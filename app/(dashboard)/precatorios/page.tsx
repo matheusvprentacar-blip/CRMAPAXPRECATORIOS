@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Plus, Send, AlertCircle, Trash2, X, FileJson } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
+import type { SupabaseClient } from "@supabase/supabase-js"
 import type { Precatorio } from "@/lib/types/database"
 import { useToast } from "@/hooks/use-toast"
 import { ImportJsonModal } from "@/components/import/import-json-modal"
@@ -29,6 +30,13 @@ export default function PrecatoriosPage() {
   const { toast } = useToast()
   const [userRole, setUserRole] = useState<string | null>(null)
   const [authUserId, setAuthUserId] = useState<string | null>(null)
+
+  // Helper: garante Supabase não-nulo (corrige o erro do build)
+  function requireSupabase(): SupabaseClient {
+    const client = getSupabase()
+    if (!client) throw new Error("Supabase não disponível")
+    return client
+  }
 
   // Usar hook de busca avançada
   const {
@@ -65,19 +73,19 @@ export default function PrecatoriosPage() {
 
   async function loadUserInfo() {
     try {
+      // Aqui eu não lanço erro — só não carrega se não tiver client (ex: build/SSR)
       const supabase = getSupabase()
-      if (supabase) {
-        const {
-          data: { user },
-        } = await supabase.auth.getUser()
-        if (!user) return
+      if (!supabase) return
 
-        setAuthUserId(user.id)
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) return
 
-        const { data: perfil } = await supabase.from("usuarios").select("role").eq("id", user.id).single()
+      setAuthUserId(user.id)
 
-        setUserRole(perfil?.role || null)
-      }
+      const { data: perfil } = await supabase.from("usuarios").select("role").eq("id", user.id).single()
+      setUserRole(perfil?.role || null)
     } catch (error) {
       console.error("[Precatorios] Erro ao carregar usuário:", error)
     }
@@ -86,15 +94,15 @@ export default function PrecatoriosPage() {
   async function loadOperadoresCalculo() {
     try {
       const supabase = getSupabase()
-      if (supabase) {
-        const { data } = await supabase
-          .from("usuarios")
-          .select("id, nome")
-          .eq("role", "operador_calculo")
-          .eq("ativo", true)
+      if (!supabase) return
 
-        if (data) setOperadoresCalculo(data)
-      }
+      const { data } = await supabase
+        .from("usuarios")
+        .select("id, nome")
+        .eq("role", "operador_calculo")
+        .eq("ativo", true)
+
+      if (data) setOperadoresCalculo(data)
     } catch (error) {
       console.error("Erro ao carregar operadores de cálculo:", error)
     }
@@ -115,8 +123,7 @@ export default function PrecatoriosPage() {
 
     setSending(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) throw new Error("Supabase não disponível")
+      const supabase = requireSupabase()
 
       const { error } = await supabase
         .from("precatorios")
@@ -152,7 +159,7 @@ export default function PrecatoriosPage() {
     } catch (error: any) {
       toast({
         title: "Erro ao enviar para cálculo",
-        description: error.message,
+        description: error?.message || "Erro desconhecido",
         variant: "destructive",
       })
     } finally {
@@ -165,11 +172,9 @@ export default function PrecatoriosPage() {
 
     setDeleting(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) throw new Error("Supabase não disponível")
+      const supabase = requireSupabase()
 
       const { error } = await supabase.rpc("delete_precatorio", { p_precatorio_id: precatorioToDelete.id })
-
       if (error) throw error
 
       toast({
@@ -183,7 +188,7 @@ export default function PrecatoriosPage() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir precatório",
-        description: error.message,
+        description: error?.message || "Erro desconhecido",
         variant: "destructive",
       })
     } finally {
@@ -196,8 +201,7 @@ export default function PrecatoriosPage() {
 
     setBulkDeleting(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) throw new Error("Supabase não disponível")
+      const supabase = requireSupabase()
 
       let sucessos = 0
       let erros = 0
@@ -223,7 +227,7 @@ export default function PrecatoriosPage() {
     } catch (error: any) {
       toast({
         title: "Erro ao excluir precatórios",
-        description: error.message,
+        description: error?.message || "Erro desconhecido",
         variant: "destructive",
       })
     } finally {
@@ -245,7 +249,7 @@ export default function PrecatoriosPage() {
     if (selectedIds.size === precatorios.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(precatorios.map(p => p.id)))
+      setSelectedIds(new Set(precatorios.map((p) => p.id)))
     }
   }
 
@@ -274,10 +278,7 @@ export default function PrecatoriosPage() {
         </div>
         <div className="flex items-center gap-2">
           {selectedIds.size > 0 && (
-            <Button 
-              variant="destructive" 
-              onClick={() => setBulkDeleteOpen(true)}
-            >
+            <Button variant="destructive" onClick={() => setBulkDeleteOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
               Excluir {selectedIds.size} Selecionados
             </Button>
@@ -296,11 +297,7 @@ export default function PrecatoriosPage() {
       {/* Busca e Filtros */}
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <SearchBar 
-            value={searchTerm} 
-            onChange={setTermo}
-            onClear={() => setTermo("")}
-          />
+          <SearchBar value={searchTerm} onChange={setTermo} onClear={() => setTermo("")} />
           <AdvancedFilters
             filtros={filtros}
             onFilterChange={updateFiltros}
@@ -314,11 +311,7 @@ export default function PrecatoriosPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-sm text-muted-foreground">Filtros ativos:</span>
             {filtrosAtivos.map((filtro: any, index: number) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="flex items-center gap-2"
-              >
+              <Badge key={index} variant="secondary" className="flex items-center gap-2">
                 <span className="font-medium">{filtro.label}:</span>
                 <span>{filtro.displayValue}</span>
                 <button
@@ -352,11 +345,7 @@ export default function PrecatoriosPage() {
             onChange={toggleSelectAll}
             className="h-4 w-4 rounded border-gray-300"
           />
-          <span>
-            {selectedIds.size === 0 
-              ? "Selecionar todos" 
-              : `${selectedIds.size} selecionados`}
-          </span>
+          <span>{selectedIds.size === 0 ? "Selecionar todos" : `${selectedIds.size} selecionados`}</span>
         </div>
       )}
 
@@ -365,7 +354,9 @@ export default function PrecatoriosPage() {
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-12">
               <p className="text-muted-foreground mb-4">
-                {searchTerm || temFiltrosAtivos ? "Nenhum precatório encontrado com os filtros aplicados" : "Nenhum precatório cadastrado"}
+                {searchTerm || temFiltrosAtivos
+                  ? "Nenhum precatório encontrado com os filtros aplicados"
+                  : "Nenhum precatório cadastrado"}
               </p>
               {!searchTerm && !temFiltrosAtivos && (
                 <Button onClick={() => router.push("/precatorios/novo")}>
@@ -379,7 +370,7 @@ export default function PrecatoriosPage() {
           precatorios.map((precatorio) => (
             <Card
               key={precatorio.id}
-              className={`transition-colors ${selectedIds.has(precatorio.id) ? 'ring-2 ring-primary' : ''}`}
+              className={`transition-colors ${selectedIds.has(precatorio.id) ? "ring-2 ring-primary" : ""}`}
             >
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
@@ -392,80 +383,83 @@ export default function PrecatoriosPage() {
                     }}
                     className="h-5 w-5 rounded border-gray-300 mt-1"
                   />
-                  <div 
-                    className="flex-1 cursor-pointer"
-                    onClick={() => router.push(`/precatorios/${precatorio.id}`)}
-                  >
+                  <div className="flex-1 cursor-pointer" onClick={() => router.push(`/precatorios/${precatorio.id}`)}>
                     <div className="flex items-start justify-between">
                       <div className="space-y-1 flex-1">
-                    <h3 className="font-semibold text-lg">
-                      {precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
-                    </h3>
-                    {precatorio.urgente && (
-                      <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                        <AlertCircle className="h-3 w-3" />
-                        Urgente
-                      </div>
-                    )}
-                    <p className="text-sm text-muted-foreground">Credor: {precatorio.credor_nome}</p>
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
-                      {precatorio.numero_processo && <span>Processo: {precatorio.numero_processo}</span>}
-                      {precatorio.tribunal && <span>Tribunal: {precatorio.tribunal}</span>}
-                    </div>
-                    {(precatorio.proposta_menor_valor_display || precatorio.proposta_maior_valor_display) && (
-                      <div className="flex items-center gap-2 text-sm mt-2">
-                        <span className="text-muted-foreground">Propostas:</span>
-                        {precatorio.proposta_menor_valor_display && (
-                          <span className="font-medium">
-                            {precatorio.proposta_menor_valor_display}
-                            {precatorio.proposta_menor_percentual && ` (${precatorio.proposta_menor_percentual}%)`}
-                          </span>
+                        <h3 className="font-semibold text-lg">
+                          {precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
+                        </h3>
+                        {precatorio.urgente && (
+                          <div className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                            <AlertCircle className="h-3 w-3" />
+                            Urgente
+                          </div>
                         )}
-                        {precatorio.proposta_menor_valor_display && precatorio.proposta_maior_valor_display && (
-                          <span className="text-muted-foreground">-</span>
+                        <p className="text-sm text-muted-foreground">Credor: {precatorio.credor_nome}</p>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-2">
+                          {precatorio.numero_processo && <span>Processo: {precatorio.numero_processo}</span>}
+                          {precatorio.tribunal && <span>Tribunal: {precatorio.tribunal}</span>}
+                        </div>
+
+                        {(precatorio.proposta_menor_valor_display || precatorio.proposta_maior_valor_display) && (
+                          <div className="flex items-center gap-2 text-sm mt-2">
+                            <span className="text-muted-foreground">Propostas:</span>
+                            {precatorio.proposta_menor_valor_display && (
+                              <span className="font-medium">
+                                {precatorio.proposta_menor_valor_display}
+                                {precatorio.proposta_menor_percentual && ` (${precatorio.proposta_menor_percentual}%)`}
+                              </span>
+                            )}
+                            {precatorio.proposta_menor_valor_display && precatorio.proposta_maior_valor_display && (
+                              <span className="text-muted-foreground">-</span>
+                            )}
+                            {precatorio.proposta_maior_valor_display && (
+                              <span className="font-medium">
+                                {precatorio.proposta_maior_valor_display}
+                                {precatorio.proposta_maior_percentual && ` (${precatorio.proposta_maior_percentual}%)`}
+                              </span>
+                            )}
+                          </div>
                         )}
-                        {precatorio.proposta_maior_valor_display && (
-                          <span className="font-medium">
-                            {precatorio.proposta_maior_valor_display}
-                            {precatorio.proposta_maior_percentual && ` (${precatorio.proposta_maior_percentual}%)`}
-                          </span>
-                        )}
-                      </div>
-                    )}
+
                         {precatorio.data_calculo_display && (
                           <div className="text-sm text-muted-foreground">Cálculo: {precatorio.data_calculo_display}</div>
                         )}
                       </div>
+
                       <div className="text-right space-y-2">
-                    <div className="text-lg font-bold">
-                      {(() => {
-                        const va = Number(precatorio.valor_atualizado ?? 0)
-                        const vp = Number(precatorio.valor_principal ?? 0)
-                        if (va > 0) {
-                          return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(va)
-                        } else if (vp > 0) {
-                          return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(vp)
-                        }
-                        return "Aguardando"
-                      })()}
-                    </div>
-                    <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                      {precatorio.status?.replace(/_/g, " ") || "Novo"}
-                    </div>
-                    {userRole === "operador_comercial" && precatorio.responsavel === authUserId && (
-                      <Button
-                        size="sm"
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          setSelectedPrecatorio(precatorio)
-                          setSendToCalculoOpen(true)
-                        }}
-                        className="mt-2"
-                      >
-                        <Send className="h-3 w-3 mr-1" />
-                        Enviar p/ Cálculo
-                      </Button>
-                    )}
+                        <div className="text-lg font-bold">
+                          {(() => {
+                            const va = Number(precatorio.valor_atualizado ?? 0)
+                            const vp = Number(precatorio.valor_principal ?? 0)
+                            if (va > 0) {
+                              return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(va)
+                            } else if (vp > 0) {
+                              return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(vp)
+                            }
+                            return "Aguardando"
+                          })()}
+                        </div>
+
+                        <div className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                          {precatorio.status?.replace(/_/g, " ") || "Novo"}
+                        </div>
+
+                        {userRole === "operador_comercial" && precatorio.responsavel === authUserId && (
+                          <Button
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedPrecatorio(precatorio)
+                              setSendToCalculoOpen(true)
+                            }}
+                            className="mt-2"
+                          >
+                            <Send className="h-3 w-3 mr-1" />
+                            Enviar p/ Cálculo
+                          </Button>
+                        )}
+
                         {canDelete(precatorio) && (
                           <Button
                             size="sm"
@@ -497,8 +491,7 @@ export default function PrecatoriosPage() {
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
               Tem certeza que deseja excluir o precatório "
-              {precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}"? Esta ação não pode ser
-              desfeita.
+              {precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}"? Esta ação não pode ser desfeita.
             </DialogDescription>
           </DialogHeader>
 
@@ -517,9 +510,7 @@ export default function PrecatoriosPage() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Enviar para Cálculo</DialogTitle>
-            <DialogDescription>
-              Selecione o operador de cálculo que será responsável por este precatório
-            </DialogDescription>
+            <DialogDescription>Selecione o operador de cálculo que será responsável por este precatório</DialogDescription>
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
