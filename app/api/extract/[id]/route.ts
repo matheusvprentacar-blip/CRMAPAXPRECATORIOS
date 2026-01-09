@@ -3,18 +3,18 @@ import { createServerSupabaseClient } from '@/lib/supabase/server'
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  ctx: { params: Promise<{ id: string }> }
 ) {
   try {
     const supabase = await createServerSupabaseClient()
-    
+
     if (!supabase) {
       return NextResponse.json(
         { error: 'Supabase não configurado' },
         { status: 500 }
       )
     }
-    
+
     // Verificar autenticação
     const { data: { user }, error: authError } = await supabase.auth.getUser()
     if (authError || !user) {
@@ -24,7 +24,7 @@ export async function GET(
       )
     }
 
-    const extracaoId = params.id
+    const { id: extracaoId } = await ctx.params
 
     // Buscar extração
     const { data: extracao, error: extracaoError } = await supabase
