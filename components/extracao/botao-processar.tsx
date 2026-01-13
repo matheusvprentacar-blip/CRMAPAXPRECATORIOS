@@ -17,24 +17,24 @@ export function BotaoProcessar({ precatorioId, onSuccess }: BotaoProcessarProps)
     setProcessando(true)
 
     try {
-      const response = await fetch('/api/extract/process', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          precatorio_id: precatorioId,
-        }),
+      const { createBrowserClient } = await import('@/lib/supabase/client')
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error('Cliente Supabase não inicializado')
+
+      const { data, error } = await supabase.functions.invoke('ai-extract', {
+        body: { precatorio_id: precatorioId },
       })
 
-      const data = await response.json()
+      if (error) {
+        throw new Error(error.message || 'Erro ao processar documentos')
+      }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao processar documentos')
+      if (data.error) {
+        throw new Error(data.error)
       }
 
       toast.success('Processamento iniciado!', {
-        description: `${data.total_documentos} documento(s) sendo processado(s) pela IA`
+        description: `${data.total_documentos || 0} documento(s) sendo processado(s) pela IA`
       })
 
       if (onSuccess) {

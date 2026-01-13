@@ -44,7 +44,7 @@ export default function RegisterPage() {
     }
 
     try {
-      await signUp(email, password, nome, role)
+      await signUp(email, password, nome, [role])
       setSuccess(true)
       setTimeout(() => {
         router.push("/login")

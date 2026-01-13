@@ -128,17 +128,15 @@ export function TimelineEventItem({ event, isLast = false }: TimelineEventItemPr
             )}
 
             {/* Dados adicionais */}
+            {/* Dados adicionais com melhor formatação */}
             {event.dados_novos && Object.keys(event.dados_novos).length > 0 && (
-              <div className="mt-3 p-3 bg-muted rounded-md">
-                <p className="text-xs font-medium mb-2">Detalhes:</p>
-                <div className="space-y-1">
-                  {Object.entries(event.dados_novos).map(([key, value]) => (
-                    <div key={key} className="text-xs">
-                      <span className="text-muted-foreground">{formatKey(key)}:</span>{" "}
-                      <span className="font-medium">{formatValue(value)}</span>
-                    </div>
-                  ))}
-                </div>
+              <div className="mt-3 text-sm border-l-2 border-primary/50 pl-3">
+                {Object.entries(event.dados_novos).map(([key, value]) => (
+                  <div key={key} className="grid grid-cols-[120px_1fr] gap-2 py-0.5">
+                    <span className="text-muted-foreground font-medium">{formatKey(key)}:</span>
+                    <span className="text-foreground">{formatValue(key, value)}</span>
+                  </div>
+                ))}
               </div>
             )}
           </div>
@@ -171,16 +169,24 @@ function formatKey(key: string): string {
 }
 
 // Helper para formatar valores
-function formatValue(value: any): string {
+function formatValue(key: string, value: any): string {
   if (value === null || value === undefined) return "-"
   if (typeof value === "boolean") return value ? "Sim" : "Não"
+
   if (typeof value === "number") {
+    // Campos que são números mas NÃO devem ser formatados como moeda
+    const nonCurrencyFields = ["sla_horas", "calculo_ultima_versao", "percentual"]
+
+    if (nonCurrencyFields.includes(key)) {
+      return String(value)
+    }
+
     return new Intl.NumberFormat("pt-BR", {
       style: "currency",
       currency: "BRL",
     }).format(value)
   }
-  
+
   // Formatar status de SLA
   const slaLabels: Record<string, string> = {
     nao_iniciado: "Não Iniciado",
@@ -189,10 +195,10 @@ function formatValue(value: any): string {
     atrasado: "Atrasado",
     concluido: "Concluído",
   }
-  
+
   if (slaLabels[value]) {
     return slaLabels[value]
   }
-  
+
   return String(value)
 }

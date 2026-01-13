@@ -57,7 +57,16 @@ export interface Precatorio {
   proposta_maior_valor: number
 
   // Workflow
-  status: "novo" | "em_andamento" | "concluido" | "cancelado" | "pendente_distribuicao" | "em_contato" | "em_calculo"
+  status:
+  | "novo"
+  | "em_andamento"
+  | "concluido"
+  | "cancelado"
+  | "pendente_distribuicao"
+  | "em_contato"
+  | "em_calculo"
+  | "aguardando_cliente"
+
   prioridade: "baixa" | "media" | "alta" | "urgente"
   localizacao_kanban: string
   urgente: boolean

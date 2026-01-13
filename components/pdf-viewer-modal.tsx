@@ -6,14 +6,19 @@ import { Button } from "@/components/ui/button"
 import { ExternalLink, Loader2, AlertCircle } from "lucide-react"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"
 
+import { useRouter } from "next/navigation"
+
 interface PdfViewerModalProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   pdfUrl: string | null
   titulo?: string
+  precatorioId?: string
+  canCalculate?: boolean
 }
 
-export function PdfViewerModal({ open, onOpenChange, pdfUrl, titulo }: PdfViewerModalProps) {
+export function PdfViewerModal({ open, onOpenChange, pdfUrl, titulo, precatorioId, canCalculate }: PdfViewerModalProps) {
+  const router = useRouter()
   const [viewerUrl, setViewerUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -47,20 +52,30 @@ export function PdfViewerModal({ open, onOpenChange, pdfUrl, titulo }: PdfViewer
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl h-[90vh]">
-        <DialogHeader>
+      <DialogContent className="max-w-5xl h-[90vh] flex flex-col p-0 gap-0">
+        <DialogHeader className="p-4 border-b">
           <DialogTitle className="flex items-center justify-between">
             <span>{titulo || "Visualizar PDF"}</span>
-            {viewerUrl && (
-              <Button variant="outline" size="sm" onClick={() => window.open(viewerUrl, "_blank")}>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Abrir em nova guia
-              </Button>
-            )}
+            <div className="flex items-center gap-2">
+              {canCalculate && precatorioId && (
+                <Button size="sm" onClick={() => {
+                  onOpenChange(false)
+                  router.push(`/calcular?id=${precatorioId}`)
+                }}>
+                  Abrir Calculadora
+                </Button>
+              )}
+              {viewerUrl && (
+                <Button variant="outline" size="sm" onClick={() => window.open(viewerUrl, "_blank")}>
+                  <ExternalLink className="h-4 w-4 mr-2" />
+                  Abrir em nova guia
+                </Button>
+              )}
+            </div>
           </DialogTitle>
         </DialogHeader>
 
-        <div className="flex-1 min-h-0">
+        <div className="flex-1 w-full h-full min-h-0">
           {loading && (
             <div className="flex items-center justify-center h-full">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
@@ -75,7 +90,7 @@ export function PdfViewerModal({ open, onOpenChange, pdfUrl, titulo }: PdfViewer
           )}
 
           {!loading && !error && viewerUrl && (
-            <iframe src={viewerUrl} className="w-full h-full border rounded" title="Visualizador de PDF" />
+            <iframe src={viewerUrl} className="w-full h-full border-none" title="Visualizador de PDF" />
           )}
 
           {!loading && !error && !pdfUrl && (

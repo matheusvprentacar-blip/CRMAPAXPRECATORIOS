@@ -128,7 +128,7 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
       await supabase.from("atividades").insert({
         precatorio_id: precatorioId,
         usuario_id: user.id,
-        tipo: "atraso",
+        tipo: "atualizacao",
         descricao: `Atraso reportado: ${TIPOS_ATRASO.find((t) => t.value === tipoAtraso)?.label}`,
         dados_novos: {
           tipo_atraso: tipoAtraso,

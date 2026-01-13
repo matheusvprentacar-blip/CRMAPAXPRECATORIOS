@@ -10,6 +10,8 @@ import { CardPrecatorioCalculo } from "@/components/calculo/card-precatorio-calc
 import { ComplexityBadge } from "@/components/ui/complexity-badge"
 import { SLAIndicator } from "@/components/ui/sla-indicator"
 import { ModalAtraso } from "@/components/calculo/modal-atraso"
+import { ModalEnviarJuridico } from "@/components/calculo/modal-enviar-juridico"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 
 interface PrecatorioCalculo {
   id: string
@@ -42,14 +44,17 @@ export default function FilaCalculoPage() {
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
   const [modalAtrasoOpen, setModalAtrasoOpen] = useState(false)
+  const [modalJuridicoOpen, setModalJuridicoOpen] = useState(false)
   const [precatorioSelecionado, setPrecatorioSelecionado] = useState<PrecatorioCalculo | null>(null)
   const [calculando, setCalculando] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("aguardando")
 
   useEffect(() => {
     loadData()
-  }, [])
+  }, [activeTab]) // Reload when tab changes
 
   async function loadData() {
+    setLoading(true) // Ensure loading state shows during fetch
     try {
       const supabase = getSupabase()
       if (!supabase) return
@@ -59,10 +64,15 @@ export default function FilaCalculoPage() {
       } = await supabase.auth.getUser()
       if (!user) return
 
-      console.log("[FILA CALCULO] Carregando fila para usuário:", user.id)
+      // Buscar perfil do usuário para verificar role
+      const { data: profile } = await supabase
+        .from("usuarios")
+        .select("role")
+        .eq("id", user.id)
+        .single()
 
-      // Buscar TODOS os precatórios em cálculo (FIFO)
-      const { data, error } = await supabase
+      // Buscar precatórios
+      let query = supabase
         .from("precatorios_cards")
         .select(
           `id,
@@ -79,6 +89,7 @@ export default function FilaCalculoPage() {
           criador_nome,
           responsavel_nome,
           responsavel_calculo_nome,
+          responsavel_calculo_id,
           motivo_atraso_calculo,
           data_atraso_calculo,
           score_complexidade,
@@ -87,7 +98,24 @@ export default function FilaCalculoPage() {
           sla_horas,
           sla_status`
         )
-        .eq("status", "em_calculo")
+
+      // Filter based on active tab
+      if (activeTab === "aguardando") {
+        query = query.in("status", ["pronto_calculo", "calculo_andamento", "em_calculo"])
+      } else {
+        query = query.in("status", ["calculo_concluido", "calculado"])
+      }
+
+      // Se for operador de cálculo (e não for admin), filtrar apenas os atribuídos a ele
+      const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+      const isAdmin = roles.includes("admin")
+
+      if (roles.includes("operador_calculo") && !isAdmin) {
+        // Filtrar: (responsavel = usuario ID) OU (responsavel IS NULL)
+        query = query.or(`responsavel_calculo_id.eq.${user.id},responsavel_calculo_id.is.null`)
+      }
+
+      const { data, error } = await query
         .order("urgente", { ascending: false })
         .order("created_at", { ascending: true })
 
@@ -96,7 +124,6 @@ export default function FilaCalculoPage() {
         throw error
       }
 
-      console.log("[FILA CALCULO] Carregados:", data?.length || 0, "precatórios")
       setFilaCalculo((data as PrecatorioCalculo[]) || [])
     } catch (error) {
       console.error("[FILA CALCULO] Erro:", error)
@@ -105,8 +132,22 @@ export default function FilaCalculoPage() {
     }
   }
 
-  const handleCalcular = (precatorioId: string) => {
+  const handleCalcular = async (precatorioId: string) => {
     setCalculando(precatorioId)
+    try {
+      const supabase = getSupabase()
+      if (supabase) {
+        // Auto-move to "Em Andamento" on Kanban
+        await supabase.from('precatorios').update({
+          status: 'calculo_andamento',
+          status_kanban: 'calculo_andamento', // Nome correto da coluna Kanban
+          localizacao_kanban: 'calculo_andamento',
+          updated_at: new Date().toISOString()
+        }).eq('id', precatorioId)
+      }
+    } catch (e) {
+      console.error("Erro ao atualizar status para andamento:", e)
+    }
     router.push(`/calcular?id=${precatorioId}`)
   }
 
@@ -140,7 +181,7 @@ export default function FilaCalculoPage() {
       // Registrar atividade
       await supabase.from("atividades").insert({
         precatorio_id: precatorioId,
-        tipo: "atraso_removido",
+        tipo: "atualizacao",
         descricao: "Atraso removido - precatório retomado",
       })
 
@@ -153,87 +194,116 @@ export default function FilaCalculoPage() {
 
   const filteredFila = searchTerm
     ? filaCalculo.filter(
-        (p) =>
-          p.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.numero_precatorio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.credor_nome?.toLowerCase().includes(searchTerm.toLowerCase())
-      )
+      (p) =>
+        p.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.numero_precatorio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        p.credor_nome?.toLowerCase().includes(searchTerm.toLowerCase())
+    )
     : filaCalculo
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-      </div>
-    )
-  }
-
   return (
-    <div className="space-y-6">
+    <div className="container mx-auto max-w-[100vw] p-6 space-y-8">
       {/* Cabeçalho */}
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Fila de Cálculo</h1>
           <p className="text-muted-foreground">
-            Todos os precatórios aguardando cálculo • Ordenação FIFO (Primeiro a Entrar, Primeiro a Sair)
+            Gestão de precatórios para cálculo
           </p>
         </div>
         <div className="flex items-center gap-2">
           <Calculator className="h-5 w-5 text-primary" />
-          <span className="text-2xl font-bold">{filaCalculo.length}</span>
-          <span className="text-sm text-muted-foreground">na fila</span>
+          <span className="text-2xl font-bold">{filteredFila.length}</span>
+          <span className="text-sm text-muted-foreground">
+            {activeTab === "aguardando" ? "na fila" : "concluídos"}
+          </span>
         </div>
       </div>
 
-      {/* Barra de Busca */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Buscar por título, número do precatório ou credor..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="pl-10"
-        />
-      </div>
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full max-w-md grid-cols-2">
+          <TabsTrigger value="aguardando">Aguardando Cálculo</TabsTrigger>
+          <TabsTrigger value="concluidos">Cálculos Concluídos</TabsTrigger>
+        </TabsList>
 
-      {/* Lista de Precatórios */}
-      <div className="space-y-4">
-        {filteredFila.length === 0 ? (
-          <Card>
-            <CardContent className="flex flex-col items-center justify-center py-16">
-              <Calculator className="h-16 w-16 text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">
-                {searchTerm ? "Nenhum precatório encontrado" : "Fila vazia"}
-              </h3>
-              <p className="text-sm text-muted-foreground text-center max-w-md">
-                {searchTerm
-                  ? "Tente ajustar os termos da busca"
-                  : "Não há precatórios aguardando cálculo no momento"}
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <>
-            {filteredFila.map((precatorio, index) => (
-              <CardPrecatorioCalculo
-                key={precatorio.id}
-                precatorio={precatorio}
-                posicao={index + 1}
-                onCalcular={() => handleCalcular(precatorio.id)}
-                onReportarAtraso={() => handleReportarAtraso(precatorio)}
-                onRemoverAtraso={() => handleRemoverAtraso(precatorio.id)}
-                isCalculando={calculando === precatorio.id}
-              />
-            ))}
-          </>
-        )}
-      </div>
+        <div className="mt-6 space-y-6">
+          {/* Barra de Busca */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Buscar por título, número do precatório ou credor..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+
+          {loading ? (
+            <div className="flex items-center justify-center h-48">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {filteredFila.length === 0 ? (
+                <Card>
+                  <CardContent className="flex flex-col items-center justify-center py-16">
+                    <Calculator className="h-16 w-16 text-muted-foreground mb-4" />
+                    <h3 className="text-lg font-semibold mb-2">
+                      {searchTerm ? "Nenhum precatório encontrado" : "Lista vazia"}
+                    </h3>
+                    <p className="text-sm text-muted-foreground text-center max-w-md">
+                      {searchTerm
+                        ? "Tente ajustar os termos da busca"
+                        : activeTab === "aguardando"
+                          ? "Não há precatórios aguardando cálculo no momento"
+                          : "Nenhum cálculo concluído encontrado"}
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  {filteredFila.map((precatorio, index) => (
+                    <CardPrecatorioCalculo
+                      key={precatorio.id}
+                      precatorio={precatorio}
+                      posicao={index + 1}
+                      onCalcular={() => handleCalcular(precatorio.id)}
+                      onReportarAtraso={() => handleReportarAtraso(precatorio)}
+                      onRemoverAtraso={() => handleRemoverAtraso(precatorio.id)}
+                      onEnviarJuridico={() => {
+                        setPrecatorioSelecionado(precatorio)
+                        setModalJuridicoOpen(true)
+                      }}
+                      isCalculando={calculando === precatorio.id}
+                    />
+                  ))}
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      </Tabs>
 
       {/* Modal de Atraso */}
       {precatorioSelecionado && (
         <ModalAtraso
           open={modalAtrasoOpen}
           onOpenChange={setModalAtrasoOpen}
+          precatorioId={precatorioSelecionado.id}
+          precatorioTitulo={
+            precatorioSelecionado.titulo ||
+            precatorioSelecionado.numero_precatorio ||
+            "Sem título"
+          }
+          onSuccess={handleAtrasoSuccess}
+        />
+      )}
+
+      {/* Modal de Jurídico */}
+      {precatorioSelecionado && (
+        <ModalEnviarJuridico
+          open={modalJuridicoOpen}
+          onOpenChange={setModalJuridicoOpen}
           precatorioId={precatorioSelecionado.id}
           precatorioTitulo={
             precatorioSelecionado.titulo ||

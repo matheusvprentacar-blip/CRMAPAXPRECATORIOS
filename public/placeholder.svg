@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img" aria-label="placeholder">
+  <rect width="800" height="450" fill="#f4f4f5"/>
+  <rect x="40" y="40" width="720" height="370" rx="24" fill="#e4e4e7"/>
+  <path d="M220 310l120-140 110 120 70-70 120 140H220z" fill="#d4d4d8"/>
+  <circle cx="310" cy="170" r="38" fill="#d4d4d8"/>
+  <text x="400" y="385" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Roboto, Arial" font-size="20" fill="#71717a">
+    placeholder.svg
+  </text>
+</svg>

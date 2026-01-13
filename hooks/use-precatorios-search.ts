@@ -19,33 +19,60 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
   const debouncedTermo = useDebounce(filtros.termo, 500)
 
   const buscar = useCallback(async () => {
-    if (!supabase) return
+    console.log("🔍 [DEBUG] usePrecatoriosSearch - Iniciando busca")
+    console.log("🔍 [DEBUG] Supabase disponível:", !!supabase)
+    
+    if (!supabase) {
+      console.warn("⚠️ [DEBUG] Supabase não disponível, abortando busca")
+      return
+    }
 
     setLoading(true)
     setError(null)
 
     try {
+      console.log("🔍 [DEBUG] Filtros originais:", filtros)
+      console.log("🔍 [DEBUG] Termo debounced:", debouncedTermo)
+      
       const params = filtrosToRpcParams({
         ...filtros,
         termo: debouncedTermo,
       })
+
+      console.log("🔍 [DEBUG] Parâmetros RPC:", JSON.stringify(params, null, 2))
 
       const { data, error: rpcError } = await supabase.rpc(
         "buscar_precatorios_global",
         params
       )
 
-      if (rpcError) throw rpcError
+      console.log("🔍 [DEBUG] Resposta RPC:")
+      console.log("  - Data:", data ? `${data.length} resultados` : "null")
+      console.log("  - Error:", rpcError)
 
+      if (rpcError) {
+        console.error("❌ [DEBUG] Erro RPC detalhado:", {
+          message: rpcError.message,
+          details: rpcError.details,
+          hint: rpcError.hint,
+          code: rpcError.code,
+        })
+        throw rpcError
+      }
+
+      console.log("✅ [DEBUG] Busca concluída com sucesso:", data?.length || 0, "resultados")
       setResultados(data || [])
       setTotal(data?.length || 0)
     } catch (err) {
-      console.error("[usePrecatoriosSearch] Erro ao buscar:", err)
+      console.error("❌ [DEBUG] Erro ao buscar:", err)
+      console.error("❌ [DEBUG] Tipo do erro:", typeof err)
+      console.error("❌ [DEBUG] Erro completo:", JSON.stringify(err, null, 2))
       setError(err instanceof Error ? err.message : "Erro ao buscar precatórios")
       setResultados([])
       setTotal(0)
     } finally {
       setLoading(false)
+      console.log("🔍 [DEBUG] Busca finalizada (loading = false)")
     }
   }, [supabase, filtros, debouncedTermo])
 

@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, Calculator, Eye, User, Briefcase, UserCog, Clock } from "lucide-react"
+import { AlertCircle, Calculator, Eye, User, Briefcase, UserCog, Clock, Scale } from "lucide-react"
 import { useRouter } from "next/navigation"
 import { ComplexityBadge } from "@/components/ui/complexity-badge"
 import { SLAIndicator } from "@/components/ui/sla-indicator"
@@ -42,6 +42,7 @@ interface CardPrecatorioCalculoProps {
   onCalcular: () => void
   onReportarAtraso: () => void
   onRemoverAtraso?: () => void
+  onEnviarJuridico?: () => void
   isCalculando?: boolean
 }
 
@@ -51,6 +52,7 @@ export function CardPrecatorioCalculo({
   onCalcular,
   onReportarAtraso,
   onRemoverAtraso,
+  onEnviarJuridico,
   isCalculando = false,
 }: CardPrecatorioCalculoProps) {
   const router = useRouter()
@@ -75,9 +77,8 @@ export function CardPrecatorioCalculo({
 
   return (
     <Card
-      className={`hover:shadow-md transition-all ${
-        precatorio.urgente ? "border-red-500 border-2" : ""
-      } ${precatorio.motivo_atraso_calculo ? "bg-orange-50/50 dark:bg-orange-950/10" : ""}`}
+      className={`hover:shadow-md transition-all ${precatorio.urgente ? "border-red-500 border-2" : ""
+        } ${precatorio.motivo_atraso_calculo ? "bg-orange-50/50 dark:bg-orange-950/10" : ""}`}
     >
       <CardContent className="p-6">
         <div className="space-y-4">
@@ -88,25 +89,25 @@ export function CardPrecatorioCalculo({
                 <Badge variant="outline" className="font-mono">
                   #{posicao}
                 </Badge>
-                
+
                 {precatorio.urgente && (
                   <Badge variant="destructive" className="flex items-center gap-1">
                     <AlertCircle className="h-3 w-3" />
                     URGENTE
                   </Badge>
                 )}
-                
+
                 {precatorio.motivo_atraso_calculo && (
                   <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                     <Clock className="h-3 w-3" />
                     Atraso Reportado
                   </Badge>
                 )}
-                
+
                 {/* FASE 1: Badge de Complexidade */}
                 {precatorio.nivel_complexidade && precatorio.score_complexidade !== undefined && (
-                  <ComplexityBadge 
-                    nivel={precatorio.nivel_complexidade} 
+                  <ComplexityBadge
+                    nivel={precatorio.nivel_complexidade}
                     score={precatorio.score_complexidade}
                     size="sm"
                   />
@@ -145,7 +146,7 @@ export function CardPrecatorioCalculo({
           {/* Identificação dos Responsáveis */}
           <div className="pt-3 border-t space-y-2">
             <p className="text-xs font-medium text-muted-foreground mb-2">Responsáveis:</p>
-            
+
             <div className="grid gap-2 text-sm">
               {precatorio.criador_nome && (
                 <div className="flex items-center gap-2">
@@ -154,7 +155,7 @@ export function CardPrecatorioCalculo({
                   <span className="font-medium">{precatorio.criador_nome}</span>
                 </div>
               )}
-              
+
               {precatorio.responsavel_nome && (
                 <div className="flex items-center gap-2">
                   <Briefcase className="h-4 w-4 text-green-500" />
@@ -162,7 +163,7 @@ export function CardPrecatorioCalculo({
                   <span className="font-medium">{precatorio.responsavel_nome}</span>
                 </div>
               )}
-              
+
               {precatorio.responsavel_calculo_nome && (
                 <div className="flex items-center gap-2">
                   <UserCog className="h-4 w-4 text-purple-500" />
@@ -189,11 +190,11 @@ export function CardPrecatorioCalculo({
                     <ImpactBadge impacto={precatorio.impacto_atraso} size="sm" showIcon={false} />
                   )}
                 </div>
-                
+
                 <p className="text-sm text-orange-700 dark:text-orange-300">
                   {precatorio.motivo_atraso_calculo}
                 </p>
-                
+
                 {precatorio.data_atraso_calculo && (
                   <p className="text-xs text-orange-600 dark:text-orange-400">
                     Reportado em: {formatDate(precatorio.data_atraso_calculo)}
@@ -263,19 +264,29 @@ export function CardPrecatorioCalculo({
               <Calculator className="h-4 w-4 mr-2" />
               {isCalculando ? "Calculando..." : "Calcular"}
             </Button>
-            
+
             <Button
               onClick={onReportarAtraso}
               variant="outline"
-              className="flex-1"
+              className="flex-1 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
               size="sm"
             >
               <AlertCircle className="h-4 w-4 mr-2" />
-              Reportar Atraso
+              Atraso
             </Button>
-            
+
             <Button
-              onClick={() => router.push(`/precatorios/${precatorio.id}`)}
+              onClick={onEnviarJuridico}
+              variant="outline"
+              className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+              size="sm"
+            >
+              <Scale className="h-4 w-4 mr-2" />
+              Jurídico
+            </Button>
+
+            <Button
+              onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
               variant="ghost"
               size="sm"
             >

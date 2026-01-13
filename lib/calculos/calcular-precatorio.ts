@@ -92,10 +92,13 @@ export function calcularPrecatorio(dados: DadosEntrada): ResultadoCalculo {
   console.log("[v0] ===== INÍCIO CÁLCULO PRECATÓRIO =====")
   console.log("[v0] Valor Principal Original:", dados.valor_principal_original)
 
-  const taxaJurosMora =
-    (dados.taxa_juros_mora ?? dados.taxa_juros_moratorios ?? dados.juros_mora_percentual)
-      ? dados.juros_mora_percentual * 100
-      : 0
+  const jurosMoraPercentual =
+    dados.taxa_juros_mora ??
+    dados.taxa_juros_moratorios ??
+    dados.juros_mora_percentual ??
+    0
+
+  const taxaJurosMora = jurosMoraPercentual * 100
   console.log("[v0] Taxa Juros Mora:", taxaJurosMora)
   console.log("[v0] Data Inicial:", dados.data_inicial_calculo)
   console.log("[v0] Data Final:", dados.data_final_calculo)
@@ -156,9 +159,9 @@ export function calcularPrecatorio(dados: DadosEntrada): ResultadoCalculo {
     const saldoCredorSemDesconto = valorAtualizadoFinal - dados.adiantamento_recebido
 
     console.log("[v0] ========== PREPARANDO CÁLCULO IRPF ==========")
-    console.log("[v0] Valor Atualizado Final:", valorAtualizadoFinal.toFixed(2))
-    console.log("[v0] Adiantamento Recebido:", dados.adiantamento_recebido.toFixed(2))
-    console.log("[v0] Saldo Credor Sem Desconto:", saldoCredorSemDesconto.toFixed(2))
+    console.log("[v0] Valor Atualizado Final:", (valorAtualizadoFinal || 0).toFixed(2))
+    console.log("[v0] Adiantamento Recebido:", (dados.adiantamento_recebido || 0).toFixed(2))
+    console.log("[v0] Saldo Credor Sem Desconto:", (saldoCredorSemDesconto || 0).toFixed(2))
     console.log("[v0] ==============================================")
 
     // Chama com duas bases: saldo do credor + valores originais para faixa

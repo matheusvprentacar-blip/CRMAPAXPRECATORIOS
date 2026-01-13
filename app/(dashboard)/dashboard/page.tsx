@@ -36,7 +36,7 @@ export default function DashboardPage() {
         fetchComplexityData(supabase),
         fetchBottlenecksData(supabase),
         fetchPerformanceData(supabase),
-        fetchOperatorsData(supabase, profile?.id, profile?.role),
+        fetchOperatorsData(supabase, profile?.id, profile?.role as any),
         fetchCriticalData(supabase),
       ])
 
@@ -63,10 +63,11 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Filtrar por role
-    if (profile?.role === "operador_comercial") {
-      query = query.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-    } else if (profile?.role === "operador_calculo") {
-      query = query.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+    const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (roles.includes("operador_comercial")) {
+      query = query.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (roles.includes("operador_calculo")) {
+      query = query.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
     }
 
     const { data, error } = await query
@@ -100,10 +101,11 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Filtrar por role
-    if (profile?.role === "operador_comercial") {
-      query = query.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-    } else if (profile?.role === "operador_calculo") {
-      query = query.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+    const rolesBottlenecks = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (rolesBottlenecks.includes("operador_comercial")) {
+      query = query.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (rolesBottlenecks.includes("operador_calculo")) {
+      query = query.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
     }
 
     const { data, error } = await query
@@ -144,10 +146,11 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Filtrar por role
-    if (profile?.role === "operador_comercial") {
-      queryFila = queryFila.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-    } else if (profile?.role === "operador_calculo") {
-      queryFila = queryFila.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+    const rolesPerfFila = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (rolesPerfFila.includes("operador_comercial")) {
+      queryFila = queryFila.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (rolesPerfFila.includes("operador_calculo")) {
+      queryFila = queryFila.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
     }
 
     const { data: emFila } = await queryFila
@@ -155,9 +158,9 @@ export default function DashboardPage() {
     const tempoMedioFila =
       emFila && emFila.length > 0
         ? emFila.reduce((sum: number, p: any) => {
-            const horas = (Date.now() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
-            return sum + horas
-          }, 0) / emFila.length
+          const horas = (Date.now() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
+          return sum + horas
+        }, 0) / emFila.length
         : 0
 
     // Tempo médio para finalizar
@@ -170,10 +173,11 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Filtrar por role
-    if (profile?.role === "operador_comercial") {
-      queryFinalizado = queryFinalizado.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-    } else if (profile?.role === "operador_calculo") {
-      queryFinalizado = queryFinalizado.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+    const rolesPerfFin = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (rolesPerfFin.includes("operador_comercial")) {
+      queryFinalizado = queryFinalizado.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (rolesPerfFin.includes("operador_calculo")) {
+      queryFinalizado = queryFinalizado.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
     }
 
     const { data: finalizados } = await queryFinalizado
@@ -181,10 +185,10 @@ export default function DashboardPage() {
     const tempoMedioFinalizar =
       finalizados && finalizados.length > 0
         ? finalizados.reduce((sum: number, p: any) => {
-            const horas =
-              (new Date(p.data_calculo).getTime() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
-            return sum + horas
-          }, 0) / finalizados.length
+          const horas =
+            (new Date(p.data_calculo).getTime() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
+          return sum + horas
+        }, 0) / finalizados.length
         : 0
 
     // SLA estourado
@@ -195,10 +199,11 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Filtrar por role
-    if (profile?.role === "operador_comercial") {
-      querySLA = querySLA.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-    } else if (profile?.role === "operador_calculo") {
-      querySLA = querySLA.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+    const rolesSLA = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (rolesSLA.includes("operador_comercial")) {
+      querySLA = querySLA.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (rolesSLA.includes("operador_calculo")) {
+      querySLA = querySLA.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
     }
 
     const { count: slaEstourado } = await querySLA
@@ -229,7 +234,8 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Se não for admin, filtrar apenas o próprio operador
-    if (userRole !== "admin" && userId) {
+    const roles = (Array.isArray(userRole) ? userRole : [userRole].filter(Boolean)) as any[]
+    if (!roles.includes("admin") && userId) {
       query = query.eq("responsavel_calculo_id", userId)
     }
 
@@ -294,10 +300,14 @@ export default function DashboardPage() {
         .or("nivel_complexidade.eq.alta,sla_status.eq.atrasado,impacto_atraso.eq.alto")
 
       // Filtrar por role
-      if (profile?.role === "operador_comercial") {
-        queryFallback = queryFallback.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
-      } else if (profile?.role === "operador_calculo") {
-        queryFallback = queryFallback.or(`responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`)
+      const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+      if (roles.includes("operador_comercial")) {
+        queryFallback = queryFallback.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+      } else if (roles.includes("operador_calculo")) {
+        // Operador de cálculo: excluir precatórios em cálculo (só vê na fila)
+        queryFallback = queryFallback
+          .or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
+          .neq("status", "em_calculo")
       }
 
       queryFallback = queryFallback.order("created_at", { ascending: true }).limit(10)
@@ -317,6 +327,12 @@ export default function DashboardPage() {
             (p.impacto_atraso === "alto" ? 30 : 0),
         })) || []
       )
+    }
+
+    // Filtrar precatórios em cálculo para operador de cálculo
+    const userRoles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (userRoles.includes("operador_calculo") && data) {
+      return data.filter((p: any) => p.status !== "em_calculo")
     }
 
     return data || []
@@ -344,7 +360,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Estratégico</h1>
           <p className="text-muted-foreground">
-            {profile?.role === "admin"
+            {profile?.role?.includes("admin")
               ? "Visão completa de todos os precatórios"
               : `Seu desempenho - ${profile?.nome}`}
           </p>

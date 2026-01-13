@@ -265,7 +265,7 @@ export default function PerfilPage() {
     }
   }
 
-  const roleDescription = profile?.role ? ROLE_DESCRIPTIONS[profile.role as keyof typeof ROLE_DESCRIPTIONS] : ""
+  const roleDescription = profile?.role?.[0] ? ROLE_DESCRIPTIONS[profile.role[0] as keyof typeof ROLE_DESCRIPTIONS] : ""
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -337,7 +337,7 @@ export default function PerfilPage() {
                 <Label htmlFor="role">Tipo de Conta</Label>
                 <Input
                   id="role"
-                  value={profile?.role?.replace(/_/g, " ").toUpperCase() || ""}
+                  value={profile?.role?.[0]?.replace(/_/g, " ").toUpperCase() || ""}
                   className="bg-muted capitalize"
                   disabled
                 />
@@ -485,7 +485,7 @@ export default function PerfilPage() {
               <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
                 <Shield className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Permissões do seu perfil ({profile?.role?.replace(/_/g, " ")}):</strong>
+                  <strong>Permissões do seu perfil ({profile?.role?.[0]?.replace(/_/g, " ")}):</strong>
                   <br />
                   {roleDescription}
                 </AlertDescription>

@@ -62,25 +62,34 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
     }
   }, [dados, taxaJurosMora]) // Adicionar taxaJurosMora como dependência
 
+  // Cálculos locais para consistência com a visualização
+  const valorPrincipal = dados.valor_principal_original || 0
+  const valorJurosOrig = dados.valor_juros_original || 0
+  const valorSelicOrig = dados.multa || 0
+  const totalBase = valorPrincipal + valorJurosOrig + valorSelicOrig
+  const valorJurosMoraCalculado = (totalBase * taxaJurosMora) / 100
+  const valorAtualizadoCalculado = totalBase + valorJurosMoraCalculado
+
   const handleAvancar = () => {
     const dadosAtualizados = {
       ...dados,
-      taxa_juros_mora: taxaJurosMora, // Passar como taxa_juros_mora
-      taxa_juros_moratorios: taxaJurosMora, // Manter alias
+      taxa_juros_mora: taxaJurosMora,
+      taxa_juros_moratorios: taxaJurosMora,
       juros_mora_percentual: taxaJurosMora / 100,
     }
     setDados(dadosAtualizados)
 
-    const valorAtualizadoFinal = resultado?.valor_atualizado || 0
-
-    console.log("[v0] StepAtualizacaoMonetaria - Salvando valor_atualizado:", valorAtualizadoFinal)
+    console.log("[v0] StepAtualizacaoMonetaria - Salvando valor_atualizado:", valorAtualizadoCalculado)
 
     onCompletar({
       ...resultado,
-      taxa_juros_mora: taxaJurosMora, // Adicionar aqui também
+      taxa_juros_mora: taxaJurosMora,
       taxa_juros_moratorios: taxaJurosMora,
-      valorAtualizado: valorAtualizadoFinal,
-      valor_atualizado: valorAtualizadoFinal,
+      valorAtualizado: valorAtualizadoCalculado,
+      valor_atualizado: valorAtualizadoCalculado,
+      valorJuros: valorJurosMoraCalculado, // Atualiza juros também
+      juros_mora: valorJurosMoraCalculado,
+      multa: valorSelicOrig, // Garante que multa/selic seja passada
     })
   }
 
@@ -151,9 +160,9 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
               </div>
               {dados.valor_principal_original && (
                 <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Juros sobre o principal:</span>
+                  <span className="text-blue-700 dark:text-blue-300">Juros sobre Total (P+J+S):</span>
                   <span className="font-medium text-blue-900 dark:text-blue-100">
-                    {((dados.valor_principal_original * taxaJurosMora) / 100).toLocaleString("pt-BR", {
+                    {(((dados.valor_principal_original + (dados.valor_juros_original || 0) + (dados.multa || 0)) * taxaJurosMora) / 100).toLocaleString("pt-BR", {
                       style: "currency",
                       currency: "BRL",
                     })}
@@ -175,21 +184,21 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
             <h4 className="text-sm font-medium">Resultado da Atualização</h4>
             <div className="grid gap-2 md:grid-cols-2 text-sm">
               <div>
-                <span className="text-muted-foreground">Valor Original: </span>
+                <span className="text-muted-foreground">Valor Original (P+J+S): </span>
                 <span className="font-medium">
-                  {dados.valor_principal_original?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {totalBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </span>
               </div>
               <div>
                 <span className="text-muted-foreground">Valor Atualizado: </span>
                 <span className="font-medium">
-                  {resultado.valor_atualizado?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {valorAtualizadoCalculado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </span>
               </div>
               <div>
-                <span className="text-muted-foreground">Juros de Mora: </span>
+                <span className="text-muted-foreground">Juros de Mora (sobre Total): </span>
                 <span className="font-medium">
-                  {resultado.juros_mora?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  {valorJurosMoraCalculado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </span>
               </div>
             </div>

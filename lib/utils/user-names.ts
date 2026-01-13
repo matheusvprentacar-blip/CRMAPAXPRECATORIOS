@@ -8,6 +8,9 @@ export async function fetchUserNames(userIds: string[]): Promise<Record<string, 
   }
 
   const supabase = createBrowserClient()
+  if (!supabase) {
+    throw new Error("Supabase não configurado (URL/KEY ausentes)")
+  }
   const { data, error } = await supabase.from("usuarios").select("id, nome, email").in("id", uniqueIds)
 
   if (error) {

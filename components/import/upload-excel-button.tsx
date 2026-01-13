@@ -20,20 +20,25 @@ export function UploadExcelButton({ onSuccess }: UploadExcelButtonProps) {
     setUploading(true)
 
     try {
+      const { createBrowserClient } = await import('@/lib/supabase/client')
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error('Cliente Supabase não inicializado')
+
       // Criar FormData
       const formData = new FormData()
       formData.append('file', file)
 
-      // Enviar para API de análise
-      const response = await fetch('/api/import/excel/analyze', {
-        method: 'POST',
+      // Enviar para Edge Function
+      const { data, error } = await supabase.functions.invoke('analyze-excel', {
         body: formData,
       })
 
-      const data = await response.json()
+      if (error) {
+        throw new Error(error.message || 'Erro ao analisar planilha')
+      }
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Erro ao analisar planilha')
+      if (data.error) {
+        throw new Error(data.error)
       }
 
       toast.success('Planilha analisada!', {
@@ -67,7 +72,7 @@ export function UploadExcelButton({ onSuccess }: UploadExcelButtonProps) {
         onChange={handleFileSelect}
         className="hidden"
       />
-      
+
       <Button
         onClick={() => fileInputRef.current?.click()}
         disabled={uploading}

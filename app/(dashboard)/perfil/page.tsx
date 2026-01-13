@@ -25,6 +25,7 @@ import {
   Shield,
 } from "lucide-react"
 import { useAuth } from "@/lib/auth/auth-context"
+import { useTheme } from "next-themes"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { UploadFoto } from "@/components/perfil/upload-foto"
 import { buscarCEP, formatarCEP, validarCEP } from "@/lib/utils/cep"
@@ -44,6 +45,7 @@ const ROLE_DESCRIPTIONS = {
 
 export default function PerfilPage() {
   const { profile, updateProfile } = useAuth()
+  const { setTheme: setSystemTheme } = useTheme()
 
   // Estados - Informações Pessoais
   const [nome, setNome] = useState(profile?.nome || "")
@@ -112,6 +114,7 @@ export default function PerfilPage() {
         setDescricaoCargo(data.descricao_cargo || "")
         setNotificacoesEmail(data.notificacoes_email ?? true)
         setTema(data.tema || "system")
+        setSystemTheme(data.tema || "system")
       }
     } catch (error) {
       console.error("[Perfil] Erro ao carregar:", error)
@@ -265,7 +268,11 @@ export default function PerfilPage() {
     }
   }
 
-  const roleDescription = profile?.role ? ROLE_DESCRIPTIONS[profile.role as keyof typeof ROLE_DESCRIPTIONS] : ""
+  // Descrição das permissões (suporta múltiplas roles)
+  const roles = Array.isArray(profile?.role) ? profile.role : [profile?.role].filter(Boolean)
+  const roleDescriptions = roles.map(r => ROLE_DESCRIPTIONS[r as keyof typeof ROLE_DESCRIPTIONS]).filter(Boolean)
+  const roleDescription = roleDescriptions.length > 0 ? roleDescriptions.join(" ") : ""
+  const roleDisplay = roles.map(r => (r as string).replace(/_/g, " ")).join(", ").toUpperCase()
 
   return (
     <div className="space-y-6 max-w-5xl">
@@ -337,7 +344,7 @@ export default function PerfilPage() {
                 <Label htmlFor="role">Tipo de Conta</Label>
                 <Input
                   id="role"
-                  value={profile?.role?.replace(/_/g, " ").toUpperCase() || ""}
+                  value={roleDisplay || ""}
                   className="bg-muted capitalize"
                   disabled
                 />
@@ -485,7 +492,7 @@ export default function PerfilPage() {
               <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
                 <Shield className="h-4 w-4 text-blue-600" />
                 <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
-                  <strong>Permissões do seu perfil ({profile?.role?.replace(/_/g, " ")}):</strong>
+                  <strong>Permissões do seu perfil ({roleDisplay}):</strong>
                   <br />
                   {roleDescription}
                 </AlertDescription>
@@ -523,7 +530,13 @@ export default function PerfilPage() {
 
             <div className="space-y-2">
               <Label htmlFor="tema">Tema da Interface</Label>
-              <Select value={tema} onValueChange={setTema}>
+              <Select
+                value={tema}
+                onValueChange={(val) => {
+                  setTema(val)
+                  setSystemTheme(val)
+                }}
+              >
                 <SelectTrigger id="tema">
                   <SelectValue />
                 </SelectTrigger>

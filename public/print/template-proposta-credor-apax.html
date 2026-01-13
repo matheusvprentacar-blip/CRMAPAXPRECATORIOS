@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Proposta Apax - Credor</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-print-color-adjust: exact;
+            color: #1e293b;
+            line-height: 1.4;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* Timbrado Pássaro */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 440px;
+            transform: translate(-50%, -50%) rotate(-10deg);
+            opacity: 0.10;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid #0f172a;
+            padding-bottom: 5mm;
+            margin-bottom: 5mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-box {
+            width: 45mm;
+        }
+
+        .logo-box img {
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .company-info {
+            text-align: right;
+            font-size: 9pt;
+            color: #64748b;
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 14pt;
+            color: #0f172a;
+            text-transform: uppercase;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 5mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title h2 {
+            margin: 0;
+            font-size: 16pt;
+            text-transform: uppercase;
+            text-decoration: underline;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .section {
+            margin-bottom: 3mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-size: 10pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: #0f172a;
+            background: #f1f5f9;
+            padding: 1mm 3mm;
+            border-left: 4px solid #0f172a;
+            margin-bottom: 2mm;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1mm 5mm;
+            font-size: 10pt;
+        }
+
+        .grid p {
+            margin: 0;
+        }
+
+        .grid strong {
+            font-size: 8pt;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-right: 1mm;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1mm;
+            font-size: 9pt;
+        }
+
+        table th {
+            background: #f8fafc;
+            text-align: left;
+            padding: 2mm 3mm;
+            font-weight: 800;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        table td {
+            padding: 1.5mm 3mm;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .row-total {
+            background: #0f172a;
+            color: white;
+            font-weight: 800;
+            font-size: 11pt;
+        }
+
+        .row-subtotal {
+            background: #f1f5f9;
+            font-weight: 700;
+            color: #1e40af;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .content-text {
+            font-size: 9.5pt;
+            text-align: justify;
+            margin-top: 3mm;
+            color: #334155;
+        }
+
+        .content-text p {
+            margin-bottom: 1.5mm;
+        }
+
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20mm;
+            margin-top: 10mm;
+        }
+
+        .sig-box {
+            text-align: center;
+            font-size: 9pt;
+            height: 25mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .sig-line {
+            border-bottom: 1px solid #0f172a;
+            margin-bottom: 2mm;
+        }
+
+        .sig-box strong {
+            display: block;
+            margin-top: 2mm;
+        }
+
+        .footer {
+            position: absolute;
+            bottom: 8mm;
+            left: 10mm;
+            right: 10mm;
+            border-top: 1px solid #e2e8f0;
+            padding-top: 2mm;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+
+        .btn-print {
+            position: fixed;
+            top: 10mm;
+            right: 10mm;
+            padding: 3mm 6mm;
+            background: #0f172a;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        @media print {
+            .btn-print {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button class="btn-print" onclick="window.print()">Imprimir Proposta</button>
+
+    <div class="page" id="document">
+        <img src="/logo-apax.png" class="watermark" alt="Timbrado">
+
+        <header>
+            <div class="logo-box">
+                <img src="/logo-apax.png" alt="Logo Apax">
+            </div>
+            <div class="company-info">
+                <h1>Apax Investimentos Ltda.</h1>
+                <p>CNPJ: <span data-k="empresa.cnpj">09.121.790/0001-38</span></p>
+                <p data-k="empresa.endereco">Av. Paulista, 1000 - São Paulo/SP</p>
+            </div>
+        </header>
+
+        <div class="title">
+            <h2>Proposta de Aquisição de Crédito (Credor)</h2>
+        </div>
+
+        <section class="section">
+            <div class="section-title">1. Identificação do Negócio</div>
+            <div class="grid">
+                <p><strong>Cód. Interno:</strong> <span data-k="documento.codigo_interno">—</span></p>
+                <p><strong>Emissão:</strong> <span data-k="documento.data_emissao">—</span></p>
+                <p><strong>Credor:</strong> <span data-k="credor.nome">—</span></p>
+                <p><strong>CPF/CNPJ:</strong> <span data-k="credor.cpf_cnpj">—</span></p>
+                <p><strong>Número Processo:</strong> <span data-k="processo.numero">—</span></p>
+                <p><strong>Número Precatório:</strong> <span data-k="precatorio.numero">—</span></p>
+                <p><strong>Ofício:</strong> <span data-k="precatorio.oficio">—</span></p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-title">2. Demonstrativo de Valores</div>
+            <table>
+                <thead>
+                    <tr>
+                        <th>Descrição da Verba</th>
+                        <th class="text-right">Valor Integrado (BRL)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>Crédito Principal Atualizado (Bruto)</td>
+                        <td class="text-right" data-k="valores.credito_atualizado">—</td>
+                    </tr>
+                    <tr>
+                        <td>Honorários Contratuais Advogado</td>
+                        <td class="text-right" data-k="valores.honorarios">—</td>
+                    </tr>
+                    <tr>
+                        <td>Adiantamentos já recebidos</td>
+                        <td class="text-right" data-k="valores.adiantamento_recebido">—</td>
+                    </tr>
+                    <tr>
+                        <td>Previdência Oficial / PSS</td>
+                        <td class="text-right" data-k="valores.previdencia">—</td>
+                    </tr>
+                    <tr>
+                        <td>Imposto de Renda (IR RRA)</td>
+                        <td class="text-right" data-k="valores.ir_rra">—</td>
+                    </tr>
+                    <tr class="row-subtotal">
+                        <td>SALDO LÍQUIDO DISPONÍVEL AO CREDOR</td>
+                        <td class="text-right" data-k="valores.saldo_liquido_credor">—</td>
+                    </tr>
+                    <tr class="row-total">
+                        <td style="padding: 4mm 3mm;">VALOR LÍQUIDO DA PROPOSTA DE AQUISIÇÃO</td>
+                        <td class="text-right" style="padding: 4mm 3mm;" data-k="valores.proposta_credor">—</td>
+                    </tr>
+                </tbody>
+            </table>
+        </section>
+
+        <section class="section">
+            <div class="section-title">3. Condições e Objeto</div>
+            <div class="content-text">
+                <p><strong>CLÁUSULA 1 - OBJETO:</strong> <span data-k="textos.objeto">A presente proposta visa a cessão
+                        total e definitiva dos direitos creditórios oriundos do processo judicial acima identificado,
+                        livres de quaisquer ônus ou gravames, mediante escritura pública.</span></p>
+                <p><strong>CLÁUSULA 2 - PAGAMENTO:</strong> <span data-k="textos.pagamento">O pagamento será realizado
+                        em parcela única, via transferência bancária (TED/PIX), no ato da formalização da cessão em
+                        cartório ou conforme acordado entre as partes.</span></p>
+                <p><strong>CLÁUSULA 3 - CONDIÇÕES:</strong> <span data-k="textos.honorarios">A validade desta proposta é
+                        de 05 (cinco) dias úteis. A aprovação está sujeita a análise documental definitiva e
+                        inexistência de impedimentos jurídicos supervenientes.</span></p>
+            </div>
+        </section>
+
+        <div class="signatures">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <strong data-k="credor.nome">CREDOR</strong>
+                <span>Assinatura (Identidade)</span>
+            </div>
+            <div class="sig-box">
+                <strong data-k="empresa.representante_nome">APAX INVESTIMENTOS LTDA.</strong>
+                <span>Proponente</span>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Gerado por: <span data-k="documento.gerado_por">Sistema CRM Apax</span></p>
+            <p>Versão: <span data-k="documento.versao">1.0</span></p>
+            <p data-k="documento.observacoes">Documento estritamente confidencial para fins de negociação.</p>
+        </footer>
+    </div>
+
+    <script>
+        function render(data) {
+            if (!data.documento.data_emissao) {
+                const now = new Date();
+                data.documento.data_emissao = now.toLocaleDateString("pt-BR");
+            }
+
+            function getNestedValue(obj, path) {
+                return path.split('.').reduce((acc, part) => acc && acc[part], obj);
+            }
+
+            const formatMoney = (val) => {
+                const numeric = parseFloat(val);
+                if (isNaN(numeric)) return "R$ 0,00";
+                return numeric.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+            };
+
+            document.querySelectorAll('[data-k]').forEach(el => {
+                const key = el.getAttribute('data-k');
+                let value = getNestedValue(data, key);
+
+                if (value === undefined || value === null || value === "") {
+                    value = "—";
+                } else if (key.startsWith('valores.')) {
+                    value = formatMoney(value);
+                }
+
+                el.innerText = value;
+            });
+        }
+        window.render = render;
+    </script>
+</body>
+
+</html>

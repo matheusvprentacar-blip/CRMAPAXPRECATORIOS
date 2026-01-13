@@ -1,6 +1,5 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -25,12 +24,25 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { useToast } from "@/hooks/use-toast"
 import { createNewUser, updateUserRole } from "./actions"
+import { useState, useEffect } from "react"
+
+const AVAILABLE_ROLES = [
+  { value: "admin", label: "Administrador" },
+  { value: "operador_comercial", label: "Operador Comercial" },
+  { value: "operador_calculo", label: "Operador de Cálculo" },
+  { value: "operador", label: "Operador" },
+  { value: "analista", label: "Analista" },
+  { value: "gestor", label: "Gestor" },
+  { value: "gestor_certidoes", label: "Gestor de Certidões" },
+  { value: "gestor_oficio", label: "Gestor de Ofícios" },
+  { value: "juridico", label: "Jurídico" },
+]
 
 interface Usuario {
   id: string
   nome: string
   email: string
-  role: string
+  role: string[]  // Array de roles
   telefone: string | null
   foto_url: string | null
   ativo: boolean
@@ -42,7 +54,7 @@ export default function UsuariosPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [editingUser, setEditingUser] = useState<Usuario | null>(null)
-  const [newRole, setNewRole] = useState("")
+  const [newRole, setNewRole] = useState<string[]>([])
   const [saving, setSaving] = useState(false)
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState("")
@@ -53,7 +65,7 @@ export default function UsuariosPage() {
     email: "",
     password: "",
     nome: "",
-    role: "operador_comercial" as const,
+    role: ["operador_comercial"],
     autoConfirm: true,
   })
   const { toast } = useToast()
@@ -120,6 +132,38 @@ export default function UsuariosPage() {
     }
   }
 
+  function toggleRole(roleValue: string, isEditing: boolean) {
+    if (isEditing) {
+      setNewRole(prev => {
+        if (prev.includes(roleValue)) {
+          // Prevent removing the last role (optional, but good UX)
+          if (prev.length === 1) return prev
+          return prev.filter(r => r !== roleValue)
+        } else {
+          if (prev.length >= 2) {
+            toast({ title: "Limite atingido", description: "Máximo de 2 funções por usuário.", variant: "destructive" })
+            return prev
+          }
+          return [...prev, roleValue]
+        }
+      })
+    } else {
+      setNewUserData(prev => {
+        const currentRoles = prev.role
+        if (currentRoles.includes(roleValue)) {
+          if (currentRoles.length === 1) return prev
+          return { ...prev, role: currentRoles.filter(r => r !== roleValue) }
+        } else {
+          if (currentRoles.length >= 2) {
+            toast({ title: "Limite atingido", description: "Máximo de 2 funções por usuário.", variant: "destructive" })
+            return prev
+          }
+          return { ...prev, role: [...currentRoles, roleValue] }
+        }
+      })
+    }
+  }
+
   async function handleCreateUser() {
     const now = Date.now()
     const timeSinceLastAttempt = now - lastCreateAttempt
@@ -170,7 +214,7 @@ export default function UsuariosPage() {
         email: "",
         password: "",
         nome: "",
-        role: "operador_comercial",
+        role: ["operador_comercial"],
         autoConfirm: true,
       })
       setCreateUserOpen(false)
@@ -210,6 +254,10 @@ export default function UsuariosPage() {
         return "secondary"
       case "operador_calculo":
         return "outline"
+      case "juridico":
+        return "default"
+      case "gestor_certidoes":
+        return "secondary"
       default:
         return "secondary"
     }
@@ -258,7 +306,7 @@ export default function UsuariosPage() {
               <Shield className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{usuarios.filter((u) => u.role === "admin").length}</div>
+              <div className="text-2xl font-bold">{usuarios.filter((u) => u.role.includes("admin")).length}</div>
               <p className="text-xs text-muted-foreground">Com acesso total</p>
             </CardContent>
           </Card>
@@ -269,7 +317,7 @@ export default function UsuariosPage() {
               <Users className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{usuarios.filter((u) => u.role !== "admin").length}</div>
+              <div className="text-2xl font-bold">{usuarios.filter((u) => !u.role.includes("admin")).length}</div>
               <p className="text-xs text-muted-foreground">Comercial e Cálculo</p>
             </CardContent>
           </Card>
@@ -331,24 +379,20 @@ export default function UsuariosPage() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="new-role">Tipo de Conta</Label>
-                        <Select
-                          value={newUserData.role}
-                          onValueChange={(value: any) => setNewUserData((prev) => ({ ...prev, role: value }))}
-                          disabled={creatingUser}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="admin">Administrador</SelectItem>
-                            <SelectItem value="operador_comercial">Operador Comercial</SelectItem>
-                            <SelectItem value="operador_calculo">Operador de Cálculo</SelectItem>
-                            <SelectItem value="operador">Operador</SelectItem>
-                            <SelectItem value="analista">Analista</SelectItem>
-                            <SelectItem value="gestor">Gestor</SelectItem>
-                          </SelectContent>
-                        </Select>
+                        <Label>Tipo de Conta (Máx 2)</Label>
+                        <div className="grid grid-cols-2 gap-2 border p-4 rounded-md h-60 overflow-y-auto">
+                          {AVAILABLE_ROLES.map((role) => (
+                            <div key={role.value} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`create-role-${role.value}`}
+                                checked={newUserData.role.includes(role.value)}
+                                onCheckedChange={() => toggleRole(role.value, false)}
+                                disabled={creatingUser}
+                              />
+                              <Label htmlFor={`create-role-${role.value}`}>{role.label}</Label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                       <div className="flex items-center space-x-2">
                         <Checkbox
@@ -459,9 +503,13 @@ export default function UsuariosPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge variant={getRoleBadgeVariant(usuario.role)}>
-                            {usuario.role.replace(/_/g, " ").toUpperCase()}
-                          </Badge>
+                          <div className="flex gap-1">
+                            {usuario.role.map(r => (
+                              <Badge key={r} variant={getRoleBadgeVariant(r)}>
+                                {r.replace(/_/g, " ").toUpperCase()}
+                              </Badge>
+                            ))}
+                          </div>
                         </TableCell>
                         <TableCell className="text-right">
                           <Dialog
@@ -469,7 +517,11 @@ export default function UsuariosPage() {
                             onOpenChange={(open) => {
                               if (open) {
                                 setEditingUser(usuario)
-                                setNewRole(usuario.role)
+                                // Garantir que role seja array (compatibilidade com dados antigos)
+                                const roleArray = Array.isArray(usuario.role)
+                                  ? usuario.role
+                                  : (usuario.role ? [usuario.role] : [])
+                                setNewRole(roleArray)
                                 setError("")
                                 setSuccess(false)
                               } else {
@@ -500,20 +552,20 @@ export default function UsuariosPage() {
                                   </div>
                                 </div>
                                 <div className="space-y-2">
-                                  <Label htmlFor="role">Tipo de Conta</Label>
-                                  <Select value={newRole} onValueChange={setNewRole}>
-                                    <SelectTrigger>
-                                      <SelectValue />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      <SelectItem value="admin">Administrador</SelectItem>
-                                      <SelectItem value="operador_comercial">Operador Comercial</SelectItem>
-                                      <SelectItem value="operador_calculo">Operador de Cálculo</SelectItem>
-                                      <SelectItem value="operador">Operador</SelectItem>
-                                      <SelectItem value="analista">Analista</SelectItem>
-                                      <SelectItem value="gestor">Gestor</SelectItem>
-                                    </SelectContent>
-                                  </Select>
+                                  <Label>Tipo de Conta (Máx 2)</Label>
+                                  <div className="grid grid-cols-2 gap-2 border p-4 rounded-md h-60 overflow-y-auto">
+                                    {AVAILABLE_ROLES.map((role) => (
+                                      <div key={role.value} className="flex items-center space-x-2">
+                                        <Checkbox
+                                          id={`edit-role-${role.value}`}
+                                          checked={newRole.includes(role.value)}
+                                          onCheckedChange={() => toggleRole(role.value, true)}
+                                          disabled={saving}
+                                        />
+                                        <Label htmlFor={`edit-role-${role.value}`}>{role.label}</Label>
+                                      </div>
+                                    ))}
+                                  </div>
                                 </div>
                                 {error && (
                                   <Alert variant="destructive">
@@ -535,7 +587,7 @@ export default function UsuariosPage() {
                                 </Button>
                                 <Button
                                   onClick={() => handleEditarRole(usuario)}
-                                  disabled={saving || newRole === usuario.role}
+                                  disabled={saving || JSON.stringify(newRole.sort()) === JSON.stringify(usuario.role.sort())}
                                 >
                                   {saving ? (
                                     <>

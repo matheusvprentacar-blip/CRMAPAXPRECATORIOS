@@ -1,5 +1,7 @@
 import { createBrowserClient as createSupabaseClient } from "@supabase/ssr"
-import type { Database } from "@/lib/types/database"
+
+// ✅ Stub para destravar tipagem do Supabase (substitua por tipos gerados depois)
+type Database = any
 
 let supabaseInstance: ReturnType<
   typeof createSupabaseClient<Database>

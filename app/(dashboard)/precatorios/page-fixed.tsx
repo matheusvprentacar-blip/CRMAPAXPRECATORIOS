@@ -85,7 +85,7 @@ export default function PrecatoriosPage() {
         const { data } = await supabase
           .from("usuarios")
           .select("id, nome")
-          .eq("role", "operador_calculo")
+          .contains("role", ["operador_calculo"])
           .eq("ativo", true)
 
         if (data) setOperadoresCalculo(data)
@@ -218,8 +218,8 @@ export default function PrecatoriosPage() {
       {/* Busca e Filtros */}
       <div className="space-y-4">
         <div className="flex items-center gap-4">
-          <SearchBar 
-            value={searchTerm} 
+          <SearchBar
+            value={searchTerm}
             onChange={setTermo}
             onClear={() => setTermo("")}
           />

@@ -2,9 +2,10 @@
 
 import type React from "react"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { getSupabase } from "@/lib/supabase/client"
 import {
   LayoutDashboard,
   FileText,
@@ -19,6 +20,8 @@ import {
   Moon,
   Sun,
   User,
+  FileCheck,
+  Scroll,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -54,7 +57,31 @@ const navigation = [
     icon: Kanban,
     roles: ["admin", "operador_comercial", "operador", "operador_calculo"],
   },
+  {
+    name: "Propostas",
+    href: "/propostas",
+    icon: FileCheck,
+    roles: ["admin", "operador_comercial", "operador", "operador_calculo"],
+  },
+  {
+    name: "Jurídico",
+    href: "/juridico",
+    icon: Scale,
+    roles: ["admin", "juridico"],
+  },
   { name: "Fila de Cálculo", href: "/calculo", icon: Calculator, roles: ["admin", "operador_calculo"] },
+  {
+    name: "Gestão de Certidões",
+    href: "/gestao-certidoes",
+    icon: FileCheck,
+    roles: ["admin", "gestor_certidoes"]
+  },
+  {
+    name: "Gestão de Ofícios",
+    href: "/gestao-oficios",
+    icon: Scroll,
+    roles: ["admin", "gestor_oficio"]
+  },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
   { name: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["admin"] },
 ]
@@ -65,7 +92,42 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { profile, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
 
-  const filteredNavigation = navigation.filter((item) => profile && item.roles.includes(profile.role))
+  const [logoUrl, setLogoUrl] = useState<string | null>(null)
+  const [nomeEmpresa, setNomeEmpresa] = useState("CRM Precatórios")
+  const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
+
+  const filteredNavigation = navigation.filter((item) => {
+    if (!profile?.role) return false
+    // Garantir que role seja tratado como array
+    const userRoles = typeof profile.role === 'string' ? [profile.role] : profile.role
+
+    // Verificar se usuário tem QUALQUER uma das roles necessárias para este item
+    return item.roles.some(requiredRole => userRoles.includes(requiredRole as any))
+  })
+
+  useEffect(() => {
+    loadConfig()
+  }, [])
+
+  async function loadConfig() {
+    try {
+      const supabase = getSupabase()
+      if (!supabase) return
+
+      const { data } = await supabase
+        .from('configuracoes_sistema')
+        .select('logo_url, nome_empresa, subtitulo_empresa')
+        .single()
+
+      if (data) {
+        if (data.logo_url) setLogoUrl(data.logo_url)
+        if (data.nome_empresa) setNomeEmpresa(data.nome_empresa)
+        if (data.subtitulo_empresa) setSubtituloEmpresa(data.subtitulo_empresa)
+      }
+    } catch (error) {
+      console.error('Erro ao carregar configurações:', error)
+    }
+  }
 
   const getInitials = (nome: string) => {
     return nome
@@ -94,12 +156,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="flex flex-col h-full">
             {/* Logo */}
             <div className="flex items-center gap-3 p-6 border-b">
-              <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <Scale className="w-6 h-6 text-white" />
+              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+                <img
+                  src={logoUrl || "/logo-apax.png"}
+                  alt="Logo"
+                  className="object-contain w-full h-full"
+                />
               </div>
               <div>
-                <h1 className="text-lg font-bold">CRM Precatórios</h1>
-                <p className="text-xs text-muted-foreground">Sistema de Gestão</p>
+                <h1 className="text-lg font-bold">{nomeEmpresa}</h1>
+                <p className="text-xs text-muted-foreground">{subtituloEmpresa}</p>
               </div>
             </div>
 
@@ -114,14 +180,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors",
+                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group",
                       isActive
-                        ? "bg-primary text-primary-foreground"
+                        ? "bg-primary/10 text-primary border-l-4 border-primary rounded-l-none"
                         : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Icon className="w-5 h-5" />
+                    <Icon className={cn("w-5 h-5", isActive && "text-primary")} />
                     {item.name}
                   </Link>
                 )
@@ -137,7 +203,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 </Avatar>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium truncate">{profile?.nome}</p>
-                  <p className="text-xs text-muted-foreground capitalize">{profile?.role?.replace(/_/g, " ")}</p>
+                  <p className="text-xs text-muted-foreground capitalize">
+                    {(Array.isArray(profile?.role) ? profile.role : [profile?.role]).filter(Boolean).map(r => r?.replace(/_/g, " ")).join(" + ")}
+                  </p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -163,7 +231,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 {sidebarOpen ? <X /> : <Menu />}
               </Button>
-              <h2 className="text-lg font-semibold">CRM Precatórios</h2>
+              <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
               <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
               </Button>

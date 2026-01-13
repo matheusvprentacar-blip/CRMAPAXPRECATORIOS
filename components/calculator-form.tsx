@@ -13,13 +13,15 @@ interface CalculatorFormProps {
   onCalculate: (result: CalculationResult) => void
 }
 
+type CalculationType = "simple" | "compound"
+
 export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
   const [principalValue, setPrincipalValue] = useState("")
   const [startDate, setStartDate] = useState("")
   const [endDate, setEndDate] = useState("")
   const [interestRate, setInterestRate] = useState("1")
   const [correctionIndex, setCorrectionIndex] = useState("IPCA")
-  const [calculationType, setCalculationType] = useState("simple")
+  const [calculationType, setCalculationType] = useState<CalculationType>("simple")
 
   const calculatePrecatorio = () => {
     const principal = Number.parseFloat(principalValue.replace(/\D/g, "")) / 100
@@ -53,7 +55,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       endDate,
       interestRate: Number.parseFloat(interestRate),
       correctionIndex,
-      calculationType,
+      calculationType, // ✅ agora bate com "simple" | "compound"
       calculatedAt: new Date().toISOString(),
     }
 
@@ -132,7 +134,10 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
 
           <div className="space-y-2">
             <Label htmlFor="calculationType">Tipo de Cálculo</Label>
-            <Select value={calculationType} onValueChange={setCalculationType}>
+            <Select
+              value={calculationType}
+              onValueChange={(v) => setCalculationType(v as CalculationType)}
+            >
               <SelectTrigger id="calculationType">
                 <SelectValue />
               </SelectTrigger>

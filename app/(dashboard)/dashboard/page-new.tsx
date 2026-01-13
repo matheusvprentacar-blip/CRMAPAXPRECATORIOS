@@ -128,9 +128,9 @@ export default function DashboardPage() {
     const tempoMedioFila =
       emFila && emFila.length > 0
         ? emFila.reduce((sum: number, p: any) => {
-            const horas = (Date.now() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
-            return sum + horas
-          }, 0) / emFila.length
+          const horas = (Date.now() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
+          return sum + horas
+        }, 0) / emFila.length
         : 0
 
     // Tempo médio para finalizar
@@ -145,10 +145,10 @@ export default function DashboardPage() {
     const tempoMedioFinalizar =
       finalizados && finalizados.length > 0
         ? finalizados.reduce((sum: number, p: any) => {
-            const horas =
-              (new Date(p.data_calculo).getTime() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
-            return sum + horas
-          }, 0) / finalizados.length
+          const horas =
+            (new Date(p.data_calculo).getTime() - new Date(p.data_entrada_calculo).getTime()) / (1000 * 60 * 60)
+          return sum + horas
+        }, 0) / finalizados.length
         : 0
 
     // SLA estourado
@@ -168,7 +168,7 @@ export default function DashboardPage() {
   }
 
   // BLOCO 4: Operadores
-  async function fetchOperatorsData(supabase: any, userId?: string, userRole?: string) {
+  async function fetchOperatorsData(supabase: any, userId?: string, userRole?: string | string[]) {
     let query = supabase
       .from("precatorios")
       .select(
@@ -184,7 +184,10 @@ export default function DashboardPage() {
       .is("deleted_at", null)
 
     // Se não for admin, filtrar apenas o próprio operador
-    if (userRole !== "admin" && userId) {
+    const roles = Array.isArray(userRole) ? userRole : [userRole].filter(Boolean)
+    const isAdmin = roles.includes("admin")
+
+    if (!isAdmin && userId) {
       query = query.eq("responsavel_calculo_id", userId)
     }
 
@@ -290,7 +293,7 @@ export default function DashboardPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Dashboard Estratégico</h1>
           <p className="text-muted-foreground">
-            {profile?.role === "admin"
+            {Array.isArray(profile?.role) && profile.role.includes("admin")
               ? "Visão completa de todos os precatórios"
               : `Seu desempenho - ${profile?.nome}`}
           </p>

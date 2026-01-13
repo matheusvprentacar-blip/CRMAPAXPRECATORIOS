@@ -2,11 +2,11 @@
 
 import type React from "react"
 
-import { useAuth } from "./auth-context"
+import { useAuth, type UserRole } from "./auth-context"
 import { useRouter } from "next/navigation"
 import { useEffect } from "react"
 
-type UserRole = "admin" | "operador_comercial" | "operador_calculo" | "operador" | "analista" | "gestor"
+
 
 interface RoleGuardProps {
   children: React.ReactNode
@@ -19,8 +19,15 @@ export function RoleGuard({ children, allowedRoles, fallbackPath = "/dashboard" 
   const router = useRouter()
 
   useEffect(() => {
-    if (!loading && profile && !allowedRoles.includes(profile.role)) {
-      router.push(fallbackPath)
+    if (!loading && profile) {
+      // Verificar se o usuário tem alguma das roles permitidas
+      const hasPermission = Array.isArray(profile.role)
+        ? allowedRoles.some(role => profile.role.includes(role))
+        : allowedRoles.includes(profile.role as any)
+
+      if (!hasPermission) {
+        router.push(fallbackPath)
+      }
     }
   }, [profile, loading, allowedRoles, fallbackPath, router])
 
@@ -35,7 +42,14 @@ export function RoleGuard({ children, allowedRoles, fallbackPath = "/dashboard" 
     )
   }
 
-  if (!profile || !allowedRoles.includes(profile.role)) {
+  // Verificação de renderização
+  const hasPermission = profile && (
+    Array.isArray(profile.role)
+      ? allowedRoles.some(role => profile.role.includes(role))
+      : allowedRoles.includes(profile.role as any)
+  )
+
+  if (!hasPermission) {
     return null
   }
 

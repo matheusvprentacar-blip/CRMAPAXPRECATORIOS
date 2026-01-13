@@ -27,6 +27,9 @@ export async function uploadAndAttachPdf({
   }
 
   const supabase = createBrowserClient()
+  if (!supabase) {
+    throw new Error("Supabase não configurado (URL/KEY ausentes)")
+  }
   const bucket = "precatorios-pdf"
 
   // Sanitizar nome do arquivo
@@ -76,6 +79,9 @@ export async function getPdfViewerUrl(pdfUrl: string | null): Promise<string | n
   // Se começar com storage:, gerar signed URL
   if (pdfUrl.startsWith("storage:")) {
     const supabase = createBrowserClient()
+  if (!supabase) {
+    throw new Error("Supabase não configurado (URL/KEY ausentes)")
+  }
 
     // Parse: storage:precatorios-pdf/precatorios/xxx/file.pdf
     const match = pdfUrl.match(/^storage:([^/]+)\/(.+)$/)

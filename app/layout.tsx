@@ -5,7 +5,8 @@ import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
-import { ClientToaster } from "@/components/client-toaster";
+import { ClientToaster } from "@/components/client-toaster"
+import { PDFViewerProvider } from "@/components/providers/pdf-viewer-provider"
 
 const _geist = Geist({ subsets: ["latin"] })
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
@@ -42,8 +43,12 @@ export default function RootLayout({
     <html lang="pt-BR" suppressHydrationWarning>
       <body className={`font-sans antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
-          <AuthProvider>{children}</AuthProvider>
-        <ClientToaster />
+          <AuthProvider>
+            <PDFViewerProvider>
+              {children}
+            </PDFViewerProvider>
+          </AuthProvider>
+          <ClientToaster />
         </ThemeProvider>
         <Analytics />
       </body>

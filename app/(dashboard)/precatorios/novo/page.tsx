@@ -61,6 +61,7 @@ export default function NovoPrecatorioPage() {
           data_expedicao: formData.data_expedicao,
           contatos: formData.contatos,
           criado_por: userData.user?.id,
+          responsavel: userData.user?.id, // Satisfy 'Comercial insere seus' RLS check
           status: "novo",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
@@ -243,8 +244,18 @@ export default function NovoPrecatorioPage() {
             <CardContent>
               <Textarea
                 placeholder="Adicione observações sobre este precatório..."
-                value={formData.contatos || ""}
-                onChange={(e) => setFormData({ ...formData, contatos: e.target.value })}
+                value={(formData.contatos || []).map((c: any) => String(c)).join("\n")}
+                onChange={(e) =>
+                  setFormData({
+                    ...formData,
+                    contatos: e.target.value
+                      .split("\n")
+                      .map((s) => s.trim())
+                      .filter(Boolean),
+                  })
+                }
+
+
                 rows={4}
               />
             </CardContent>

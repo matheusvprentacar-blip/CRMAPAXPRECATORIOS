@@ -2,6 +2,9 @@ import { createBrowserClient } from "@/lib/supabase/client"
 
 export async function uploadPrecatorioPdf(file: File, precatorioId: string): Promise<string> {
   const supabase = createBrowserClient()
+  if (!supabase) {
+    throw new Error("Supabase não configurado (URL/KEY ausentes)")
+  }
   const bucket = "precatorios-pdf"
   const filePath = `precatorios/${precatorioId}/${Date.now()}-${file.name}`
 
@@ -46,6 +49,9 @@ export async function getPdfSignedUrl(storagePath: string): Promise<string | nul
   }
 
   const supabase = createBrowserClient()
+  if (!supabase) {
+    throw new Error("Supabase não configurado (URL/KEY ausentes)")
+  }
 
   // Parse: "storage:precatorios-pdf/precatorios/123/file.pdf"
   const pathWithoutPrefix = storagePath.replace("storage:", "")
