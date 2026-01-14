@@ -58,8 +58,9 @@ export default function PrecatoriosPage() {
   const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
   const [deletingBatch, setDeletingBatch] = useState(false)
 
-  // Filtrar precatórios em cálculo para operador de cálculo
-  const precatorios = userRole?.includes("operador_calculo")
+  // Filtrar precatórios em cálculo para operador de cálculo (exceto se for admin ou gestor)
+  const isCalculoOnly = userRole?.includes("operador_calculo") && !userRole?.includes("admin") && !userRole?.includes("gestor")
+  const precatorios = isCalculoOnly
     ? precatoriosRaw.filter(p => p.status !== "em_calculo")
     : precatoriosRaw
 
@@ -214,7 +215,7 @@ export default function PrecatoriosPage() {
   }
 
   const canDelete = (precatorio: Precatorio) => {
-    if (userRole?.includes("admin")) return true
+    if (userRole?.includes("admin") || userRole?.includes("gestor")) return true
     if (userRole?.includes("operador_comercial")) {
       return precatorio.criado_por === authUserId
     }

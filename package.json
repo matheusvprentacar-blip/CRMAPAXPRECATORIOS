@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "tauri": "tauri build"
   },
   "overrides": {
     "@radix-ui/react-slot": "^1.2.4"
@@ -29,6 +30,8 @@
     "@radix-ui/react-toast": "^1.2.15",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
+    "@tauri-apps/plugin-process": "^2.3.1",
+    "@tauri-apps/plugin-updater": "^2.9.0",
     "@vercel/analytics": "latest",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",

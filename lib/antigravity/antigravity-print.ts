@@ -42,30 +42,52 @@ export async function antigravityPrint({ tipo, data, validacao }: PrintConfig) {
 
         const html = await response.text()
 
-        // 4. Abrir nova janela e injetar
-        const win = window.open("", "_blank", "width=900,height=1000")
-        if (!win) {
-            throw new Error("O bloqueador de pop-ups impediu a abertura da proposta. Por favor, habilite pop-ups para este site.")
+        // 4. Criação do Iframe oculta para impressão (Bypass Popup Blockers)
+        const iframeId = "print-frame-antigravity"
+        let iframe = document.getElementById(iframeId) as HTMLIFrameElement
+
+        if (!iframe) {
+            iframe = document.createElement("iframe")
+            iframe.id = iframeId
+            // Estilo para esconder visualmente mas manter renderizável
+            iframe.style.position = "fixed"
+            iframe.style.left = "-9999px"
+            iframe.style.top = "0px"
+            iframe.style.width = "210mm" // A4 width
+            iframe.style.height = "297mm" // A4 height
+            iframe.style.border = "none"
+            document.body.appendChild(iframe)
         }
 
-        win.document.open()
-        win.document.write(html)
-        win.document.close()
+        const doc = iframe.contentWindow?.document
+        if (!doc) throw new Error("Não foi possível acessar o contexto de impressão.")
 
-        // 5. Chamar o renderizador do template quando carregar
-        // Damos um pequeno timeout para garantir que os scripts do HTML foram parseados
-        win.onload = () => {
-            if ((win as any).render) {
-                (win as any).render(printData)
+        doc.open()
+        doc.write(html)
+        doc.close()
+
+        // 5. Chamar o renderizador e imprimir
+        const triggerPrint = () => {
+            if ((iframe.contentWindow as any).render) {
+                (iframe.contentWindow as any).render(printData)
             }
+            // Pequeno delay para garantir renderização de imagens/fontes
+            setTimeout(() => {
+                iframe.contentWindow?.focus()
+                iframe.contentWindow?.print()
+
+                // Opcional: Remover iframe depois?
+                // document.body.removeChild(iframe) 
+                // Melhor manter para reuso ou limpar no próximo
+            }, 500)
         }
 
-        // Fallback caso o onload não dispare (comum em escritas dinâmicas)
-        setTimeout(() => {
-            if ((win as any).render) {
-                (win as any).render(printData)
-            }
-        }, 500)
+        if (iframe.contentWindow) {
+            iframe.contentWindow.onload = triggerPrint
+        } else {
+            // Fallback imediato
+            triggerPrint()
+        }
 
     } catch (error: any) {
         console.error("[AntigravityPrint] Erro:", error)

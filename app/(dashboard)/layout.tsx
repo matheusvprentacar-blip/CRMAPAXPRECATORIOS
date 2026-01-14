@@ -37,50 +37,51 @@ import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/auth-context"
 import { ProtectedRoute } from "@/lib/auth/protected-route"
 import { useTheme } from "next-themes"
+import { UpdateChecker } from "@/components/settings/update-checker"
 
 const navigation = [
   {
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["admin", "operador_comercial", "operador_calculo", "operador"],
+    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor"],
   },
   {
     name: "Precatórios",
     href: "/precatorios",
     icon: FileText,
-    roles: ["admin", "operador_comercial", "operador_calculo", "operador"],
+    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor"],
   },
   {
     name: "Kanban",
     href: "/kanban",
     icon: Kanban,
-    roles: ["admin", "operador_comercial", "operador", "operador_calculo"],
+    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor"],
   },
   {
     name: "Propostas",
     href: "/propostas",
     icon: FileCheck,
-    roles: ["admin", "operador_comercial", "operador", "operador_calculo"],
+    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor"],
   },
   {
     name: "Jurídico",
     href: "/juridico",
     icon: Scale,
-    roles: ["admin", "juridico"],
+    roles: ["admin", "juridico", "gestor"],
   },
-  { name: "Fila de Cálculo", href: "/calculo", icon: Calculator, roles: ["admin", "operador_calculo"] },
+  { name: "Fila de Cálculo", href: "/calculo", icon: Calculator, roles: ["admin", "operador_calculo", "gestor"] },
   {
     name: "Gestão de Certidões",
     href: "/gestao-certidoes",
     icon: FileCheck,
-    roles: ["admin", "gestor_certidoes"]
+    roles: ["admin", "gestor_certidoes", "gestor"]
   },
   {
     name: "Gestão de Ofícios",
     href: "/gestao-oficios",
     icon: Scroll,
-    roles: ["admin", "gestor_oficio"]
+    roles: ["admin", "gestor_oficio", "gestor"]
   },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
   { name: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["admin"] },
@@ -195,8 +196,9 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </nav>
 
             {/* User section */}
-            <div className="p-4 border-t">
-              <div className="flex items-center gap-3 mb-3">
+            <div className="p-4 border-t space-y-3">
+              <UpdateChecker />
+              <div className="flex items-center gap-3">
                 <Avatar>
                   <AvatarImage src={profile?.foto_url || "/placeholder.svg"} />
                   <AvatarFallback>{profile?.nome ? getInitials(profile.nome) : "U"}</AvatarFallback>

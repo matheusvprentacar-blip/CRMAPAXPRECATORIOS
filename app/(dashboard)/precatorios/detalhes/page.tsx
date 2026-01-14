@@ -11,6 +11,7 @@ import { Separator } from "@/components/ui/separator"
 import { Textarea } from "@/components/ui/textarea"
 import { Switch } from "@/components/ui/switch"
 import { toast } from "@/components/ui/use-toast"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
   ArrowLeft,
   Building2,
@@ -21,6 +22,7 @@ import {
   User,
   Users,
   AlertCircle,
+  ExternalLink,
   CheckCircle2,
   Clock,
   XCircle,
@@ -210,6 +212,13 @@ export default function PrecatorioDetailPage() {
         cessionario: editData.cessionario,
         contatos: editData.contatos,
         observacoes: editData.observacoes,
+        banco: editData.banco,
+        agencia: editData.agencia,
+        conta: editData.conta,
+        tipo_conta: editData.tipo_conta,
+        chave_pix: editData.chave_pix,
+        tipo_chave_pix: editData.tipo_chave_pix,
+        observacoes_bancarias: editData.observacoes_bancarias,
         updated_at: new Date().toISOString(),
       }
 
@@ -605,6 +614,138 @@ export default function PrecatorioDetailPage() {
                   <label className="text-sm font-medium text-muted-foreground">Status</label>
                   <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "—"}</p>
                 </div>
+              </CardContent>
+            </Card>
+
+            {/* Dados Bancários */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5" />
+                  Dados Bancários
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {isEditing ? (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Banco</Label>
+                        <Input
+                          placeholder="Ex: Banco do Brasil"
+                          value={editData.banco || ""}
+                          onChange={(e) => setEditData({ ...editData, banco: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Tipo de Conta</Label>
+                        <Select
+                          value={editData.tipo_conta || "corrente"}
+                          onValueChange={(value) => setEditData({ ...editData, tipo_conta: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="corrente">Conta Corrente</SelectItem>
+                            <SelectItem value="poupanca">Conta Poupança</SelectItem>
+                            <SelectItem value="pagamento">Conta de Pagamento</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Agência</Label>
+                        <Input
+                          placeholder="Sem dígito"
+                          value={editData.agencia || ""}
+                          onChange={(e) => setEditData({ ...editData, agencia: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label>Conta</Label>
+                        <Input
+                          placeholder="Com dígito"
+                          value={editData.conta || ""}
+                          onChange={(e) => setEditData({ ...editData, conta: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <Separator className="my-2" />
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label>Tipo Chave PIX</Label>
+                        <Select
+                          value={editData.tipo_chave_pix || "cpf"}
+                          onValueChange={(value) => setEditData({ ...editData, tipo_chave_pix: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Selecione..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="cpf">CPF/CNPJ</SelectItem>
+                            <SelectItem value="email">E-mail</SelectItem>
+                            <SelectItem value="telefone">Telefone</SelectItem>
+                            <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div>
+                        <Label>Chave PIX</Label>
+                        <Input
+                          value={editData.chave_pix || ""}
+                          onChange={(e) => setEditData({ ...editData, chave_pix: e.target.value })}
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <Label>Observações Bancárias</Label>
+                      <Textarea
+                        value={editData.observacoes_bancarias || ""}
+                        onChange={(e) => setEditData({ ...editData, observacoes_bancarias: e.target.value })}
+                        placeholder="Ex: Pagamento somente em nome do titular..."
+                      />
+                    </div>
+                  </>
+                ) : (
+                  <>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Banco</label>
+                        <p className="text-base">{precatorio.banco || "—"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Tipo</label>
+                        <p className="text-base capitalize">{precatorio.tipo_conta || "—"}</p>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Agência</label>
+                        <p className="text-base">{precatorio.agencia || "—"}</p>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium text-muted-foreground">Conta</label>
+                        <p className="text-base">{precatorio.conta || "—"}</p>
+                      </div>
+                    </div>
+                    {precatorio.chave_pix && (
+                      <div className="bg-muted/30 p-3 rounded-md border mt-2">
+                        <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                          <ExternalLink className="h-3 w-3" /> PIX ({precatorio.tipo_chave_pix || "Chave"})
+                        </label>
+                        <p className="text-base font-mono mt-1 select-all">{precatorio.chave_pix}</p>
+                      </div>
+                    )}
+                    {precatorio.observacoes_bancarias && (
+                      <div className="mt-2">
+                        <label className="text-sm font-medium text-muted-foreground">Observações</label>
+                        <p className="text-sm mt-1">{precatorio.observacoes_bancarias}</p>
+                      </div>
+                    )}
+                  </>
+                )}
               </CardContent>
             </Card>
 

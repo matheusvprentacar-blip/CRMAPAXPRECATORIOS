@@ -106,9 +106,9 @@ export default function FilaCalculoPage() {
         query = query.in("status", ["calculo_concluido", "calculado"])
       }
 
-      // Se for operador de cálculo (e não for admin), filtrar apenas os atribuídos a ele
+      // Se for operador de cálculo (e não for admin/gestor), filtrar apenas os atribuídos a ele
       const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
-      const isAdmin = roles.includes("admin")
+      const isAdmin = roles.includes("admin") || roles.includes("gestor")
 
       if (roles.includes("operador_calculo") && !isAdmin) {
         // Filtrar: (responsavel = usuario ID) OU (responsavel IS NULL)

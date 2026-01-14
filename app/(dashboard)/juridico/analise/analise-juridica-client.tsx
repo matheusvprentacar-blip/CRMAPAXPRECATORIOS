@@ -66,7 +66,7 @@ function AnaliseJuridicaContent() {
     }
 
     return (
-        <RoleGuard allowedRoles={['admin', 'juridico']}>
+        <RoleGuard allowedRoles={['admin', 'juridico', 'gestor']}>
             <div className="container mx-auto max-w-4xl p-6 space-y-6">
                 <div className="flex items-center gap-4">
                     <Button

@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button"
 import { RefreshCw } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
+import { FinancialOverview } from "@/components/dashboard/financial-overview"
 import { ComplexityOverview } from "@/components/dashboard/complexity-overview"
 import { DelayBottlenecks } from "@/components/dashboard/delay-bottlenecks"
 import { PerformanceMetrics } from "@/components/dashboard/performance-metrics"
@@ -32,12 +33,13 @@ export default function DashboardPage() {
       setRefreshing(true)
 
       // Carregar todas as métricas em paralelo
-      const [complexity, bottlenecks, performance, operators, critical] = await Promise.all([
+      const [complexity, bottlenecks, performance, operators, critical, financial] = await Promise.all([
         fetchComplexityData(supabase),
         fetchBottlenecksData(supabase),
         fetchPerformanceData(supabase),
         fetchOperatorsData(supabase, profile?.id, profile?.role as any),
         fetchCriticalData(supabase),
+        fetchFinancialData(supabase),
       ])
 
       setMetrics({
@@ -46,6 +48,7 @@ export default function DashboardPage() {
         performance,
         operators,
         critical,
+        financial,
       })
     } catch (error) {
       console.error("[DASHBOARD] Erro ao carregar métricas:", error)
@@ -338,6 +341,36 @@ export default function DashboardPage() {
     return data || []
   }
 
+  // BLOCO 6: Financeiro
+  async function fetchFinancialData(supabase: any) {
+    let query = supabase
+      .from("precatorios")
+      .select("valor_principal, valor_atualizado")
+      .is("deleted_at", null)
+
+    // Filtrar por role
+    const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+    if (roles.includes("operador_comercial")) {
+      query = query.or(`criado_por.eq.${profile!.id},responsavel.eq.${profile!.id}`)
+    } else if (roles.includes("operador_calculo")) {
+      // Operador de cálculo vê tudo ou apenas o dele?
+      // Geralmente vê o valor do que está trabalhando, mas aqui vamos manter a lógica de restrição
+      query = query.or(`responsavel_calculo_id.eq.${profile!.id},responsavel.eq.${profile!.id},criado_por.eq.${profile!.id}`)
+    }
+
+    const { data, error } = await query
+
+    if (error) throw error
+
+    const totalPrincipal = data?.reduce((acc: number, item: any) => acc + (Number(item.valor_principal) || 0), 0) || 0
+    const totalAtualizado = data?.reduce((acc: number, item: any) => acc + (Number(item.valor_atualizado) || 0), 0) || 0
+
+    return {
+      totalPrincipal,
+      totalAtualizado
+    }
+  }
+
   const handleRefresh = () => {
     loadDashboardMetrics()
   }
@@ -352,6 +385,9 @@ export default function DashboardPage() {
       </div>
     )
   }
+
+  // Fallback seguro se metrics for null
+  const financialData = metrics?.financial || { totalPrincipal: 0, totalAtualizado: 0 }
 
   return (
     <div className="space-y-6">
@@ -373,6 +409,9 @@ export default function DashboardPage() {
 
       {metrics && (
         <>
+          {/* BLOCO 0: Visão Financeira */}
+          <FinancialOverview data={financialData} loading={refreshing} />
+
           {/* BLOCO 1: Visão por Complexidade */}
           <ComplexityOverview data={metrics.complexity} loading={refreshing} />
 

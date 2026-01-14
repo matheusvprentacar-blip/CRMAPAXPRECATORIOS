@@ -36,7 +36,7 @@ export default function PropostasPage() {
     const [selectedId, setSelectedId] = useState<string | null>(null)
     const [modalOpen, setModalOpen] = useState(false)
 
-    const isAdmin = profile?.role?.includes("admin")
+    const isAdmin = profile?.role?.includes("admin") || profile?.role?.includes("gestor")
 
     useEffect(() => {
         if (profile) {

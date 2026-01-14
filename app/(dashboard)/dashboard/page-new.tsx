@@ -46,6 +46,7 @@ export default function DashboardPage() {
         performance,
         operators,
         critical,
+        financial: { totalPrincipal: 0, totalAtualizado: 0 },
       })
     } catch (error) {
       console.error("[DASHBOARD] Erro ao carregar métricas:", error)

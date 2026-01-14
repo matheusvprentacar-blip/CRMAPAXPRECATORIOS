@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { filtrosToRpcParams, getFiltrosAtivos } from "@/lib/types/filtros"
-import { useDebounce } from "@/hooks/use-debounce"
+
 
 export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
   const [filtros, setFiltros] = useState<FiltrosPrecatorios>(initialFiltros)
@@ -15,13 +15,13 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
 
   const supabase = createBrowserClient()
 
-  // Debounce do termo de busca para evitar muitas requisições
-  const debouncedTermo = useDebounce(filtros.termo, 500)
+  // Busca direta (controlada pelo SearchBar manual)
+  const termoBusca = filtros.termo
 
   const buscar = useCallback(async () => {
     console.log("🔍 [DEBUG] usePrecatoriosSearch - Iniciando busca")
     console.log("🔍 [DEBUG] Supabase disponível:", !!supabase)
-    
+
     if (!supabase) {
       console.warn("⚠️ [DEBUG] Supabase não disponível, abortando busca")
       return
@@ -32,11 +32,11 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
 
     try {
       console.log("🔍 [DEBUG] Filtros originais:", filtros)
-      console.log("🔍 [DEBUG] Termo debounced:", debouncedTermo)
-      
+      console.log("🔍 [DEBUG] Termo:", termoBusca)
+
       const params = filtrosToRpcParams({
         ...filtros,
-        termo: debouncedTermo,
+        termo: termoBusca,
       })
 
       console.log("🔍 [DEBUG] Parâmetros RPC:", JSON.stringify(params, null, 2))
@@ -74,7 +74,7 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
       setLoading(false)
       console.log("🔍 [DEBUG] Busca finalizada (loading = false)")
     }
-  }, [supabase, filtros, debouncedTermo])
+  }, [supabase, filtros, termoBusca])
 
   // Executar busca quando filtros mudarem
   useEffect(() => {

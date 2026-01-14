@@ -55,10 +55,16 @@ export interface CriticalPrecatorio {
   score_criticidade: number
 }
 
+export interface FinancialMetrics {
+  totalPrincipal: number
+  totalAtualizado: number
+}
+
 export interface DashboardMetrics {
   complexity: ComplexityMetrics
   bottlenecks: BottleneckItem[]
   performance: PerformanceMetrics
   operators: OperatorMetrics[]
   critical: CriticalPrecatorio[]
+  financial: FinancialMetrics
 }
