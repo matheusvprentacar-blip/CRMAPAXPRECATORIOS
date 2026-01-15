@@ -1,6 +1,6 @@
 {
     "name":  "Blackbox AI clone",
-    "version":  "0.5.22",
+    "version":  "0.5.24",
     "private":  true,
     "scripts":  {
                     "dev":  "next dev",
