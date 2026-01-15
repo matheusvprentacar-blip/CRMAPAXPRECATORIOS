@@ -1,13 +1,13 @@
 {
     "name":  "Blackbox AI clone",
-    "version":  "0.5.3",
+    "version":  "0.5.5",
     "private":  true,
     "scripts":  {
                     "dev":  "next dev",
                     "build":  "next build",
                     "start":  "next start",
                     "lint":  "next lint",
-                    "tauri":  "tauri build"
+                    "tauri":  "tauri"
                 },
     "overrides":  {
                       "@radix-ui/react-slot":  "^1.2.4"
