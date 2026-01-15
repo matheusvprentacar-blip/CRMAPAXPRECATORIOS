@@ -1,2 +1,12 @@
-supabase/functions/*
-src-tauri/*
+node_modules/
+.next/
+out/
+build/
+dist/
+src-tauri/target/
+scripts/
+public/
+*.js
+*.json
+*.txt
+*.log

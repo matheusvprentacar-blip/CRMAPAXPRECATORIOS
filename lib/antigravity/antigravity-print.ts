@@ -14,9 +14,27 @@ interface PrintConfig {
         comercial_ok?: boolean
         admin_ok?: boolean
     }
+    customTexts?: {
+        objeto?: string
+        pagamento?: string
+        honorarios?: string
+    }
+    proposalConfig?: any // Configuração dinâmica de campos
 }
 
-export async function antigravityPrint({ tipo, data, validacao }: PrintConfig) {
+// Mapeamento de chaves para valores e sinais (para cálculo de soma visível)
+const FIELD_MAP: Record<string, { sign: number, getValue: (v: any) => number }> = {
+    'credito_atualizado': { sign: 1, getValue: (v) => v.credito_atualizado },
+    'honorarios': { sign: -1, getValue: (v) => v.honorarios },
+    'adiantamento_recebido': { sign: -1, getValue: (v) => v.adiantamento_recebido },
+    'previdencia': { sign: -1, getValue: (v) => v.previdencia },
+    'ir_rra': { sign: -1, getValue: (v) => v.ir_rra },
+    // Saldo líquido e Proposta são resultados, não entram na soma simples dos componentes acima geralmente, 
+    // mas se o usuário quiser recalcular o "Saldo Disponível" based on visible lines, we sum the components.
+    // O campo 'saldo_liquido_credor' is usually the result.
+}
+
+export async function antigravityPrint({ tipo, data, validacao, customTexts, proposalConfig }: PrintConfig) {
     // 1. Validar se está aprovado por todos
     const aprovado =
         validacao.calculo_ok &&
@@ -29,12 +47,17 @@ export async function antigravityPrint({ tipo, data, validacao }: PrintConfig) {
     }
 
     // 2. Normalizar e preparar o objeto para o template (data-k)
-    const printData = buildPropostaData(data)
+    // Se tiver config e for tipo Credor, usamos a lógica dinâmica
+    const printData = buildPropostaData(data, customTexts, proposalConfig)
 
     // 3. Carregar o template HTML
-    const templatePath = tipo === "credor"
-        ? "/print/template-proposta-credor-apax.html"
-        : "/print/template-proposta-honorarios-apax.html"
+    let templatePath = "/print/template-proposta-credor-apax.html"; // Fallback
+
+    if (tipo === "credor") {
+        templatePath = "/print/template-proposta-dynamic.html"; // Usar sempre o dinâmico para credor agora (se não tiver config, usa default internas)
+    } else {
+        templatePath = "/print/template-proposta-honorarios-apax.html";
+    }
 
     try {
         const response = await fetch(templatePath, { cache: "no-store" })
@@ -98,7 +121,72 @@ export async function antigravityPrint({ tipo, data, validacao }: PrintConfig) {
 /**
  * Normaliza os dados do precatório para o esquema esperado pelos templates (data-k)
  */
-function buildPropostaData(p: any) {
+function buildPropostaData(p: any, customTexts?: any, config?: any) {
+    const valoresRaw = {
+        credito_atualizado: p.valor_atualizado || 0,
+        honorarios: p.honorarios_valor || 0,
+        proposta_advogado: p.proposta_advogado_valor || 0,
+        adiantamento_recebido: p.adiantamento_valor || 0,
+        ir_rra: p.irpf_valor || 0,
+        previdencia: p.pss_valor || 0,
+        saldo_liquido_credor: p.saldo_liquido || 0,
+        proposta_credor: p.proposta_maior_valor || p.proposta_menor_valor || 0
+    };
+
+    // Construção das linhas dinâmicas (Rows)
+    let rows: any[] = [];
+
+    // Configuração Default se não houver
+    const itemsConfig = config?.items || [
+        { key: 'credito_atualizado', label: 'Crédito Principal Atualizado (Bruto)', visible: true, showValue: true },
+        { key: 'honorarios', label: 'Honorários Contratuais Advogado (-)', visible: true, showValue: true },
+        { key: 'adiantamento_recebido', label: 'Adiantamentos já recebidos (-)', visible: true, showValue: true },
+        { key: 'previdencia', label: 'Previdência Oficial / PSS (-)', visible: true, showValue: true },
+        { key: 'ir_rra', label: 'Imposto de Renda / IR RRA (-)', visible: true, showValue: true },
+        { key: 'saldo_liquido_credor', label: 'SALDO LÍQUIDO DISPONÍVEL AO CREDOR', visible: true, showValue: true, isTotal: true },
+        { key: 'proposta_credor', label: 'PROPOSTA DE COMPRA DE CRÉDITO', visible: true, showValue: true, isTotal: true }
+    ];
+
+    const totalMode = config?.totalMode || 'internal';
+    let calculatedTotal = 0;
+
+    // Se modo for soma visível, iteramos para somar primeiro
+    if (totalMode === 'sum_visible') {
+        itemsConfig.forEach((item: any) => {
+            if (item.visible && !item.isTotal && FIELD_MAP[item.key]) {
+                const def = FIELD_MAP[item.key];
+                const val = def.getValue(valoresRaw);
+                calculatedTotal += (val * def.sign);
+            }
+        });
+    }
+
+    rows = itemsConfig.map((item: any) => {
+        let val = 0;
+        // Se for campo conhecido mapeado
+        if (FIELD_MAP[item.key]) {
+            val = FIELD_MAP[item.key].getValue(valoresRaw);
+        }
+        // Se for Totais explícitos
+        else if (item.key === 'saldo_liquido_credor') {
+            val = totalMode === 'sum_visible' ? calculatedTotal : valoresRaw.saldo_liquido_credor;
+        }
+        else if (item.key === 'proposta_credor') {
+            // Proposta quase sempre é valor fixo negociado, não soma de componentes (exceto se definido diferente)
+            // Mantemos valor original da proposta, a menos que haja regra diferente
+            val = valoresRaw.proposta_credor;
+        }
+
+        return {
+            ...item,
+            value: val,
+            valueFormatted: new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(val)
+        };
+    });
+
+    // Filtrar apenas linhas visíveis
+    rows = rows.filter((r: any) => r.visible);
+
     return {
         empresa: {
             cnpj: "09.121.790/0001-38",
@@ -127,20 +215,12 @@ function buildPropostaData(p: any) {
             numero: p.numero_precatorio || "N/A",
             oficio: p.numero_oficio || "N/A"
         },
-        valores: {
-            credito_atualizado: p.valor_atualizado || 0,
-            honorarios: p.honorarios_valor || 0,
-            proposta_advogado: p.proposta_advogado_valor || 0, // Fallback se o campo não existir no objeto
-            adiantamento_recebido: p.adiantamento_valor || 0,
-            ir_rra: p.irpf_valor || 0,
-            previdencia: p.pss_valor || 0,
-            saldo_liquido_credor: p.saldo_liquido || 0,
-            proposta_credor: p.proposta_maior_valor || p.proposta_menor_valor || 0
-        },
+        valores: valoresRaw, // Mantemos bruto caso template legacy ainda use
+        rows: rows, // Novo array dinâmico
         textos: {
-            objeto: "A presente proposta visa a cessão total e definitiva dos direitos creditórios oriundos do processo judicial acima identificado.",
-            pagamento: "O pagamento será realizado em parcela única via transferência bancária no ato da assinatura.",
-            honorarios: "Validade de 05 dias úteis, sujeita a análise superveniente."
+            objeto: customTexts?.objeto || "A presente proposta visa a cessão total e definitiva dos direitos creditórios oriundos do processo judicial acima identificado.",
+            pagamento: customTexts?.pagamento || "O pagamento será realizado em parcela única via transferência bancária no ato da assinatura.",
+            honorarios: customTexts?.honorarios || "Validade de 05 dias úteis, sujeita a análise superveniente."
         }
     }
 }

@@ -1,0 +1,475 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Proposta Apax - Credor</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        :root {
+            --primary: #0f172a;
+            --secondary: #64748b;
+            --border: #e2e8f0;
+            --bg-odd: #f8fafc;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+            color: #1e293b;
+            line-height: 1.4;
+            background: white;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            padding: 10mm;
+            margin: 0 auto;
+            background: white;
+            position: relative;
+            box-sizing: border-box;
+        }
+
+        /* Timbrado Pássaro */
+        .watermark {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 440px;
+            transform: translate(-50%, -50%) rotate(-10deg);
+            opacity: 0.10;
+            z-index: 0;
+            pointer-events: none;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            border-bottom: 2px solid var(--primary);
+            padding-bottom: 5mm;
+            margin-bottom: 5mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-box {
+            width: 45mm;
+        }
+
+        .logo-box img {
+            width: 100%;
+            object-fit: contain;
+        }
+
+        .company-info {
+            text-align: right;
+            font-size: 9pt;
+            color: var(--secondary);
+        }
+
+        .company-info h1 {
+            margin: 0;
+            font-size: 14pt;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        .title {
+            text-align: center;
+            margin-bottom: 5mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .title h2 {
+            margin: 0;
+            font-size: 16pt;
+            text-transform: uppercase;
+            text-decoration: underline;
+            font-weight: 800;
+            color: var(--primary);
+        }
+
+        .section {
+            margin-bottom: 3mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .section-title {
+            font-size: 10pt;
+            font-weight: 800;
+            text-transform: uppercase;
+            color: var(--primary);
+            background: #f1f5f9;
+            padding: 1mm 3mm;
+            border-left: 4px solid var(--primary);
+            margin-bottom: 2mm;
+        }
+
+        /* Identificação Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1mm 5mm;
+            font-size: 10pt;
+        }
+
+        .info-grid p {
+            margin: 0;
+        }
+
+        .info-grid strong {
+            font-size: 8pt;
+            color: var(--secondary);
+            text-transform: uppercase;
+            margin-right: 1mm;
+        }
+
+        /* Tabela Dinâmica com Estilo Original */
+        .values-container {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 1mm;
+            font-size: 9pt;
+            display: table;
+            /* Força comportamento de tabela no desktop/print */
+        }
+
+        .table-header {
+            display: table-header-group;
+            background: #f8fafc;
+            font-weight: 800;
+        }
+
+        .table-row {
+            display: table-row;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .table-cell {
+            display: table-cell;
+            padding: 1.5mm 3mm;
+            border-bottom: 1px solid #f1f5f9;
+        }
+
+        .header-cell {
+            padding: 2mm 3mm;
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .text-right {
+            text-align: right;
+        }
+
+        .row-total {
+            background: var(--primary);
+            color: white;
+            font-weight: 800;
+            font-size: 11pt;
+        }
+
+        .row-total .table-cell {
+            padding: 4mm 3mm;
+            border-bottom: none;
+        }
+
+        .row-total .label {
+            color: white;
+        }
+
+        /* Cláusulas */
+        .content-text {
+            font-size: 9.5pt;
+            text-align: justify;
+            margin-top: 3mm;
+            color: #334155;
+        }
+
+        .content-text p {
+            margin-bottom: 1.5mm;
+        }
+
+        .content-text strong {
+            color: #000;
+        }
+
+        /* Assinaturas */
+        .signatures {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20mm;
+            margin-top: 10mm;
+            position: relative;
+            z-index: 1;
+        }
+
+        .sig-box {
+            text-align: center;
+            font-size: 9pt;
+            height: 25mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-end;
+        }
+
+        .sig-line {
+            border-bottom: 1px solid var(--primary);
+            margin-bottom: 2mm;
+        }
+
+        .sig-box strong {
+            display: block;
+            margin-top: 2mm;
+        }
+
+        /* Footer */
+        .footer {
+            position: absolute;
+            bottom: 8mm;
+            left: 10mm;
+            right: 10mm;
+            border-top: 1px solid var(--border);
+            padding-top: 2mm;
+            display: flex;
+            justify-content: space-between;
+            font-size: 8pt;
+            color: #94a3b8;
+        }
+
+        /* Mobile Responsive adjustments (Screen only) */
+        @media screen and (max-width: 768px) {
+            .page {
+                width: 100%;
+                min-height: auto;
+                padding: 15px;
+            }
+
+            .watermark {
+                width: 80%;
+                opacity: 0.05;
+            }
+
+            header {
+                flex-direction: column;
+                gap: 10px;
+                align-items: center;
+                text-align: center;
+            }
+
+            .logo-box {
+                width: 120px;
+            }
+
+            .company-info {
+                text-align: center;
+            }
+
+            .info-grid {
+                grid-template-columns: 1fr;
+                gap: 10px;
+            }
+
+            .values-container,
+            .table-header,
+            .table-row,
+            .table-cell {
+                display: block;
+                width: 100%;
+            }
+
+            .table-header {
+                display: none;
+                /* Hide header on mobile stacks */
+            }
+
+            .table-row {
+                margin-bottom: 10px;
+                background: white;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                padding: 10px;
+                box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+            }
+
+            .table-cell {
+                padding: 4px 0;
+                border: none;
+            }
+
+            .text-right {
+                text-align: left;
+                font-weight: 700;
+                font-size: 1.1em;
+                margin-top: 4px;
+            }
+
+            .row-total {
+                background: var(--primary);
+                color: white;
+            }
+
+            .signatures {
+                grid-template-columns: 1fr;
+                gap: 40px;
+            }
+        }
+
+        /* Print Specifics */
+        @media print {
+            body {
+                background: none;
+            }
+
+            .page {
+                box-shadow: none;
+                margin: 0;
+                width: 210mm;
+                height: 297mm;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="page" id="document">
+        <img src="/logo-apax.png" class="watermark" alt="Timbrado">
+
+        <header>
+            <div class="logo-box">
+                <img src="/logo-apax.png" alt="Logo Apax">
+            </div>
+            <div class="company-info">
+                <h1>Apax Investimentos Ltda.</h1>
+                <p>CNPJ: 09.121.790/0001-38</p>
+                <p>Av. Paulista, 1000 - São Paulo/SP</p>
+            </div>
+        </header>
+
+        <div class="title">
+            <h2 id="doc-title">Proposta de Aquisição de Crédito (Credor)</h2>
+        </div>
+
+        <section class="section">
+            <div class="section-title">1. Identificação do Negócio</div>
+            <div class="info-grid">
+                <p><strong>Cód. Interno:</strong> <span id="doc-code">—</span></p>
+                <p><strong>Emissão:</strong> <span id="doc-date">—</span></p>
+                <p><strong>Credor:</strong> <span id="credor-nome">—</span></p>
+                <p><strong>CPF/CNPJ:</strong> <span id="credor-doc">—</span></p>
+                <p><strong>Número Processo:</strong> <span id="processo-num">—</span></p>
+                <p><strong>Número Precatório:</strong> <span id="precatorio-num">—</span></p>
+                <p><strong>Ofício:</strong> <span id="precatorio-oficio">—</span></p>
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-title">2. Demonstrativo de Valores</div>
+            <div class="values-container" id="values-table">
+                <div class="table-header">
+                    <div class="table-row">
+                        <div class="table-cell header-cell">Descrição de descontos obrigatórios</div>
+                        <div class="table-cell header-cell text-right">Valor Integrado (BRL)</div>
+                    </div>
+                </div>
+                <!-- Rows injected via JS -->
+            </div>
+        </section>
+
+        <section class="section">
+            <div class="section-title">3. Condições e Objeto</div>
+            <div class="content-text">
+                <p><strong>CLÁUSULA 1 - OBJETO:</strong> <span id="text-objeto">---</span></p>
+                <p><strong>CLÁUSULA 2 - PAGAMENTO:</strong> <span id="text-pagamento">---</span></p>
+                <p><strong>CLÁUSULA 3 - CONDIÇÕES:</strong> <span id="text-validade">---</span></p>
+            </div>
+        </section>
+
+        <div class="signatures">
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <strong id="sign-credor">CREDOR</strong>
+                <span>Assinatura (Identidade)</span>
+            </div>
+            <div class="sig-box">
+                <div class="sig-line"></div>
+                <strong>APAX INVESTIMENTOS LTDA.</strong>
+                <span>Proponente</span>
+            </div>
+        </div>
+
+        <footer class="footer">
+            <p>Gerado por: Sistema CRM Apax</p>
+            <p>Versão: 1.0</p>
+            <p>Documento estritamente confidencial para fins de negociação.</p>
+        </footer>
+    </div>
+
+    <script>
+        window.render = function (data) {
+            // Preencher Identificação
+            document.getElementById('doc-code').textContent = data.documento.codigo_interno;
+            document.getElementById('doc-date').textContent = data.documento.data_emissao;
+            document.getElementById('credor-nome').textContent = data.credor.nome;
+            document.getElementById('credor-doc').textContent = data.credor.cpf_cnpj;
+            document.getElementById('processo-num').textContent = data.processo.numero;
+            document.getElementById('precatorio-num').textContent = data.precatorio.numero;
+            document.getElementById('precatorio-oficio').textContent = data.precatorio.oficio;
+            document.getElementById('sign-credor').textContent = data.credor.nome.toUpperCase();
+
+            // Preencher Textos
+            document.getElementById('text-objeto').textContent = data.textos.objeto;
+            document.getElementById('text-pagamento').textContent = data.textos.pagamento;
+            document.getElementById('text-validade').textContent = data.textos.honorarios;
+
+            // Título dinâmico
+            if (data.titulo_documento) {
+                document.getElementById('doc-title').textContent = data.titulo_documento;
+            }
+
+            // Renderizar Tabela
+            const container = document.getElementById('values-table');
+            // Manter header, limpar resto (embora aqui só tenhamos rows injetadas depois)
+            // Vamos recriar o container body part
+            const oldRows = container.querySelectorAll('.generated-row');
+            oldRows.forEach(r => r.remove());
+
+            if (data.rows && Array.isArray(data.rows)) {
+                data.rows.forEach(row => {
+                    const rowEl = document.createElement('div');
+                    rowEl.className = 'table-row generated-row';
+                    if (row.isTotal) rowEl.classList.add('row-total');
+
+                    const cellDesc = document.createElement('div');
+                    cellDesc.className = 'table-cell label';
+                    cellDesc.innerText = row.label; // InnerText handles spacing better?
+
+                    const cellVal = document.createElement('div');
+                    cellVal.className = 'table-cell text-right';
+
+                    if (row.showValue) {
+                        cellVal.innerText = row.valueFormatted;
+                    } else {
+                        // Se ocultar valor, manter a célula preenchida para não quebrar layout
+                        cellVal.innerHTML = "&nbsp;";
+                    }
+
+                    rowEl.appendChild(cellDesc);
+                    rowEl.appendChild(cellVal);
+                    container.appendChild(rowEl);
+                });
+            }
+        };
+    </script>
+</body>
+
+</html>

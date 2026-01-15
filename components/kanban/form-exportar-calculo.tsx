@@ -16,11 +16,15 @@ interface FormExportarCalculoProps {
   onUpdate: () => void
 }
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: FormExportarCalculoProps) {
   const [exporting, setExporting] = useState(false)
   const [formData, setFormData] = useState({
     data_base: "",
     valor_atualizado: "",
+    pss_valor: "0",
+    irpf_valor: "0",
+    honorarios_valor: "0",
     saldo_liquido: "",
     premissas_resumo: "",
     premissas_json: "",
@@ -66,6 +70,9 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
         versao: novaVersao,
         data_base: formData.data_base,
         valor_atualizado: parseFloat(formData.valor_atualizado),
+        pss_valor: parseFloat(formData.pss_valor || "0"),
+        irpf_valor: parseFloat(formData.irpf_valor || "0"),
+        honorarios_valor: parseFloat(formData.honorarios_valor || "0"),
         saldo_liquido: parseFloat(formData.saldo_liquido),
         premissas_json: formData.premissas_json ? JSON.parse(formData.premissas_json) : null,
         premissas_resumo: formData.premissas_resumo || null,
@@ -78,6 +85,9 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
       const { error: updError } = await supabase.from('precatorios').update({
         data_base_calculo: formData.data_base,
         valor_atualizado: parseFloat(formData.valor_atualizado),
+        pss_valor: parseFloat(formData.pss_valor || "0"),
+        irpf_valor: parseFloat(formData.irpf_valor || "0"),
+        honorarios_valor: parseFloat(formData.honorarios_valor || "0"),
         saldo_liquido: parseFloat(formData.saldo_liquido),
         premissas_calculo_resumo: formData.premissas_resumo || null,
         calculo_pdf_url: formData.arquivo_pdf_url || null,
@@ -97,6 +107,9 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
         payload_json: {
           versao: novaVersao,
           valor_atualizado: parseFloat(formData.valor_atualizado),
+          pss_valor: parseFloat(formData.pss_valor || "0"),
+          irpf_valor: parseFloat(formData.irpf_valor || "0"),
+          honorarios_valor: parseFloat(formData.honorarios_valor || "0"),
           saldo_liquido: parseFloat(formData.saldo_liquido)
         },
         user_id: user.id
@@ -136,6 +149,9 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
       setFormData({
         data_base: "",
         valor_atualizado: "",
+        pss_valor: "",
+        irpf_valor: "",
+        honorarios_valor: "",
         saldo_liquido: "",
         premissas_resumo: "",
         premissas_json: "",
@@ -143,6 +159,7 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
       })
 
       onUpdate()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("[Form Exportar Cálculo] Erro:", error)
       toast({
@@ -162,7 +179,7 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
         <p className="text-sm font-medium text-blue-900">📊 Exportar Cálculo</p>
         <p className="text-xs text-blue-700 mt-2">
           Ao exportar, uma nova versão do cálculo será criada e os valores serão salvos no card do precatório.
-          O precatório será automaticamente movido para a coluna "Cálculo Concluído".
+          O precatório será automaticamente movido para a coluna &quot;Cálculo Concluído&quot;.
         </p>
       </div>
 
@@ -187,6 +204,42 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
               step="0.01"
               value={formData.valor_atualizado}
               onChange={(e) => setFormData({ ...formData, valor_atualizado: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="pss_valor">PSS (R$)</Label>
+            <Input
+              id="pss_valor"
+              type="number"
+              step="0.01"
+              value={formData.pss_valor}
+              onChange={(e) => setFormData({ ...formData, pss_valor: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="irpf_valor">IRPF (R$)</Label>
+            <Input
+              id="irpf_valor"
+              type="number"
+              step="0.01"
+              value={formData.irpf_valor}
+              onChange={(e) => setFormData({ ...formData, irpf_valor: e.target.value })}
+              placeholder="0.00"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="honorarios_valor">Honorários (R$)</Label>
+            <Input
+              id="honorarios_valor"
+              type="number"
+              step="0.01"
+              value={formData.honorarios_valor}
+              onChange={(e) => setFormData({ ...formData, honorarios_valor: e.target.value })}
               placeholder="0.00"
             />
           </div>
@@ -251,8 +304,8 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
       <div className="p-4 bg-muted rounded-lg">
         <p className="text-sm font-medium">💡 Exemplo de Premissas</p>
         <p className="text-xs text-muted-foreground mt-2">
-          <strong>Resumo:</strong> "Cálculo atualizado até 31/12/2023 utilizando IPCA-E + juros de 0,5% a.m.
-          Descontados PSS (11%) e IRPF (27,5%). Honorários de 20% sobre o valor bruto."
+          <strong>Resumo:</strong> &quot;Cálculo atualizado até 31/12/2023 utilizando IPCA-E + juros de 0,5% a.m.
+          Descontados PSS (11%) e IRPF (27,5%). Honorários de 20% sobre o valor bruto.&quot;
         </p>
         <p className="text-xs text-muted-foreground mt-2 font-mono">
           <strong>JSON:</strong> {`{"indice":"IPCA-E","taxa_juros":0.5,"pss_percentual":11,"irpf_percentual":27.5,"honorarios_percentual":20}`}

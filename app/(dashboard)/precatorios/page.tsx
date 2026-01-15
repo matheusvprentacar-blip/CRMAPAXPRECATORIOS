@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable */
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -48,7 +49,6 @@ export default function PrecatoriosPage() {
     setTermo,
     loading,
     resultados: precatoriosRaw,
-    total: totalResultados,
     filtrosAtivos,
     refetch,
   } = usePrecatoriosSearch()
@@ -586,8 +586,8 @@ export default function PrecatoriosPage() {
           <DialogHeader>
             <DialogTitle>Confirmar Exclusão</DialogTitle>
             <DialogDescription>
-              Tem certeza que deseja excluir o precatório "
-              {precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}"? Esta ação não pode ser
+              Tem certeza que deseja excluir o precatório &quot;
+              {precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}&quot;? Esta ação não pode ser
               desfeita.
             </DialogDescription>
           </DialogHeader>

@@ -4,20 +4,9 @@ import { useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { getSupabase } from "@/lib/supabase/client"
 import CalculadoraPrecatorios from "@/components/calculador-precatorios"
-import { FileText, RefreshCw, ExternalLink } from "lucide-react"
-import { PdfUploadButton } from "@/components/pdf-upload-button"
+import { FileText } from "lucide-react"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"
 import { Button } from "@/components/ui/button"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import { toast } from "@/components/ui/use-toast"
 
 export default function CalcularPage() {
@@ -27,8 +16,6 @@ export default function CalcularPage() {
   const [loading, setLoading] = useState(true)
   const [precatorioPdfUrl, setPrecatorioPdfUrl] = useState<string | null>(null)
   const [hasCalculation, setHasCalculation] = useState(false)
-  const [showConfirmDialog, setShowConfirmDialog] = useState(false)
-  const [resetting, setResetting] = useState(false)
 
   useEffect(() => {
     if (precatorioId) {
@@ -92,101 +79,7 @@ export default function CalcularPage() {
     }
   }
 
-  async function handleRefazerCalculo() {
-    setShowConfirmDialog(true)
-  }
 
-  async function confirmarRefazerCalculo() {
-    if (!precatorioId) return
-
-    setResetting(true)
-    try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        throw new Error("Supabase não disponível")
-      }
-
-      console.log("🔄 [REFAZER] Iniciando reset do cálculo para:", precatorioId)
-
-      // 1. Resetar valores no banco (apenas colunas que existem)
-      const { error: updateError } = await supabase
-        .from("precatorios")
-        .update({
-          // Valores calculados
-          valor_atualizado: null,
-          valor_juros: null,
-          valor_selic: null,
-          saldo_liquido: null,
-
-          // Descontos
-          pss_valor: null,
-          irpf_valor: null,
-          honorarios_valor: null,
-
-          // Propostas
-          proposta_menor_valor: null,
-          proposta_menor_percentual: null,
-          proposta_maior_valor: null,
-          proposta_maior_percentual: null,
-
-          // PDF do visualizador (gerado pelo cálculo)
-          pdf_url: null,
-
-          // Dados de cálculo
-          data_calculo: null,
-          dados_calculo: null,
-
-          // Status
-          status: "em_calculo",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", precatorioId)
-
-      if (updateError) {
-        console.error("❌ [REFAZER] Erro ao resetar cálculo:", updateError)
-        throw updateError
-      }
-
-      console.log("✅ [REFAZER] Valores resetados com sucesso")
-
-      // 2. Registrar atividade
-      const { data: userData } = await supabase.auth.getUser()
-      if (userData.user) {
-        const { error: atividadeError } = await supabase.from("atividades").insert({
-          precatorio_id: precatorioId,
-          usuario_id: userData.user.id,
-          tipo: "refazer_calculo",
-          descricao: "Cálculo resetado para ser refeito",
-        })
-
-        if (atividadeError) {
-          console.warn("⚠️ [REFAZER] Erro ao registrar atividade:", atividadeError)
-        } else {
-          console.log("✅ [REFAZER] Atividade registrada")
-        }
-      }
-
-      // 3. Mostrar sucesso
-      toast({
-        title: "✅ Cálculo Resetado",
-        description: "Você pode realizar um novo cálculo agora",
-      })
-
-      // 4. Recarregar página
-      console.log("🔄 [REFAZER] Recarregando página...")
-      window.location.reload()
-    } catch (error) {
-      console.error("❌ [REFAZER] Erro ao refazer cálculo:", error)
-      toast({
-        title: "Erro",
-        description: "Não foi possível resetar o cálculo. Tente novamente.",
-        variant: "destructive",
-      })
-    } finally {
-      setResetting(false)
-      setShowConfirmDialog(false)
-    }
-  }
 
   const handleUpdate = () => {
     // Redirecionar removido para debug

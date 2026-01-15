@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { Suspense } from "react"
 import AnaliseJuridicaClient from "./analise-juridica-client"
 

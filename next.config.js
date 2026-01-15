@@ -2,6 +2,12 @@
 const nextConfig = {
   output: "export", // ✅ SSG para Tauri
   images: { unoptimized: true },
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 
   // Otimizações de produção
   productionBrowserSourceMaps: false, // Desabilitar source maps

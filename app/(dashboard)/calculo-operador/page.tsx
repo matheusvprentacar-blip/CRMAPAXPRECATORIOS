@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable */
 
 import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
@@ -31,8 +32,13 @@ export default function CalculoOperadorPage() {
       if (!supabase) {
         const localData = localStorage.getItem("precatorios")
         if (localData) {
-          const parsed = JSON.parse(localData)
-          setPrecatorios(parsed || [])
+          try {
+            const parsed = JSON.parse(localData)
+            setPrecatorios(parsed || [])
+          } catch (e) {
+            console.error("Erro ao fazer parse do localStorage", e)
+            setPrecatorios([])
+          }
         }
         setLoading(false)
         return

@@ -11,6 +11,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 
 interface FormParecerJuridicoProps {
   precatorioId: string
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   precatorio: any
   onUpdate: () => void
 }
@@ -65,6 +66,7 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
 
       setFormData({ parecer_status: "", parecer_texto: "" })
       onUpdate()
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
       console.error("[Form Parecer Jurídico] Erro:", error)
       toast({

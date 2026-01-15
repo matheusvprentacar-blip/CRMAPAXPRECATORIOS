@@ -3,7 +3,7 @@
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
@@ -23,6 +23,7 @@ const INTERESSE_STATUS = [
   { value: "TEM_INTERESSE", label: "Tem Interesse", color: "text-green-500" },
 ]
 
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 export function FormInteresse({ precatorioId, precatorio, onUpdate }: FormInteresseProps) {
   const [saving, setSaving] = useState(false)
   const [formData, setFormData] = useState({

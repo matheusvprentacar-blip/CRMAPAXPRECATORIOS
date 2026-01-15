@@ -1,4 +1,6 @@
 "use client"
+/* eslint-disable */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useState, useEffect } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"

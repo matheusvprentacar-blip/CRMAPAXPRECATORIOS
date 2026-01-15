@@ -17,6 +17,10 @@ import {
     DialogTitle,
 } from "@/components/ui/dialog"
 
+import { Textarea } from "@/components/ui/textarea"
+import { ProposalConfigModal } from "./proposal-config-modal"
+import { Settings } from "lucide-react"
+
 interface AbaPropostaProps {
     precatorioId: string
     precatorio: any
@@ -47,6 +51,14 @@ export function AbaProposta({
 
     const [isEditing, setIsEditing] = useState(false)
     const [showPrintDialog, setShowPrintDialog] = useState(false)
+
+    // Estado para edição da descrição
+    const [showDescriptionModal, setShowDescriptionModal] = useState(false)
+    const [descriptionText, setDescriptionText] = useState("A presente proposta visa a cessão total e definitiva dos direitos creditórios oriundos do processo judicial acima identificado.")
+    const [pendingPrintType, setPendingPrintType] = useState<"credor" | "honorarios" | null>(null)
+
+    // Estado para configuração do modelo
+    const [showConfigModal, setShowConfigModal] = useState(false)
 
     // Valores Base
     const saldoLiquidoCredor = precatorio.saldo_liquido || 0
@@ -159,7 +171,19 @@ export function AbaProposta({
     const canEditProposta = ["admin", "operador_comercial"].includes(userRole || "")
     const hasPropostaDefined = !!precatorio.dados_calculo?.proposta_escolhida_percentual || !!precatorio.dados_calculo?.proposta_advogado_percentual
 
-    async function handlePrint(tipo: "credor" | "honorarios") {
+    // Função intermediária para abrir o modal de edição
+    function initiatePrint(tipo: "credor" | "honorarios") {
+        setPendingPrintType(tipo)
+        setShowDescriptionModal(true)
+    }
+
+    // Função real de impressão
+    async function handleFinalPrint() {
+        if (!pendingPrintType) return
+
+        const tipo = pendingPrintType
+        setShowDescriptionModal(false)
+
         setLoading(true)
         try {
             const supabase = createBrowserClient()
@@ -209,7 +233,11 @@ export function AbaProposta({
                     juridico_ok: true,
                     comercial_ok: true,
                     admin_ok: true,
-                }
+                },
+                customTexts: {
+                    objeto: descriptionText
+                },
+                proposalConfig: precatorio.dados_calculo?.proposal_config
             })
         } catch (error: any) {
             console.error("Erro ao imprimir/registrar:", error)
@@ -227,6 +255,24 @@ export function AbaProposta({
 
     return (
         <div className="space-y-6">
+            {/* Header: Faixa de Informações + Botão Configurar */}
+            <div className="flex justify-between items-center">
+                <div className="text-sm font-medium text-muted-foreground uppercase tracking-wider">
+                    Resumo Financeiro
+                </div>
+                {canEditProposta && (
+                    <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setShowConfigModal(true)}
+                        className="gap-2"
+                    >
+                        <Settings className="h-4 w-4" />
+                        Configurar Modelo
+                    </Button>
+                )}
+            </div>
+
             {/* Faixa de Informações - Teto apenas para Credor por enquanto (ou geral?) */}
             <div className="grid gap-4 md:grid-cols-2">
                 <Card className="bg-slate-50 border-slate-200">
@@ -310,7 +356,7 @@ export function AbaProposta({
                             <div className="flex flex-col gap-3 pt-2">
                                 <Button
                                     size="lg"
-                                    onClick={() => handlePrint("credor")}
+                                    onClick={() => initiatePrint("credor")}
                                     className="w-full bg-black hover:bg-black/90 text-white"
                                 >
                                     <Printer className="mr-2 h-4 w-4" />
@@ -319,7 +365,7 @@ export function AbaProposta({
                                 <Button
                                     variant="outline"
                                     size="lg"
-                                    onClick={() => handlePrint("honorarios")}
+                                    onClick={() => initiatePrint("honorarios")}
                                     className="w-full bg-white hover:bg-gray-100 text-black border-gray-200"
                                 >
                                     <Printer className="mr-2 h-4 w-4" />
@@ -343,14 +389,62 @@ export function AbaProposta({
                         <CardContent className="space-y-6">
 
                             {/* Input Credor */}
-                            <div className="space-y-2 border-b pb-4">
+                            <div className="space-y-4 border-b pb-6">
                                 <div className="flex items-center justify-between">
                                     <Label className="text-base font-semibold">Proposta ao Credor</Label>
                                     <span className="text-xs text-muted-foreground">Base: {formatCurrency(saldoLiquidoCredor)}</span>
                                 </div>
+
+                                {/* Sugestões de Proposta (Cálculo) */}
+                                {(() => {
+                                    // Lógica de extração segura dos dados calculados, similar ao ResumoCalculoDetalhado
+                                    const resultados = precatorio.dados_calculo?.resultadosEtapas || []
+                                    const propostas = resultados[5] || {} // O passo 5 geralmente contém as propostas
+
+                                    // Prioridades: 1. resultadosEtapas[5], 2. dados_calculo direto
+                                    const pMenorPct = adjustPercent(propostas.percentual_menor ?? precatorio.dados_calculo?.proposta_menor_percentual)
+                                    const pMenorVal = propostas.menor_proposta ?? precatorio.dados_calculo?.proposta_menor_valor
+
+                                    const pMaiorPct = adjustPercent(propostas.percentual_maior ?? precatorio.dados_calculo?.proposta_maior_percentual)
+                                    const pMaiorVal = propostas.maior_proposta ?? precatorio.dados_calculo?.proposta_maior_valor
+
+                                    // Se não tiver dados, não exibe
+                                    if (!pMenorVal && !pMaiorVal) return null
+
+                                    return (
+                                        <div className="grid grid-cols-2 gap-3 mb-2">
+                                            <button
+                                                onClick={() => setPercentualCredor(pMenorPct)}
+                                                disabled={!canEditProposta}
+                                                className="flex flex-col items-start p-3 border rounded-md hover:bg-slate-50 transition-colors text-left group border-slate-200"
+                                            >
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                                                    Proposta Menor ({pMenorPct || 0}%)
+                                                </span>
+                                                <span className="text-sm font-bold text-slate-900 mt-1">
+                                                    {formatCurrency(pMenorVal)}
+                                                </span>
+                                            </button>
+
+                                            <button
+                                                onClick={() => setPercentualCredor(pMaiorPct)}
+                                                disabled={!canEditProposta}
+                                                className="flex flex-col items-start p-3 border rounded-md hover:bg-slate-50 transition-colors text-left group border-slate-200"
+                                            >
+                                                <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider group-hover:text-slate-700">
+                                                    Proposta Maior ({pMaiorPct || 0}%)
+                                                </span>
+                                                <span className="text-sm font-bold text-slate-900 mt-1">
+                                                    {formatCurrency(pMaiorVal)}
+                                                </span>
+                                            </button>
+                                        </div>
+                                    )
+                                })()}
+
                                 <div className="flex flex-col md:flex-row gap-4 items-end">
                                     <div className="grid gap-2 flex-1 relative">
-                                        <Label htmlFor="percentualCredor" className="text-xs font-bold">Porcentagem (%)</Label>
+                                        <Label htmlFor="percentualCredor" className="text-xs font-bold">Porcentagem Definida (%)</Label>
                                         <div className="relative">
                                             <Input
                                                 id="percentualCredor"
@@ -360,7 +454,7 @@ export function AbaProposta({
                                                 step="0.01"
                                                 value={percentualCredor}
                                                 onChange={(e: any) => setPercentualCredor(e.target.value)}
-                                                className="bg-background pr-8"
+                                                className="bg-background pr-8 font-medium"
                                                 placeholder="Ex: 60.00"
                                                 disabled={!canEditProposta}
                                             />
@@ -368,8 +462,8 @@ export function AbaProposta({
                                         </div>
                                     </div>
                                     <div className="grid gap-2 flex-1">
-                                        <Label className="text-xs font-bold">Valor Calculado</Label>
-                                        <div className="h-10 flex items-center px-3 bg-muted border rounded-md font-bold text-primary">
+                                        <Label className="text-xs font-bold">Valor Final Calculado</Label>
+                                        <div className="h-10 flex items-center px-3 bg-muted border rounded-md font-bold text-primary text-lg">
                                             {valorPropostaCredorFmt}
                                         </div>
                                     </div>
@@ -434,6 +528,7 @@ export function AbaProposta({
                 )
             }
 
+            {/* Modal de Sucesso + Escolha de Impressão */}
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
                 <DialogContent className="sm:max-w-md">
                     <DialogHeader>
@@ -445,8 +540,8 @@ export function AbaProposta({
                     <div className="grid grid-cols-2 gap-4 py-4">
                         <Button
                             onClick={() => {
-                                handlePrint("credor")
                                 setShowPrintDialog(false)
+                                initiatePrint("credor")
                             }}
                             className="h-24 flex flex-col gap-3 bg-black hover:bg-black/90"
                         >
@@ -455,8 +550,8 @@ export function AbaProposta({
                         </Button>
                         <Button
                             onClick={() => {
-                                handlePrint("honorarios")
                                 setShowPrintDialog(false)
+                                initiatePrint("honorarios")
                             }}
                             variant="outline"
                             className="h-24 flex flex-col gap-3 border-2"
@@ -467,6 +562,47 @@ export function AbaProposta({
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {/* Novo Modal: Editar Descrição */}
+            <Dialog open={showDescriptionModal} onOpenChange={setShowDescriptionModal}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader>
+                        <DialogTitle>Editar Descrição da Proposta</DialogTitle>
+                        <DialogDescription>
+                            Revise ou edite o texto do objeto da proposta antes de gerar o documento.
+                            O valor financeiro não será alterado.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4 space-y-4">
+                        <div className="space-y-2">
+                            <Label>Objeto da Proposta</Label>
+                            <Textarea
+                                value={descriptionText}
+                                onChange={(e) => setDescriptionText(e.target.value)}
+                                className="h-32 resize-none"
+                            />
+                        </div>
+                    </div>
+                    <div className="flex justify-end gap-2">
+                        <Button variant="ghost" onClick={() => setShowDescriptionModal(false)}>
+                            Cancelar
+                        </Button>
+                        <Button onClick={handleFinalPrint} disabled={loading}>
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Printer className="h-4 w-4 mr-2" />}
+                            Gerar e Baixar PDF
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            {/* Modal de Configuração do Modelo */}
+            <ProposalConfigModal
+                open={showConfigModal}
+                onOpenChange={setShowConfigModal}
+                precatorioId={precatorioId}
+                currentData={precatorio}
+                onSave={onUpdate}
+            />
         </div >
     )
 }

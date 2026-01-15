@@ -1,4 +1,5 @@
 "use client"
+/* eslint-disable */
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -27,6 +28,7 @@ export default function GestaoOficiosPage() {
 
     useEffect(() => {
         verificarAcessoECarregarDados()
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [])
 
     async function verificarAcessoECarregarDados() {

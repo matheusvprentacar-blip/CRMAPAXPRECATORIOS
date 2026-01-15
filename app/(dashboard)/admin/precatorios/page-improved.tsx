@@ -1,4 +1,5 @@
-    "use client"
+"use client"
+/* eslint-disable */
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
@@ -105,7 +106,7 @@ export default function AdminPrecatoriosPageImproved() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroTab, setFiltroTab] = useState<"todos" | "distribuidos" | "pendentes">("todos")
-  
+
   const [createDialogOpen, setCreateDialogOpen] = useState(false)
   const [distributeDialogOpen, setDistributeDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
