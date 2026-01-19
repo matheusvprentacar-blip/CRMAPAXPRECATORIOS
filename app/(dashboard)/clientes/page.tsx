@@ -168,7 +168,7 @@ export default function ClientsPage() {
                                         </TableRow>
                                     ) : (
                                         filteredCredores.map((credor) => (
-                                            <TableRow key={credor.id_unico} className="cursor-pointer hover:bg-muted/50" onClick={() => openCredorDetails(credor)}>
+                                            <TableRow key={credor.id_unico} className="cursor-pointer hover:bg-muted" onClick={() => openCredorDetails(credor)}>
                                                 <TableCell>
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{credor.credor_nome}</span>

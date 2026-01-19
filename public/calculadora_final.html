@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Precatórios (EC113 + RRA) - Oficial</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <style>
+        :root {
+            --primary: #0f172a;
+            --accent: #3b82f6;
+            --success: #22c55e;
+            --danger: #ef4444;
+            --bg: #f8fafc;
+        }
+
+        body {
+            font-family: 'Inter', system-ui, sans-serif;
+            background: var(--bg);
+            color: var(--primary);
+            padding: 20px;
+            line-height: 1.5;
+        }
+
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        /* Header */
+        header {
+            background: var(--primary);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.5rem;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            opacity: 0.8;
+            font-size: 0.9rem;
+        }
+
+        /* Status Conexão */
+        .connection-status {
+            background: #fff7ed;
+            color: #9a3412;
+            padding: 10px;
+            text-align: center;
+            font-size: 0.9rem;
+            font-weight: 600;
+            border-bottom: 1px solid #fed7aa;
+        }
+
+        .connection-status.ok {
+            background: #dcfce7;
+            color: #166534;
+            border-color: #bbf7d0;
+        }
+
+        /* Grid de Inputs */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            padding: 25px;
+        }
+
+        .card {
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .card-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #64748b;
+            font-weight: 700;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #f1f5f9;
+            padding-bottom: 5px;
+        }
+
+        label {
+            display: block;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+            font-weight: 500;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #cbd5e1;
+            border-radius: 6px;
+            font-size: 1rem;
+            transition: all 0.2s;
+            box-sizing: border-box;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+        }
+
+        .hint {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-top: 2px;
+        }
+
+        /* Botão */
+        .actions {
+            padding: 0 25px 25px;
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 1.1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: #2563eb;
+        }
+
+        button:disabled {
+            background: #94a3b8;
+            cursor: not-allowed;
+        }
+
+        /* Resultados */
+        .results {
+            background: #f1f5f9;
+            border-top: 1px solid #e2e8f0;
+            padding: 25px;
+            display: none;
+        }
+
+        .summary-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .res-item {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+        }
+
+        .res-label {
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .res-value {
+            font-size: 1.4rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .res-value.green {
+            color: var(--success);
+        }
+
+        .res-value.red {
+            color: var(--danger);
+        }
+
+        /* Log Passo a Passo */
+        .audit-log {
+            background: #1e293b;
+            color: #e2e8f0;
+            padding: 20px;
+            border-radius: 8px;
+            font-family: 'Fira Code', monospace;
+            font-size: 0.85rem;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+        }
+
+        .audit-title {
+            margin-top: 0;
+            color: white;
+            font-size: 1rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <header>
+            <h1>Calculadora Oficial de Precatórios</h1>
+            <p>Lógica EC113 + RRA + PSS Atualizado</p>
+        </header>
+
+        <div id="status" class="connection-status">
+            🔌 Conectando ao Banco de Dados...
+        </div>
+
+        <div class="grid-container">
+            <div class="card">
+                <div class="card-title">Financeiro Original</div>
+
+                <label>Valor Principal Original (R$)</label>
+                <input type="number" id="valor_principal_original" value="100000.00">
+
+                <label>Juros Moratórios Originais (R$)</label>
+                <input type="number" id="valor_juros_original" value="0.00">
+                <div class="hint">Juros já calculados no processo original</div>
+
+                <label>Multa (R$)</label>
+                <input type="number" id="multa" value="0.00">
+            </div>
+
+            <div class="card">
+                <div class="card-title">Linha do Tempo</div>
+
+                <label>Data Base (Início do Cálculo)</label>
+                <input type="date" id="data_base" value="2021-01-01">
+
+                <label>Data Final (Data do Pagamento)</label>
+                <input type="date" id="data_final_calculo" value="2025-12-31">
+
+                <label>Marco Temporal EC113</label>
+                <input type="text" value="01/01/2022" disabled style="background: #f1f5f9; color: #64748b;">
+            </div>
+
+            <div class="card">
+                <div class="card-title">Deduções (RRA / PSS)</div>
+
+                <label>Meses Exec. Anterior (NM)</label>
+                <input type="number" id="meses_execucao_anterior" value="60">
+                <div class="hint">Crucial para regra de RRA</div>
+
+                <label>Honorários Contratuais (R$)</label>
+                <input type="number" id="honorarios_contratuais" value="0.00">
+
+                <label>PSS (Previdência) (R$)</label>
+                <input type="number" id="pss_valor" value="0.00">
+                <div class="hint">Se 0, o sistema pode calcular (mas prefira manual)</div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <button id="btn_calcular" onclick="calcularPrecatorio()" disabled>Carregando Dados...</button>
+        </div>
+
+        <div id="results_area" class="results">
+            <div class="summary-grid">
+                <div class="res-item">
+                    <div class="res-label">Total Bruto Atualizado</div>
+                    <div class="res-value" id="disp_total_bruto">R$ 0,00</div>
+                </div>
+                <div class="res-item">
+                    <div class="res-label">Líquido a Receber</div>
+                    <div class="res-value green" id="disp_liquido">R$ 0,00</div>
+                </div>
+                <div class="res-item">
+                    <div class="res-label">IRPF Retido (RRA)</div>
+                    <div class="res-value red" id="disp_irpf">R$ 0,00</div>
+                </div>
+                <div class="res-item">
+                    <div class="res-label">Correção Monetária + Juros</div>
+                    <div class="res-value" id="disp_updates">R$ 0,00</div>
+                </div>
+            </div>
+
+            <h3 class="audit-title">📝 Log de Auditoria (Passo a Passo)</h3>
+            <div class="audit-log" id="audit_log">Aguardando cálculo...</div>
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURAÇÃO (COLOQUE SUAS CHAVES AQUI) ---
+        const SUPABASE_URL = 'https://ldtildnelijndhswcmss.supabase.co';
+        const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxkdGlsZG5lbGlqbmRoc3djbXNzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUzNzM1NDksImV4cCI6MjA4MDk0OTU0OX0.xRawbSBZwLH5Wwutt15SomYrh7p5JQQMqGZPktLfxWs';
+
+        const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
+        // Cache de Dados
+        let CACHE_IPCA = [];
+        let CACHE_SELIC = [];
+        const DATA_CORTE_EC113 = new Date('2022-01-01');
+
+        // --- 2. INICIALIZAÇÃO ---
+        async function init() {
+            const statusEl = document.getElementById('status');
+            const btn = document.getElementById('btn_calcular');
+
+            try {
+                // Buscar IPCA Mensal
+                let { data: ipca, error: err1 } = await supabase
+                    .from('economic_indices')
+                    .select('*')
+                    .eq('type', 'ipca_mensal')
+                    .order('reference_date', { ascending: true });
+
+                // Buscar SELIC
+                let { data: selic, error: err2 } = await supabase
+                    .from('economic_indices')
+                    .select('*')
+                    .eq('type', 'selic')
+                    .order('reference_date', { ascending: true });
+
+                if (err1 || err2) throw new Error("Falha ao baixar índices");
+
+                CACHE_IPCA = ipca;
+                CACHE_SELIC = selic;
+
+                statusEl.innerHTML = `✅ Conectado! Base carregada: ${ipca.length} IPCA | ${selic.length} SELIC`;
+                statusEl.className = 'connection-status ok';
+                btn.disabled = false;
+                btn.innerText = "CALCULAR PRECATÓRIO";
+
+            } catch (e) {
+                console.error(e);
+                statusEl.innerHTML = `❌ Erro de Conexão: ${e.message}`;
+                statusEl.className = 'connection-status';
+            }
+        }
+
+        // --- 3. MOTOR DE CÁLCULO ---
+        function calcularPrecatorio() {
+            // Limpar Log
+            const logEl = document.getElementById('audit_log');
+            let logs = [];
+            function log(msg) { logs.push(msg); }
+
+            log("=== INÍCIO DO CÁLCULO ===");
+            log(`Data Hora: ${new Date().toLocaleString()}`);
+
+            // Captura Inputs
+            const principal = parseFloat(document.getElementById('valor_principal_original').value) || 0;
+            const jurosOrig = parseFloat(document.getElementById('valor_juros_original').value) || 0;
+            const multa = parseFloat(document.getElementById('multa').value) || 0;
+            const dataBase = new Date(document.getElementById('data_base').value + "T00:00:00");
+            const dataFinal = new Date(document.getElementById('data_final_calculo').value + "T00:00:00");
+
+            // Inputs Fiscais
+            const honorarios = parseFloat(document.getElementById('honorarios_contratuais').value) || 0;
+            const pssInput = parseFloat(document.getElementById('pss_valor').value) || 0;
+            const mesesRRA = parseInt(document.getElementById('meses_execucao_anterior').value) || 1;
+
+            log(`Principal Original: ${fmt(principal)}`);
+            log(`Data Base: ${dataBase.toLocaleDateString()} -> Data Final: ${dataFinal.toLocaleDateString()}`);
+
+            // --- PASSO 1: FASE PRÉ-2022 (IPCA-E + JUROS SIMPLES) ---
+            let valorAtualizadoIPCA = principal;
+            let valorJurosPre22 = 0;
+            let fatorAcumuladoIPCA = 1.0;
+
+            if (dataBase < DATA_CORTE_EC113) {
+                log("\n--- FASE 1: PRÉ-EC113 (Até Dez/2021) ---");
+
+                // Filtra IPCA
+                const indicesIPCA = CACHE_IPCA.filter(i => {
+                    const d = new Date(i.reference_date);
+                    // Ajuste de fuso para garantir comparação correta
+                    d.setHours(0, 0, 0, 0);
+                    return d >= dataBase && d < DATA_CORTE_EC113;
+                });
+
+                if (indicesIPCA.length > 0) {
+                    log(`Encontrados ${indicesIPCA.length} índices de IPCA para correção.`);
+                    indicesIPCA.forEach(idx => {
+                        // Lógica: Valor * (1 + taxa/100)
+                        const fatorMensal = 1 + (parseFloat(idx.value) / 100);
+                        fatorAcumuladoIPCA *= fatorMensal;
+                    });
+
+                    valorAtualizadoIPCA = principal * fatorAcumuladoIPCA;
+                    log(`Fator IPCA Acumulado: ${fatorAcumuladoIPCA.toFixed(6)}`);
+                    log(`Principal Corrigido (IPCA): ${fmt(valorAtualizadoIPCA)}`);
+                } else {
+                    log("Nenhum índice IPCA aplicável (Data Base muito próxima de 2022).");
+                }
+
+                // Juros de Mora (0.5% ao mês simples)
+                // Calculando diferença de meses exata
+                const diffTime = Math.abs(DATA_CORTE_EC113 - dataBase);
+                const diffMonths = Math.floor(diffTime / (1000 * 60 * 60 * 24 * 30.44));
+
+                const taxaJurosTotal = diffMonths * 0.005; // 0.5% a.m.
+                valorJurosPre22 = valorAtualizadoIPCA * taxaJurosTotal;
+
+                log(`Tempo para Juros: ~${diffMonths} meses`);
+                log(`Juros Pré-22 Calculados (${(taxaJurosTotal * 100).toFixed(2)}%): ${fmt(valorJurosPre22)}`);
+            } else {
+                log("\n--- FASE 1 PULADA (Data Base já é Pós-2022) ---");
+            }
+
+            // --- PASSO 2: FASE PÓS-2022 (SELIC) ---
+            log("\n--- FASE 2: PÓS-EC113 (Jan/2022 em diante) ---");
+
+            // A base para a SELIC é o Valor Corrigido IPCA (Regra do STF)
+            const baseParaSelic = valorAtualizadoIPCA;
+            let selicAcumulada = 0;
+            let indicesSelicUsados = 0;
+
+            if (dataFinal >= DATA_CORTE_EC113) {
+                const dataInicioSelic = dataBase > DATA_CORTE_EC113 ? dataBase : DATA_CORTE_EC113;
+
+                const indicesSelic = CACHE_SELIC.filter(i => {
+                    const d = new Date(i.reference_date);
+                    d.setHours(0, 0, 0, 0);
+                    return d >= dataInicioSelic && d <= dataFinal;
+                });
+
+                indicesSelic.forEach(idx => {
+                    selicAcumulada += parseFloat(idx.value);
+                    indicesSelicUsados++;
+                });
+
+                log(`Soma de Taxas SELIC (${indicesSelicUsados} meses): ${selicAcumulada.toFixed(4)}%`);
+            }
+
+            const valorSelic = baseParaSelic * (selicAcumulada / 100);
+            log(`Valor Atualização SELIC: ${fmt(valorSelic)}`);
+
+            // --- TOTAIS ---
+            // Nota: Juros Originais e Multa geralmente não sofrem correção dupla, 
+            // mas aqui somamos ao final. (Ajuste conforme regra específica se necessário)
+            const totalBruto = baseParaSelic + valorJurosPre22 + valorSelic + jurosOrig + multa;
+
+            log("\n--- CONSOLIDAÇÃO ---");
+            log(`(+) Principal Corrigido: ${fmt(baseParaSelic)}`);
+            log(`(+) Juros Pré-22: ${fmt(valorJurosPre22)}`);
+            log(`(+) SELIC Pós-22: ${fmt(valorSelic)}`);
+            log(`(+) Juros/Multa Originais: ${fmt(jurosOrig + multa)}`);
+            log(`(=) TOTAL BRUTO: ${fmt(totalBruto)}`);
+
+            // --- PASSO 3: FISCAL (IRPF - RRA) ---
+            log("\n--- CÁLCULO FISCAL (RRA) ---");
+
+            // Base de Cálculo = Bruto - Honorários - PSS
+            // Nota: PSS também abate base de IR
+            const baseCalculoIR = totalBruto - honorarios - pssInput;
+            log(`Base IR (Total - Honorários - PSS): ${fmt(baseCalculoIR)}`);
+
+            let impostoRRA = 0;
+
+            if (baseCalculoIR > 0 && mesesRRA > 0) {
+                const rendimentoMensalFicticio = baseCalculoIR / mesesRRA;
+                log(`Rendimento Mensal Fictício (Base / ${mesesRRA}): ${fmt(rendimentoMensalFicticio)}`);
+
+                // Tabela Progressiva 2025 (Faixas de Isenção Atualizadas)
+                let aliquota = 0;
+                let deducao = 0;
+
+                if (rendimentoMensalFicticio <= 2259.20) {
+                    aliquota = 0; deducao = 0;
+                } else if (rendimentoMensalFicticio <= 2826.65) {
+                    aliquota = 0.075; deducao = 169.44;
+                } else if (rendimentoMensalFicticio <= 3751.05) {
+                    aliquota = 0.150; deducao = 381.44;
+                } else if (rendimentoMensalFicticio <= 4664.68) {
+                    aliquota = 0.225; deducao = 662.77;
+                } else {
+                    aliquota = 0.275; deducao = 896.00;
+                }
+
+                log(`Enquadramento: Alíquota ${(aliquota * 100).toFixed(1)}% | Dedução Base ${fmt(deducao)}`);
+
+                // Fórmula RRA: ( (RendaMensal * Aliquota) - Deducao ) * Meses
+                const impostoMensal = (rendimentoMensalFicticio * aliquota) - deducao;
+                impostoRRA = Math.max(0, impostoMensal * mesesRRA);
+                log(`IRPF Final (Mensal x Meses): ${fmt(impostoRRA)}`);
+            } else {
+                log("Isento ou Base Negativa.");
+            }
+
+            const liquido = totalBruto - pssInput - impostoRRA - honorarios;
+
+            // --- RENDERIZAR ---
+            document.getElementById('disp_total_bruto').innerText = fmt(totalBruto);
+            document.getElementById('disp_liquido').innerText = fmt(liquido);
+            document.getElementById('disp_irpf').innerText = fmt(impostoRRA);
+            document.getElementById('disp_updates').innerText = fmt(valorJurosPre22 + valorSelic + (baseParaSelic - principal));
+
+            logEl.innerText = logs.join('\n');
+            document.getElementById('results_area').style.display = 'block';
+        }
+
+        function fmt(n) { return n.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); }
+
+        // Start
+        init();
+
+    </script>
+</body>
+
+</html>

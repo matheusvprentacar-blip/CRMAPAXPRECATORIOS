@@ -131,10 +131,10 @@ export function StepResumo({ dados, resultadosEtapas, voltar }: StepResumoProps)
           </div>
         </div>
 
-        {resumo.observacoes && (
+        {(dados.observacoes || resumo.observacoes) && (
           <div className="mt-4 p-3 bg-muted rounded-md">
             <p className="text-xs font-medium mb-2">Observações</p>
-            <p className="text-xs whitespace-pre-wrap text-muted-foreground">{resumo.observacoes}</p>
+            <p className="text-xs whitespace-pre-wrap text-muted-foreground">{dados.observacoes || resumo.observacoes}</p>
           </div>
         )}
 

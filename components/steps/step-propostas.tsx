@@ -28,61 +28,90 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
   const [manualMaior, setManualMaior] = useState<number>(dados.maior_proposta_manual || 0)
 
   useEffect(() => {
-    const etapaAtualizacao = resultadosEtapas[1] || {}
-    const etapaPss = resultadosEtapas[2] || {}
-    const etapaIrpf = resultadosEtapas[3] || {}
-    const etapaHonorarios = resultadosEtapas[4] || {}
+    // ROBUST DATA EXTRACTION
+    // Instead of relying on hardcoded indices (which might shift), we try to find the relevant steps
+    // based on their content structure or known properties.
 
-    console.log("[v0] StepPropostas - Etapa Atualização:", etapaAtualizacao)
-    console.log("[v0] StepPropostas - Etapa PSS:", etapaPss)
-    console.log("[v0] StepPropostas - Etapa IRPF:", etapaIrpf)
-    console.log("[v0] StepPropostas - Etapa Honorários:", etapaHonorarios)
+    // Find Atualizacao Step (looks for 'valorAtualizado' or 'memoriaCalculo')
+    // We filter for objects that are NOT null/undefined first
+    const validSteps = resultadosEtapas.filter(r => r);
 
-    // Extrair valor atualizado (com fallbacks para diferentes nomes)
-    const valorAtualizado =
-      etapaAtualizacao.valor_atualizado ||
-      etapaAtualizacao.valorAtualizado ||
-      etapaAtualizacao.valor_corrigido_monetariamente ||
-      0
+    const etapaAtualizacao = validSteps.find(r => r.valorAtualizado !== undefined || r.memoriaCalculo) || {}
 
-    // Extrair PSS
-    const pssValor = etapaPss.pss_valor || etapaPss.pssTotal || etapaPss.pss_atualizado || 0
+    // Find IRPF Step (looks for 'irpf_valor' or 'breakdown')
+    const etapaIrpf = validSteps.find(r => r.irpf_valor !== undefined || r.breakdown) || {}
 
-    // Extrair IRPF
-    const irpfValor = etapaIrpf.valor_irpf || etapaIrpf.irTotal || etapaIrpf.irpf_valor || 0
+    // Find PSS Step (looks for 'pss_valor')
+    const etapaPss = validSteps.find(r => r.pss_valor !== undefined || r.pssTotal !== undefined) || {}
 
-    console.log("[v0] Valores extraídos - Atualizado:", valorAtualizado, "PSS:", pssValor, "IRPF:", irpfValor)
+    // Find Honorarios Step (looks for 'honorarios' object or percentual)
+    const etapaHonorarios = validSteps.find(r => r.honorarios || r.honorarios_percentual !== undefined) || {}
 
-    const basePreDescontos = round2(valorAtualizado - pssValor - irpfValor)
-    console.log("[v0] Base pré-descontos calculada:", basePreDescontos)
+    console.log("[v2] StepPropostas - Detected Steps:", {
+      atualizacao: etapaAtualizacao,
+      irpf: etapaIrpf,
+      pss: etapaPss,
+      honorarios: etapaHonorarios
+    })
+
+    const etapaDados = validSteps[0] || {} // Dados Basicos usually 0
+
+    // The Auditor (Step IRPF) now returns a 'breakdown' object.
+    // IF MISSING (user didn't re-run Auditor), construct fallback from Atualizacao
+    let breakdown = etapaIrpf.breakdown || {}
+
+    // FALLBACK: If total_bruto is missing, use Atualizacao
+    if (!breakdown.total_bruto) {
+      // Try to pull from Atualizacao
+      const valorAtualizado = etapaAtualizacao.valorAtualizado || etapaAtualizacao.valor_atualizado || 0
+      if (valorAtualizado > 0) {
+        console.log("[v2] Breakdown missing, constructing fallback from Atualizacao...", valorAtualizado)
+        breakdown = {
+          principal_original: dados.valor_principal_original || etapaDados.valor_principal_original || 0,
+          correcao_monetaria: etapaAtualizacao.memoriaCalculo?.ipca?.resultado || 0,
+          juros_pre_22: etapaAtualizacao.memoriaCalculo?.juros?.resultado || 0,
+          selic: etapaAtualizacao.memoriaCalculo?.selic?.resultado || 0,
+          juros_moratorios_originais: dados.valor_juros_original || 0,
+          total_bruto: valorAtualizado,
+          base_irpf: 0,
+          descricao_faixa: "N/A (Legado)"
+        }
+      }
+    }
+
+    // Extract Values
+    const totalBruto = breakdown.total_bruto || etapaAtualizacao.valorAtualizado || 0
+    const valorPrincipal = breakdown.principal_original || dados.valor_principal_original || 0
+    const correcaoMonetaria = breakdown.correcao_monetaria || 0
+    const jurosPre22 = breakdown.juros_pre_22 || 0
+    const valSelic = breakdown.selic || 0
+    const jurosMoraOrig = breakdown.juros_moratorios_originais || dados.valor_juros_original || 0
+
+    // Deductions
+    const pssValor = etapaPss.pss_valor || etapaPss.pssTotal || 0
+    const irpfValor = etapaIrpf.irpf_valor || etapaIrpf.valor_irpf || etapaIrpf.irTotal || 0
 
     const honorarios = etapaHonorarios.honorarios || etapaHonorarios || {}
     const honorariosPercentual = Number(honorarios.honorarios_percentual || 0)
     const adiantamentoPercentual = Number(honorarios.adiantamento_percentual || 0)
 
-    // Check if Honorarios was manual
+    // Check manual overrides for Honorarios
     let honorariosValor = 0;
     let adiantamentoValor = 0;
-
-    // Se a etapa honorarios diz que é manual OU se tem valores definidos explicitamente (mesmo que calculados lá),
-    // devemos usar os valores de lá e não recalcular se possível.
-    // Mas para segurança, se for manual lá, usamos o valor de lá.
     const isHonManual = etapaHonorarios.honorarios_manual || honorarios.honorarios_manual || false;
+
+    // Base Pre Descontos Logic
+    const basePreDescontos = round2(totalBruto - pssValor - irpfValor)
 
     if (isHonManual || (honorarios.honorarios_valor !== undefined && honorarios.honorarios_valor !== null)) {
       honorariosValor = Number(honorarios.honorarios_valor)
       adiantamentoValor = Number(honorarios.adiantamento_valor)
     } else {
-      // Fallback calculation
       honorariosValor = round2(basePreDescontos * (honorariosPercentual / 100))
       adiantamentoValor = round2(basePreDescontos * (adiantamentoPercentual / 100))
     }
 
-    console.log("[v0] Percentuais - Honorários:", honorariosPercentual, "% Adiantamento:", adiantamentoPercentual, "%")
-    console.log("[v0] Valores calculados/usados - Honorários:", honorariosValor, "Adiantamento:", adiantamentoValor)
-
     const baseLiquidaFinal = round2(basePreDescontos - honorariosValor - adiantamentoValor)
-    console.log("[v0] Base líquida final:", baseLiquidaFinal)
 
     const menorPropostaCalc = round2(baseLiquidaFinal * (percentualMenorProposta / 100))
     const maiorPropostaCalc = round2(baseLiquidaFinal * (percentualMaiorProposta / 100))
@@ -90,23 +119,14 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
     let menorProposta = isManual ? manualMenor : menorPropostaCalc;
     let maiorProposta = isManual ? manualMaior : maiorPropostaCalc;
 
-    // If we just toggled manual ON and values calculate as 0 (init), maybe set them to current calc?
-    // Handled in toggle handler or specific effect?
-    // Let's rely on manualMenor state.
-
-    // However, if we are NOT manual, we must update the state to reflect calculated?
-    // No, state `manualMenor` is only for override.
-    // But `calculoFinal` should have the effective result.
-
     if (!isManual) {
       menorProposta = menorPropostaCalc
       maiorProposta = maiorPropostaCalc
     }
 
-    console.log("[v0] Propostas - Menor:", menorProposta, "Maior:", maiorProposta)
-
     setCalculoFinal({
-      valor_atualizado: valorAtualizado,
+      breakdown, // Pass full breakdown for UI
+      valor_atualizado: totalBruto,
       pss_valor: pssValor,
       irpf_valor: irpfValor,
       base_liquida_pre_descontos: basePreDescontos,
@@ -115,14 +135,14 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
       adiantamento_valor: adiantamentoValor,
       adiantamento_percentual: adiantamentoPercentual,
       base_liquida_final: baseLiquidaFinal,
-      base_calculo_liquida: baseLiquidaFinal, // Alias para compatibilidade
-      valor_liquido_credor: baseLiquidaFinal, // Alias para compatibilidade
+      base_calculo_liquida: baseLiquidaFinal,
+      valor_liquido_credor: baseLiquidaFinal,
       percentual_menor: percentualMenorProposta,
       percentual_maior: percentualMaiorProposta,
       menor_proposta: menorProposta,
       maior_proposta: maiorProposta,
-      menorProposta: menorProposta, // Alias camelCase
-      maiorProposta: maiorProposta, // Alias camelCase
+      menorProposta: menorProposta,
+      maiorProposta: maiorProposta,
     })
   }, [
     percentualMenorProposta,
@@ -132,10 +152,6 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
     manualMenor,
     manualMaior
   ])
-
-  // Correction: Used `iManual` instead of `isManual` above. Fixing.
-  // Wait, I am writing the file string so I can fix it now before writing.
-  // "let menorProposta = isManual ? manualMenor : menorPropostaCalc;"
 
   const handleManualToggle = (checked: boolean) => {
     setIsManual(checked)
@@ -220,24 +236,34 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
 
         {calculoFinal && (
           <div className="space-y-2 p-4 bg-muted rounded-lg border">
-            <p className="text-sm font-medium mb-2">Preview do Cálculo Final</p>
-            <div className="grid gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Valor atualizado:</span>
-                <span className="font-medium">{formatarMoeda(calculoFinal.valor_atualizado)}</span>
+            <p className="text-sm font-medium mb-2 border-b pb-1">Preview do Cálculo Final (Detalhado)</p>
+            <div className="grid gap-1 text-xs">
+
+              <div className="flex justify-between text-slate-500"><span>Principal Original:</span> <span>{formatarMoeda(calculoFinal.breakdown?.principal_original || 0)}</span></div>
+              <div className="flex justify-between text-slate-500"><span>Correção (IPCA-E/IPCA):</span> <span>{formatarMoeda(calculoFinal.breakdown?.correcao_monetaria || 0)}</span></div>
+              <div className="flex justify-between text-slate-500"><span>Juros Pré-22:</span> <span>{formatarMoeda(calculoFinal.breakdown?.juros_pre_22 || 0)}</span></div>
+              <div className="flex justify-between text-slate-500"><span>SELIC (Pós-22):</span> <span>{formatarMoeda(calculoFinal.breakdown?.selic || 0)}</span></div>
+              <div className="flex justify-between text-slate-500 border-b pb-1 mb-1"><span>Juros Originais:</span> <span>{formatarMoeda(calculoFinal.breakdown?.juros_moratorios_originais || 0)}</span></div>
+
+              <div className="flex justify-between font-bold text-sm">
+                <span>Total Bruto:</span>
+                <span>{formatarMoeda(calculoFinal.valor_atualizado)}</span>
               </div>
-              <div className="flex justify-between text-red-600">
+
+              <div className="flex justify-between text-red-600 mt-2">
                 <span>(-) PSS:</span>
                 <span>{formatarMoeda(calculoFinal.pss_valor)}</span>
               </div>
               <div className="flex justify-between text-red-600">
-                <span>(-) IRPF:</span>
+                <span>(-) IRPF ({calculoFinal.breakdown?.descricao_faixa || "N/A"}):</span>
                 <span>{formatarMoeda(calculoFinal.irpf_valor)}</span>
               </div>
+
               <div className="flex justify-between border-t pt-2 font-medium">
                 <span>Base pré-descontos:</span>
                 <span>{formatarMoeda(calculoFinal.base_liquida_pre_descontos)}</span>
               </div>
+
               <div className="flex justify-between text-red-600">
                 <span>(-) Honorários ({calculoFinal.honorarios_percentual?.toFixed(2) || "0.00"}%):</span>
                 <span>{formatarMoeda(calculoFinal.honorarios_valor)}</span>
@@ -246,7 +272,8 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
                 <span>(-) Adiantamento ({calculoFinal.adiantamento_percentual?.toFixed(2) || "0.00"}%):</span>
                 <span>{formatarMoeda(calculoFinal.adiantamento_valor)}</span>
               </div>
-              <div className="flex justify-between border-t pt-2 font-bold text-blue-600">
+
+              <div className="flex justify-between border-t pt-2 font-bold text-blue-600 text-sm">
                 <span>Base líquida final (para propostas):</span>
                 <span>{formatarMoeda(calculoFinal.base_liquida_final)}</span>
               </div>
@@ -306,6 +333,19 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
             Avançar
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>
+        </div>
+
+        {/* DEBUG SENSOR - REMOVE AFTER FIX */}
+        <div className="mt-8 p-4 bg-yellow-50 border border-yellow-200 rounded-lg text-xs font-mono text-yellow-800">
+          <p className="font-bold border-b border-yellow-200 pb-1 mb-2">🕵️ DEBUG DATA (Tire Print se os valores estiverem errados)</p>
+          <div className="grid grid-cols-2 gap-2">
+            <div>Principal Raw: {dados.valor_principal_original}</div>
+            <div>Principal Calculo: {calculoFinal?.breakdown?.principal_original}</div>
+            <div>Bruto (Proposta): {calculoFinal?.valor_atualizado}</div>
+            <div>IPCA Inicial: {dados.ipca_fator_inicial}</div>
+            <div>IPCA Final: {dados.ipca_fator_final}</div>
+            <div className="col-span-2 overflow-hidden truncate">Breakdown: {JSON.stringify(calculoFinal?.breakdown || "N/A")}</div>
+          </div>
         </div>
       </CardContent>
     </Card>

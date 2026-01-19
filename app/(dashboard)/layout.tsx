@@ -80,6 +80,12 @@ const navigation = [
   },
   { name: "Fila de Cálculo", href: "/calculo", icon: Calculator, roles: ["admin", "operador_calculo", "gestor"] },
   {
+    name: "Auditor IRPF",
+    href: "/auditoria-irpf",
+    icon: Scale,
+    roles: ["admin", "operador_calculo", "gestor"]
+  },
+  {
     name: "Gestão de Certidões",
     href: "/gestao-certidoes",
     icon: FileCheck,
@@ -117,6 +123,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     loadConfig()
+
+
   }, [])
 
   async function loadConfig() {
@@ -217,7 +225,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
                       isActive
-                        ? "bg-sidebar-primary/10 text-primary" // Active state refined: removed shadow-sm, added primary color text
+                        ? "bg-orange-50 dark:bg-orange-950/20 text-primary" // Active state refined: Solid background
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", // Hover state refined
                     )}
                     onClick={() => setSidebarOpen(false)}

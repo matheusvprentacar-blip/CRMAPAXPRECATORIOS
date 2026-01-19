@@ -314,15 +314,21 @@ export function calcularPrecatorio(dados: DadosEntrada): ResultadoCalculo {
 
     const taxaMensalJuros = jurosMoraPercentual * 100; // 0.5%
 
-    // [UPDATED] Juros Moratórios: Full Period (Start -> End) as per user request (61.5% logic)
-    const fim = new Date(dados.data_final_calculo);
+    // [UPDATED] Juros Moratórios: (Start -> Dec/2021 OR End if earlier)
+    // EC113/21: Juros de Mora stops when Selic starts (Jan/22)
+    const dataCalculo = new Date(dados.data_final_calculo);
+    const dataCorte = new Date(2021, 11, 31); // 31/12/2021
+
+    // Use the earliest date between Calculation Date and Cutoff Date
+    const fim = dataCalculo < dataCorte ? dataCalculo : dataCorte;
+
     const inicio = new Date(dados.data_inicial_calculo || dados.data_base);
-    // const dataCorte = new Date(2022, 0, 1); // Ignorar corte 2022 para Juros
 
     if (inicio < fim) {
       const meses = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
       if (meses > 0) {
         taxaTotalJurosPre22 = meses * taxaMensalJuros;
+        console.log(`[v2] Juros Moratórios Auto: ${meses} meses (Até ${fim.toLocaleDateString()}) = ${taxaTotalJurosPre22.toFixed(2)}%`)
       }
     }
   }

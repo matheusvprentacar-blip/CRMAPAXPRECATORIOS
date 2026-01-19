@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CurrencyInput } from "@/components/ui/currency-input"
+import { Textarea } from "@/components/ui/textarea"
 import { ArrowLeft, ArrowRight } from "lucide-react"
 
 interface StepDadosBasicosProps {
@@ -111,6 +112,16 @@ export function StepDadosBasicos({ dados, setDados, onCompletar, voltar }: StepD
               placeholder="Ex: Alimentar, Comum"
             />
           </div>
+        </div>
+
+        <div className="space-y-2">
+          <Label className="text-xs">Observações</Label>
+          <Textarea
+            value={dados.observacoes || ""}
+            onChange={(e) => handleChange("observacoes", e.target.value)}
+            placeholder="Observações gerais sobre o precatório..."
+            className="min-h-[80px]"
+          />
         </div>
 
         <div className="border-t pt-4 mt-4">

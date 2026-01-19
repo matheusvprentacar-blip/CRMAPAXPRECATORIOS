@@ -378,7 +378,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
           resumoFinal,
           resultadosEtapas,
           juros_mora_percentual: safeNumber(pss?.juros_mora_percentual || atualizacao?.taxa_juros_moratorios),
-          observacoes: resumoFinal?.observacoes || "",
+          observacoes: dados.observacoes || resumoFinal?.observacoes || "",
         },
         status: "certidoes",
         status_kanban: "certidoes", // FIXED: Ensure kanban position updates
@@ -543,7 +543,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
 
   if (loading) {
     return (
-      <Card className="p-8 border-none shadow-md bg-card/50 backdrop-blur-sm">
+      <Card className="p-8 border-none shadow-md bg-card">
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
           <p className="ml-4 text-muted-foreground">Carregando dados do precatório...</p>
@@ -554,7 +554,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
 
   return (
     <div className="space-y-6 relative">
-      <Card className="border-none shadow-md bg-card/95 backdrop-blur-sm sticky top-4 z-40 transition-all duration-200">
+      <Card className="border-none shadow-md bg-card sticky top-4 z-40 transition-all duration-200">
         <div className="p-6 border-b">
           <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
             <div>
