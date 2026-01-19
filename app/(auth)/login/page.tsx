@@ -1,11 +1,10 @@
 "use client"
 
 import type React from "react"
-
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Scale } from "lucide-react"
+import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -37,12 +36,18 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
-      <Card className="w-full max-w-md">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-background to-orange-100 dark:from-background dark:via-background dark:to-orange-950/20 p-4">
+      <Card className="w-full max-w-md shadow-xl border-orange-100/50 dark:border-border">
         <CardHeader className="text-center">
-          <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 rounded-full bg-gradient-to-br from-blue-600 to-purple-600 flex items-center justify-center">
-              <Scale className="w-8 h-8 text-white" />
+          <div className="flex justify-center mb-6">
+            <div className="relative w-28 h-28 aspect-square">
+              <Image
+                src="/login-logo.png"
+                alt="Logo"
+                fill
+                className="object-contain"
+                priority
+              />
             </div>
           </div>
           <CardTitle className="text-2xl">CRM de Precatórios</CardTitle>

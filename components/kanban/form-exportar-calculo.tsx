@@ -81,6 +81,50 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
       })
       if (calcError) throw calcError
 
+      // Build synthetic dados_calculo for compatibility with ResumoCalculoDetalhado component
+      const dadosCalculoSintetico = {
+        resultadosEtapas: [
+          // 0: Dados Básicos
+          {
+            valor_principal_original: precatorio.valor_principal,
+            data_base: formData.data_base,
+            data_expedicao: precatorio.data_expedicao
+          },
+          // 1: Atualização
+          {
+            valorAtualizado: parseFloat(formData.valor_atualizado),
+            juros_mora: 0, // Manual calculation might not separate this, or we could calculate diff
+            taxa_juros_moratorios: 0
+          },
+          // 2: PSS
+          {
+            pss_valor: parseFloat(formData.pss_valor || "0"),
+            pss_oficio_valor: 0
+          },
+          // 3: IRPF
+          {
+            valor_irpf: parseFloat(formData.irpf_valor || "0"),
+            aliquota_efetiva: "Manual"
+          },
+          // 4: Honorários
+          {
+            honorarios: {
+              honorarios_percentual: 0, // We could infer from value / updated * 100
+              honorarios_valor: parseFloat(formData.honorarios_valor || "0")
+            }
+          },
+          // 5: Propostas (Base Líquida)
+          {
+            base_liquida_final: parseFloat(formData.saldo_liquido),
+            percentual_menor: precatorio.proposta_menor_percentual,
+            menor_proposta: precatorio.proposta_menor_valor,
+            percentual_maior: precatorio.proposta_maior_percentual,
+            maior_proposta: precatorio.proposta_maior_valor
+          }
+        ],
+        origem: "manual_export"
+      }
+
       // 2. Update Precatorio
       const { error: updError } = await supabase.from('precatorios').update({
         data_base_calculo: formData.data_base,
@@ -94,7 +138,8 @@ export function FormExportarCalculo({ precatorioId, precatorio, onUpdate }: Form
         calculo_ultima_versao: novaVersao,
         calculo_desatualizado: false,
         status_kanban: 'calculo_concluido',
-        updated_at: new Date().toISOString()
+        updated_at: new Date().toISOString(),
+        dados_calculo: dadosCalculoSintetico // Save the synthetic JSON
       }).eq('id', precatorioId)
       if (updError) throw updError
 

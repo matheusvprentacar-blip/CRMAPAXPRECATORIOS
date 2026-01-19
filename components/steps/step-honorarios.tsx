@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, ArrowRight, Info } from "lucide-react"
 import { useEffect, useState } from "react"
 
@@ -18,6 +19,8 @@ interface StepHonorariosProps {
 export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultadosEtapas }: StepHonorariosProps) {
   const honorariosSalvos = resultadosEtapas[4]?.honorarios
 
+  const [isManual, setIsManual] = useState<boolean>(dados.honorarios_manual || false)
+
   const [honorariosPercentual, setHonorariosPercentual] = useState(
     honorariosSalvos?.honorarios_percentual || dados.honorarios_percentual || 0,
   )
@@ -25,21 +28,30 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
     honorariosSalvos?.adiantamento_percentual || dados.adiantamento_percentual || 0,
   )
 
-  // Sincronizar com dados salvos quando disponíveis
+  // States for manual values
+  const [honorariosValorManual, setHonorariosValorManual] = useState<number>(honorariosSalvos?.honorarios_valor || 0)
+  const [adiantamentoValorManual, setAdiantamentoValorManual] = useState<number>(honorariosSalvos?.adiantamento_valor || 0)
+
   useEffect(() => {
     if (honorariosSalvos) {
       setHonorariosPercentual(honorariosSalvos.honorarios_percentual || 0)
       setAdiantamentoPercentual(honorariosSalvos.adiantamento_percentual || 0)
+      if (isManual) {
+        setHonorariosValorManual(honorariosSalvos.honorarios_valor || 0)
+        setAdiantamentoValorManual(honorariosSalvos.adiantamento_valor || 0)
+      }
     }
-  }, [honorariosSalvos])
-  // </CHANGE>
+  }, [honorariosSalvos, isManual])
 
-  const propostas = resultadosEtapas[5] // Step Propostas
+  const propostas = resultadosEtapas[5]
   const baseCalculo = propostas?.base_calculo_liquida || propostas?.valorLiquidoCredor || 0
 
-  const honorariosValor = honorariosSalvos?.honorarios_valor || baseCalculo * (honorariosPercentual / 100)
-  const adiantamentoValor = honorariosSalvos?.adiantamento_valor || baseCalculo * (adiantamentoPercentual / 100)
-  // </CHANGE>
+  // Calculate auto values
+  const honorariosValorAuto = baseCalculo * (honorariosPercentual / 100)
+  const adiantamentoValorAuto = baseCalculo * (adiantamentoPercentual / 100)
+
+  const honorariosValorFinal = isManual ? honorariosValorManual : honorariosValorAuto
+  const adiantamentoValorFinal = isManual ? adiantamentoValorManual : adiantamentoValorAuto
 
   const handleChange = (field: string, value: any) => {
     setDados({ ...dados, [field]: value })
@@ -57,19 +69,39 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
     }
   }
 
+  const handleManualToggle = (checked: boolean) => {
+    setIsManual(checked)
+    if (checked) {
+      // Initialize manual values with current auto values
+      setHonorariosValorManual(honorariosValorAuto)
+      setAdiantamentoValorManual(adiantamentoValorAuto)
+    }
+  }
+
   const handleAvancar = () => {
+    const newHonPercent = isManual && baseCalculo > 0 ? (honorariosValorManual / baseCalculo) * 100 : honorariosPercentual
+    const newAdiPercent = isManual && baseCalculo > 0 ? (adiantamentoValorManual / baseCalculo) * 100 : adiantamentoPercentual
+
     onCompletar({
       honorarios: {
-        honorarios_percentual: honorariosPercentual,
-        honorarios_valor: honorariosValor,
-        adiantamento_percentual: adiantamentoPercentual,
-        adiantamento_valor: adiantamentoValor,
+        honorarios_percentual: newHonPercent,
+        honorarios_valor: honorariosValorFinal,
+        adiantamento_percentual: newAdiPercent,
+        adiantamento_valor: adiantamentoValorFinal,
       },
       // Campos legados para compatibilidade
-      honorarios_contratuais: honorariosValor,
-      adiantamento_recebido: adiantamentoValor,
-      honorariosTotal: honorariosValor,
-      adiantamentoValor: adiantamentoValor,
+      honorarios_contratuais: honorariosValorFinal,
+      adiantamento_recebido: adiantamentoValorFinal,
+      honorariosTotal: honorariosValorFinal,
+      adiantamentoValor: adiantamentoValorFinal,
+      honorarios_manual: isManual
+    })
+
+    setDados({
+      ...dados,
+      honorarios_manual: isManual,
+      honorarios_percentual: newHonPercent,
+      adiantamento_percentual: newAdiPercent
     })
   }
 
@@ -83,8 +115,18 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Honorários e Adiantamentos</CardTitle>
-        <CardDescription>Configure percentuais de honorários e adiantamentos sobre a base líquida</CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Honorários e Adiantamentos</CardTitle>
+            <CardDescription>Configure percentuais de honorários e adiantamentos sobre a base líquida</CardDescription>
+          </div>
+          <div className="flex items-center space-x-2 bg-secondary/50 p-2 rounded-lg border border-secondary">
+            <Switch id="manual-mode-honorarios" checked={isManual} onCheckedChange={handleManualToggle} />
+            <Label htmlFor="manual-mode-honorarios" className="cursor-pointer font-semibold">
+              Modo Manual
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-6">
         {baseCalculo === 0 ? (
@@ -101,7 +143,6 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
             <p className="text-sm font-medium">{formatarMoeda(baseCalculo)}</p>
           </div>
         )}
-        {/* </CHANGE> */}
 
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-3">
@@ -115,15 +156,28 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
                 value={honorariosPercentual || ""}
                 onChange={(e) => handlePercentualChange("honorarios_percentual", e.target.value)}
                 placeholder="0.00"
+                disabled={isManual}
               />
             </div>
-            {baseCalculo > 0 && (
+            {(baseCalculo > 0 || isManual) && (
               <div className="p-2 bg-muted/50 rounded">
-                <p className="text-xs text-muted-foreground">Valor calculado</p>
-                <p className="text-sm font-medium text-emerald-600">{formatarMoeda(honorariosValor)}</p>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  Valor Honorários (R$)
+                  {isManual && <span className="ml-1 text-amber-600">(Manual)</span>}
+                </Label>
+                {isManual ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className="font-bold text-emerald-600 border-emerald-200"
+                    value={honorariosValorManual}
+                    onChange={(e) => setHonorariosValorManual(Number.parseFloat(e.target.value) || 0)}
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-emerald-600">{formatarMoeda(honorariosValorAuto)}</p>
+                )}
               </div>
             )}
-            {/* </CHANGE> */}
           </div>
 
           <div className="space-y-3">
@@ -137,15 +191,28 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
                 value={adiantamentoPercentual || ""}
                 onChange={(e) => handlePercentualChange("adiantamento_percentual", e.target.value)}
                 placeholder="0.00"
+                disabled={isManual}
               />
             </div>
-            {baseCalculo > 0 && (
+            {(baseCalculo > 0 || isManual) && (
               <div className="p-2 bg-muted/50 rounded">
-                <p className="text-xs text-muted-foreground">Valor calculado</p>
-                <p className="text-sm font-medium text-orange-600">{formatarMoeda(adiantamentoValor)}</p>
+                <Label className="text-xs text-muted-foreground mb-1 block">
+                  Valor Adiantamento (R$)
+                  {isManual && <span className="ml-1 text-amber-600">(Manual)</span>}
+                </Label>
+                {isManual ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className="font-bold text-orange-600 border-orange-200"
+                    value={adiantamentoValorManual}
+                    onChange={(e) => setAdiantamentoValorManual(Number.parseFloat(e.target.value) || 0)}
+                  />
+                ) : (
+                  <p className="text-sm font-medium text-orange-600">{formatarMoeda(adiantamentoValorAuto)}</p>
+                )}
               </div>
             )}
-            {/* </CHANGE> */}
           </div>
         </div>
 

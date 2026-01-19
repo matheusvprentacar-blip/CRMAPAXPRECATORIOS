@@ -2,10 +2,9 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ArrowRight, Calculator, Info } from "lucide-react"
+import { ArrowLeft, ArrowRight, Info } from "lucide-react"
 import { calcularPrecatorio } from "@/lib/calculos/calcular-precatorio"
 import { calcularJurosMoratoriosAcumulados } from "@/lib/calculos/indices"
 
@@ -19,7 +18,6 @@ interface StepAtualizacaoMonetariaProps {
 export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar }: StepAtualizacaoMonetariaProps) {
   const [resultado, setResultado] = useState<any>(null)
   const [taxaJurosMora, setTaxaJurosMora] = useState<number>(0)
-  const [periodosJuros, setPeriodosJuros] = useState<Array<{ periodo: string; indice: number }>>([])
 
   useEffect(() => {
     if (!dados.data_final_calculo) {
@@ -28,26 +26,26 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
     }
   }, [])
 
-  const handleChange = (field: string, value: any) => {
-    setDados({ ...dados, [field]: value })
-  }
-
+  // Effect for Juros Calculation (remains active for reference)
   useEffect(() => {
     if (dados.data_base) {
       const resultado = calcularJurosMoratoriosAcumulados(dados.data_base)
       setTaxaJurosMora(resultado.taxaTotal)
-      setPeriodosJuros(resultado.periodos)
     }
   }, [dados.data_base])
 
+  // AUTOMATIC CALCULATION EFFECT
   useEffect(() => {
-    if (dados.data_base && dados.data_inicial_calculo && dados.data_final_calculo && dados.valor_principal_original) {
+    // Only calculate if we have minimal data
+    if (dados.data_base && dados.valor_principal_original) {
       try {
+        console.log("[v0] Auto-calculating in StepAtualizacaoMonetaria...", dados);
         const calc = calcularPrecatorio({
           ...dados,
-          taxa_juros_mora: taxaJurosMora, // Usar a taxa calculada
+          taxa_juros_mora: taxaJurosMora,
           taxa_juros_moratorios: taxaJurosMora,
           juros_mora_percentual: taxaJurosMora / 100,
+          taxa_juros_pre_22_acumulada: taxaJurosMora, // Pass pre-calculated rate
           aliquota_irpf: 0,
           aliquota_pss: 0,
           tem_desconto_pss: true,
@@ -60,148 +58,146 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
         console.error("[v0] Erro ao calcular:", error)
       }
     }
-  }, [dados, taxaJurosMora]) // Adicionar taxaJurosMora como dependência
-
-  // Cálculos locais para consistência com a visualização
-  const valorPrincipal = dados.valor_principal_original || 0
-  const valorJurosOrig = dados.valor_juros_original || 0
-  const valorSelicOrig = dados.multa || 0
-  const totalBase = valorPrincipal + valorJurosOrig + valorSelicOrig
-  const valorJurosMoraCalculado = (totalBase * taxaJurosMora) / 100
-  const valorAtualizadoCalculado = totalBase + valorJurosMoraCalculado
+  }, [dados, taxaJurosMora])
 
   const handleAvancar = () => {
-    const dadosAtualizados = {
+    if (!resultado) return;
+
+    const finalResult = {
+      ...resultado,
+      taxa_juros_mora: taxaJurosMora,
+      // Ensure we pass the calculated values
+      valorJuros: resultado.valorJuros,
+      juros_mora: resultado.valorJuros,
+      multa: dados.multa || 0,
+    }
+
+    console.log("[v0] StepAtualizacaoMonetaria (AUTO) - Salvando:", finalResult)
+
+    setDados({
       ...dados,
       taxa_juros_mora: taxaJurosMora,
       taxa_juros_moratorios: taxaJurosMora,
       juros_mora_percentual: taxaJurosMora / 100,
-    }
-    setDados(dadosAtualizados)
-
-    console.log("[v0] StepAtualizacaoMonetaria - Salvando valor_atualizado:", valorAtualizadoCalculado)
-
-    onCompletar({
-      ...resultado,
-      taxa_juros_mora: taxaJurosMora,
-      taxa_juros_moratorios: taxaJurosMora,
-      valorAtualizado: valorAtualizadoCalculado,
-      valor_atualizado: valorAtualizadoCalculado,
-      valorJuros: valorJurosMoraCalculado, // Atualiza juros também
-      juros_mora: valorJurosMoraCalculado,
-      multa: valorSelicOrig, // Garante que multa/selic seja passada
     })
+
+    onCompletar(finalResult)
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Atualização Monetária</CardTitle>
-        <CardDescription>
-          Configure as datas para cálculo da atualização monetária (SELIC até 12/2021, IPCA-E depois)
-        </CardDescription>
+        <div className="flex items-center justify-between">
+          <div>
+            <CardTitle>Atualização Monetária (Automática)</CardTitle>
+            <CardDescription>
+              Cálculo realizado com base nos índices e datas configurados.
+            </CardDescription>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-3">
-          <div className="space-y-2">
-            <Label className="text-xs">Data Base</Label>
-            <Input
-              type="date"
-              value={dados.data_base || ""}
-              onChange={(e) => handleChange("data_base", e.target.value)}
-            />
+        {/* Read-only Data Summary */}
+        <div className="grid gap-4 md:grid-cols-3 p-4 bg-muted/20 rounded-lg border border-dashed">
+          <div>
+            <Label className="text-xs text-muted-foreground">Data Base</Label>
+            <div className="font-medium text-sm">{dados.data_base ? new Date(dados.data_base + 'T12:00:00').toLocaleDateString("pt-BR") : "-"}</div>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Data Inicial do Cálculo</Label>
-            <Input
-              type="date"
-              value={dados.data_inicial_calculo || ""}
-              onChange={(e) => handleChange("data_inicial_calculo", e.target.value)}
-            />
+          <div>
+            <Label className="text-xs text-muted-foreground">Data Cálculo Final</Label>
+            <div className="font-medium text-sm">{dados.data_final_calculo ? new Date(dados.data_final_calculo + 'T12:00:00').toLocaleDateString("pt-BR") : "-"}</div>
           </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Data Final do Cálculo</Label>
-            <Input
-              type="date"
-              value={dados.data_final_calculo || ""}
-              onChange={(e) => handleChange("data_final_calculo", e.target.value)}
-            />
-            <p className="text-xs text-muted-foreground">Data atual preenchida automaticamente</p>
+          <div>
+            <Label className="text-xs text-muted-foreground">Principal Original</Label>
+            <div className="font-medium text-sm">{(dados.valor_principal_original || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
           </div>
         </div>
 
-        {dados.data_base && taxaJurosMora > 0 && (
-          <div className="bg-blue-50 dark:bg-blue-950/20 border border-blue-200 dark:border-blue-800 p-4 rounded-lg space-y-2">
-            <div className="flex items-center gap-2">
-              <Calculator className="h-4 w-4 text-blue-600" />
-              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100">
-                Calculadora de Juros Moratórios
-              </h4>
+        {/* MEMÓRIA DE CÁLCULO DETALHADA */}
+        {resultado?.memoriaCalculo ? (
+          <div className="space-y-3 border rounded-md p-3 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 animate-in fade-in duration-500">
+            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 border-b pb-2 mb-2">
+              <Info className="w-4 h-4" />
+              <h4 className="text-sm font-bold">Memória de Cálculo (Detalhamento)</h4>
             </div>
-            <div className="grid gap-2 text-xs">
-              <div className="flex justify-between">
-                <span className="text-blue-700 dark:text-blue-300">Data base do crédito:</span>
-                <span className="font-medium text-blue-900 dark:text-blue-100">
-                  {new Date(dados.data_base).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-blue-700 dark:text-blue-300">Período considerado:</span>
-                <span className="font-medium text-blue-900 dark:text-blue-100">
-                  {new Date(dados.data_base).toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })} até{" "}
-                  {periodosJuros.length > 0
-                    ? periodosJuros[periodosJuros.length - 1].periodo.split(" - ")[1]
-                    : new Date().toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })}
-                </span>
-              </div>
-              <div className="flex justify-between border-t border-blue-300 dark:border-blue-700 pt-2">
-                <span className="font-semibold text-blue-900 dark:text-blue-100">Taxa total de juros moratórios:</span>
-                <span className="text-lg font-bold text-blue-600 dark:text-blue-400">{taxaJurosMora.toFixed(4)}%</span>
-              </div>
-              {dados.valor_principal_original && (
-                <div className="flex justify-between">
-                  <span className="text-blue-700 dark:text-blue-300">Juros sobre Total (P+J+S):</span>
-                  <span className="font-medium text-blue-900 dark:text-blue-100">
-                    {(((dados.valor_principal_original + (dados.valor_juros_original || 0) + (dados.multa || 0)) * taxaJurosMora) / 100).toLocaleString("pt-BR", {
-                      style: "currency",
-                      currency: "BRL",
-                    })}
-                  </span>
+
+            <div className="grid gap-3 text-xs">
+              {/* Etapa 1: IPCA */}
+              {resultado.memoriaCalculo.ipca && (
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
+                  <div>
+                    <span className="font-semibold text-blue-700 dark:text-blue-400 block">1. Correção Monetária (IPCA-E)</span>
+                    <span className="text-muted-foreground font-mono">
+                      {resultado.memoriaCalculo.ipca.formula}
+                    </span>
+                    <div className="text-slate-500 mt-1">
+                      {resultado.memoriaCalculo.ipca.base ? (
+                        <>
+                          ({resultado.memoriaCalculo.ipca.principalOriginal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} ÷ {resultado.memoriaCalculo.ipca.fatorInicial?.toFixed(7)}) × {resultado.memoriaCalculo.ipca.fatorFinal?.toFixed(7)}
+                        </>
+                      ) : (
+                        <>Fator In: {resultado.memoriaCalculo.ipca.fatorInicial?.toFixed(7)} | Fator Out: {resultado.memoriaCalculo.ipca.fatorFinal?.toFixed(7)}</>
+                      )}
+                    </div>
+                  </div>
+                  <div className="font-bold font-mono text-base text-blue-800 dark:text-blue-300">
+                    {resultado.memoriaCalculo.ipca.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
                 </div>
               )}
-            </div>
-            <div className="flex items-start gap-1 text-xs text-blue-700 dark:text-blue-300 mt-2">
-              <Info className="h-3 w-3 mt-0.5 flex-shrink-0" />
-              <span>
-                Soma acumulada dos índices SELIC/IPCA-E da tabela oficial desde a data base até o período atual.
-              </span>
+
+              {/* Etapa 2: Juros */}
+              {resultado.memoriaCalculo.juros && (
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center border-t border-dashed pt-2">
+                  <div>
+                    <span className="font-semibold text-orange-700 dark:text-orange-400 block">2. Juros Moratórios (Pré-2022)</span>
+                    <span className="text-muted-foreground font-mono">
+                      {resultado.memoriaCalculo.juros.formula}
+                    </span>
+                    <div className="text-slate-500 mt-1">
+                      {resultado.memoriaCalculo.juros.base?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {resultado.memoriaCalculo.juros.percentual?.toFixed(4)}%
+                    </div>
+                  </div>
+                  <div className="font-bold font-mono text-base text-orange-800 dark:text-orange-300">
+                    {resultado.memoriaCalculo.juros.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                </div>
+              )}
+
+              {/* Etapa 3: SELIC */}
+              {resultado.memoriaCalculo.selic && (
+                <div className="grid grid-cols-[1fr_auto] gap-2 items-center border-t border-dashed pt-2">
+                  <div>
+                    <span className="font-semibold text-green-700 dark:text-green-400 block">3. SELIC Acumulada (Pós-2022)</span>
+                    <span className="text-muted-foreground font-mono">
+                      {resultado.memoriaCalculo.selic.formula}
+                    </span>
+                    <div className="text-slate-500 mt-1">
+                      {resultado.memoriaCalculo.selic.base?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {resultado.memoriaCalculo.selic.percentual?.toFixed(4)}%
+                    </div>
+                  </div>
+                  <div className="font-bold font-mono text-base text-green-800 dark:text-green-300">
+                    {resultado.memoriaCalculo.selic.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  </div>
+                </div>
+              )}
+
+              {/* Total Calculation */}
+              <div className="border-t-2 border-slate-300 pt-3 mt-2 flex justify-between items-center bg-slate-100 dark:bg-slate-800 p-3 rounded">
+                <div>
+                  <span className="font-bold uppercase text-xs text-muted-foreground block">Valor Atualizado Final</span>
+                  <span className="text-[10px] text-muted-foreground">(Soma dos itens 1, 2 e 3)</span>
+                </div>
+                <span className="font-bold text-2xl text-slate-900 dark:text-white">
+                  {(resultado.memoriaCalculo.ipca.resultado + resultado.memoriaCalculo.juros.resultado + resultado.memoriaCalculo.selic.resultado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                </span>
+              </div>
             </div>
           </div>
-        )}
-
-        {resultado && (
-          <div className="space-y-2 p-3 bg-muted rounded-md">
-            <h4 className="text-sm font-medium">Resultado da Atualização</h4>
-            <div className="grid gap-2 md:grid-cols-2 text-sm">
-              <div>
-                <span className="text-muted-foreground">Valor Original (P+J+S): </span>
-                <span className="font-medium">
-                  {totalBase.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Valor Atualizado: </span>
-                <span className="font-medium">
-                  {valorAtualizadoCalculado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </span>
-              </div>
-              <div>
-                <span className="text-muted-foreground">Juros de Mora (sobre Total): </span>
-                <span className="font-medium">
-                  {valorJurosMoraCalculado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                </span>
-              </div>
-            </div>
+        ) : (
+          <div className="p-8 text-center text-muted-foreground bg-muted/10 rounded-lg flex flex-col items-center gap-2">
+            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
+            <p>Calculando atualização monetária...</p>
           </div>
         )}
 
@@ -210,7 +206,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
             <ArrowLeft className="h-4 w-4 mr-1" />
             Voltar
           </Button>
-          <Button size="sm" onClick={handleAvancar}>
+          <Button size="sm" onClick={handleAvancar} disabled={!resultado}>
             Avançar
             <ArrowRight className="h-4 w-4 ml-1" />
           </Button>

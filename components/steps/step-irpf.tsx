@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, ArrowRight, Info, Calculator } from "lucide-react"
 import { useState, useEffect } from "react"
 
@@ -18,6 +19,9 @@ interface StepIRPFProps {
 export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, voltar }: StepIRPFProps) {
   const [preview, setPreview] = useState<any>(null)
   const [calculadoraSM, setCalculadoraSM] = useState<any>(null)
+  const [isManual, setIsManual] = useState<boolean>(dados.irpf_manual || false)
+  // Se já veio manual, usa o valor salvo. Se veio auto, usa valor_irpf se existir, senão 0.
+  const [valorManual, setValorManual] = useState<number>(dados.valor_irpf || 0)
 
   useEffect(() => {
     if (dados.valor_principal_original && dados.taxa_juros_moratorios && dados.salario_minimo_referencia) {
@@ -98,12 +102,20 @@ export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, volta
         faixaAplicada,
         deducaoTotal,
         meses: dados.meses_execucao_anterior,
-        valorAtualizado, // Usar valor atualizado em vez de saldoCredorSemDesconto
+        valorAtualizado,
         irBruto,
         irpfTotal,
       })
+
+      // Se NÃO for manual, atualiza o state valorManual para refletir o automático
+      // (Isso garante que ao trocar para manual, já comece com o valor calculado)
+      if (!isManual) {
+        setValorManual(irpfTotal)
+      }
+
     } else {
       setPreview(null)
+      if (!isManual) setValorManual(0)
     }
   }, [
     dados.valor_principal_original,
@@ -112,6 +124,7 @@ export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, volta
     dados.meses_execucao_anterior,
     dados.adiantamento_recebido,
     resultadosEtapas,
+    isManual // Re-run if manual toggles (to reset value if toggled off)
   ])
 
   const handleChange = (field: string, value: any) => {
@@ -123,30 +136,56 @@ export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, volta
     setDados(novoDados)
   }
 
+  const handleManualToggle = (checked: boolean) => {
+    setIsManual(checked)
+    // Effect handled reset logic
+  }
+
+  const handleManualValueChange = (val: number) => {
+    setValorManual(val)
+  }
+
   const handleAvancar = () => {
     const dadosAtualizados = calculadoraSM
       ? { ...dados, quantidade_salarios_minimos: calculadoraSM.qtdSalarios }
       : dados
 
-    setDados(dadosAtualizados)
+    const valorFinal = isManual ? valorManual : (preview?.irpfTotal || 0)
+
+    setDados({
+      ...dadosAtualizados,
+      irpf_manual: isManual,
+      valor_irpf: valorFinal
+    })
 
     onCompletar({
       quantidade_salarios_minimos: dadosAtualizados.quantidade_salarios_minimos,
       meses_execucao_anterior: dados.meses_execucao_anterior,
-      valor_irpf: preview?.irpfTotal || 0,
-      irTotal: preview?.irpfTotal || 0, // Alias
-      irpf_valor: preview?.irpfTotal || 0, // Alias
+      valor_irpf: valorFinal,
+      irTotal: valorFinal, // Alias
+      irpf_valor: valorFinal, // Alias
       preview,
+      irpf_manual: isManual
     })
   }
 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>IRPF - Imposto de Renda (Modelo RRA)</CardTitle>
-        <CardDescription>
-          Configure os parâmetros de desconto do IRPF usando o modelo RRA (Rendimentos Recebidos Acumuladamente)
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>IRPF - Imposto de Renda (Modelo RRA)</CardTitle>
+            <CardDescription>
+              Configure os parâmetros de desconto do IRPF usando o modelo RRA (Rendimentos Recebidos Acumuladamente)
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2 bg-secondary/50 p-2 rounded-lg border border-secondary">
+            <Switch id="manual-mode-irpf" checked={isManual} onCheckedChange={handleManualToggle} />
+            <Label htmlFor="manual-mode-irpf" className="cursor-pointer font-semibold">
+              Modo Manual
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         {dados.taxa_juros_moratorios && (
@@ -254,6 +293,7 @@ export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, volta
               <Info className="h-4 w-4 mt-0.5 text-blue-500" />
               <div className="space-y-2 flex-1">
                 <p className="font-medium text-base">Cálculo de IRPF - Modelo RRA (Duas Bases)</p>
+                {/* ... (keep preview details as visual helper even in manual mode) ... */}
                 <div className="grid gap-2 text-xs bg-background p-3 rounded border border-border">
                   <p className="font-semibold text-blue-600 mb-1">BASE 1: Para descobrir a faixa</p>
                   <div className="flex justify-between">
@@ -312,15 +352,41 @@ export function StepIRPF({ dados, setDados, onCompletar, resultadosEtapas, volta
                   </div>
 
                   <div className="flex justify-between border-t-2 border-border pt-2 mt-2">
-                    <span className="font-semibold">IRPF Total (IR bruto - Dedução):</span>
+                    <span className="font-semibold">IRPF Calc (IR bruto - Dedução):</span>
                     <span className="text-lg font-bold text-blue-600">
                       {preview.irpfTotal.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </span>
                   </div>
                 </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Fórmula RRA: IRPF = (Valor Atualizado × Alíquota) - (Parcela a Deduzir × Meses)
-                </p>
+
+                {/* MANUAL OVERRIDE SECTION */}
+                <div className="mt-4 pt-4 border-t border-blue-200 dark:border-blue-800">
+                  <Label className="mb-2 block font-semibold text-blue-900 dark:text-blue-100">
+                    Valor Final do IRPF {isManual && "(Manual)"}
+                  </Label>
+
+                  {isManual ? (
+                    <Input
+                      type="number"
+                      step="0.01"
+                      value={valorManual}
+                      onChange={(e) => handleManualValueChange(parseFloat(e.target.value) || 0)}
+                      className="font-bold text-lg border-amber-500 focus-visible:ring-amber-500 bg-background"
+                    />
+                  ) : (
+                    <div className="p-2 bg-background border rounded font-bold text-lg text-blue-600">
+                      {valorManual.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                    </div>
+                  )}
+
+                  {isManual && (
+                    <p className="text-xs text-amber-600 mt-1">
+                      Você está definindo o valor do IRPF manualmente. O cálculo acima é apenas referência.
+                    </p>
+                  )}
+                </div>
+
+
               </div>
             </div>
           </div>

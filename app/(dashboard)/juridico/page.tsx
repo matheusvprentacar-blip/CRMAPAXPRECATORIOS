@@ -1,174 +1,210 @@
 "use client"
 /* eslint-disable */
 
-import { useState, useEffect } from "react"
-import { RoleGuard } from "@/lib/auth/role-guard"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Scale, Clock, CheckCircle2, AlertCircle, Loader2, ArrowRight } from "lucide-react"
-import { createBrowserClient } from "@/lib/supabase/client"
-import { Button } from "@/components/ui/button"
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import Link from "next/link"
+import { Button } from "@/components/ui/button"
+import { Scale, AlertCircle, FileText, User, CalendarClock, Briefcase } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getSupabase } from "@/lib/supabase/client"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
+
+interface PrecatJuridico {
+    id: string
+    credor_nome?: string
+    numero_processo?: string
+    numero_precatorio?: string
+    devedor?: string
+    advogado_nome?: string
+    responsavel?: string
+    created_at: string
+    status_kanban?: string
+    responsavel_nome?: string
+}
 
 export default function JuridicoPage() {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const router = useRouter()
+    const [precatorios, setPrecatorios] = useState<PrecatJuridico[]>([])
     const [loading, setLoading] = useState(true)
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const [precatorios, setPrecatorios] = useState<any[]>([])
-    const [stats, setStats] = useState({
-        pendentes: 0,
-        realizados: 0,
-        riscos: 0
-    })
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        fetchData()
+        const carregarDados = async () => {
+            const supabase = getSupabase()
+
+            if (!supabase) {
+                setLoading(false)
+                return
+            }
+
+            try {
+                const {
+                    data: { user: currentUser },
+                } = await supabase.auth.getUser()
+
+                if (!currentUser) {
+                    setError("Usuário não autenticado.")
+                    setLoading(false)
+                    return
+                }
+
+                // Busca precatórios na fase juridico
+                // Ordenação por created_at ASC (Ordem de inclusão/Fila)
+                const { data, error: fetchError } = await supabase
+                    .from("precatorios")
+                    .select(
+                        `
+            id,
+            credor_nome,
+            numero_processo,
+            numero_precatorio,
+            devedor,
+            advogado_nome,
+            responsavel,
+            created_at,
+            status_kanban,
+            usuarios!responsavel(nome)
+          `
+                    )
+                    // Filtro: Tudo que está em 'juridico' ou 'analise_juridica' ou atribuído
+                    .or(`status_kanban.eq.juridico,status_kanban.eq.analise_juridica,responsavel_juridico_id.eq.${currentUser.id}`)
+                    .order("created_at", { ascending: true }) // FIFO
+
+                if (fetchError) {
+                    console.error("[Jurídico] Erro ao carregar fila:", fetchError)
+                    setError("Erro ao carregar fila jurídica.")
+                    setLoading(false)
+                    return
+                }
+
+                const formatted = (data || []).map((p: any) => ({
+                    ...p,
+                    responsavel_nome: p.usuarios?.nome || "Sem responsável"
+                }))
+
+                setPrecatorios(formatted)
+                setLoading(false)
+            } catch (err) {
+                console.error("[Jurídico] Erro inesperado:", err)
+                setError("Ocorreu um erro inesperado.")
+                setLoading(false)
+            }
+        }
+
+        carregarDados()
     }, [])
 
-    async function fetchData() {
-        try {
-            setLoading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) return
+    const handleAbrir = (id: string) => {
+        router.push(`/precatorios/visualizar?id=${id}`)
+    }
 
-            // Buscar precatórios com status 'juridico'
-            const { data, error } = await supabase
-                .from('precatorios')
-                .select('*')
-                .eq('status_kanban', 'analise_juridica')
-                .order('created_at', { ascending: false })
-
-            if (error) throw error
-
-            if (data) {
-                setPrecatorios(data)
-                setStats({
-                    pendentes: data.length,
-                    realizados: 0, // Implementar lógica de realizados se houver histórico
-                    riscos: 0 // Implementar lógica de risco se houver campo
-                })
-            }
-        } catch (error) {
-            console.error("Erro ao carregar dados do jurídico:", error)
-        } finally {
-            setLoading(false)
-        }
+    if (loading) {
+        return (
+            <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+        )
     }
 
     return (
-        <RoleGuard allowedRoles={["admin", "juridico", "gestor"]}>
-            <div className="space-y-6">
+        <div className="space-y-6 container mx-auto p-6 max-w-7xl">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight text-primary">Painel Jurídico</h1>
-                    <p className="text-muted-foreground">
-                        Gerencie pareceres jurídicos e analise riscos processuais.
-                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight">Fila Jurídica</h1>
+                    <p className="text-muted-foreground">Processos aguardando análise jurídica (Ordem de Chegada)</p>
                 </div>
-
-                <div className="grid gap-4 md:grid-cols-3">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pareceres Pendentes</CardTitle>
-                            <Clock className="h-4 w-4 text-amber-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.pendentes}</div>
-                            <p className="text-xs text-muted-foreground">Aguardando análise</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Pareceres Realizados</CardTitle>
-                            <CheckCircle2 className="h-4 w-4 text-green-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.realizados}</div>
-                            <p className="text-xs text-muted-foreground">Neste mês</p>
-                        </CardContent>
-                    </Card>
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Riscos Elevados</CardTitle>
-                            <AlertCircle className="h-4 w-4 text-red-500" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.riscos}</div>
-                            <p className="text-xs text-muted-foreground">Processos críticos</p>
-                        </CardContent>
-                    </Card>
+                <div className="flex items-center gap-2">
+                    <Badge variant="secondary" className="text-lg px-4 py-1">
+                        {precatorios.length} na fila
+                    </Badge>
                 </div>
-
-                <Tabs defaultValue="pendentes" className="w-full">
-                    <TabsList>
-                        <TabsTrigger value="pendentes">Pendentes de Análise</TabsTrigger>
-                        <TabsTrigger value="andamento">Em Andamento</TabsTrigger>
-                        <TabsTrigger value="historico">Histórico Completo</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="pendentes" className="mt-4">
-                        <Card>
-                            <CardHeader>
-                                <CardTitle>Solicitações Pendentes</CardTitle>
-                                <CardDescription>
-                                    Precatórios aguardando parecer jurídico.
-                                </CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                {loading ? (
-                                    <div className="flex justify-center py-8">
-                                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                                    </div>
-                                ) : precatorios.length === 0 ? (
-                                    <div className="flex flex-col items-center justify-center p-8 text-center text-muted-foreground bg-muted/20 rounded-lg border-dashed border-2">
-                                        <Scale className="h-10 w-10 mb-2 opacity-20" />
-                                        <p>Nenhuma solicitação pendente no momento.</p>
-                                    </div>
-                                ) : (
-                                    <div className="space-y-4">
-                                        {precatorios.map(precatorio => (
-                                            <div key={precatorio.id} className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors">
-                                                <div className="flex flex-col gap-1">
-                                                    <div className="flex items-center gap-2">
-                                                        <span className="font-semibold">{precatorio.credor_nome || "Credor não informado"}</span>
-                                                        <Badge variant="outline">{precatorio.numero_processo}</Badge>
-                                                    </div>
-                                                    <div className="text-sm text-muted-foreground flex gap-4">
-                                                        <span>Tribunal: {precatorio.tribunal}</span>
-                                                        <span>Valor: {precatorio.valor_principal ? `R$ ${precatorio.valor_principal.toLocaleString('pt-BR')}` : '-'}</span>
-                                                    </div>
-                                                </div>
-                                                <Button size="sm" asChild>
-                                                    <Link href={`/juridico/analise?id=${precatorio.id}`}>
-                                                        Analisar
-                                                        <ArrowRight className="ml-2 h-4 w-4" />
-                                                    </Link>
-                                                </Button>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="andamento" className="mt-4">
-                        <Card>
-                            <CardContent className="p-8 text-center text-muted-foreground">
-                                <p>Nenhuma análise em andamento.</p>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    <TabsContent value="historico" className="mt-4">
-                        <Card>
-                            <CardContent className="p-8 text-center text-muted-foreground">
-                                <p>Histórico vazio.</p>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-                </Tabs>
             </div>
-        </RoleGuard>
+
+            {error && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
+
+            {!loading && precatorios.length === 0 && (
+                <Card className="p-8 text-center text-muted-foreground bg-muted/50 border-dashed">
+                    <Scale className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <p className="text-lg font-medium">Nenhum precatório nesta fila</p>
+                    <p className="text-sm">Processos enviados para o Jurídico aparecerão aqui.</p>
+                </Card>
+            )}
+
+            <div className="grid gap-4">
+                {precatorios.map((p, index) => (
+                    <Card
+                        key={p.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500/40 group relative overflow-hidden"
+                        onClick={() => handleAbrir(p.id)}
+                    >
+                        <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors" />
+
+                        <CardContent className="p-6 flex items-center justify-between relative z-10">
+                            <div className="flex items-start gap-6 flex-1">
+                                {/* Índice */}
+                                <div className="flex flex-col items-center justify-center min-w-[3rem]">
+                                    <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-blue-500/40 transition-colors">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
+                                </div>
+
+                                {/* Info Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+
+                                    {/* Coluna 1: Credor/Devedor */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <User className="w-3 h-3" /> Partes
+                                        </label>
+                                        <p className="font-medium truncate" title={p.credor_nome}>{p.credor_nome || "Credor N/I"}</p>
+                                        <p className="text-xs text-muted-foreground truncate" title={p.devedor}>Contra: {p.devedor || "Devedor N/I"}</p>
+                                    </div>
+
+                                    {/* Coluna 2: Processual */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <FileText className="w-3 h-3" /> Processo
+                                        </label>
+                                        <p className="font-medium text-sm font-mono">{p.numero_processo || "N/A"}</p>
+                                        <p className="text-xs text-muted-foreground">{p.numero_precatorio || "Prec. N/A"}</p>
+                                    </div>
+
+                                    {/* Coluna 3: Advogado (Adaptado para Jurídico) */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <Briefcase className="w-3 h-3" /> Advogado Origem
+                                        </label>
+                                        <p className="font-medium text-sm truncate" title={p.advogado_nome}>{p.advogado_nome || "Não informado"}</p>
+                                    </div>
+
+                                    {/* Coluna 4: Responsável e Data */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <CalendarClock className="w-3 h-3" /> Responsável
+                                        </label>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-blue-600">
+                                                {p.responsavel_nome}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground">
+                                                {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+        </div>
     )
 }

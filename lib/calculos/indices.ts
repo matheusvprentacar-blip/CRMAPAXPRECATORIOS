@@ -71,20 +71,67 @@ export const TABELA_INDICES_COMPLETA: LinhaIndice[] = [
 ]
 
 export function calcularJurosMoratoriosAcumulados(
-  dataBase: string, // formato "YYYY-MM-DD" ou "YYYY-MM-01"
+  dataBase: string,
+  dataLimite?: string // YYYY-MM-DD cutoff
 ): { taxaTotal: number; periodos: Array<{ periodo: string; indice: number }> } {
   const periodos: Array<{ periodo: string; indice: number }> = []
 
-  // Filtra todas as linhas >= dataBase e com indice > 0
-  const linhasFiltradas = TABELA_INDICES_COMPLETA.filter((l) => l.dataRef >= dataBase && l.indice > 0)
+  // Default cutoff for EC113 is usually Dec 2021 if not specified? 
+  // Better to let caller specify. If undefined, assume NOW (which is wrong for EC113).
+  // But let's fix the calculation method first.
 
-  // Soma os índices
-  const taxaTotal = linhasFiltradas.reduce((acc, l) => {
-    periodos.push({ periodo: l.periodo, indice: l.indice })
-    return acc + l.indice
-  }, 0)
+  const inicio = new Date(dataBase);
+  const fim = dataLimite ? new Date(dataLimite) : new Date(); // Today if no limit
 
-  // Retorna com 4 casas decimais
+  let taxaTotal = 0;
+
+  // Iterate distinct months
+  let current = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
+  // Normalize end date to start of month to compare
+  const endMonth = new Date(fim.getFullYear(), fim.getMonth(), 1);
+
+  // Cutoff strict for EC113: 2021-12-01
+  const LIMIT_EC113 = new Date(2021, 11, 1);
+
+  // We need to access locally defined table. 
+  // Since replace_file_content replaces a block, I can't easily access variable defined below unless I hoist it or copy it here.
+  // I will redefine a local helper table or assume TABELA_JUROS_MORA is available (variables are hoisted? No const/let aren't).
+  // I will copy the simple table here to be safe and robust.
+  const TABELA_JUROS_LOCAL = [
+    { inicio: new Date(2000, 0, 1), fim: new Date(2009, 5, 30), taxa: 0.5 },
+    { inicio: new Date(2009, 6, 1), fim: new Date(2021, 11, 31), taxa: 1.0 }, // Cap at Dec 2021 for this specific function/logic? 
+    // Or should I use the exported one?
+    // Let's rely on the logic:
+  ];
+
+  // Actually, let's just implement the Month Iterator which is standard.
+
+  while (current <= endMonth) {
+    if (current > LIMIT_EC113) {
+      // If we passed Dec 2021, STOP calculating "Old Juros" for EC113.
+      // Because Post-2022 is SELIC (which includes juros).
+      // This hardcoded cutoff ensures we never double count post-2022.
+      break;
+    }
+
+    let taxaMes = 1.0; // Default CTN
+
+    // Check for 0.5% period (Until June 2009)
+    if (current < new Date(2009, 6, 1)) {
+      taxaMes = 0.5;
+    }
+
+    // Add to total
+    taxaTotal += taxaMes;
+    periodos.push({
+      periodo: `${current.getMonth() + 1}/${current.getFullYear()}`,
+      indice: taxaMes
+    });
+
+    // Next month
+    current.setMonth(current.getMonth() + 1);
+  }
+
   return {
     taxaTotal: Number(taxaTotal.toFixed(4)),
     periodos,

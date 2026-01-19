@@ -1,34 +1,18 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  output: "export", // ✅ SSG para Tauri
+  reactStrictMode: false,
+  output: "export",               // SSG para Tauri
   images: { unoptimized: true },
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
-  typescript: {
-    ignoreBuildErrors: true,
-  },
 
-  // Otimizações de produção
-  productionBrowserSourceMaps: false, // Desabilitar source maps
+  // 👉 Otimizações de produção (mantidas, mas simples)
+  poweredByHeader: false,         // Remove cabeçalho X-Powered-By
+  eslint: { ignoreDuringBuilds: true },
+  typescript: { ignoreBuildErrors: true },
 
-  compiler: {
-    removeConsole: process.env.NODE_ENV === "production" ? {
-      exclude: ["error", "warn"], // Manter apenas error e warn
-    } : false,
-  },
-
-
-
-  // Otimizar bundle
-  experimental: {
-    optimizePackageImports: [
-      '@radix-ui/react-dialog',
-      '@radix-ui/react-dropdown-menu',
-      '@radix-ui/react-select',
-      '@radix-ui/react-tabs',
-      'lucide-react',
-    ],
+  // Fix for PDF.js in Next.js 15
+  webpack: (config) => {
+    config.resolve.alias.canvas = false;
+    return config;
   },
 };
 

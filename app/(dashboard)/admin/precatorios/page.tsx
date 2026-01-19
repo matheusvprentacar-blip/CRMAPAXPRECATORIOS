@@ -2,6 +2,20 @@
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
+
+import { ModalCriarPrecatorio } from "@/components/admin/modal-criar-precatorio"
+
+// Tipo de dados extraídos via OCR
+interface PrecatorioData {
+  credor_nome?: string
+  valor_principal?: number
+  numero_precatorio?: string
+  tribunal?: string
+  file_url?: string
+  raw_text?: string
+  // outros campos podem ser adicionados conforme necessidade
+}
+
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -32,6 +46,14 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table"
+import {
   FileText,
   Search,
   UserPlus,
@@ -42,12 +64,14 @@ import {
   Loader2,
   Trash2,
   User,
+  Calculator,
   TrendingUp,
 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { toast } from "sonner"
 import { UploadOficiosModal } from "@/components/admin/upload-oficios-modal"
+import { ModalImportarPrecatorio } from "@/components/admin/modal-importar-precatorio"
 import { trackSupabaseError, trackError } from "@/lib/utils/error-tracker"
 import { Checkbox } from "@/components/ui/checkbox"
 
@@ -71,6 +95,7 @@ interface PrecatorioAdmin {
   prioridade: string
   dono_usuario_id: string
   responsavel_calculo_id: string
+  file_url?: string
   usuario_dono?: Usuario
   usuario_calculo?: Usuario
 }
@@ -113,9 +138,12 @@ export default function AdminPrecatoriosPage() {
   const [filtroTab, setFiltroTab] = useState<"todos" | "distribuidos" | "pendentes">("todos")
 
   const [uploadOficiosOpen, setUploadOficiosOpen] = useState(false)
+  const [importModalOpen, setImportModalOpen] = useState(false)
   const [distributeDialogOpen, setDistributeDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedPrecatorio, setSelectedPrecatorio] = useState<PrecatorioAdmin | null>(null)
+  const [ocrData, setOcrData] = useState<PrecatorioData | null>(null)
+  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
 
   // Bulk Deletion State
@@ -416,10 +444,16 @@ export default function AdminPrecatoriosPage() {
             <h1 className="text-3xl font-bold">Gestão de Precatórios</h1>
             <p className="text-muted-foreground">Gerencie seus precatórios e distribua para operadores</p>
           </div>
-          <Button onClick={() => setUploadOficiosOpen(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Upload de Ofícios
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Importar (OCR)
+            </Button>
+            <Button onClick={() => setUploadOficiosOpen(true)}>
+              <Plus className="h-4 w-4 mr-2" />
+              Upload de Ofícios
+            </Button>
+          </div>
         </div>
 
         <div className="grid gap-4 md:grid-cols-4">
@@ -528,117 +562,106 @@ export default function AdminPrecatoriosPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    {precatoriosFiltrados.map((prec) => {
-                      const progress = KANBAN_PROGRESS[prec.status_kanban || "entrada"] || 0
-                      const statusLabel = KANBAN_LABELS[prec.status_kanban || "entrada"] || prec.status_kanban
-                      const isSelected = selectedIds.includes(prec.id)
-
-                      return (
-                        <Card
-                          key={prec.id}
-                          className={`hover:shadow-lg transition-all duration-200 relative ${isSelected ? 'border-primary ring-1 ring-primary bg-primary/5' : ''
-                            }`}
-                        >
-                          <div className="absolute top-4 right-4 z-10">
+                  <div className="rounded-md border bg-card">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-[50px]">
                             <Checkbox
-                              checked={isSelected}
-                              onCheckedChange={() => toggleSelection(prec.id)}
+                              checked={isAllSelected}
+                              onCheckedChange={toggleSelectAll}
+                              aria-label="Select all"
                             />
-                          </div>
+                          </TableHead>
+                          <TableHead>Precatório</TableHead>
+                          <TableHead>Status</TableHead>
+                          <TableHead>Valor</TableHead>
+                          <TableHead className="text-right">Ações</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {precatoriosFiltrados.map((prec) => {
+                          const statusLabel = KANBAN_LABELS[prec.status_kanban || "entrada"] || prec.status_kanban
+                          const isSelected = selectedIds.includes(prec.id)
 
-                          <CardHeader className="pb-3 pr-10">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1 min-w-0">
-                                <CardTitle className="text-base line-clamp-1" title={prec.titulo || prec.numero_precatorio}>
-                                  {prec.titulo || prec.numero_precatorio}
-                                </CardTitle>
-                                <CardDescription className="line-clamp-1">{prec.credor_nome}</CardDescription>
-                              </div>
-                            </div>
-                            <div className="mt-2">
-                              <Badge variant={getPrioridadeVariant(prec.prioridade)}>
-                                {prec.prioridade || "média"}
-                              </Badge>
-                            </div>
-                          </CardHeader>
-
-                          <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-sm">
-                                <span className="text-muted-foreground">Progresso</span>
-                                <Badge variant="outline" className="text-xs">{statusLabel}</Badge>
-                              </div>
-                              <Progress value={progress} className="h-2" />
-                              <p className="text-xs text-muted-foreground text-right">{progress}%</p>
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <p className="text-muted-foreground text-xs">Valor</p>
-                                <p className="font-semibold text-xs">
-                                  {formatCurrency(prec.valor_atualizado || prec.valor_principal)}
-                                </p>
-                              </div>
-                              <div>
-                                <p className="text-muted-foreground text-xs">Tribunal</p>
-                                <p className="font-semibold truncate text-xs">{prec.tribunal || "—"}</p>
-                              </div>
-                            </div>
-
-                            {prec.dono_usuario_id && (
-                              <div className="space-y-1 pt-2 border-t">
-                                <div className="flex items-center gap-2">
-                                  <User className="h-3 w-3 text-muted-foreground" />
-                                  <span className="text-xs text-muted-foreground">Comercial:</span>
-                                  <span className="font-medium text-xs truncate max-w-[120px]">{prec.usuario_dono?.nome || "—"}</span>
-                                </div>
-                                {prec.responsavel_calculo_id && (
-                                  <div className="flex items-center gap-2">
-                                    <User className="h-3 w-3 text-muted-foreground" />
-                                    <span className="text-xs text-muted-foreground">Cálculo:</span>
-                                    <span className="font-medium text-xs truncate max-w-[120px]">{prec.usuario_calculo?.nome || "—"}</span>
+                          return (
+                            <TableRow key={prec.id} data-state={isSelected ? "selected" : undefined}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleSelection(prec.id)}
+                                  aria-label={`Select ${prec.numero_precatorio}`}
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">
+                                <div className="flex flex-col">
+                                  <span className="font-semibold">{prec.titulo || prec.numero_precatorio}</span>
+                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{prec.numero_processo || "Sem processo"}</span>
+                                    {prec.file_url && (
+                                      <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
+                                        <FileText className="h-2 w-2" />
+                                        PDF
+                                      </Badge>
+                                    )}
                                   </div>
-                                )}
-                              </div>
-                            )}
-
-                            <div className="flex gap-2 pt-2">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1"
-                                onClick={() => {
-                                  setSelectedPrecatorio(prec)
-                                  setDistribuicao({
-                                    dono_usuario_id: prec.dono_usuario_id || "",
-                                    responsavel_calculo_id: prec.responsavel_calculo_id || "none",
-                                    prioridade: (prec.prioridade as any) || "media",
-                                  })
-                                  setDistributeDialogOpen(true)
-                                }}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                {prec.dono_usuario_id ? "Redistr." : "Distribuir"}
-                              </Button>
-                              <Button size="sm" variant="ghost" onClick={() => router.push(`/precatorios/visualizar?id=${prec.id}`)}>
-                                <FileText className="h-3 w-3" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => {
-                                  setSelectedPrecatorio(prec)
-                                  setDeleteDialogOpen(true)
-                                }}
-                              >
-                                <Trash2 className="h-3 w-3 text-destructive" />
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline" className="text-xs whitespace-nowrap">
+                                  {statusLabel}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div className="text-sm font-medium">
+                                  {formatCurrency(prec.valor_atualizado || prec.valor_principal)}
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="h-8 w-8 p-0"
+                                    title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                    onClick={() => {
+                                      setSelectedPrecatorio(prec)
+                                      setDistribuicao({
+                                        dono_usuario_id: prec.dono_usuario_id || "",
+                                        responsavel_calculo_id: prec.responsavel_calculo_id || "none",
+                                        prioridade: (prec.prioridade as any) || "media",
+                                      })
+                                      setDistributeDialogOpen(true)
+                                    }}
+                                  >
+                                    <Send className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0"
+                                    onClick={() => router.push(`/precatorios/visualizar?id=${prec.id}`)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                    onClick={() => {
+                                      setSelectedPrecatorio(prec)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                  </Button>
+                                </div>
+                              </TableCell>
+                            </TableRow>
+                          )
+                        })}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </TabsContent>
@@ -651,6 +674,27 @@ export default function AdminPrecatoriosPage() {
           open={uploadOficiosOpen}
           onOpenChange={setUploadOficiosOpen}
           onSuccess={() => loadData()}
+        />
+
+        <ModalImportarPrecatorio
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onSuccess={() => loadData()}
+          onExtracted={(data) => {
+            setOcrData(data);
+            setImportModalOpen(false);
+            setCreateModalOpen(true);
+          }}
+        />
+
+        <ModalCriarPrecatorio
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          data={ocrData ?? {}}
+          onSuccess={() => {
+            loadData();
+            setOcrData(null);
+          }}
         />
 
         {/* Dialog de Distribuição */}
@@ -782,7 +826,38 @@ export default function AdminPrecatoriosPage() {
           </AlertDialogContent>
         </AlertDialog>
 
-      </div>
-    </RoleGuard>
+
+
+        <ModalImportarPrecatorio
+          open={importModalOpen}
+          onOpenChange={setImportModalOpen}
+          onExtracted={(data) => {
+            setOcrData(data)
+            setImportModalOpen(false)
+            // Delay opening the creation modal to allow the import modal to close/animate out completely
+            setTimeout(() => {
+              setCreateModalOpen(true)
+            }, 300)
+          }}
+        />
+
+        <ModalCriarPrecatorio
+          open={createModalOpen}
+          onOpenChange={setCreateModalOpen}
+          data={ocrData as any}
+          onSuccess={() => {
+            setCreateModalOpen(false)
+            setOcrData(null)
+            loadData()
+          }}
+        />
+
+        <UploadOficiosModal
+          open={uploadOficiosOpen}
+          onOpenChange={setUploadOficiosOpen}
+          onSuccess={() => loadData()}
+        />
+      </div >
+    </RoleGuard >
   )
 }

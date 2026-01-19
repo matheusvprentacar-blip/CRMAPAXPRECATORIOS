@@ -49,6 +49,12 @@ const navigation = [
     roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor"],
   },
   {
+    name: "Clientes (CRM)",
+    href: "/clientes",
+    icon: Users,
+    roles: ["admin", "operador_comercial", "gestor"],
+  },
+  {
     name: "Precatórios",
     href: "/precatorios",
     icon: FileText,
@@ -150,82 +156,87 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
         )}
 
-        {/* Sidebar */}
+        {/* Global Watermark/Timbrado - BRANDING */}
+        <div
+          className="fixed inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03] select-none"
+          aria-hidden="true"
+        >
+          <div className="relative w-[500px] h-[500px]">
+            <Image
+              src="/image.png"
+              alt="Watermark"
+              fill
+              className="object-contain grayscale"
+            />
+          </div>
+        </div>
+
+        {/* Sidebar - Premium Glassmorphism Look */}
         <aside
           className={cn(
-            "fixed inset-y-0 left-0 z-50 w-64 bg-card border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0",
+            "fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
+            "bg-card shadow-xl", // Removed backdrop-blur-sm, changed bg-card/95 to bg-card
+            "text-card-foreground",
             sidebarOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
-          <div className="flex flex-col h-full">
-            {/* Logo */}
-            <div className="flex items-center gap-3 p-6 border-b">
-              <div className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0 relative overflow-hidden">
+          <div className="flex flex-col h-full relative z-10">
+            {/* Gradient Accent Top */}
+            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-500" />
+
+            {/* Logo Area */}
+            <div className="flex items-center gap-3 p-6 border-b border-border/50">
+              <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-orange-100">
                 <Image
-                  src={logoUrl || "/logo-apax.png"}
+                  src={logoUrl || "/image.png"}
                   alt="Logo"
                   width={40}
                   height={40}
-                  className="object-contain w-full h-full"
+                  className="object-contain w-10 h-10"
                 />
               </div>
-              <div>
-                <h1 className="text-lg font-bold">{nomeEmpresa}</h1>
-                <p className="text-xs text-muted-foreground">{subtituloEmpresa}</p>
+              <div className="flex flex-col">
+                <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">{nomeEmpresa}</h1>
+                <p className="text-xs text-muted-foreground mt-1 font-medium">{subtituloEmpresa}</p>
               </div>
             </div>
 
             {/* Navigation */}
             <nav className="flex-1 p-4 space-y-1">
-              {filteredNavigation.map((item) => {
+              {filteredNavigation.reduce((acc: React.ReactNode[], item, index) => {
+                // Logic to add separators if needed, for now just the items
+                // You can group them here if the `roles` or `category` was more explicit in the `navigation` array
+
                 const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
                 const Icon = item.icon
 
-                return (
+                const link = (
                   <Link
                     key={item.name}
                     href={item.href}
                     className={cn(
-                      "flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
                       isActive
-                        ? "bg-primary/10 text-primary border-l-4 border-primary rounded-l-none"
-                        : "text-muted-foreground hover:bg-accent hover:text-accent-foreground",
+                        ? "bg-sidebar-primary/10 text-primary" // Active state refined: removed shadow-sm, added primary color text
+                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground", // Hover state refined
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
-                    <Icon className={cn("w-5 h-5", isActive && "text-primary")} />
+                    {isActive && (
+                      <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary rounded-r-full" />
+                    )}
+                    <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-primary")} />
                     {item.name}
                   </Link>
                 )
-              })}
+
+                return [...acc, link]
+              }, [])}
             </nav>
 
-            {/* User section */}
-            <div className="p-4 border-t space-y-3">
-              <UpdateChecker />
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarImage src={profile?.foto_url || "/placeholder.svg"} />
-                  <AvatarFallback>{profile?.nome ? getInitials(profile.nome) : "U"}</AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">{profile?.nome}</p>
-                  <p className="text-xs text-muted-foreground capitalize">
-                    {(Array.isArray(profile?.role) ? profile.role : [profile?.role]).filter(Boolean).map(r => r?.replace(/_/g, " ")).join(" + ")}
-                  </p>
-                </div>
-              </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1 bg-transparent" asChild>
-                  <Link href="/perfil">
-                    <Settings className="w-4 h-4 mr-2" />
-                    Perfil
-                  </Link>
-                </Button>
-                <Button variant="outline" size="sm" onClick={() => signOut()}>
-                  <LogOut className="w-4 h-4" />
-                </Button>
-              </div>
+            {/* User section removed as per request to move to top header */}
+            <div className="p-4 border-t border-border/50 bg-muted/5">
+              <p className="text-[10px] text-center text-muted-foreground">v0.5.2</p>
             </div>
           </div>
         </aside>
@@ -246,7 +257,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </header>
 
           {/* Desktop header */}
-          <header className="hidden lg:block sticky top-0 z-30 bg-card border-b">
+          <header className="hidden lg:block sticky top-0 z-30 bg-background border-b">
+            {/* Subtle noise texture or gradient could be added here via pseudo-element if desired, for now keeping it clean/glassy */}
             <div className="flex items-center justify-end p-4 gap-2">
               <Button variant="ghost" size="icon" onClick={() => setTheme(theme === "dark" ? "light" : "dark")}>
                 {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
@@ -261,8 +273,16 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <span className="text-sm">{profile?.nome}</span>
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuLabel>Minha Conta</DropdownMenuLabel>
+                <DropdownMenuContent align="end" className="w-56" forceMount>
+                  <DropdownMenuLabel className="font-normal">
+                    <div className="flex flex-col space-y-1">
+                      <p className="text-sm font-medium leading-none">{profile?.nome}</p>
+                      <p className="text-xs leading-none text-muted-foreground">
+                        {/* Display roles */}
+                        {(Array.isArray(profile?.role) ? profile.role : [profile?.role]).filter(Boolean).map(r => r?.replace(/_/g, " ")).join(", ")}
+                      </p>
+                    </div>
+                  </DropdownMenuLabel>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem asChild>
                     <Link href="/perfil">

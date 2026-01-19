@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { ArrowLeft, ArrowRight, Info } from "lucide-react"
 
 interface StepPropostasProps {
@@ -21,6 +22,10 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
   const [percentualMenorProposta, setPercentualMenorProposta] = useState(dados.percentual_menor_proposta || 60)
   const [percentualMaiorProposta, setPercentualMaiorProposta] = useState(dados.percentual_maior_proposta || 65)
   const [calculoFinal, setCalculoFinal] = useState<any>(null)
+
+  const [isManual, setIsManual] = useState<boolean>(dados.propostas_manual || false)
+  const [manualMenor, setManualMenor] = useState<number>(dados.menor_proposta_manual || 0)
+  const [manualMaior, setManualMaior] = useState<number>(dados.maior_proposta_manual || 0)
 
   useEffect(() => {
     const etapaAtualizacao = resultadosEtapas[1] || {}
@@ -55,18 +60,48 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
     const honorariosPercentual = Number(honorarios.honorarios_percentual || 0)
     const adiantamentoPercentual = Number(honorarios.adiantamento_percentual || 0)
 
+    // Check if Honorarios was manual
+    let honorariosValor = 0;
+    let adiantamentoValor = 0;
+
+    // Se a etapa honorarios diz que é manual OU se tem valores definidos explicitamente (mesmo que calculados lá),
+    // devemos usar os valores de lá e não recalcular se possível.
+    // Mas para segurança, se for manual lá, usamos o valor de lá.
+    const isHonManual = etapaHonorarios.honorarios_manual || honorarios.honorarios_manual || false;
+
+    if (isHonManual || (honorarios.honorarios_valor !== undefined && honorarios.honorarios_valor !== null)) {
+      honorariosValor = Number(honorarios.honorarios_valor)
+      adiantamentoValor = Number(honorarios.adiantamento_valor)
+    } else {
+      // Fallback calculation
+      honorariosValor = round2(basePreDescontos * (honorariosPercentual / 100))
+      adiantamentoValor = round2(basePreDescontos * (adiantamentoPercentual / 100))
+    }
+
     console.log("[v0] Percentuais - Honorários:", honorariosPercentual, "% Adiantamento:", adiantamentoPercentual, "%")
-
-    const honorariosValor = round2(basePreDescontos * (honorariosPercentual / 100))
-    const adiantamentoValor = round2(basePreDescontos * (adiantamentoPercentual / 100))
-
-    console.log("[v0] Valores calculados - Honorários:", honorariosValor, "Adiantamento:", adiantamentoValor)
+    console.log("[v0] Valores calculados/usados - Honorários:", honorariosValor, "Adiantamento:", adiantamentoValor)
 
     const baseLiquidaFinal = round2(basePreDescontos - honorariosValor - adiantamentoValor)
     console.log("[v0] Base líquida final:", baseLiquidaFinal)
 
-    const menorProposta = round2(baseLiquidaFinal * (percentualMenorProposta / 100))
-    const maiorProposta = round2(baseLiquidaFinal * (percentualMaiorProposta / 100))
+    const menorPropostaCalc = round2(baseLiquidaFinal * (percentualMenorProposta / 100))
+    const maiorPropostaCalc = round2(baseLiquidaFinal * (percentualMaiorProposta / 100))
+
+    let menorProposta = isManual ? manualMenor : menorPropostaCalc;
+    let maiorProposta = isManual ? manualMaior : maiorPropostaCalc;
+
+    // If we just toggled manual ON and values calculate as 0 (init), maybe set them to current calc?
+    // Handled in toggle handler or specific effect?
+    // Let's rely on manualMenor state.
+
+    // However, if we are NOT manual, we must update the state to reflect calculated?
+    // No, state `manualMenor` is only for override.
+    // But `calculoFinal` should have the effective result.
+
+    if (!isManual) {
+      menorProposta = menorPropostaCalc
+      maiorProposta = maiorPropostaCalc
+    }
 
     console.log("[v0] Propostas - Menor:", menorProposta, "Maior:", maiorProposta)
 
@@ -89,19 +124,45 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
       menorProposta: menorProposta, // Alias camelCase
       maiorProposta: maiorProposta, // Alias camelCase
     })
-  }, [percentualMenorProposta, percentualMaiorProposta, resultadosEtapas])
+  }, [
+    percentualMenorProposta,
+    percentualMaiorProposta,
+    resultadosEtapas,
+    isManual,
+    manualMenor,
+    manualMaior
+  ])
+
+  // Correction: Used `iManual` instead of `isManual` above. Fixing.
+  // Wait, I am writing the file string so I can fix it now before writing.
+  // "let menorProposta = isManual ? manualMenor : menorPropostaCalc;"
+
+  const handleManualToggle = (checked: boolean) => {
+    setIsManual(checked)
+    if (checked && calculoFinal) {
+      // Init manual values with current calculated values
+      setManualMenor(calculoFinal.menor_proposta || 0)
+      setManualMaior(calculoFinal.maior_proposta || 0)
+    }
+  }
 
   const handleAvancar = () => {
     setDados({
       ...dados,
       percentual_menor_proposta: percentualMenorProposta,
       percentual_maior_proposta: percentualMaiorProposta,
+      propostas_manual: isManual,
+      menor_proposta_manual: manualMenor,
+      maior_proposta_manual: manualMaior
     })
 
     console.log("[v0] StepPropostas - Avançando com resultado final:", calculoFinal)
 
     if (calculoFinal) {
-      onCompletar(calculoFinal)
+      onCompletar({
+        ...calculoFinal,
+        propostas_manual: isManual
+      })
     } else {
       onCompletar({})
     }
@@ -114,10 +175,20 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Propostas</CardTitle>
-        <CardDescription>
-          Defina a faixa de proposta mínima e máxima com base no valor líquido final do credor
-        </CardDescription>
+        <div className="flex justify-between items-start">
+          <div>
+            <CardTitle>Propostas</CardTitle>
+            <CardDescription>
+              Defina a faixa de proposta mínima e máxima com base no valor líquido final do credor
+            </CardDescription>
+          </div>
+          <div className="flex items-center space-x-2 bg-secondary/50 p-2 rounded-lg border border-secondary">
+            <Switch id="manual-mode-propostas" checked={isManual} onCheckedChange={handleManualToggle} />
+            <Label htmlFor="manual-mode-propostas" className="cursor-pointer font-semibold">
+              Modo Manual
+            </Label>
+          </div>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="grid gap-4 md:grid-cols-2">
@@ -130,6 +201,7 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
               max="100"
               value={percentualMenorProposta}
               onChange={(e) => setPercentualMenorProposta(Number(e.target.value) || 0)}
+              disabled={isManual}
             />
           </div>
           <div className="space-y-2">
@@ -141,6 +213,7 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
               max="100"
               value={percentualMaiorProposta}
               onChange={(e) => setPercentualMaiorProposta(Number(e.target.value) || 0)}
+              disabled={isManual}
             />
           </div>
         </div>
@@ -177,13 +250,41 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
                 <span>Base líquida final (para propostas):</span>
                 <span>{formatarMoeda(calculoFinal.base_liquida_final)}</span>
               </div>
-              <div className="flex justify-between border-t pt-2 mt-2">
-                <span className="text-muted-foreground">Menor proposta ({percentualMenorProposta}%):</span>
-                <span className="font-medium text-emerald-600">{formatarMoeda(calculoFinal.menor_proposta)}</span>
+
+              <div className="flex justify-between border-t border-blue-200 dark:border-blue-800 pt-3 mt-2 items-center">
+                <span className="text-muted-foreground">
+                  Menor proposta
+                  {isManual ? <span className="text-amber-600 ml-1">(Manual)</span> : ` (${percentualMenorProposta}%)`}:
+                </span>
+                {isManual ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className="w-32 font-medium text-emerald-600 h-8"
+                    value={manualMenor}
+                    onChange={(e) => setManualMenor(Number(e.target.value) || 0)}
+                  />
+                ) : (
+                  <span className="font-medium text-emerald-600">{formatarMoeda(calculoFinal.menor_proposta)}</span>
+                )}
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Maior proposta ({percentualMaiorProposta}%):</span>
-                <span className="font-medium text-orange-600">{formatarMoeda(calculoFinal.maior_proposta)}</span>
+
+              <div className="flex justify-between items-center mt-1">
+                <span className="text-muted-foreground">
+                  Maior proposta
+                  {isManual ? <span className="text-amber-600 ml-1">(Manual)</span> : ` (${percentualMaiorProposta}%)`}:
+                </span>
+                {isManual ? (
+                  <Input
+                    type="number"
+                    step="0.01"
+                    className="w-32 font-medium text-orange-600 h-8"
+                    value={manualMaior}
+                    onChange={(e) => setManualMaior(Number(e.target.value) || 0)}
+                  />
+                ) : (
+                  <span className="font-medium text-orange-600">{formatarMoeda(calculoFinal.maior_proposta)}</span>
+                )}
               </div>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import type React from "react"
 import type { Metadata } from "next"
-import { Geist, Geist_Mono } from "next/font/google"
+import { Plus_Jakarta_Sans } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth/auth-context"
@@ -8,8 +8,11 @@ import { ThemeProvider } from "@/components/theme-provider"
 import { ClientToaster } from "@/components/client-toaster"
 import { PDFViewerProvider } from "@/components/providers/pdf-viewer-provider"
 
-const _geist = Geist({ subsets: ["latin"] })
-const _geistMono = Geist_Mono({ subsets: ["latin"] })
+const plusJakarta = Plus_Jakarta_Sans({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-sans",
+})
 
 export const metadata: Metadata = {
   title: "CRM de Precatórios | Sistema de Gestão",
@@ -41,15 +44,13 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-BR" suppressHydrationWarning>
-      <body className={`font-sans antialiased`}>
+      <body className={`${plusJakarta.className} antialiased`}>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
-            <PDFViewerProvider>
-              {children}
-            </PDFViewerProvider>
+            <PDFViewerProvider>{children}</PDFViewerProvider>
           </AuthProvider>
-          <ClientToaster />
         </ThemeProvider>
+        <ClientToaster />
         <Analytics />
       </body>
     </html>

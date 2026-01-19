@@ -2,301 +2,217 @@
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { createBrowserClient } from "@/lib/supabase/client"
-import { FileCheck, Search, AlertCircle, CheckCircle2, Clock } from "lucide-react"
-import { Progress } from "@/components/ui/progress"
+import { useRouter } from "next/navigation"
+import { FileCheck, AlertCircle, MapPin, User, FileText, CalendarClock } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { getSupabase } from "@/lib/supabase/client"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
-interface Precatorio {
+interface PrecatCertidao {
     id: string
-    numero_precatorio: string
-    credor_nome: string
-    valor_atualizado: number
-    status: string
-    certidoes_completas: number
-    certidoes_total: number
-    certidoes_vencidas: number
+    credor_nome?: string
+    credor_cpf_cnpj?: string
+    credor_cidade?: string
+    credor_uf?: string
+    numero_processo?: string
+    numero_precatorio?: string
+    responsavel?: string // ID do responsavel
+    usuarios?: { nome: string } // Join manual se necessario ou view
+    responsavel_nome?: string // Se vier da view
+    created_at: string
+    status_kanban?: string
 }
 
 export default function GestaoCertidoesPage() {
     const router = useRouter()
-    const [precatorios, setPrecatorios] = useState<Precatorio[]>([])
+    const [precatorios, setPrecatorios] = useState<PrecatCertidao[]>([])
     const [loading, setLoading] = useState(true)
-    const [userRole, setUserRole] = useState<string | null>(null)
-    const [searchTerm, setSearchTerm] = useState("")
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        verificarAcessoECarregarDados()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const carregarDados = async () => {
+            const supabase = getSupabase()
+
+            if (!supabase) {
+                setLoading(false)
+                return
+            }
+
+            try {
+                const {
+                    data: { user: currentUser },
+                } = await supabase.auth.getUser()
+
+                if (!currentUser) {
+                    setError("Usuário não autenticado.")
+                    setLoading(false)
+                    return
+                }
+
+                // Busca precatórios na fase de certidões ou atribuídos ao gestor
+                // Ordenação por created_at ASC (Ordem de inclusão/Fila)
+                const { data, error: fetchError } = await supabase
+                    .from("precatorios")
+                    .select(
+                        `
+            id,
+            credor_nome,
+            credor_cpf_cnpj,
+            credor_cidade,
+            credor_uf,
+            numero_processo,
+            numero_precatorio,
+            responsavel,
+            created_at,
+            status_kanban,
+            usuarios!responsavel(nome)
+          `
+                    )
+                    // Filtro: Tudo que está em 'certidoes' ou atribuído a este usuário como gestor de certidões
+                    .or(`status_kanban.eq.certidoes,responsavel_certidoes_id.eq.${currentUser.id}`)
+                    .order("created_at", { ascending: true }) // FIFO: Mais antigos primeiro
+
+                if (fetchError) {
+                    console.error("[Certidões] Erro ao carregar fila:", fetchError)
+                    setError("Erro ao carregar fila de certidões.")
+                    setLoading(false)
+                    return
+                }
+
+                // Mapear para structure plana se necessário
+                const formatted = (data || []).map((p: any) => ({
+                    ...p,
+                    responsavel_nome: p.usuarios?.nome || "Sem responsável"
+                }))
+
+                setPrecatorios(formatted)
+                setLoading(false)
+            } catch (err) {
+                console.error("[Certidões] Erro inesperado:", err)
+                setError("Ocorreu um erro inesperado.")
+                setLoading(false)
+            }
+        }
+
+        carregarDados()
     }, [])
 
-    async function verificarAcessoECarregarDados() {
-        try {
-            const supabase = createBrowserClient()
-            if (!supabase) return
-
-            // Verificar role do usuário
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push("/login")
-                return
-            }
-
-            const { data: userData } = await supabase
-                .from("usuarios")
-                .select("role")
-                .eq("id", user.id)
-                .single()
-
-            if (!userData || (!userData.role.includes("admin") && !userData.role.includes("gestor_certidoes"))) {
-                router.push("/");
-                return
-            }
-
-            setUserRole(userData.role.includes("admin") ? "admin" : "gestor_certidoes")
-            await carregarPrecatorios(user.id, userData.role.includes("admin") ? "admin" : "gestor_certidoes")
-        } catch (error) {
-            console.error("Erro ao verificar acesso:", error)
-            router.push("/")
-        }
-    }
-
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    async function carregarPrecatorios(userId: string, role: string) {
-        try {
-            setLoading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) return
-
-            const query = supabase
-                .from("precatorios")
-                .select(`
-          id,
-          numero_precatorio,
-          credor_nome,
-          valor_atualizado,
-          status
-        `)
-                .eq("status_kanban", "certidoes") // Apenas precatórios na coluna de certidões
-
-            // Se não for admin, filtrava por ID, mas agora usamos política para visão global na gestão
-            // if (role !== "admin") {
-            //     query = query.eq("responsavel_certidoes_id", userId)
-            // }
-
-            const { data, error } = await query.order("created_at", { ascending: false })
-
-            if (error) throw error
-
-            // Para cada precatório, buscar status das certidões
-            const precatoriosComCertidoes = await Promise.all(
-                (data || []).map(async (prec) => {
-                    const { data: itens } = await supabase.rpc("obter_itens_precatorio", {
-                        p_precatorio_id: prec.id
-                    })
-
-                    const certidoesTotal = itens?.length || 0
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const certidoesCompletas = itens?.filter((i: any) =>
-                        i.status_item === "RECEBIDO" || i.status_item === "NAO_APLICAVEL"
-                    ).length || 0
-
-                    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                    const certidoesVencidas = itens?.filter((i: any) => {
-                        if (!i.validade) return false
-                        const hoje = new Date()
-                        const dataValidade = new Date(i.validade)
-                        return dataValidade < hoje
-                    }).length || 0
-
-                    return {
-                        ...prec,
-                        certidoes_completas: certidoesCompletas,
-                        certidoes_total: certidoesTotal,
-                        certidoes_vencidas: certidoesVencidas
-                    }
-                })
-            )
-
-            setPrecatorios(precatoriosComCertidoes)
-        } catch (error) {
-            console.error("Erro ao carregar precatórios:", error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const precatoriosFiltrados = precatorios.filter(p =>
-        p.numero_precatorio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.credor_nome?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    const stats = {
-        total: precatorios.length,
-        comPendencias: precatorios.filter(p => p.certidoes_completas < p.certidoes_total).length,
-        comVencidas: precatorios.filter(p => p.certidoes_vencidas > 0).length,
-        completos: precatorios.filter(p => p.certidoes_completas === p.certidoes_total && p.certidoes_total > 0).length
+    const handleAbrir = (id: string) => {
+        router.push(`/precatorios/visualizar?id=${id}`)
     }
 
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         )
     }
 
     return (
-        <div className="container mx-auto max-w-7xl p-6 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col gap-4">
+        <div className="space-y-6 container mx-auto p-6 max-w-7xl">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                        Gestão de Certidões
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        {userRole === "admin" ? "Todos os precatórios" : "Precatórios atribuídos a você"}
-                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight">Gestão de Certidões</h1>
+                    <p className="text-muted-foreground">Fila de processos aguardando análise de certidões (Ordem de Chegada)</p>
                 </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.total}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Pendentes</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600">{stats.comPendencias}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Com Vencidas</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-red-600">{stats.comVencidas}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Completos</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-green-600">{stats.completos}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Busca */}
                 <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por número ou credor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
+                    <Badge variant="secondary" className="text-lg px-4 py-1">
+                        {precatorios.length} na fila
+                    </Badge>
                 </div>
             </div>
 
-            {/* Lista de Precatórios */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {precatoriosFiltrados.map((precatorio) => {
-                    const percentualCompleto = precatorio.certidoes_total > 0
-                        ? Math.round((precatorio.certidoes_completas / precatorio.certidoes_total) * 100)
-                        : 0
+            {error && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
 
-                    return (
-                        <Card key={precatorio.id} className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <CardTitle className="text-base font-semibold truncate">
-                                            {precatorio.numero_precatorio || "Sem número"}
-                                        </CardTitle>
-                                        <p className="text-sm text-muted-foreground mt-1 truncate">
-                                            {precatorio.credor_nome}
-                                        </p>
-                                    </div>
-                                    {precatorio.certidoes_vencidas > 0 && (
-                                        <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0 ml-2" />
-                                    )}
+            {!loading && precatorios.length === 0 && (
+                <Card className="p-8 text-center text-muted-foreground bg-muted/50 border-dashed">
+                    <FileCheck className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <p className="text-lg font-medium">Nenhum precatório nesta fila</p>
+                    <p className="text-sm">Novos processos marcados para "Certidões" aparecerão aqui.</p>
+                </Card>
+            )}
+
+            <div className="grid gap-4">
+                {precatorios.map((p, index) => (
+                    <Card
+                        key={p.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-primary/40 group relative overflow-hidden"
+                        onClick={() => handleAbrir(p.id)}
+                    >
+                        {/* Efeito de hover suave */}
+                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors" />
+
+                        <CardContent className="p-6 flex items-center justify-between relative z-10">
+                            <div className="flex items-start gap-6 flex-1">
+                                {/* Índice da Fila */}
+                                <div className="flex flex-col items-center justify-center min-w-[3rem]">
+                                    <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary/40 transition-colors">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
                                 </div>
-                            </CardHeader>
 
-                            <CardContent className="space-y-4">
-                                {/* Progresso */}
-                                <div className="space-y-2">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">Certidões</span>
-                                        <span className="font-medium">
-                                            {precatorio.certidoes_completas}/{precatorio.certidoes_total}
-                                        </span>
+                                {/* Informações Principais */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+
+                                    {/* Coluna 1: Credor */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <User className="w-3 h-3" /> Credor
+                                        </label>
+                                        <p className="font-medium truncate" title={p.credor_nome}>{p.credor_nome || "Não informado"}</p>
+                                        <p className="text-sm text-muted-foreground font-mono">{p.credor_cpf_cnpj || "CPF não inf."}</p>
                                     </div>
-                                    <Progress value={percentualCompleto} className="h-2" />
-                                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                        <span>{percentualCompleto}% concluído</span>
-                                        {precatorio.certidoes_vencidas > 0 && (
-                                            <span className="text-red-600 font-medium">
-                                                {precatorio.certidoes_vencidas} vencida(s)
+
+                                    {/* Coluna 2: Localização */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> Residência
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">
+                                                {p.credor_cidade ? `${p.credor_cidade}` : "Cidade n/d"}
                                             </span>
-                                        )}
+                                            {p.credor_uf && <Badge variant="outline" className="text-[10px] h-5">{p.credor_uf}</Badge>}
+                                        </div>
+                                    </div>
+
+                                    {/* Coluna 3: Processo */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <FileText className="w-3 h-3" /> Processo
+                                        </label>
+                                        <p className="font-medium text-sm font-mono">{p.numero_processo || "N/A"}</p>
+                                        <p className="text-xs text-muted-foreground">{p.numero_precatorio || "Prec. N/A"}</p>
+                                    </div>
+
+                                    {/* Coluna 4: Responsável e Data */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <CalendarClock className="w-3 h-3" /> Responsável
+                                        </label>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-primary">
+                                                {p.responsavel_nome}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground" title={new Date(p.created_at).toLocaleString()}>
+                                                Entrou em: {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                            </span>
+                                        </div>
                                     </div>
                                 </div>
-
-                                {/* Status Badge */}
-                                {percentualCompleto === 100 ? (
-                                    <Badge className="w-full justify-center bg-green-500 hover:bg-green-600">
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        Completo
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline" className="w-full justify-center">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        Em andamento
-                                    </Badge>
-                                )}
-
-                                {/* Botão Visualizar */}
-                                <Button
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => router.push(`/precatorios/visualizar?id=${precatorio.id}`)}
-                                >
-                                    <FileCheck className="h-4 w-4 mr-2" />
-                                    Visualizar Certidões
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )
-                })}
-
-                {precatoriosFiltrados.length === 0 && (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                        <FileCheck className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Nenhum precatório encontrado</p>
-                        {searchTerm && (
-                            <p className="text-sm mt-2">Tente ajustar os filtros de busca</p>
-                        )}
-                    </div>
-                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
         </div>
     )

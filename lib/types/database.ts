@@ -20,10 +20,15 @@ export interface Precatorio {
   tribunal?: string
   devedor?: string
   esfera_devedor?: string
+  natureza?: string
+  pdf_url?: string
 
   // Pessoas
   credor_nome?: string
   credor_cpf_cnpj?: string
+  credor_endereco?: string
+  credor_cidade?: string
+  credor_uf?: string
   advogado_nome?: string
   advogado_cpf_cnpj?: string
   cessionario?: string
@@ -89,7 +94,7 @@ export interface Precatorio {
   motivo_atraso_calculo?: string
   data_atraso_calculo?: string
   registrado_atraso_por?: string
-  
+
   // Atraso Estruturado (FASE 2)
   tipo_atraso?: "titular_falecido" | "penhora" | "cessao_parcial" | "doc_incompleta" | "duvida_juridica" | "aguardando_cliente" | "outro"
   impacto_atraso?: "baixo" | "medio" | "alto"
@@ -161,4 +166,17 @@ export interface Comentario {
   texto: string
   created_at: string
   updated_at: string
+}
+
+export interface CredorView {
+  id_unico: string
+  credor_nome: string
+  credor_cpf_cnpj: string | null
+  cidade: string | null
+  uf: string | null
+  telefone: string | null
+  email: string | null
+  total_precatorios: number
+  valor_total_principal: number
+  ultimo_precatorio_data: string | null
 }

@@ -2,13 +2,13 @@
 /* eslint-disable */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Lock, LockOpen, CheckCircle2, Clock, Kanban } from "lucide-react"
+import { Lock, LockOpen, CheckCircle2, Clock, Kanban, FileText } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "@/components/ui/use-toast"
@@ -24,6 +24,7 @@ import { Textarea } from "@/components/ui/textarea"
 
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
+import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
 import { KANBAN_COLUMNS } from "./columns";
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
@@ -56,6 +57,7 @@ interface PrecatorioCard {
   saldo_liquido: number | null
   responsavel_calculo_id: string | null
   created_at: string
+  file_url?: string | null // [NEW] Campo de Ofício
   // Campos para filtros avançados
   nivel_complexidade?: 'baixa' | 'media' | 'alta' | null
   sla_status?: 'nao_iniciado' | 'no_prazo' | 'atencao' | 'atrasado' | 'concluido' | null
@@ -96,6 +98,57 @@ export default function KanbanPageNewGates() {
     validacao: null,
   })
   const [motivoFechamento, setMotivoFechamento] = useState("")
+  const [semInteresseDialog, setSemInteresseDialog] = useState<{
+    open: boolean
+    precatorioId: string | null
+  }>({
+    open: false,
+    precatorioId: null,
+  })
+
+  const [isDragging, setIsDragging] = useState(false)
+
+  /*
+    useEffect(() => {
+      if (!isDragging) return;
+  
+      const container = document.getElementById('kanban-scroll-container');
+      if (!container) return;
+  
+      const SCROLL_ZONE = 100; // px – tighter hot zone
+      const SCROLL_SPEED = 12; // px per frame – slightly faster scroll
+      let animationFrameId: number;
+      let mouseX = 0;
+  
+      const handleMouseMove = (e: MouseEvent) => {
+        mouseX = e.clientX;
+      };
+  
+      const scrollLoop = () => {
+        // DEBUG LOG
+        // console.log("Scroll Loop Active", mouseX, SCROLL_ZONE, window.innerWidth);
+  
+        // Check boundaries
+        if (mouseX < SCROLL_ZONE) {
+          container.scrollLeft -= SCROLL_SPEED;
+        } else if (mouseX > window.innerWidth - SCROLL_ZONE) {
+          container.scrollLeft += SCROLL_SPEED;
+        }
+        animationFrameId = requestAnimationFrame(scrollLoop);
+      };
+  
+      window.addEventListener('mousemove', handleMouseMove);
+      animationFrameId = requestAnimationFrame(scrollLoop);
+  
+      return () => {
+        window.removeEventListener('mousemove', handleMouseMove);
+        cancelAnimationFrame(animationFrameId);
+      };
+    }, [isDragging]);
+  */
+
+  // DEBUG INDICATOR (Remove later)
+  // console.log("Kanban Render. IsDragging:", isDragging);
 
   useEffect(() => {
     if (profile) {
@@ -138,7 +191,8 @@ export default function KanbanPageNewGates() {
           tipo_atraso,
           impacto_atraso,
           urgente,
-          status
+          status,
+          file_url
         `)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
@@ -331,6 +385,28 @@ export default function KanbanPageNewGates() {
 
     const colunaDestino = destination.droppableId
 
+    // [NEW] Validation: Require Ofício to move to Pronto p/ Cálculo
+    if (colunaDestino === "pronto_calculo") {
+      const precatorio = precatorios.find(p => p.id === draggableId)
+      if (!precatorio?.file_url) {
+        toast({
+          title: "Bloqueado",
+          description: "É necessário anexar/extrair o Ofício antes de mover para Pronto p/ Cálculo.",
+          variant: "destructive"
+        })
+        return
+      }
+    }
+
+    // [NEW] Intercept move to "Sem Interesse"
+    if (colunaDestino === "sem_interesse") {
+      setSemInteresseDialog({
+        open: true,
+        precatorioId: draggableId
+      })
+      return
+    }
+
     try {
       const supabase = createBrowserClient()
       if (!supabase) return
@@ -515,6 +591,79 @@ export default function KanbanPageNewGates() {
 
   const grupos = agruparPorColuna()
 
+  const scrollContainerRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const handleWheel = (e: WheelEvent) => {
+      if (e.deltaY !== 0) {
+        // Se o usuário não estiver segurando Shift (que já faz scroll horizontal nativo)
+        if (!e.shiftKey) {
+          e.preventDefault()
+          container.scrollLeft += e.deltaY * 1.5 // Multiplicador para velocidade
+        }
+      }
+    }
+
+    container.addEventListener('wheel', handleWheel, { passive: false })
+
+    return () => {
+      container.removeEventListener('wheel', handleWheel)
+    }
+  }, [])
+
+  // REACTIVATED & FIXED: Custom auto-scroll with MANUAL EVENT DISPATCH
+  // This solves the sync issue by forcing the library to detect the scroll change
+  useEffect(() => {
+    if (!isDragging) return;
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    const SCROLL_ZONE = 100; // px form edge
+    const SCROLL_SPEED = 15; // px per frame
+
+    let animationFrameId: number;
+
+    const handleMouseMove = (e: MouseEvent) => {
+      const rect = container.getBoundingClientRect();
+      const relativeX = e.clientX - rect.left;
+
+      let scrollAmount = 0;
+
+      // Calculate scroll based on mouse position relative to container
+      if (relativeX < SCROLL_ZONE) {
+        // Scroll Left
+        const intensity = (SCROLL_ZONE - relativeX) / SCROLL_ZONE;
+        scrollAmount = -SCROLL_SPEED * intensity;
+      } else if (rect.width - relativeX < SCROLL_ZONE) {
+        // Scroll Right
+        const intensity = (SCROLL_ZONE - (rect.width - relativeX)) / SCROLL_ZONE;
+        scrollAmount = SCROLL_SPEED * intensity;
+      }
+
+      if (scrollAmount !== 0) {
+        container.scrollLeft += scrollAmount;
+        // CRITICAL FIX: Manually dispatch scroll event so react-beautiful-dnd updates coordinates
+        // This prevents the visual Desync
+        container.dispatchEvent(new Event('scroll'));
+      }
+    };
+
+    const loop = () => {
+      animationFrameId = requestAnimationFrame(loop);
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    animationFrameId = requestAnimationFrame(loop);
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, [isDragging]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -526,13 +675,15 @@ export default function KanbanPageNewGates() {
     )
   }
 
+  // ... (Header code omitted for brevity as it is unchanged)
+
   return (
-    <div className="container mx-auto max-w-[100vw] space-y-4 h-[calc(100vh-7rem)] flex flex-col">
+    <div className="w-full px-4 h-[calc(100vh-7rem)] flex flex-col space-y-4">
       {/* Header Premium */}
       <div className="flex flex-col space-y-4 border-b pb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent w-fit">
+            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent w-fit">
               Kanban Workflow
             </h1>
             <p className="text-muted-foreground mt-1">Fluxo controlado com gates de validação automática</p>
@@ -584,20 +735,34 @@ export default function KanbanPageNewGates() {
 
       {/* Container Principal com Altura Fixa */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
-        <DragDropContext onDragEnd={onDragEnd}>
-          <div className="flex gap-4 overflow-x-auto pb-4 h-full px-1">
+        <DragDropContext
+          disableAutoScroll={true} // Custom handler used instead
+          onDragEnd={(result) => {
+            setIsDragging(false);
+            onDragEnd(result);
+          }}
+          onDragStart={() => {
+            setIsDragging(true);
+            // Optional: Add class to body to prevent text selection
+          }}
+        >
+          <div
+            ref={scrollContainerRef}
+            id="kanban-scroll-container"
+            className="flex gap-4 overflow-x-auto pb-4 h-full px-1"
+          >
             {COLUNAS.map((coluna) => {
               const precatoriosColuna = grupos[coluna.id] || []
               const totalColuna = calcularTotalColuna(precatoriosColuna)
 
               return (
                 <div key={coluna.id} className="flex-shrink-0 w-80 h-full flex flex-col">
-                  <Card className="flex flex-col h-full shadow-md border-border/50 bg-card/50 backdrop-blur-sm">
+                  <Card className="flex flex-col h-full shadow-md border-border/50 bg-card/50">
                     {/* Header Sticky */}
                     <CardHeader className="pb-3 border-b bg-card/95 z-10 rounded-t-lg sticky top-0 shadow-sm">
                       <div className="flex items-center gap-2">
                         <div className={`w-3 h-3 rounded-full ${coluna.cor}`} />
-                        <CardTitle className="text-sm font-semibold">{coluna.titulo}</CardTitle>
+                        <CardTitle className="text-sm font-bold text-orange-700 dark:text-orange-400 uppercase tracking-tighter">{coluna.titulo}</CardTitle>
                         <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
                           {precatoriosColuna.length}
                         </span>
@@ -609,7 +774,10 @@ export default function KanbanPageNewGates() {
                     </CardHeader>
 
                     {/* Área de Drop com Scroll Interno */}
-                    <Droppable droppableId={coluna.id}>
+                    <Droppable
+                      droppableId={coluna.id}
+                      ignoreContainerClipping={true}
+                    >
                       {(provided) => (
                         <CardContent
                           ref={provided.innerRef}
@@ -621,15 +789,26 @@ export default function KanbanPageNewGates() {
 
                             return (
                               <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
-                                {(provided) => (
-                                  <div ref={provided.innerRef} {...provided.draggableProps} {...provided.dragHandleProps}>
-                                    <Card className="cursor-pointer hover:shadow-lg hover:border-primary/40 transition-all duration-200 border-border/60 bg-card group">
+                                {(provided, snapshot) => (
+                                  <div
+                                    ref={provided.innerRef}
+                                    {...provided.draggableProps}
+                                    {...provided.dragHandleProps}
+                                    style={{
+                                      ...provided.draggableProps.style,
+                                      opacity: snapshot.isDragging ? 0.9 : 1,
+                                    }}
+                                  >
+                                    <Card
+                                      className={`cursor-pointer hover:shadow-lg hover:border-primary/40 border-border/60 bg-card group ${snapshot.isDragging ? 'shadow-xl ring-2 ring-primary/50 rotate-2 scale-105' : 'transition-all duration-200'
+                                        }`}
+                                    >
                                       <CardContent className="p-3">
                                         <div className="space-y-2">
                                           {/* Título */}
                                           <div className="flex items-start justify-between gap-2">
                                             <h4
-                                              className="font-medium text-sm flex-1 leading-tight group-hover:text-primary transition-colors"
+                                              className="font-bold text-sm flex-1 leading-tight text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
                                               onClick={() => abrirDetalhe(precatorio.id)}
                                             >
                                               {precatorio.titulo || precatorio.numero_precatorio || "Sem título"}
@@ -666,6 +845,16 @@ export default function KanbanPageNewGates() {
                                                 v{precatorio.calculo_ultima_versao}
                                               </Badge>
                                             )}
+
+                                            {/* Ofício (PDF) */}
+                                            {precatorio.file_url && (
+                                              <a href={precatorio.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400">
+                                                  <FileText className="h-2.5 w-2.5" />
+                                                  Ofício
+                                                </Badge>
+                                              </a>
+                                            )}
                                           </div>
 
                                           {/* Valores */}
@@ -685,7 +874,7 @@ export default function KanbanPageNewGates() {
                                             <Button
                                               variant={podeCalculos ? "secondary" : "ghost"}
                                               size="sm"
-                                              className={`w-full text-[10px] h-7 ${!podeCalculos ? 'opacity-50' : 'hover:bg-primary/10 hover:text-primary'}`}
+                                              className={`w-full text-[10px] h-7 ${!podeCalculos ? 'opacity-50' : 'hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 dark:hover:text-orange-400'}`}
                                               disabled={!podeCalculos}
                                               onClick={(e) => {
                                                 e.stopPropagation()
@@ -809,6 +998,45 @@ export default function KanbanPageNewGates() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ModalSemInteresse
+        open={semInteresseDialog.open}
+        onOpenChange={(open) => setSemInteresseDialog((prev) => ({ ...prev, open }))}
+        precatorioId={semInteresseDialog.precatorioId || ""}
+        onConfirm={async (motivo, dataRecontato) => {
+          const supabase = createBrowserClient()
+          const { error } = await supabase
+            .from("precatorios")
+            .update({
+              status_kanban: "sem_interesse",
+              localizacao_kanban: "sem_interesse", // Sync both fields
+              motivo_sem_interesse: motivo,
+              data_recontato: dataRecontato ? dataRecontato.toISOString() : null,
+              updated_at: new Date().toISOString(),
+            })
+            .eq("id", semInteresseDialog.precatorioId)
+
+          if (error) {
+            throw error
+          }
+
+          // Update local state
+          setPrecatorios((prev) =>
+            prev.map((p) =>
+              p.id === semInteresseDialog.precatorioId
+                ? { ...p, status_kanban: "sem_interesse" }
+                : p
+            )
+          )
+          toast({
+            title: "Atualizado",
+            description: "Precatório movido para Sem Interesse.",
+          })
+
+          // Refresh list to ensure consistency
+          await loadPrecatorios()
+        }}
+      />
     </div>
   )
 }

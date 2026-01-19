@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react"
 import { StepDadosBasicos } from "./steps/step-dados-basicos"
+import { StepIndices } from "./steps/step-indices"
 import { StepAtualizacaoMonetaria } from "./steps/step-atualizacao-monetaria"
 import { StepPSS } from "./steps/step-pss"
 import { StepIRPF } from "./steps/step-irpf"
@@ -525,6 +526,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
 
   const steps = [
     { label: "Dados básicos", component: StepDadosBasicos },
+    { label: "Índices", component: StepIndices },
     { label: "Atualização monetária", component: StepAtualizacaoMonetaria },
     { label: "PSS", component: StepPSS },
     { label: "IRPF", component: StepIRPF },

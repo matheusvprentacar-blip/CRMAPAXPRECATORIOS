@@ -309,7 +309,7 @@ export default function PrecatoriosPage() {
       {/* Header Premium */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b pb-6">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent w-fit">
+          <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent w-fit">
             Precatórios
           </h1>
           <p className="text-muted-foreground mt-1">Gerencie a carteira de precatórios com eficiência</p>
@@ -463,7 +463,7 @@ export default function PrecatoriosPage() {
                     <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-semibold text-lg text-foreground group-hover:text-primary transition-colors">
+                          <h3 className="font-semibold text-lg text-orange-600 dark:text-orange-400 group-hover:text-orange-500 transition-colors">
                             {precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
                           </h3>
                           {precatorio.urgente && (

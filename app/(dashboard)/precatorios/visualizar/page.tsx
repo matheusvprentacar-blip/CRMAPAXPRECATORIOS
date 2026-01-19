@@ -9,7 +9,20 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { Edit, Save, X, ArrowLeft, FileText, Scale, Calculator, Clock, CheckSquare } from "lucide-react"
+import {
+  Edit, Save, X, ArrowLeft, FileText,
+  AlertCircle,
+  Clock,
+  CheckCircle2,
+  Calendar,
+  Building2,
+  DollarSign,
+  Briefcase,
+  User,
+  Calculator,
+  CheckSquare,
+  Scale
+} from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +47,8 @@ import { HistoricoCalculos } from "@/components/kanban/historico-calculos"
 import { Timeline } from "@/components/precatorios/timeline"
 import CalculadoraPrecatorios from "@/components/calculador-precatorios"
 import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-detalhado"
+import { AbaProposta } from "@/components/kanban/aba-proposta"
+import { OficioViewer } from "@/components/kanban/oficio-viewer"
 
 
 function PrecatorioDetailContent() {
@@ -73,6 +88,8 @@ function PrecatorioDetailContent() {
         .select(`
           *,
           dados_calculo,
+          raw_text,
+          file_url,
           responsavel_comercial:responsavel(id, nome, email),
           responsavel_calculo:responsavel_calculo_id(id, nome, email),
           responsavel_certidoes:responsavel_certidoes_id(id, nome, email),
@@ -97,6 +114,10 @@ function PrecatorioDetailContent() {
     loadPrecatorio()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id])
+
+  // ... (rest of code)
+
+
 
   const formatBR = (n: number) =>
     n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -405,19 +426,26 @@ function PrecatorioDetailContent() {
       <Card className="border-none shadow-md bg-card/50 backdrop-blur-sm">
         <CardContent className="p-0">
           <Tabs defaultValue="geral" className="w-full">
-            <div className="border-b px-6 pt-2">
-              <TabsList className="bg-transparent h-auto p-0 gap-6">
+            <div className="border-b px-6 sticky top-0 bg-background/95 backdrop-blur z-10 w-full mb-6">
+              <TabsList className="bg-transparent h-auto p-0 gap-6 w-full justify-start">
                 <TabsTrigger
                   value="geral"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary border-b-2 border-transparent rounded-none px-2 py-3 bg-transparent h-auto font-medium"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Geral
                 </TabsTrigger>
                 <TabsTrigger
+                  value="oficio"
+                  className="data-[state=active]:border-cyan-500 data-[state=active]:text-cyan-600 border-b-2 border-transparent rounded-none px-2 py-3 bg-transparent h-auto font-medium"
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Ofício
+                  {precatorio.file_url && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
+                </TabsTrigger>
+                <TabsTrigger
                   value="documentos"
-                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
-
+                  className="data-[state=active]:border-primary data-[state=active]:text-primary border-b-2 border-transparent rounded-none px-2 py-3 bg-transparent h-auto font-medium"
                 >
                   <CheckSquare className="h-4 w-4 mr-2" />
                   Documentos
@@ -437,6 +465,14 @@ function PrecatorioDetailContent() {
                   <Calculator className="h-4 w-4 mr-2" />
                   Cálculo
                 </TabsTrigger>
+
+                <TabsTrigger
+                  value="proposta"
+                  className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
+                >
+                  <Scale className="h-4 w-4 mr-2" />
+                  Proposta
+                </TabsTrigger>
                 <TabsTrigger
                   value="timeline"
                   className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
@@ -444,100 +480,110 @@ function PrecatorioDetailContent() {
                   <Clock className="h-4 w-4 mr-2" />
                   Timeline
                 </TabsTrigger>
+
+                {precatorio.file_url && (
+                  <TabsTrigger
+                    value="ocr"
+                    className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
+                  >
+                    <FileText className="h-4 w-4 mr-2" />
+                    OCR / Arquivo
+                  </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
-            <div className="p-6 bg-muted/5 min-h-[500px]">
-              <TabsContent value="geral" className="mt-0 space-y-6">
+            <div className="p-4">
+              <TabsContent value="geral" className="mt-0 space-y-4">
                 <Card className="border shadow-sm">
-                  <CardHeader className="pb-3 border-b bg-muted/20">
+                  <CardHeader className="pb-2 border-b bg-muted/20 px-4 pt-4">
                     <CardTitle className="text-base font-semibold">Dados do Precatório</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Informações Principais</h3>
-                      <div className="grid gap-4">
-                        <div className="space-y-1.5">
+                  <CardContent className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Informações Principais</h3>
+                      <div className="grid gap-3">
+                        <div className="space-y-1">
                           <Label className="text-xs">Título</Label>
                           {isEditing ? (
                             <Input
                               value={editData.titulo || ""}
                               onChange={(e) => updateEditField("titulo", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
-                            <div className="p-2 bg-muted/30 rounded text-sm font-medium border border-transparent">{precatorio.titulo || "-"}</div>
+                            <div className="px-2 py-1 bg-muted/30 rounded text-sm font-medium border border-transparent">{precatorio.titulo || "-"}</div>
                           )}
                         </div>
 
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-1.5">
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="space-y-1">
                             <Label className="text-xs">Nº Precatório</Label>
                             {isEditing ? (
                               <Input
                                 value={editData.numero_precatorio || ""}
                                 onChange={(e) => updateEditField("numero_precatorio", e.target.value)}
-                                className="h-9"
+                                className="h-8 text-sm"
                               />
                             ) : (
-                              <div className="p-2 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_precatorio || "-"}</div>
+                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_precatorio || "-"}</div>
                             )}
                           </div>
-                          <div className="space-y-1.5">
+                          <div className="space-y-1">
                             <Label className="text-xs">Nº Processo</Label>
                             {isEditing ? (
                               <Input
                                 value={editData.numero_processo || ""}
                                 onChange={(e) => updateEditField("numero_processo", e.target.value)}
-                                className="h-9"
+                                className="h-8 text-sm"
                               />
                             ) : (
-                              <div className="p-2 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_processo || "-"}</div>
+                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_processo || "-"}</div>
                             )}
                           </div>
                         </div>
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Label className="text-xs">Tribunal</Label>
                           {isEditing ? (
                             <Input
                               value={editData.tribunal || ""}
                               onChange={(e) => updateEditField("tribunal", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
-                            <div className="p-2 bg-muted/30 rounded text-sm border border-transparent">{precatorio.tribunal || "-"}</div>
+                            <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.tribunal || "-"}</div>
                           )}
                         </div>
                       </div>
                     </div>
 
-                    <div className="space-y-4">
-                      <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wider mb-2">Dados do Credor</h3>
-                      <div className="grid gap-4">
-                        <div className="space-y-1.5">
+                    <div className="space-y-3">
+                      <h3 className="text-xs font-medium text-muted-foreground uppercase tracking-wider mb-1">Dados do Credor</h3>
+                      <div className="grid gap-3">
+                        <div className="space-y-1">
                           <Label className="text-xs">Nome do Credor</Label>
                           {isEditing ? (
                             <Input
                               value={editData.credor_nome || ""}
                               onChange={(e) => updateEditField("credor_nome", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
-                            <div className="p-2 bg-muted/30 rounded text-sm font-medium border border-transparent">{precatorio.credor_nome || "-"}</div>
+                            <div className="px-2 py-1 bg-muted/30 rounded text-sm font-medium border border-transparent">{precatorio.credor_nome || "-"}</div>
                           )}
                         </div>
 
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Label className="text-xs">CPF/CNPJ do Credor</Label>
                           {isEditing ? (
                             <Input
                               value={editData.credor_cpf_cnpj || ""}
                               onChange={(e) => updateEditField("credor_cpf_cnpj", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
-                            <div className="p-2 bg-muted/30 rounded text-sm border border-transparent font-mono">{precatorio.credor_cpf_cnpj || "-"}</div>
+                            <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent font-mono">{precatorio.credor_cpf_cnpj || "-"}</div>
                           )}
                         </div>
                       </div>
@@ -545,41 +591,41 @@ function PrecatorioDetailContent() {
                   </CardContent>
                 </Card>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Card className="border shadow-sm">
-                    <CardHeader className="pb-3 border-b bg-muted/20">
+                    <CardHeader className="pb-2 border-b bg-muted/20 px-4 pt-4">
                       <CardTitle className="text-base font-semibold">Valores do Cálculo</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Valor Principal</Label>
+                    <CardContent className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">Valor Principal</Label>
                           <div className="text-sm font-medium">{precatorio.valor_principal ? formatBR(Number(precatorio.valor_principal)) : "-"}</div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Valor Atualizado</Label>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">Valor Atualizado</Label>
                           <div className="text-sm font-bold text-primary">{precatorio.valor_atualizado ? formatBR(Number(precatorio.valor_atualizado)) : "-"}</div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">PSS</Label>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">PSS</Label>
                           <div className="text-sm font-medium">{precatorio.pss_valor ? formatBR(Number(precatorio.pss_valor)) : "-"}</div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">IRPF</Label>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">IRPF</Label>
                           <div className="text-sm font-medium">{precatorio.irpf_valor ? formatBR(Number(precatorio.irpf_valor)) : "-"}</div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Honorários</Label>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">Honorários</Label>
                           <div className="text-sm font-medium">{precatorio.honorarios_valor ? formatBR(Number(precatorio.honorarios_valor)) : "-"}</div>
                         </div>
-                        <div className="space-y-1">
-                          <Label className="text-xs text-muted-foreground">Saldo Líquido</Label>
+                        <div className="space-y-0.5">
+                          <Label className="text-[10px] text-muted-foreground uppercase">Saldo Líquido</Label>
                           <div className="text-sm font-bold text-green-600">{precatorio.saldo_liquido ? formatBR(Number(precatorio.saldo_liquido)) : "-"}</div>
                         </div>
                       </div>
-                      <div className="space-y-1 pt-4 border-t">
-                        <Label className="text-xs text-muted-foreground">Proposta Maior</Label>
-                        <div className="text-lg font-bold text-foreground">
+                      <div className="space-y-1 pt-3 border-t">
+                        <Label className="text-[10px] text-muted-foreground uppercase">Proposta Maior</Label>
+                        <div className="text-base font-bold text-foreground">
                           {precatorio.proposta_maior_valor ? formatBR(Number(precatorio.proposta_maior_valor)) : "-"}
                         </div>
                       </div>
@@ -587,54 +633,54 @@ function PrecatorioDetailContent() {
                   </Card>
 
                   <Card className="border shadow-sm">
-                    <CardHeader className="pb-3 border-b bg-muted/20">
+                    <CardHeader className="pb-2 border-b bg-muted/20 px-4 pt-4">
                       <CardTitle className="text-base font-semibold">Dados Bancários</CardTitle>
                     </CardHeader>
-                    <CardContent className="pt-6 space-y-4">
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1.5">
+                    <CardContent className="p-4 space-y-3">
+                      <div className="grid grid-cols-2 gap-3">
+                        <div className="space-y-1">
                           <Label className="text-xs">Banco</Label>
                           {isEditing ? (
                             <Input
                               value={editData.banco || ""}
                               onChange={(e) => updateEditField("banco", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
                             <div className="text-sm font-medium">{precatorio.banco || "-"}</div>
                           )}
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Label className="text-xs">Agência</Label>
                           {isEditing ? (
                             <Input
                               value={editData.agencia || ""}
                               onChange={(e) => updateEditField("agencia", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
                             <div className="text-sm">{precatorio.agencia || "-"}</div>
                           )}
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Label className="text-xs">Conta</Label>
                           {isEditing ? (
                             <Input
                               value={editData.conta || ""}
                               onChange={(e) => updateEditField("conta", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
                             <div className="text-sm">{precatorio.conta || "-"}</div>
                           )}
                         </div>
-                        <div className="space-y-1.5">
+                        <div className="space-y-1">
                           <Label className="text-xs">Tipo de Conta</Label>
                           {isEditing ? (
                             <Input
                               value={editData.tipo_conta || ""}
                               onChange={(e) => updateEditField("tipo_conta", e.target.value)}
-                              className="h-9"
+                              className="h-8 text-sm"
                             />
                           ) : (
                             <div className="text-sm">{precatorio.tipo_conta || "-"}</div>
@@ -646,10 +692,10 @@ function PrecatorioDetailContent() {
                 </div>
 
                 <Card className="border shadow-sm">
-                  <CardHeader className="pb-3 border-b bg-muted/20">
+                  <CardHeader className="pb-2 border-b bg-muted/20 px-4 pt-4">
                     <CardTitle className="text-base font-semibold">Observações</CardTitle>
                   </CardHeader>
-                  <CardContent className="pt-6">
+                  <CardContent className="p-4">
                     {isEditing ? (
                       <Textarea
                         value={editData.observacoes || ""}
@@ -665,6 +711,18 @@ function PrecatorioDetailContent() {
                     )}
                   </CardContent>
                 </Card>
+              </TabsContent>
+
+              {/** Conteúdo Geral (Existente...) **/}
+
+              <TabsContent value="oficio" className="space-y-6 animate-in fade-in-50 duration-300">
+                <OficioViewer
+                  precatorioId={precatorio.id}
+                  fileUrl={precatorio.file_url}
+                  onFileUpdate={loadPrecatorio}
+                  // Readonly for everyone except Admin and Gestor de Ofício
+                  readonly={!userRole?.some(r => ['admin', 'gestor_oficio'].includes(r))}
+                />
               </TabsContent>
 
               <TabsContent value="documentos" className="mt-0">
@@ -686,29 +744,30 @@ function PrecatorioDetailContent() {
 
 
               <TabsContent value="calculo" className="mt-0 space-y-6">
-                {/* Calculadora completa para admins e operadores de cálculo */}
-                {(userRole?.includes('admin') || userRole?.includes('operador_calculo')) ? (
-                  <div className="space-y-6">
-                    <CalculadoraPrecatorios precatorioId={id} />
-                    <div className="mt-8 border-t pt-8">
-                      <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
-                      <HistoricoCalculos precatorioId={id} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6">
-                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
                       <Calculator className="h-5 w-5" />
-                      Detalhamento do Cálculo
+                      Memória de Cálculo
                     </h3>
-                    <ResumoCalculoDetalhado precatorio={precatorio} />
-
-                    <div className="mt-8 border-t pt-8">
-                      <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
-                      <HistoricoCalculos precatorioId={id} />
-                    </div>
+                    {precatorio.responsavel_calculo && (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/30 px-3 py-1.5 rounded-full border">
+                        <User className="h-4 w-4" />
+                        <span>Realizado por: <strong>{precatorio.responsavel_calculo.nome}</strong></span>
+                      </div>
+                    )}
                   </div>
-                )}
+                  <ResumoCalculoDetalhado precatorio={precatorio} />
+                </div>
+              </TabsContent>
+
+              <TabsContent value="proposta" className="mt-0 space-y-6">
+                <AbaProposta
+                  precatorioId={precatorio.id}
+                  precatorio={precatorio}
+                  onUpdate={loadPrecatorio}
+                  userRole={userRole ? userRole[0] : null}
+                />
               </TabsContent>
 
               <TabsContent value="timeline" className="mt-0">
@@ -716,11 +775,45 @@ function PrecatorioDetailContent() {
                   <Timeline precatorioId={id} />
                 </div>
               </TabsContent>
+
+              <TabsContent value="ocr" className="mt-0 h-[800px] flex gap-4">
+                <Card className="flex-1 flex flex-col border shadow-sm">
+                  <CardHeader className="pb-3 border-b bg-muted/20">
+                    <CardTitle className="text-base font-semibold">Visualização do PDF</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 p-0 overflow-hidden relative min-h-[600px]">
+                    {precatorio.file_url ? (
+                      <iframe
+                        src={precatorio.file_url}
+                        className="absolute inset-0 w-full h-full border-none"
+                        title="PDF Viewer"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-muted-foreground">
+                        Nenhum arquivo anexado.
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card className="w-1/3 flex flex-col border shadow-sm">
+                  <CardHeader className="pb-3 border-b bg-muted/20">
+                    <CardTitle className="text-base font-semibold">Texto Extraído (OCR)</CardTitle>
+                  </CardHeader>
+                  <CardContent className="flex-1 p-0">
+                    <Textarea
+                      className="w-full h-full resize-none p-4 rounded-none border-0 focus-visible:ring-0 font-mono text-xs"
+                      value={precatorio.raw_text || "Texto não disponível."}
+                      readOnly
+                    />
+                  </CardContent>
+                </Card>
+              </TabsContent>
             </div>
           </Tabs>
         </CardContent>
       </Card>
-    </div >
+    </div>
   )
 }
 

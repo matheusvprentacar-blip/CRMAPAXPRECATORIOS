@@ -2,251 +2,230 @@
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
+import { useRouter } from "next/navigation"
+import { FileCheck, AlertCircle, MapPin, User, FileText, CalendarClock } from "lucide-react"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { FileText, Search, AlertCircle, CheckCircle2, Clock } from "lucide-react"
+import { format } from "date-fns"
+import { ptBR } from "date-fns/locale"
 
-interface Precatorio {
+interface PrecatOficio {
     id: string
-    numero_precatorio: string
-    credor_nome: string
-    valor_atualizado: number
-    status: string
-    numero_oficio: string | null
+    credor_nome?: string
+    credor_cpf_cnpj?: string
+    credor_cidade?: string
+    credor_uf?: string
+    numero_processo?: string
+    numero_precatorio?: string
+    responsavel?: string
+    usuarios?: { nome: string }
+    responsavel_nome?: string
+    created_at: string
+    status_kanban?: string
+    file_url?: string
 }
 
 export default function GestaoOficiosPage() {
     const router = useRouter()
-    const [precatorios, setPrecatorios] = useState<Precatorio[]>([])
+    const [precatorios, setPrecatorios] = useState<PrecatOficio[]>([])
     const [loading, setLoading] = useState(true)
-    const [userRole, setUserRole] = useState<string | null>(null)
-    const [searchTerm, setSearchTerm] = useState("")
+    const [error, setError] = useState<string | null>(null)
 
     useEffect(() => {
-        verificarAcessoECarregarDados()
-        // eslint-disable-next-line react-hooks/exhaustive-deps
+        const carregarDados = async () => {
+            const supabase = createBrowserClient()
+
+            if (!supabase) {
+                setLoading(false)
+                return
+            }
+
+            try {
+                const {
+                    data: { user: currentUser },
+                } = await supabase.auth.getUser()
+
+                if (!currentUser) {
+                    setError("Usuário não autenticado.")
+                    setLoading(false)
+                    return
+                }
+
+                // Busca precatórios na fase de aguardando_oficio ou atribuídos ao gestor de ofícios
+                const { data, error: fetchError } = await supabase
+                    .from("precatorios")
+                    .select(
+                        `
+            id,
+            credor_nome,
+            credor_cpf_cnpj,
+            credor_cidade,
+            credor_uf,
+            numero_processo,
+            numero_precatorio,
+            responsavel,
+            created_at,
+            status_kanban,
+            file_url,
+            usuarios!responsavel(nome)
+          `
+                    )
+                    // Filtro: Tudo que está em 'aguardando_oficio' ou atribuído a este usuário como gestor de ofícios
+                    .or(`status_kanban.eq.aguardando_oficio,responsavel_oficio_id.eq.${currentUser.id}`)
+                    .order("created_at", { ascending: true }) // FIFO: Mais antigos primeiro
+
+                if (fetchError) {
+                    console.error("[Ofícios] Erro ao carregar fila:", fetchError)
+                    setError("Erro ao carregar fila de ofícios.")
+                    setLoading(false)
+                    return
+                }
+
+                // Mapear para structure plana se necessário
+                const formatted = (data || []).map((p: any) => ({
+                    ...p,
+                    responsavel_nome: p.usuarios?.nome || "Sem responsável"
+                }))
+
+                setPrecatorios(formatted)
+                setLoading(false)
+            } catch (err) {
+                console.error("[Ofícios] Erro inesperado:", err)
+                setError("Ocorreu um erro inesperado.")
+                setLoading(false)
+            }
+        }
+
+        carregarDados()
     }, [])
 
-    async function verificarAcessoECarregarDados() {
-        try {
-            const supabase = createBrowserClient()
-            if (!supabase) return
-
-            // Verificar role do usuário
-            const { data: { user } } = await supabase.auth.getUser()
-            if (!user) {
-                router.push("/login")
-                return
-            }
-
-            const { data: userData } = await supabase
-                .from("usuarios")
-                .select("role")
-                .eq("id", user.id)
-                .single()
-
-            if (!userData || (!userData.role.includes("admin") && !userData.role.includes("gestor_oficio"))) {
-                router.push("/")
-                return
-            }
-
-            setUserRole(userData.role.includes("admin") ? "admin" : "gestor_oficio")
-            await carregarPrecatorios(user.id, userData.role.includes("admin") ? "admin" : "gestor_oficio")
-        } catch (error) {
-            console.error("Erro ao verificar acesso:", error)
-            router.push("/")
-        }
-    }
-
-    async function carregarPrecatorios(userId: string, role: string) {
-        try {
-            setLoading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) return
-
-            let query = supabase
-                .from("precatorios")
-                .select(`
-          id,
-          numero_precatorio,
-          credor_nome,
-          valor_atualizado,
-          status,
-          numero_oficio
-        `)
-                .eq("status_kanban", "pronto_calculo") // Apenas precatórios prontos para cálculo
-
-            // Se não for admin, filtrar apenas precatórios atribuídos OU sem responsável (fila)
-            if (role !== "admin") {
-                query = query.or(`responsavel_oficio_id.eq.${userId},responsavel_oficio_id.is.null`)
-            }
-
-            const { data, error } = await query.order("created_at", { ascending: false })
-
-            if (error) throw error
-
-            setPrecatorios(data || [])
-        } catch (error) {
-            console.error("Erro ao carregar precatórios:", error)
-        } finally {
-            setLoading(false)
-        }
-    }
-
-    const precatoriosFiltrados = precatorios.filter(p =>
-        p.numero_precatorio?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.credor_nome?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-
-    const stats = {
-        total: precatorios.length,
-        comOficio: precatorios.filter(p => p.numero_oficio).length,
-        semOficio: precatorios.filter(p => !p.numero_oficio).length,
+    const handleAbrir = (id: string) => {
+        router.push(`/precatorios/visualizar?id=${id}`)
     }
 
     if (loading) {
         return (
             <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
         )
     }
 
     return (
-        <div className="container mx-auto max-w-7xl p-6 space-y-6">
-            {/* Header */}
-            <div className="flex flex-col gap-4">
+        <div className="space-y-6 container mx-auto p-6 max-w-7xl">
+            <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent">
-                        Gestão de Ofícios Requisitórios
-                    </h1>
-                    <p className="text-muted-foreground mt-1">
-                        {userRole === "admin" ? "Todos os precatórios prontos para cálculo" : "Precatórios atribuídos a você"}
-                    </p>
+                    <h1 className="text-3xl font-bold tracking-tight">Gestão de Ofícios</h1>
+                    <p className="text-muted-foreground">Fila de processos aguardando inclusão de Ofício Requisitório</p>
                 </div>
-
-                {/* Stats */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Total</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">{stats.total}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Sem Ofício</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-yellow-600">{stats.semOficio}</div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="pb-2">
-                            <CardTitle className="text-sm font-medium text-muted-foreground">Com Ofício</CardTitle>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold text-green-600">{stats.comOficio}</div>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                {/* Busca */}
                 <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                        <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Buscar por número ou credor..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-10"
-                        />
-                    </div>
+                    <Badge variant="secondary" className="text-lg px-4 py-1">
+                        {precatorios.length} na fila
+                    </Badge>
                 </div>
             </div>
 
-            {/* Lista de Precatórios */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {precatoriosFiltrados.map((precatorio) => {
-                    return (
-                        <Card key={precatorio.id} className="hover:shadow-lg transition-shadow">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-start justify-between">
-                                    <div className="flex-1">
-                                        <CardTitle className="text-base font-semibold truncate">
-                                            {precatorio.numero_precatorio || "Sem número"}
-                                        </CardTitle>
-                                        <p className="text-sm text-muted-foreground mt-1 truncate">
-                                            {precatorio.credor_nome}
-                                        </p>
-                                    </div>
-                                    {!precatorio.numero_oficio && (
-                                        <AlertCircle className="h-5 w-5 text-yellow-500 flex-shrink-0 ml-2" />
-                                    )}
-                                </div>
-                            </CardHeader>
+            {error && (
+                <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                </Alert>
+            )}
 
-                            <CardContent className="space-y-4">
-                                {/* Status do Ofício */}
-                                <div className="space-y-2">
-                                    <div className="text-xs text-muted-foreground font-medium uppercase tracking-wide">
-                                        Número do Ofício
-                                    </div>
-                                    {precatorio.numero_oficio ? (
-                                        <div className="text-sm font-semibold text-foreground">
-                                            {precatorio.numero_oficio}
-                                        </div>
-                                    ) : (
-                                        <div className="text-sm text-muted-foreground italic">
-                                            Não informado
-                                        </div>
-                                    )}
+            {!loading && precatorios.length === 0 && (
+                <Card className="p-8 text-center text-muted-foreground bg-muted/50 border-dashed">
+                    <FileCheck className="mx-auto h-12 w-12 opacity-50 mb-4" />
+                    <p className="text-lg font-medium">Nenhum precatório nesta fila</p>
+                    <p className="text-sm">Processos aguardando ofício aparecerão aqui.</p>
+                </Card>
+            )}
+
+            <div className="grid gap-4">
+                {precatorios.map((p, index) => (
+                    <Card
+                        key={p.id}
+                        className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-cyan-500/40 group relative overflow-hidden"
+                        onClick={() => handleAbrir(p.id)}
+                    >
+                        {/* Efeito de hover suave */}
+                        <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors" />
+
+                        <CardContent className="p-6 flex items-center justify-between relative z-10">
+                            <div className="flex items-start gap-6 flex-1">
+                                {/* Índice da Fila */}
+                                <div className="flex flex-col items-center justify-center min-w-[3rem]">
+                                    <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary/40 transition-colors">
+                                        {String(index + 1).padStart(2, '0')}
+                                    </span>
                                 </div>
 
-                                {/* Status Badge */}
-                                {precatorio.numero_oficio ? (
-                                    <Badge className="w-full justify-center bg-green-500 hover:bg-green-600">
-                                        <CheckCircle2 className="h-3 w-3 mr-1" />
-                                        Ofício Incluído
-                                    </Badge>
-                                ) : (
-                                    <Badge variant="outline" className="w-full justify-center border-yellow-500 text-yellow-600">
-                                        <Clock className="h-3 w-3 mr-1" />
-                                        Aguardando Ofício
-                                    </Badge>
-                                )}
+                                {/* Informações Principais */}
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
 
-                                {/* Botão Visualizar */}
-                                <Button
-                                    variant="outline"
-                                    className="w-full"
-                                    onClick={() => router.push(`/precatorios/visualizar?id=${precatorio.id}`)}
-                                >
-                                    <FileText className="h-4 w-4 mr-2" />
-                                    Visualizar Detalhes
-                                </Button>
-                            </CardContent>
-                        </Card>
-                    )
-                })}
+                                    {/* Coluna 1: Credor */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <User className="w-3 h-3" /> Credor
+                                        </label>
+                                        <p className="font-medium truncate" title={p.credor_nome}>{p.credor_nome || "Não informado"}</p>
+                                        <p className="text-sm text-muted-foreground font-mono">{p.credor_cpf_cnpj || "CPF não inf."}</p>
+                                    </div>
 
-                {precatoriosFiltrados.length === 0 && (
-                    <div className="col-span-full text-center py-12 text-muted-foreground">
-                        <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Nenhum precatório encontrado</p>
-                        {searchTerm && (
-                            <p className="text-sm mt-2">Tente ajustar os filtros de busca</p>
-                        )}
-                    </div>
-                )}
+                                    {/* Coluna 2: Localização */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <MapPin className="w-3 h-3" /> Residência
+                                        </label>
+                                        <div className="flex items-center gap-2">
+                                            <span className="font-medium">
+                                                {p.credor_cidade ? `${p.credor_cidade}` : "Cidade n/d"}
+                                            </span>
+                                            {p.credor_uf && <Badge variant="outline" className="text-[10px] h-5">{p.credor_uf}</Badge>}
+                                        </div>
+                                    </div>
+
+                                    {/* Coluna 3: Processo */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <FileText className="w-3 h-3" /> Processo
+                                        </label>
+                                        <p className="font-medium text-sm font-mono">{p.numero_processo || "N/A"}</p>
+                                        <p className="text-xs text-muted-foreground">{p.numero_precatorio || "Prec. N/A"}</p>
+                                    </div>
+
+                                    {/* Coluna 4: Responsável e Data */}
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                                            <CalendarClock className="w-3 h-3" /> Responsável
+                                        </label>
+                                        <div className="flex flex-col">
+                                            <span className="text-sm font-medium text-primary">
+                                                {p.responsavel_nome}
+                                            </span>
+                                            <span className="text-xs text-muted-foreground" title={new Date(p.created_at).toLocaleString()}>
+                                                Entrou em: {format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Indicator if file exists (Optional check) */}
+                            {p.file_url ? (
+                                <Badge className="absolute top-4 right-4 bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+                                    <FileCheck className="w-3 h-3 mr-1" /> Ofício Anexado
+                                </Badge>
+                            ) : (
+                                <Badge variant={"outline"} className="absolute top-4 right-4 text-orange-700 bg-orange-50 border-orange-200">
+                                    Pendente
+                                </Badge>
+                            )}
+
+                        </CardContent>
+                    </Card>
+                ))}
             </div>
         </div>
     )
