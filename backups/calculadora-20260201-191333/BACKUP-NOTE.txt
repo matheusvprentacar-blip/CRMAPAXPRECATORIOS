@@ -1,0 +1,17 @@
+﻿Backup da logica da calculadora
+Data: 20260201-191333
+Commit base: 2264bbe02b50e24a4995218f1402a7333e4c89c4
+Arquivos copiados:
+- components\calculador-precatorios.tsx
+- components\steps\step-dados-basicos.tsx
+- components\steps\step-indices.tsx
+- components\steps\step-atualizacao-monetaria.tsx
+- components\steps\step-pss.tsx
+- components\steps\step-irpf.tsx
+- components\steps\step-honorarios.tsx
+- components\steps\step-propostas.tsx
+- components\steps\step-resumo.tsx
+- lib\calculos\calcular-precatorio.ts
+- lib\calculos\calcular-irpf.ts
+- lib\calculos\indices.ts
+- components\ui\toggle-group.tsx
