@@ -136,29 +136,8 @@ export function DocumentosViewer({
       setLoading(true)
       setError(null)
       try {
-        let token: string | null = null
-        const supabase = createBrowserClient()
-        if (supabase) {
-          const { data } = await supabase.auth.getSession()
-          token = data.session?.access_token ?? null
-        }
-
-        const response = await fetch(`/api/precatorios/${precatorioId}/documentos`, {
-          cache: "no-store",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
-        })
-        const payload = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error(payload?.error || "Erro ao carregar documentos")
-        }
-
-        const list = Array.isArray(payload?.documentos) ? payload.documentos : []
-
-        let merged = mergeDocs(list, fallbackDocs)
-        if (!merged.length) {
-          const clientDocs = await loadFromClient()
-          merged = mergeDocs(clientDocs, fallbackDocs)
-        }
+        const clientDocs = await loadFromClient()
+        const merged = mergeDocs(clientDocs, fallbackDocs)
 
         if (!isMounted) return
         setDocs(merged)
@@ -170,6 +149,9 @@ export function DocumentosViewer({
             merged[0]
           return preferred?.id || ""
         })
+        if (!merged.length) {
+          setError("Nenhum documento encontrado.")
+        }
       } catch (err: any) {
         const message = err?.message || "Erro ao carregar documentos"
         const clientDocs = await loadFromClient()

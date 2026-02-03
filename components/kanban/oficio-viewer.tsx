@@ -21,6 +21,8 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
 import { downloadFileAsArrayBuffer, getFileDownloadUrl } from "@/lib/utils/file-upload"
+import { listarDocumentos } from "@/lib/utils/documento-upload"
+import { TIPO_DOCUMENTO_LABELS } from "@/lib/types/documento"
 import { toast } from "sonner"
 import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
 
@@ -100,24 +102,73 @@ export function OficioViewer({
         }
       }
 
-      let list: DocumentoItem[] = []
-      try {
+      const loadFromClient = async (): Promise<DocumentoItem[]> => {
         const supabase = createBrowserClient()
-        let token: string | null = null
-        if (supabase) {
-          const { data } = await supabase.auth.getSession()
-          token = data.session?.access_token ?? null
+        if (!supabase) return []
+
+        const docs: DocumentoItem[] = []
+
+        const result = await listarDocumentos(precatorioId)
+        if (result.success && result.documentos) {
+          const resolved = await Promise.all(
+            result.documentos.map(async (doc: any) => {
+              const tipo = doc?.tipo_documento ?? null
+              const titulo =
+                (TIPO_DOCUMENTO_LABELS as Record<string, string>)[tipo] ||
+                doc?.nome_arquivo ||
+                "Documento"
+              const storageRef = doc?.storage_path
+                ? `storage:precatorios-documentos/${doc.storage_path}`
+                : null
+              const viewUrl = doc?.storage_url || (storageRef ? await getFileDownloadUrl(storageRef) : null)
+              return {
+                id: doc.id,
+                titulo,
+                tipo,
+                viewUrl: viewUrl ?? null,
+                urlType: viewUrl ? "resolved" : "invalid",
+                created_at: doc?.created_at ?? null,
+              }
+            })
+          )
+          docs.push(...resolved)
         }
 
-        const response = await fetch(`/api/precatorios/${precatorioId}/documentos`, {
-          cache: "no-store",
-          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        const { data: itensData } = await supabase
+          .from("precatorio_itens")
+          .select("id, precatorio_id, tipo_grupo, nome_item, arquivo_url, observacao, created_at")
+          .eq("precatorio_id", precatorioId)
+          .not("arquivo_url", "is", null)
+          .order("created_at", { ascending: false })
+
+        const itensDocs = await Promise.all(
+          (itensData ?? [])
+            .filter((item: any) => item?.observacao !== "__EXCLUIDO__")
+            .map(async (item: any) => {
+              const viewUrl = await getFileDownloadUrl(item?.arquivo_url ?? null)
+              return {
+                id: `item-${item.id}`,
+                titulo: item.nome_item || "Documento",
+                tipo: item.tipo_grupo || "checklist",
+                viewUrl: viewUrl ?? null,
+                urlType: viewUrl ? "resolved" : "invalid",
+                created_at: item.created_at,
+              }
+            })
+        )
+
+        docs.push(...itensDocs)
+
+        return docs.sort((a, b) => {
+          const aTime = a?.created_at ? new Date(a.created_at).getTime() : 0
+          const bTime = b?.created_at ? new Date(b.created_at).getTime() : 0
+          return bTime - aTime
         })
-        const payload = await response.json().catch(() => ({}))
-        if (!response.ok) {
-          throw new Error(payload?.error || "Erro ao carregar documentos")
-        }
-        list = Array.isArray(payload?.documentos) ? payload.documentos : []
+      }
+
+      let list: DocumentoItem[] = []
+      try {
+        list = await loadFromClient()
       } catch (err: any) {
         if (!isMounted) return
         setError(err?.message || "Erro ao carregar documentos")
@@ -139,6 +190,9 @@ export function OficioViewer({
           merged[0]
         return preferred?.id || ""
       })
+      if (!merged.length && !fallbackDoc) {
+        setError((prev) => prev || "Nenhum documento encontrado.")
+      }
       setLoadingDocs(false)
     }
 
