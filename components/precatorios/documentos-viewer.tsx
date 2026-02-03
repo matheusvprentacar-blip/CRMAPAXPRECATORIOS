@@ -101,14 +101,11 @@ export function DocumentosViewer({
       }
 
       const { data: itensData } = await supabase
-        .from("precatorio_itens")
-        .select("id, precatorio_id, tipo_grupo, nome_item, arquivo_url, observacao, created_at")
-        .eq("precatorio_id", precatorioId)
-        .not("arquivo_url", "is", null)
-        .order("created_at", { ascending: false })
+        .rpc("obter_itens_precatorio", { p_precatorio_id: precatorioId })
 
       const itensDocs = await Promise.all(
         (itensData ?? [])
+          .filter((item: any) => item?.arquivo_url)
           .filter((item: any) => item?.observacao !== "__EXCLUIDO__")
           .map(async (item: any) => {
             const viewUrl = await getFileDownloadUrl(item?.arquivo_url ?? null)
