@@ -9,6 +9,7 @@ import { ComplexityBadge } from "@/components/ui/complexity-badge"
 import { SLAIndicator } from "@/components/ui/sla-indicator"
 import { DelayTypeBadge } from "@/components/ui/delay-type-badge"
 import { ImpactBadge } from "@/components/ui/impact-badge"
+import { maskProcesso } from "@/lib/masks"
 
 interface CardPrecatorioCalculoProps {
   precatorio: {
@@ -115,7 +116,7 @@ export function CardPrecatorioCalculo({
               </div>
 
               <h3 className="font-semibold text-lg leading-tight">
-                {precatorio.titulo || precatorio.numero_precatorio || "Sem título"}
+                {precatorio.titulo || (precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "Sem título")}
               </h3>
             </div>
 
@@ -133,7 +134,7 @@ export function CardPrecatorioCalculo({
             </p>
             {precatorio.numero_processo && (
               <p className="text-muted-foreground">
-                <span className="font-medium">Processo:</span> {precatorio.numero_processo}
+                <span className="font-medium">Processo:</span> {maskProcesso(precatorio.numero_processo)}
               </p>
             )}
             {precatorio.tribunal && (
@@ -298,3 +299,5 @@ export function CardPrecatorioCalculo({
     </Card>
   )
 }
+
+

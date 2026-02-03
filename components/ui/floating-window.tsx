@@ -22,13 +22,20 @@ export function FloatingWindow({
 }: FloatingWindowProps) {
     const [position, setPosition] = useState({ x: 50, y: 50 })
     const [size, setSize] = useState({ width: initialWidth, height: initialHeight })
-    const [isDragging, setIsDragging] = useState(false)
-    const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 })
     const [isMaximized, setIsMaximized] = useState(false)
     const [preMaximizeState, setPreMaximizeState] = useState<{ x: number, y: number, w: number, h: number } | null>(null)
     const [mounted, setMounted] = useState(false)
 
     const windowRef = useRef<HTMLDivElement>(null)
+    const positionRef = useRef(position)
+    const dragRef = useRef({
+        active: false,
+        offsetX: 0,
+        offsetY: 0,
+        lastClientX: 0,
+        lastClientY: 0,
+        rafId: 0 as number | null,
+    })
 
     useEffect(() => {
         setMounted(true)
@@ -40,50 +47,56 @@ export function FloatingWindow({
         }
     }, [initialWidth, initialHeight])
 
+    useEffect(() => {
+        positionRef.current = position
+    }, [position])
+
     const handleMouseDown = (e: React.MouseEvent) => {
         if (isMaximized) return
-        setIsDragging(true)
-        setDragOffset({
-            x: e.clientX - position.x,
-            y: e.clientY - position.y,
-        })
-    }
-
-    const handleMouseMove = (e: React.MouseEvent) => {
-        if (isDragging) {
-            setPosition({
-                x: e.clientX - dragOffset.x,
-                y: e.clientY - dragOffset.y,
-            })
-        }
-    }
-
-    const handleMouseUp = () => {
-        setIsDragging(false)
+        e.preventDefault()
+        const drag = dragRef.current
+        drag.active = true
+        drag.offsetX = e.clientX - positionRef.current.x
+        drag.offsetY = e.clientY - positionRef.current.y
+        drag.lastClientX = e.clientX
+        drag.lastClientY = e.clientY
     }
 
     useEffect(() => {
         const handleGlobalMouseMove = (e: MouseEvent) => {
-            if (isDragging) {
-                setPosition({
-                    x: e.clientX - dragOffset.x,
-                    y: e.clientY - dragOffset.y,
-                })
-            }
+            const drag = dragRef.current
+            if (!drag.active) return
+            drag.lastClientX = e.clientX
+            drag.lastClientY = e.clientY
+
+            if (drag.rafId) return
+            drag.rafId = window.requestAnimationFrame(() => {
+                drag.rafId = null
+                if (!drag.active) return
+                const nextX = drag.lastClientX - drag.offsetX
+                const nextY = drag.lastClientY - drag.offsetY
+                setPosition((prev) =>
+                    prev.x === nextX && prev.y === nextY ? prev : { x: nextX, y: nextY }
+                )
+            })
         }
         const handleGlobalMouseUp = () => {
-            setIsDragging(false)
+            const drag = dragRef.current
+            if (!drag.active) return
+            drag.active = false
+            if (drag.rafId) {
+                window.cancelAnimationFrame(drag.rafId)
+                drag.rafId = null
+            }
         }
 
-        if (isDragging) {
-            window.addEventListener("mousemove", handleGlobalMouseMove)
-            window.addEventListener("mouseup", handleGlobalMouseUp)
-        }
+        window.addEventListener("mousemove", handleGlobalMouseMove)
+        window.addEventListener("mouseup", handleGlobalMouseUp)
         return () => {
             window.removeEventListener("mousemove", handleGlobalMouseMove)
             window.removeEventListener("mouseup", handleGlobalMouseUp)
         }
-    }, [isDragging, dragOffset])
+    }, [])
 
     const toggleMaximize = () => {
         if (isMaximized) {

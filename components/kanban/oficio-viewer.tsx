@@ -1,265 +1,579 @@
 "use client"
 
-import { useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { FileText, Upload, Eye, Download, FileType, CheckCircle2, Trash2, Send } from "lucide-react"
-import { createBrowserClient } from "@/lib/supabase/client"
-import { toast } from "sonner"
+import { useEffect, useMemo, useState } from "react"
 import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  CheckCircle2,
+  Download,
+  Eye,
+  ExternalLink,
+  FileText,
+  FileType,
+  RefreshCcw,
+  Send,
+  Trash2,
+  Upload,
+} from "lucide-react"
+import { createBrowserClient } from "@/lib/supabase/client"
+import { useAuth } from "@/lib/auth/auth-context"
+import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
+import { downloadFileAsArrayBuffer, getFileDownloadUrl } from "@/lib/utils/file-upload"
+import { toast } from "sonner"
+import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
 
-interface OficioViewerProps {
-    precatorioId: string
-    fileUrl?: string | null
-    onFileUpdate: (url?: string) => void
-    readonly?: boolean
+type DocumentoItem = {
+  id: string
+  titulo?: string | null
+  tipo?: string | null
+  viewUrl?: string | null
+  urlType?: string | null
+  created_at?: string | null
+  signError?: string | null
 }
 
-export function OficioViewer({ precatorioId, fileUrl, onFileUpdate, readonly = false }: OficioViewerProps) {
-    const [uploading, setUploading] = useState(false)
+interface OficioViewerProps {
+  precatorioId: string
+  fileUrl?: string | null
+  onFileUpdate: (url?: string) => void
+  readonly?: boolean
+  currentStatus?: string | null
+}
 
-    // Função para Extrair/Upload
-    // NOTA: Como você já tem um fluxo de extração OCR, poderíamos reutilizar.
-    // Mas para este escopo específico de "Incluir Ofício", vamos fazer um upload simples para o bucket
-    // E atualizar o campo file_url.
-    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0]
-        if (!file) return
+const formatTipo = (tipo?: string | null) => {
+  if (!tipo) return ""
+  if (tipo === "oficio_requisitorio") return "Ofício Requisitório"
+  return tipo.replaceAll("_", " ")
+}
 
-        if (file.type !== "application/pdf") {
-            toast.error("Por favor, envie apenas arquivos PDF.")
-            return
+const buildStatusText = (loading: boolean, error: string | null, count: number) => {
+  if (loading) return "Carregando documentos..."
+  if (!count && error) return error
+  if (!count) return "Nenhum documento encontrado."
+  if (error) return `Mostrando ${count} documento(s). Falha ao buscar anexos.`
+  return `${count} documento${count > 1 ? "s" : ""} disponível(is)`
+}
+
+export function OficioViewer({
+  precatorioId,
+  fileUrl,
+  onFileUpdate,
+  readonly = false,
+  currentStatus,
+}: OficioViewerProps) {
+  const [uploading, setUploading] = useState(false)
+  const [docs, setDocs] = useState<DocumentoItem[]>([])
+  const [activeId, setActiveId] = useState("")
+  const [loadingDocs, setLoadingDocs] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [refreshKey, setRefreshKey] = useState(0)
+  const { openPDF } = usePDFViewer()
+  const { profile } = useAuth()
+  const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
+  const canEnviarCalculoRoles = roles.some((role) =>
+    ["admin", "juridico", "analista", "analista_processual"].includes(role)
+  )
+  const isAnaliseProcessualStage = (currentStatus || "") === "analise_processual_inicial"
+  const bloqueadoEnvio = isAnaliseProcessualStage && !canEnviarCalculoRoles
+
+  useEffect(() => {
+    let isMounted = true
+
+    const loadDocs = async () => {
+      if (!precatorioId) return
+
+      setLoadingDocs(true)
+      setError(null)
+
+      let fallbackDoc: DocumentoItem | null = null
+      if (fileUrl) {
+        const resolved = await getFileDownloadUrl(fileUrl)
+        const fallbackViewUrl = resolved ?? (fileUrl.startsWith("http") ? fileUrl : null)
+        fallbackDoc = {
+          id: "legacy-oficio",
+          titulo: "Ofício Requisitório",
+          tipo: "oficio_requisitorio",
+          viewUrl: fallbackViewUrl,
+          urlType: resolved ? "resolved" : "public",
+        }
+      }
+
+      let list: DocumentoItem[] = []
+      try {
+        const supabase = createBrowserClient()
+        let token: string | null = null
+        if (supabase) {
+          const { data } = await supabase.auth.getSession()
+          token = data.session?.access_token ?? null
         }
 
-        try {
-            setUploading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) throw new Error("Supabase não inicializado")
-
-            // 1. Upload para o bucket 'ocr-uploads'
-            const fileName = `oficio-${precatorioId}-${Date.now()}.pdf`
-            const { data: uploadData, error: uploadError } = await supabase
-                .storage
-                .from('ocr-uploads')
-                .upload(fileName, file)
-
-            if (uploadError) {
-                console.error("Upload Error:", uploadError)
-                throw uploadError
-            }
-
-            // 2. Obter URL pública
-            const { data: { publicUrl } } = supabase
-                .storage
-                .from('ocr-uploads')
-                .getPublicUrl(fileName)
-
-            console.log("Public URL generated:", publicUrl)
-
-            // 3. Atualizar registro do precatório
-            const { error: updateError } = await supabase
-                .from('precatorios')
-                .update({ file_url: publicUrl })
-                .eq('id', precatorioId)
-
-            if (updateError) {
-                console.error("Database Update Error:", updateError)
-                toast.error(`Erro ao salvar no banco: ${updateError.message}`)
-                throw updateError
-            }
-
-            toast.success("Ofício anexado com sucesso!")
-            onFileUpdate?.(publicUrl)
-        } catch (error) {
-            console.error("Erro no upload:", error)
-            toast.error("Erro ao fazer upload do ofício.")
-        } finally {
-            setUploading(false)
+        const response = await fetch(`/api/precatorios/${precatorioId}/documentos`, {
+          cache: "no-store",
+          headers: token ? { Authorization: `Bearer ${token}` } : undefined,
+        })
+        const payload = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(payload?.error || "Erro ao carregar documentos")
         }
+        list = Array.isArray(payload?.documentos) ? payload.documentos : []
+      } catch (err: any) {
+        if (!isMounted) return
+        setError(err?.message || "Erro ao carregar documentos")
+      }
+
+      const hasOficioApi = list.some((doc) => doc.tipo === "oficio_requisitorio" && doc.viewUrl)
+      const hasDuplicateFallback =
+        fallbackDoc?.viewUrl && list.some((doc) => doc.viewUrl && doc.viewUrl === fallbackDoc.viewUrl)
+
+      const merged = fallbackDoc && !hasOficioApi && !hasDuplicateFallback ? [fallbackDoc, ...list] : list
+
+      if (!isMounted) return
+      setDocs(merged)
+      setActiveId((prev) => {
+        if (prev && merged.some((doc) => doc.id === prev)) return prev
+        const preferred =
+          merged.find((doc) => doc.tipo === "oficio_requisitorio" && doc.viewUrl) ||
+          merged.find((doc) => doc.viewUrl) ||
+          merged[0]
+        return preferred?.id || ""
+      })
+      setLoadingDocs(false)
     }
 
-    const handleRemoveFile = async () => {
-        if (!confirm("Tem certeza que deseja remover este ofício?")) return
+    loadDocs()
 
-        try {
-            setUploading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) throw new Error("Supabase não inicializado")
+    return () => {
+      isMounted = false
+    }
+  }, [precatorioId, fileUrl, refreshKey])
 
-            const { error } = await supabase
-                .from('precatorios')
-                .update({ file_url: null })
-                .eq('id', precatorioId)
+  const activeDoc = useMemo(
+    () => docs.find((doc) => doc.id === activeId) || null,
+    [docs, activeId]
+  )
 
-            if (error) throw error
+  const oficioDoc = useMemo(
+    () => docs.find((doc) => doc.tipo === "oficio_requisitorio" && doc.viewUrl) || null,
+    [docs]
+  )
+  const hasOficio = Boolean(oficioDoc?.viewUrl || fileUrl)
 
-            toast.success("Ofício removido com sucesso!")
-            onFileUpdate?.(undefined)
-        } catch (error: any) {
-            console.error("Erro ao remover:", error)
-            toast.error(`Erro ao remover: ${error.message}`)
-        } finally {
-            setUploading(false)
-        }
+  const statusText = useMemo(
+    () => buildStatusText(loadingDocs, error, docs.length),
+    [loadingDocs, error, docs.length]
+  )
+
+  const handleDownload = async (doc?: DocumentoItem | null) => {
+    if (!doc?.viewUrl) return
+    try {
+      setUploading(true)
+      const supabase = createBrowserClient()
+      if (!supabase) return
+
+      toast.info("Iniciando download...")
+
+      const buffer = await downloadFileAsArrayBuffer(doc.viewUrl, supabase, doc.titulo || "Documento")
+      if (!buffer) throw new Error("Falha ao baixar arquivo")
+
+      const blob = new Blob([buffer])
+
+      let fileName = (doc.titulo || "Documento").replace(/[^\w.-]+/g, "_")
+      if (!fileName.toLowerCase().endsWith(".pdf")) fileName += ".pdf"
+
+      await saveFileWithPicker(blob, fileName)
+      toast.success("Download iniciado")
+    } catch (error: any) {
+      console.error("Erro no download:", error)
+      toast.error("Erro ao baixar documento.")
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleViewDocument = (doc?: DocumentoItem | null) => {
+    if (doc?.viewUrl) {
+      openPDF(doc.viewUrl, doc.titulo || "Documento")
+    }
+  }
+
+  const handleOpenNewTab = (doc?: DocumentoItem | null) => {
+    if (!doc?.viewUrl) return
+    window.open(doc.viewUrl, "_blank", "noopener,noreferrer")
+  }
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    if (file.type !== "application/pdf") {
+      toast.error("Por favor, envie apenas arquivos PDF.")
+      return
     }
 
-    const handleSendToCalculation = async () => {
-        try {
-            setUploading(true)
-            const supabase = createBrowserClient()
-            if (!supabase) throw new Error("Supabase não inicializado")
+    try {
+      setUploading(true)
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error("Supabase não inicializado")
 
-            const { error } = await supabase
-                .from('precatorios')
-                .update({
-                    status_kanban: 'pronto_calculo',
-                    localizacao_kanban: 'fila_calculo' // Ensure location update if needed by schema
-                })
-                .eq('id', precatorioId)
+      const fileName = `oficio-${precatorioId}-${Date.now()}.pdf`
+      const { error: uploadError } = await supabase.storage.from("ocr-uploads").upload(fileName, file)
 
-            if (error) throw error
+      if (uploadError) {
+        console.error("Upload Error:", uploadError)
+        throw uploadError
+      }
 
-            toast.success("Enviado para Fila de Cálculo com sucesso! 🚀")
-            onFileUpdate?.() // Trigger reload
-        } catch (error: any) {
-            console.error("Erro ao enviar:", error)
-            toast.error(`Erro ao enviar: ${error.message}`)
-        } finally {
-            setUploading(false)
-        }
+      const {
+        data: { publicUrl },
+      } = supabase.storage.from("ocr-uploads").getPublicUrl(fileName)
+
+      const { error: updateError } = await supabase
+        .from("precatorios")
+        .update({ file_url: publicUrl })
+        .eq("id", precatorioId)
+
+      if (updateError) {
+        console.error("Database Update Error:", updateError)
+        toast.error(`Erro ao salvar no banco: ${updateError.message}`)
+        throw updateError
+      }
+
+      toast.success("Ofício anexado com sucesso!")
+      onFileUpdate?.(publicUrl)
+      setRefreshKey((prev) => prev + 1)
+    } catch (error) {
+      console.error("Erro no upload:", error)
+      toast.error("Erro ao fazer upload do ofício.")
+    } finally {
+      setUploading(false)
     }
+  }
 
-    return (
-        <Card className="border-l-4 border-l-cyan-500 shadow-sm">
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <CardTitle className="text-xl flex items-center gap-2">
-                            <FileText className="h-5 w-5 text-cyan-600" />
-                            Ofício Requisitório
-                        </CardTitle>
-                        <CardDescription>
-                            Documento oficial do precatório (Ofício original).
-                        </CardDescription>
-                    </div>
-                    {fileUrl && (
-                        <Badge variant="secondary" className="bg-green-100 text-green-700 border-green-200">
-                            <CheckCircle2 className="h-4 w-4 mr-1" />
-                            Anexado
-                        </Badge>
-                    )}
+  const handleRemoveFile = async () => {
+    if (!confirm("Tem certeza que deseja remover este ofício?")) return
+
+    try {
+      setUploading(true)
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error("Supabase não inicializado")
+
+      const { error } = await supabase.from("precatorios").update({ file_url: null }).eq("id", precatorioId)
+
+      if (error) throw error
+
+      toast.success("Ofício removido com sucesso!")
+      onFileUpdate?.(undefined)
+      setRefreshKey((prev) => prev + 1)
+    } catch (error: any) {
+      console.error("Erro ao remover:", error)
+      toast.error(`Erro ao remover: ${error.message}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  const handleSendToCalculation = async () => {
+    try {
+      if (bloqueadoEnvio) {
+        toast.error("Somente jurídico, admin ou analista processual podem enviar para cálculo.")
+        return
+      }
+      setUploading(true)
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error("Supabase não inicializado")
+
+      const { error } = await supabase
+        .from("precatorios")
+        .update({
+          status_kanban: "pronto_calculo",
+          localizacao_kanban: "fila_calculo",
+        })
+        .eq("id", precatorioId)
+
+      if (error) throw error
+
+      toast.success("Enviado para Fila de Cálculo com sucesso! 🚀")
+      onFileUpdate?.()
+    } catch (error: any) {
+      console.error("Erro ao enviar:", error)
+      toast.error(`Erro ao enviar: ${error.message}`)
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  return (
+    <Card className="border-l-4 border-l-cyan-500 shadow-sm">
+      <CardHeader>
+        <div className="flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <CardTitle className="text-xl flex items-center gap-2">
+              <FileText className="h-5 w-5 text-cyan-600" />
+              Ofício Requisitório
+            </CardTitle>
+            <CardDescription>Documento oficial do precatório (ofício original).</CardDescription>
+          </div>
+          {hasOficio ? (
+            <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+              <CheckCircle2 className="h-4 w-4 mr-1" />
+              Anexado
+            </Badge>
+          ) : (
+            <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">
+              Pendente
+            </Badge>
+          )}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="grid gap-4 lg:grid-cols-[320px_minmax(0,1fr)]">
+          <div className="space-y-4">
+            <div className="rounded-xl border border-border/60 bg-background/70 p-4 shadow-sm">
+              <div className="flex items-center justify-between">
+                <p className="text-sm font-semibold">Documentos anexados</p>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8"
+                  onClick={() => setRefreshKey((prev) => prev + 1)}
+                  disabled={loadingDocs}
+                  title="Atualizar documentos"
+                >
+                  <RefreshCcw className={`h-4 w-4 ${loadingDocs ? "animate-spin" : ""}`} />
+                </Button>
+              </div>
+
+              <div className="mt-3 space-y-2">
+                <Select value={activeId} onValueChange={setActiveId}>
+                  <SelectTrigger className="h-10 rounded-xl">
+                    <SelectValue placeholder="Selecione um documento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {docs.map((doc) => (
+                      <SelectItem key={doc.id} value={doc.id} disabled={!doc.viewUrl}>
+                        {doc.titulo || "Documento sem título"}
+                        {!doc.viewUrl ? " (indisponível)" : ""}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <p className="text-xs text-muted-foreground">{statusText}</p>
+              </div>
+
+              {docs.length > 0 && (
+                <div className="mt-3 max-h-48 space-y-2 overflow-y-auto pr-1">
+                  {docs.map((doc) => {
+                    const isActive = doc.id === activeId
+                    return (
+                      <button
+                        key={`list-${doc.id}`}
+                        type="button"
+                        onClick={() => setActiveId(doc.id)}
+                        className={`w-full rounded-lg border px-3 py-2 text-left text-sm transition ${
+                          isActive
+                            ? "border-primary/60 bg-primary/10 text-foreground"
+                            : "border-border/60 bg-background/60 text-muted-foreground hover:bg-muted/50 hover:text-foreground"
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="truncate">{doc.titulo || "Documento"}</span>
+                          {doc.tipo ? (
+                            <span className="rounded-full border border-border/60 bg-muted/40 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide">
+                              {formatTipo(doc.tipo)}
+                            </span>
+                          ) : null}
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
-            </CardHeader>
-            <CardContent>
-                {fileUrl ? (
-                    <div className="space-y-4">
-                        <div className="bg-muted/30 border rounded-lg p-6 flex flex-col items-center justify-center text-center gap-4">
-                            <div className="bg-white p-4 rounded-full shadow-sm">
-                                <FileType className="h-10 w-10 text-red-500" />
-                            </div>
-                            <div>
-                                <h3 className="font-medium">Arquivo Disponível</h3>
-                                <p className="text-sm text-muted-foreground mb-4">O ofício já está vinculado a este precatório.</p>
+              )}
+            </div>
 
-                                <div className="flex flex-col gap-3 items-center">
-                                    <div className="flex gap-2 justify-center">
-                                        <Button variant="outline" asChild>
-                                            <a href={fileUrl} target="_blank" rel="noopener noreferrer">
-                                                <Eye className="h-4 w-4 mr-2" />
-                                                Visualizar
-                                            </a>
-                                        </Button>
-
-                                        {!readonly && (
-                                            <>
-                                                <div className="relative">
-                                                    <input
-                                                        type="file"
-                                                        accept=".pdf"
-                                                        className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                                        onChange={handleFileUpload}
-                                                        disabled={uploading}
-                                                    />
-                                                    <Button variant="secondary" disabled={uploading}>
-                                                        <Upload className="h-4 w-4 mr-2" />
-                                                        Substituir
-                                                    </Button>
-                                                </div>
-
-                                                <Button
-                                                    variant="destructive"
-                                                    size="icon"
-                                                    disabled={uploading}
-                                                    onClick={handleRemoveFile}
-                                                    title="Remover Ofício"
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </>
-                                        )}
-                                    </div>
-
-                                    {!readonly && (
-                                        <div className="pt-2 border-t w-full flex justify-center">
-                                            <Button
-                                                className="bg-green-600 hover:bg-green-700 w-full md:w-auto"
-                                                onClick={handleSendToCalculation}
-                                                disabled={uploading}
-                                            >
-                                                <Send className="h-4 w-4 mr-2" />
-                                                Enviar para Cálculo
-                                            </Button>
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Embed Preview (Optional) */}
-                        <div className="aspect-[16/9] w-full bg-slate-100 rounded-md border overflow-hidden relative group">
-                            <iframe
-                                src={`${fileUrl}#toolbar=0`}
-                                className="w-full h-full"
-                                title="Ofício Preview"
-                            />
-                            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center pointer-events-none">
-                                <span className="text-white font-medium bg-black/50 px-4 py-2 rounded-full">
-                                    Clique em visualizar para abrir em tela cheia
-                                </span>
-                            </div>
-                        </div>
-                    </div>
+            <div className="rounded-xl border border-border/60 bg-background/70 p-4 shadow-sm">
+              <div className="flex items-center justify-between gap-2">
+                <p className="text-sm font-semibold">Ofício Requisitório</p>
+                {oficioDoc ? (
+                  <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200">
+                    Anexado
+                  </Badge>
                 ) : (
-                    <div className="border-2 border-dashed border-muted-foreground/25 rounded-xl py-12 flex flex-col items-center justify-center text-center bg-muted/5 hover:bg-muted/10 transition-colors">
-                        <div className="bg-muted p-4 rounded-full mb-4">
-                            <Upload className="h-8 w-8 text-muted-foreground" />
-                        </div>
-                        <h3 className="text-lg font-semibold mb-1">Nenhum ofício anexado</h3>
-                        <p className="text-muted-foreground max-w-sm mb-6">
-                            Faça o upload do PDF do Ofício Requisitório para liberar as próximas etapas do processo.
-                        </p>
-
-                        {!readonly ? (
-                            <div className="relative">
-                                <input
-                                    type="file"
-                                    accept=".pdf"
-                                    className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                                    onChange={handleFileUpload}
-                                    disabled={uploading}
-                                />
-                                <Button size="lg" disabled={uploading} className="bg-cyan-600 hover:bg-cyan-700">
-                                    {uploading ? "Enviando..." : "Selecionar PDF do Ofício"}
-                                </Button>
-                            </div>
-                        ) : (
-                            <div className="text-sm text-muted-foreground bg-yellow-50 px-3 py-1 rounded-md border border-yellow-200">
-                                Aguardando inclusão pelo responsável.
-                            </div>
-                        )}
-                    </div>
+                  <Badge variant="secondary" className="bg-amber-100 text-amber-700 border-amber-200">
+                    Pendente
+                  </Badge>
                 )}
-            </CardContent>
-        </Card>
-    )
+              </div>
+              <p className="mt-1 text-xs text-muted-foreground">
+                O ofício é o documento obrigatório para liberar as próximas etapas.
+              </p>
+
+              {hasOficio ? (
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleViewDocument(oficioDoc)}
+                    disabled={!oficioDoc?.viewUrl}
+                  >
+                    <Eye className="h-4 w-4 mr-2" />
+                    Visualizar
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDownload(oficioDoc)}
+                    disabled={!oficioDoc?.viewUrl}
+                  >
+                    <Download className="h-4 w-4 mr-2" />
+                    Baixar
+                  </Button>
+                  {!readonly && (
+                    <>
+                      <div className="relative">
+                        <input
+                          type="file"
+                          accept=".pdf"
+                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                          onChange={handleFileUpload}
+                          disabled={uploading}
+                        />
+                        <Button variant="secondary" size="sm" disabled={uploading}>
+                          <Upload className="h-4 w-4 mr-2" />
+                          Substituir
+                        </Button>
+                      </div>
+                      <Button
+                        variant="destructive"
+                        size="sm"
+                        disabled={uploading}
+                        onClick={handleRemoveFile}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Remover
+                      </Button>
+                    </>
+                  )}
+                </div>
+              ) : (
+                <div className="mt-3">
+                  {!readonly ? (
+                    <div className="relative inline-flex">
+                      <input
+                        type="file"
+                        accept=".pdf"
+                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        onChange={handleFileUpload}
+                        disabled={uploading}
+                      />
+                      <Button size="sm" disabled={uploading} className="bg-cyan-600 hover:bg-cyan-700">
+                        {uploading ? "Enviando..." : "Selecionar PDF do ofício"}
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-lg border border-border/60">
+                      Aguardando inclusão pelo responsável.
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {hasOficio && !oficioDoc?.viewUrl && (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Ofício anexado, mas o link não pôde ser carregado. Clique em atualizar documentos.
+                </p>
+              )}
+
+              {!readonly && hasOficio && (
+                <div className="mt-4 border-t border-border/60 pt-3">
+                  <Button
+                    className="w-full bg-emerald-600 hover:bg-emerald-700"
+                    onClick={handleSendToCalculation}
+                    disabled={uploading || bloqueadoEnvio}
+                    title={
+                      bloqueadoEnvio
+                        ? "Somente jurídico, admin ou analista processual podem enviar para cálculo."
+                        : "Enviar para cálculo"
+                    }
+                  >
+                    <Send className="h-4 w-4 mr-2" />
+                    Enviar para Cálculo
+                  </Button>
+                  {bloqueadoEnvio && (
+                    <p className="mt-2 text-xs text-muted-foreground text-center">
+                      Somente jurídico, admin ou analista processual podem enviar para cálculo.
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-border/60 bg-background/70 shadow-sm overflow-hidden flex flex-col min-h-[420px]">
+            <div className="flex flex-wrap items-start justify-between gap-3 border-b border-border/60 p-3">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold truncate">
+                  {activeDoc?.titulo || "Nenhum documento selecionado"}
+                </p>
+                <p className="text-xs text-muted-foreground">{formatTipo(activeDoc?.tipo) || "—"}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => handleViewDocument(activeDoc)}
+                  disabled={!activeDoc?.viewUrl}
+                  title="Visualizar em tela cheia"
+                >
+                  <Eye className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => handleOpenNewTab(activeDoc)}
+                  disabled={!activeDoc?.viewUrl}
+                  title="Abrir em nova aba"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-9 w-9"
+                  onClick={() => handleDownload(activeDoc)}
+                  disabled={!activeDoc?.viewUrl}
+                  title="Baixar documento"
+                >
+                  <Download className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+
+            <div className="flex-1 bg-muted/20">
+              {activeDoc?.viewUrl ? (
+                <iframe
+                  key={activeDoc.viewUrl}
+                  src={activeDoc.viewUrl}
+                  className="h-full w-full"
+                  title={activeDoc.titulo || "Documento do precatório"}
+                />
+              ) : (
+                <div className="flex h-full flex-col items-center justify-center gap-4 p-6 text-center text-muted-foreground">
+                  <div className="rounded-full bg-muted p-4">
+                    <FileType className="h-8 w-8 opacity-50" />
+                  </div>
+                  <p>Selecione um documento para visualizar.</p>
+                  {error ? <p className="text-xs">{error}</p> : null}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
 }

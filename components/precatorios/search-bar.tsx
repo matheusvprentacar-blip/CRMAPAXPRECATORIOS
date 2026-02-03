@@ -10,6 +10,8 @@ interface SearchBarProps {
   onChange: (value: string) => void
   onClear: () => void
   placeholder?: string
+  autoSearch?: boolean
+  showButton?: boolean
 }
 
 export function SearchBar({
@@ -17,12 +19,20 @@ export function SearchBar({
   onChange,
   onClear,
   placeholder = "Buscar por número, nome, CPF/CNPJ, tribunal...",
+  autoSearch = false,
+  showButton = true,
 }: SearchBarProps) {
   const [localValue, setLocalValue] = useState(value)
 
   useEffect(() => {
     setLocalValue(value)
   }, [value])
+
+  useEffect(() => {
+    if (autoSearch) {
+      onChange(localValue)
+    }
+  }, [autoSearch, localValue, onChange])
 
   const handleSearch = () => {
     onChange(localValue)
@@ -44,7 +54,7 @@ export function SearchBar({
           value={localValue}
           onChange={(e) => setLocalValue(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="pl-9 pr-9"
+          className="pl-9 pr-9 bg-white/80 dark:bg-zinc-900/70 dark:text-zinc-100 dark:placeholder:text-zinc-400 border-zinc-200/70 dark:border-zinc-700/60"
         />
         {localValue && (
           <Button
@@ -61,9 +71,11 @@ export function SearchBar({
           </Button>
         )}
       </div>
-      <Button onClick={handleSearch} variant="secondary">
-        Buscar
-      </Button>
+      {showButton && (
+        <Button onClick={handleSearch} variant="secondary">
+          Buscar
+        </Button>
+      )}
     </div>
   )
 }

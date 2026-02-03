@@ -82,3 +82,62 @@ export async function getFileDownloadUrl(storageUrl: string | null): Promise<str
 
     return storageUrl
 }
+
+// Helper robusto para baixar arquivos (tempa fetch normal, fallback para API do Supabase e Proxy se necessario)
+export async function downloadFileAsArrayBuffer(url: string, supabase: any, itemName: string = "arquivo"): Promise<ArrayBuffer | null> {
+    try {
+        // 1. Tentar URL Storage direta
+        if (url.startsWith("storage:")) {
+            const match = url.match(/^storage:([^/]+)\/(.+)$/)
+            if (match) {
+                const [, bucket, path] = match
+                const { data, error } = await supabase.storage.from(bucket).download(path)
+                if (!error && data) return await data.arrayBuffer()
+            }
+        }
+
+        // 2. Resolver URL se não for HTTP/Blob
+        let finalUrl = url
+        if (!finalUrl.startsWith("http") && !finalUrl.startsWith("blob:")) {
+            const resolved = await getFileDownloadUrl(finalUrl)
+            if (resolved) finalUrl = resolved
+        }
+
+        // 3. Tentar Fetch direto
+        try {
+            const response = await fetch(finalUrl)
+            if (!response.ok) throw new Error(`HTTP ${response.status}`)
+            return await response.arrayBuffer()
+        } catch (fetchError) {
+            console.warn(`Fetch falhou para ${itemName}, tentando fallback SDK...`, fetchError)
+
+            // 4. Fallback: Se for URL do Supabase, tentar extrair bucket/path e usar SDK (bypass CORS)
+            if (finalUrl.includes("/storage/v1/object/")) {
+                const parts = finalUrl.split("/storage/v1/object/")
+                if (parts.length > 1) {
+                    let pathPart = parts[1] // public/bucket/... ou sign/bucket/...
+                    // Remover prefixo de tipo (public ou sign)
+                    if (pathPart.startsWith("public/")) pathPart = pathPart.substring(7)
+                    else if (pathPart.startsWith("sign/")) pathPart = pathPart.substring(5)
+
+                    const slashIndex = pathPart.indexOf("/")
+                    if (slashIndex !== -1) {
+                        const bucket = pathPart.substring(0, slashIndex)
+                        let filePath = pathPart.substring(slashIndex + 1)
+                        // Limpar query params
+                        if (filePath.includes("?")) filePath = filePath.split("?")[0]
+
+                        if (bucket && filePath) {
+                            const { data, error } = await supabase.storage.from(bucket).download(decodeURIComponent(filePath))
+                            if (!error && data) return await data.arrayBuffer()
+                        }
+                    }
+                }
+            }
+            return null
+        }
+    } catch (err) {
+        console.error(`Erro ao baixar ${itemName}:`, err)
+        return null
+    }
+}

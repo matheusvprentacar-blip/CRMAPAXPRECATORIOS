@@ -28,12 +28,13 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
     }
 
     const resultados = precatorio.dados_calculo.resultadosEtapas
+    // Ordem do fluxo: 0 Dados, 1 Índices, 2 Atualização, 3 PSS, 4 IRPF, 5 Honorários, 6 Propostas
     const dadosBasicos = resultados[0] || {}
-    const atualizacao = resultados[1] || {}
-    const pss = resultados[2] || {}
-    const irpf = resultados[3] || {}
-    const honorarios = resultados[4] || {}
-    const propostas = resultados[5] || {}
+    const atualizacao = resultados[2] || {}
+    const pss = resultados[3] || {}
+    const irpf = resultados[4] || {}
+    const honorarios = resultados[5] || {}
+    const propostas = resultados[6] || {}
 
     const formatDate = (dateString: string) => {
         if (!dateString) return "—"
@@ -82,19 +83,27 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                     <CardContent className="pt-4 grid grid-cols-2 gap-4 text-sm">
                         <div className="col-span-2">
                             <p className="text-muted-foreground">Valor Principal Atualizado</p>
-                            <p className="font-semibold text-primary text-lg">{formatCurrency(atualizacao.valorAtualizado)}</p>
+                            <p className="font-semibold text-primary text-lg">
+                                {formatCurrency(
+                                    atualizacao.valorAtualizado ??
+                                    atualizacao.valor_atualizado ??
+                                    precatorio?.valor_atualizado
+                                )}
+                            </p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Juros de Mora</p>
-                            <p className="font-semibold text-green-600">{formatCurrency(atualizacao.valorJuros || atualizacao.juros_mora)}</p>
+                            <p className="font-semibold text-green-600">
+                                {formatCurrency(atualizacao.valorJuros || atualizacao.juros_mora || precatorio?.juros_mora_aplicados)}
+                            </p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Percentual Juros</p>
-                            <p className="font-mono text-xs mt-1">{atualizacao.taxa_juros_moratorios || atualizacao.taxaJuros}%</p>
+                            <p className="font-mono text-xs mt-1">{atualizacao.taxa_juros_moratorios || atualizacao.taxaJuros || "—"}%</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">SELIC (se aplicável)</p>
-                            <p className="font-semibold">{formatCurrency(atualizacao.valorSelic)}</p>
+                            <p className="font-semibold">{formatCurrency(atualizacao.valorSelic || precatorio?.valor_selic)}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Coeficiente Correção</p>
@@ -142,19 +151,19 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                     <CardContent className="pt-4 grid grid-cols-2 gap-4 text-sm">
                         <div>
                             <p className="text-muted-foreground">Percentual</p>
-                            <p className="font-semibold">{honorarios.honorarios?.honorarios_percentual || propostas.honorarios_percentual || 0}%</p>
+                            <p className="font-semibold">{honorarios.honorarios?.honorarios_percentual || honorarios.honorarios_percentual || propostas.honorarios_percentual || 0}%</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Valor Honorários</p>
-                            <p className="font-semibold">{formatCurrency(honorarios.honorarios?.honorarios_valor || propostas.honorarios_valor)}</p>
+                            <p className="font-semibold">{formatCurrency(honorarios.honorarios?.honorarios_valor || honorarios.honorarios_valor || propostas.honorarios_valor)}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Percentual Adiant.</p>
-                            <p className="font-semibold">{honorarios.honorarios?.adiantamento_percentual || propostas.adiantamento_percentual || 0}%</p>
+                            <p className="font-semibold">{honorarios.honorarios?.adiantamento_percentual || honorarios.adiantamento_percentual || propostas.adiantamento_percentual || 0}%</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Valor Adiantamento</p>
-                            <p className="font-semibold">{formatCurrency(honorarios.honorarios?.adiantamento_valor || propostas.adiantamento_valor)}</p>
+                            <p className="font-semibold">{formatCurrency(honorarios.honorarios?.adiantamento_valor || honorarios.adiantamento_valor || propostas.adiantamento_valor)}</p>
                         </div>
                     </CardContent>
                 </Card>

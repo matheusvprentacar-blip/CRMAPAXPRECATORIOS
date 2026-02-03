@@ -50,7 +50,7 @@ export function PerformanceMetrics({ data, loading }: PerformanceMetricsProps) {
     <div className="space-y-4">
       <div>
         <h3 className="text-lg font-semibold">Performance Operacional</h3>
-        <p className="text-sm text-muted-foreground">Métricas de tempo e eficiência</p>
+        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Métricas de tempo e eficiência</p>
       </div>
 
       <div className="grid gap-4 md:grid-cols-3">

@@ -29,6 +29,7 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
     parecer_status: "",
     parecer_texto: "",
   })
+  const [resultadoFinal, setResultadoFinal] = useState("reprovado")
 
   async function handleEnviarParecer() {
     if (!formData.parecer_status) {
@@ -47,13 +48,15 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
 
       let proximaColuna = 'pronto_calculo'
       if (formData.parecer_status === 'IMPEDIMENTO') {
-        proximaColuna = 'analise_juridica'
+        proximaColuna = 'reprovado'
       }
 
       const { error } = await supabase.from('precatorios').update({
         juridico_parecer_status: formData.parecer_status,
         juridico_parecer_texto: formData.parecer_texto,
+        juridico_resultado_final: formData.parecer_status === 'IMPEDIMENTO' ? resultadoFinal : null,
         status_kanban: proximaColuna,
+        localizacao_kanban: proximaColuna,
         updated_at: new Date().toISOString()
       }).eq('id', precatorioId)
 
@@ -65,6 +68,7 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
       })
 
       setFormData({ parecer_status: "", parecer_texto: "" })
+      setResultadoFinal("reprovado")
       onUpdate()
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
     } catch (error: any) {
@@ -120,6 +124,21 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
           </Select>
         </div>
 
+        {formData.parecer_status === "IMPEDIMENTO" && (
+          <div className="space-y-2">
+            <Label htmlFor="resultado_final">Resultado Final *</Label>
+            <Select value={resultadoFinal} onValueChange={setResultadoFinal}>
+              <SelectTrigger id="resultado_final">
+                <SelectValue placeholder="Selecione o resultado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="reprovado">Reprovado</SelectItem>
+                <SelectItem value="nao_elegivel">Não elegível</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+
         <div className="space-y-2">
           <Label htmlFor="parecer_texto">Parecer Jurídico *</Label>
           <Textarea
@@ -146,7 +165,7 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
             <strong>Ajustar Dados:</strong> Retorna para "Pronto para Cálculo" mas com observação de ajustes necessários
           </li>
           <li>
-            <strong>Impedimento:</strong> O precatório será bloqueado até resolução do impedimento
+            <strong>Impedimento:</strong> O precatório irá para "Reprovado" ou "Não elegível"
           </li>
           <li>
             <strong>Risco Alto:</strong> Pode prosseguir mas com alerta de risco elevado

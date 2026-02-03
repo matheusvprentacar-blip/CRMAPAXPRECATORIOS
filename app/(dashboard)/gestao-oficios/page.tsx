@@ -53,7 +53,7 @@ export default function GestaoOficiosPage() {
                     return
                 }
 
-                // Busca precatórios na fase de aguardando_oficio ou atribuídos ao gestor de ofícios
+                // Busca precatórios aguardando ofício (sem file_url) ou atribuídos ao gestor de ofícios
                 const { data, error: fetchError } = await supabase
                     .from("precatorios")
                     .select(
@@ -72,8 +72,9 @@ export default function GestaoOficiosPage() {
             usuarios!responsavel(nome)
           `
                     )
-                    // Filtro: Tudo que está em 'aguardando_oficio' ou atribuído a este usuário como gestor de ofícios
+                    // Filtro: aguardando ofício e ainda sem arquivo anexado
                     .or(`status_kanban.eq.aguardando_oficio,responsavel_oficio_id.eq.${currentUser.id}`)
+                    .is("file_url", null)
                     .order("created_at", { ascending: true }) // FIFO: Mais antigos primeiro
 
                 if (fetchError) {
@@ -102,7 +103,7 @@ export default function GestaoOficiosPage() {
     }, [])
 
     const handleAbrir = (id: string) => {
-        router.push(`/precatorios/visualizar?id=${id}`)
+        router.push(`/precatorios/detalhes?id=${id}`)
     }
 
     if (loading) {

@@ -95,7 +95,7 @@ export default function CalculoOperadorPage() {
   }, [])
 
   const handleAbrirCalculo = (id: string) => {
-    router.push(`/precatorios/visualizar?id=${id}`)
+    router.push(`/precatorios/detalhes?id=${id}`)
   }
 
   if (loading) {

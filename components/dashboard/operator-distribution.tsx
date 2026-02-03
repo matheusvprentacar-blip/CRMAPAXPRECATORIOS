@@ -34,7 +34,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground">Nenhum operador com precatórios</p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Nenhum operador com precatórios</p>
           </div>
         </CardContent>
       </Card>
@@ -45,7 +45,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
     <Card>
       <CardHeader>
         <CardTitle>Distribuição por Operador</CardTitle>
-        <p className="text-sm text-muted-foreground">Carga de trabalho e performance</p>
+        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Carga de trabalho e performance</p>
       </CardHeader>
       <CardContent>
         <Table>
@@ -63,31 +63,31 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
               <TableRow key={operator.operador_id}>
                 <TableCell className="font-medium">{operator.operador_nome}</TableCell>
                 <TableCell className="text-right">
-                  <Badge variant="secondary" className="font-mono">
+                  <Badge variant="secondary" className="font-mono tabular-nums">
                     {operator.em_calculo}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
-                  <Badge variant="outline" className="font-mono">
+                  <Badge variant="outline" className="font-mono tabular-nums">
                     {operator.finalizados}
                   </Badge>
                 </TableCell>
                 <TableCell className="text-right">
                   {operator.com_atraso > 0 ? (
-                    <Badge variant="secondary" className="font-mono bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                    <Badge variant="secondary" className="font-mono tabular-nums bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
                       {operator.com_atraso}
                     </Badge>
                   ) : (
-                    <span className="text-muted-foreground">0</span>
+                    <span className="text-muted-foreground font-mono tabular-nums">0</span>
                   )}
                 </TableCell>
                 <TableCell className="text-right">
                   {operator.sla_estourado > 0 ? (
-                    <Badge variant="destructive" className="font-mono">
+                    <Badge variant="destructive" className="font-mono tabular-nums">
                       {operator.sla_estourado}
                     </Badge>
                   ) : (
-                    <span className="text-muted-foreground">0</span>
+                    <span className="text-muted-foreground font-mono tabular-nums">0</span>
                   )}
                 </TableCell>
               </TableRow>

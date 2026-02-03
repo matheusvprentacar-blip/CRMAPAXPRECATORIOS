@@ -100,9 +100,132 @@
   border-color: hsl(var(--border));
 }
 
+html {
+  font-family: var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+
 body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
+  font-family: inherit;
+}
+
+@layer base {
+  [data-radix-dialog-content="true"],
+  [data-radix-alert-dialog-content="true"] {
+    background-color: hsl(30 20% 98%);
+    background-color: hsl(var(--background));
+  }
+
+  .dark [data-radix-dialog-content="true"],
+  .dark [data-radix-alert-dialog-content="true"] {
+    background-color: hsl(24 10% 8%);
+    background-color: hsl(var(--background));
+  }
+}
+
+input,
+textarea,
+select,
+button {
+  font-family: inherit;
+}
+
+code,
+pre,
+kbd,
+samp {
+  font-family: var(--font-mono), ui-monospace, "SFMono-Regular", Menlo, Monaco, Consolas, monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+body.hide-global-watermark .global-watermark {
+  opacity: 0;
+}
+
+@layer components {
+  .calc-container {
+    max-width: 75rem;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+  }
+
+  .calc-card {
+    border-radius: 0.75rem;
+    border: 1px solid hsl(var(--border) / 0.6);
+    background: hsl(var(--card) / 0.7);
+    color: hsl(var(--card-foreground));
+    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+
+  .calc-card:hover {
+    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+  }
+
+  .calc-title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    line-height: 1.2;
+  }
+
+  .calc-subtitle {
+    font-size: 0.95rem;
+    color: hsl(var(--muted-foreground));
+  }
+}
+
+@layer utilities {
+  .calc-scope input,
+  .calc-scope select,
+  .calc-scope textarea {
+    height: 2.75rem;
+    border-radius: 0.375rem;
+    border-color: hsl(var(--border));
+  }
+
+  .calc-scope input:focus,
+  .calc-scope select:focus,
+  .calc-scope textarea:focus {
+    outline: none;
+    box-shadow: 0 0 0 2px hsl(var(--ring));
+  }
+
+  .value-main {
+    color: hsl(var(--primary));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value-positive {
+    color: hsl(var(--chart-4));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value-negative {
+    color: hsl(var(--destructive));
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .value-total {
+    font-size: 1.125rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+  }
+
+  .hide-scrollbar {
+    scrollbar-width: none;
+  }
+
+  .hide-scrollbar::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
 }
 
 /* Custom classes for titles */

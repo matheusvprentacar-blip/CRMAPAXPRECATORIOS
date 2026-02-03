@@ -12,6 +12,7 @@ interface StepUploadProps {
   onCompletar: (resultado: any) => void
   pdfUrl: string | null
   setPdfUrl: (url: string | null) => void
+  precatorioId?: string
 }
 
 export function StepUpload({ dados, setDados, onCompletar, pdfUrl, setPdfUrl }: StepUploadProps) {
@@ -28,10 +29,10 @@ export function StepUpload({ dados, setDados, onCompletar, pdfUrl, setPdfUrl }: 
   }
 
   return (
-    <Card>
+    <Card className="calc-card">
       <CardHeader>
-        <CardTitle>Upload e Extração de Dados</CardTitle>
-        <CardDescription>
+        <CardTitle className="calc-title">Upload e Extração de Dados</CardTitle>
+        <CardDescription className="calc-subtitle">
           Faça upload do PDF ou documento do precatório para extração automática de dados
         </CardDescription>
       </CardHeader>
@@ -47,8 +48,8 @@ export function StepUpload({ dados, setDados, onCompletar, pdfUrl, setPdfUrl }: 
         />
 
         {extracted && (
-          <div className="p-3 bg-green-50 dark:bg-green-950 rounded-md">
-            <p className="text-sm text-green-800 dark:text-green-200">
+          <div className="p-3 rounded-lg border border-border/60 bg-muted/30">
+            <p className="text-sm text-muted-foreground">
               ✓ Dados extraídos com sucesso! Você pode revisar e editar nas próximas etapas.
             </p>
           </div>

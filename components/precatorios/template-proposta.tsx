@@ -19,7 +19,7 @@ export function TemplateProposta({ precatorio }: TemplatePropostaProps) {
     const empresa = {
         nome: "Apax Investimentos Ltda.",
         cnpj: "09.121.790/0001-38",
-        endereco: "Av. Paulista, 1000 - Bela Vista, São Paulo - SP",
+        endereco: "Rua Horeslau Savinski, 443, Jardim Apucarana, CEP 86809-070",
     }
 
     const dataEmissao = new Date().toLocaleDateString("pt-BR")

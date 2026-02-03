@@ -49,7 +49,8 @@ export function FormSolicitarJuridico({ precatorioId, onUpdate }: FormSolicitarJ
       // Assuming UI prevents usage if not in correct state, sticking to Update
 
       const { error } = await supabase.from('precatorios').update({
-        status_kanban: 'analise_juridica',
+        status_kanban: 'juridico',
+        localizacao_kanban: 'juridico',
         juridico_motivo: formData.motivo,
         juridico_descricao_bloqueio: formData.descricao_bloqueio,
         juridico_parecer_status: null,
@@ -82,10 +83,10 @@ export function FormSolicitarJuridico({ precatorioId, onUpdate }: FormSolicitarJ
     <div className="space-y-6">
       {/* Informação */}
       <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-        <p className="text-sm font-medium text-blue-900">⚖️ Análise Jurídica</p>
+        <p className="text-sm font-medium text-blue-900">⚖️ Jurídico</p>
         <p className="text-xs text-blue-700 mt-2">
           Use este formulário quando houver dúvidas jurídicas ou bloqueios que impeçam o cálculo de prosseguir.
-          O precatório será movido para a coluna "Análise Jurídica" e aguardará parecer do setor jurídico.
+          O precatório será movido para a coluna "Jurídico" e aguardará parecer do setor jurídico.
         </p>
       </div>
 
@@ -145,7 +146,7 @@ export function FormSolicitarJuridico({ precatorioId, onUpdate }: FormSolicitarJ
           ) : (
             <>
               <Send className="h-4 w-4 mr-2" />
-              Solicitar Análise Jurídica
+              Solicitar Jurídico
             </>
           )}
         </Button>

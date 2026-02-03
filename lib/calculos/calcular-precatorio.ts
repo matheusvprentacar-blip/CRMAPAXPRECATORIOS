@@ -1,4 +1,4 @@
-import { getIndice, TABELA_INDICES_COMPLETA } from "./indices"
+import { IPCA_E_MENSAL, TABELA_INDICES_COMPLETA, getIndiceIpcaPre2022 } from "./indices"
 import { TABELA_IPCA_FATORES_EC113, TABELA_SELIC_PERCENTUAL_EC113, FATOR_TETO_DEZ21 } from "./dados-ec113"
 
 // --- INTERFACES ---
@@ -22,12 +22,12 @@ export interface DadosEntrada {
   adiantamento_recebido: number
   percentual_adiantamento: number
 
-  // Datas de cálculo
+  // Datas de cÃ¡lculo
   data_base: Date
   data_inicial_calculo: Date
   data_final_calculo: Date
 
-  // Parâmetros PSS/IRPF
+  // ParÃ¢metros PSS/IRPF
   meses_execucao_anterior: number
   salario_minimo_referencia: number
   quantidade_salarios_minimos: number
@@ -37,21 +37,38 @@ export interface DadosEntrada {
   taxa_juros_moratorios?: number // Alias
   taxa_selic_adicional?: number
 
-  // OBS: Se informado, este valor será usado diretamente como TOTA % de Juros Pré-22
+  // OBS: Se informado, este valor serÃ¡ usado diretamente como TOTA % de Juros PrÃ©-22
   taxa_juros_pre_22_acumulada?: number
 
   // [NEW] Overrides from StepIndices
   ipca_fator_inicial?: number
   ipca_fator_final?: number
   selic_acumulada_percentual?: number
+  dados_ipca?: {
+    fatorNaData: number
+    fatorTeto: number
+    multiplicador: number
+  }
+  dados_selic?: {
+    taxaAcumulada: number
+    inicioPeriodo: string
+    fimPeriodo: string
+    regra: string
+  }
+  dados_ipca_2025?: {
+    percentualAcumulado: number
+    inicioPeriodo: string
+    fimPeriodo: string
+    regra: string
+  }
 
   // Flags
   tem_desconto_pss: boolean
   isencao_pss: boolean
-  percentual_pss?: number // Não usado, mantido para compatibilidade
+  percentual_pss?: number // NÃ£o usado, mantido para compatibilidade
 
-  pss_oficio_valor?: number // PSS do Ofício
-  pss_valor?: number // PSS Atualizado (já calculado no StepPSS)
+  pss_oficio_valor?: number // PSS do OfÃ­cio
+  pss_valor?: number // PSS Atualizado (jÃ¡ calculado no StepPSS)
   pss_manual?: boolean
   juros_mora_percentual?: number // Taxa de juros em decimal (ex: 0.0238)
 
@@ -67,6 +84,8 @@ export interface DadosEntrada {
   honorarios_valor?: number
   adiantamento_valor?: number
 
+  tipo_beneficiario?: "credor" | "advogado"
+
   propostas_manual?: boolean
   menor_proposta_manual?: number
   maior_proposta_manual?: number
@@ -76,7 +95,7 @@ export interface DetalhamentoMensal {
   data: string
   valor_anterior: number
   indice: number
-  tipo_indice: "SELIC" | "IPCA-E" | "Juros Pré-22"
+  tipo_indice: "SELIC" | "IPCA-E" | "Juros PrÃ©-22"
   correcao: number
   valor_atualizado: number
 }
@@ -90,7 +109,7 @@ export interface ResultadoCalculo {
   valorJuros: number
   valorSelic: number
 
-  // Detalhamento e Memória
+  // Detalhamento e MemÃ³ria
   detalhamento_mensal: DetalhamentoMensal[]
   memoriaCalculo: any // Adicionado para UI
 
@@ -115,95 +134,136 @@ export interface ResultadoCalculo {
 
 // --- HELPER FUNCTIONS ---
 
-function getFatorIPCA(mes: number, ano: number): number {
-  const anoStr = ano.toString();
-  if (TABELA_IPCA_FATORES_EC113[anoStr]) {
-    // Array is 0-indexed (0=Jan, 11=Dez)
-    return TABELA_IPCA_FATORES_EC113[anoStr][mes] || 0;
+type ModeloAtualizacao = "A" | "B" | "C"
+
+const DATA_INICIO_MODELO_B = new Date(2022, 0, 1)
+const DATA_INICIO_MODELO_C = new Date(2025, 0, 1)
+const DATA_FIM_JUROS_PRE22 = new Date(2021, 10, 1)
+const DATA_FIM_SELIC = new Date(2024, 11, 1)
+
+const IPCA_TABELA_COMPLETA_MAP = new Map<string, number>()
+for (const item of TABELA_INDICES_COMPLETA) {
+  if (item.periodo.startsWith("IPCA")) {
+    IPCA_TABELA_COMPLETA_MAP.set(item.dataRef.slice(0, 7), item.indice)
   }
-  return 0;
 }
 
-function getSumSELIC(inicio: Date, fim: Date): number {
-  let sum = 0;
-  let current = new Date(inicio.getFullYear(), inicio.getMonth(), 1);
-  const endDate = new Date(fim.getFullYear(), fim.getMonth(), 1);
+function toMesAno(data: Date): string {
+  return `${data.getFullYear()}-${String(data.getMonth() + 1).padStart(2, "0")}`
+}
 
-  while (current <= endDate) {
-    const anoStr = current.getFullYear().toString();
-    const mesIndex = current.getMonth();
+function inicioMes(data: Date): Date {
+  return new Date(data.getFullYear(), data.getMonth(), 1)
+}
 
-    if (TABELA_SELIC_PERCENTUAL_EC113[anoStr]) {
-      sum += TABELA_SELIC_PERCENTUAL_EC113[anoStr][mesIndex] || 0;
-    }
+function minDate(a: Date, b: Date): Date {
+  return a < b ? a : b
+}
 
-    current.setMonth(current.getMonth() + 1);
+function forEachMesInclusivo(inicio: Date, fim: Date, fn: (mes: Date) => void): void {
+  if (inicio > fim) return
+  const current = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+  const end = new Date(fim.getFullYear(), fim.getMonth(), 1)
+
+  while (current <= end) {
+    fn(new Date(current))
+    current.setMonth(current.getMonth() + 1)
   }
-  return sum;
+}
+
+function getIndiceIpcaTabelaCompleta(mesAno: string): number {
+  const indice = IPCA_TABELA_COMPLETA_MAP.get(mesAno)
+  if (indice !== undefined) return indice
+  return getIndiceIpcaPre2022(mesAno)
+}
+
+function getIndiceIpcaE(mesAno: string): number {
+  const mapa = IPCA_E_MENSAL as Record<string, number>
+  if (Object.prototype.hasOwnProperty.call(mapa, mesAno)) {
+    return mapa[mesAno]
+  }
+  return getIndiceIpcaTabelaCompleta(mesAno)
+}
+
+function getIndiceSelicEC113(mesAno: string): number {
+  const [anoStr, mesStr] = mesAno.split("-")
+  const tabelaAno = TABELA_SELIC_PERCENTUAL_EC113[anoStr]
+  if (!tabelaAno) return 0
+  const mesIndex = Number(mesStr) - 1
+  return tabelaAno[mesIndex] ?? 0
+}
+
+function getFatorIPCA(mes: number, ano: number): number {
+  const anoStr = ano.toString()
+  if (TABELA_IPCA_FATORES_EC113[anoStr]) {
+    // Array is 0-indexed (0=Jan, 11=Dez)
+    return TABELA_IPCA_FATORES_EC113[anoStr][mes] || 0
+  }
+  return 0
 }
 
 // --- CORE CALCULATION FUNCTIONS ---
 
 function calcularAtualizacaoMensal(
-  totalContaOriginal: number,
   valorPrincipalOriginal: number,
-  dataInicial: Date,
+  dataBase: Date,
+  dataInicioModelo: Date,
   dataFinal: Date,
-  taxaJurosMoraPre2022: number = 0, // percentual total (ex: 12.5 para 12.5%)
   overrides: {
     ipca_fator_inicial?: number
     ipca_fator_final?: number
     selic_acumulada_percentual?: number
+    ipca_2025_acumulada_percentual?: number
   } = {}
 ): {
+  modelo: ModeloAtualizacao
   valorCorrigido: number
   detalhamento: DetalhamentoMensal[]
-  valorPrincipalAtualizado: number
   valorSelic: number
   valorJurosPre22: number
+  correcaoIPCA2025: number
+  fatorIPCA2025: number
+  valorAtualizadoFinal: number
   memoriaCalculo: any
 } {
-  const inicio = new Date(dataInicial);
-  const fim = new Date(dataFinal);
-  const dataCorte = new Date(2022, 0, 1); // 01/01/2022
+  const inicioModelo = new Date(dataInicioModelo)
+  const base = new Date(dataBase)
+  const baseMes = inicioMes(base)
+  const fim = new Date(dataFinal)
 
-  const detalhamento: DetalhamentoMensal[] = [];
-  const memoriaCalculo: any = {};
+  const modelo: ModeloAtualizacao =
+    inicioModelo < DATA_INICIO_MODELO_B
+      ? "A"
+      : inicioModelo < DATA_INICIO_MODELO_C
+        ? "B"
+        : "C"
 
-  // 1. CÁLCULO IPCA-E (FATOR)
-  const aplica_ipca = inicio < dataCorte;
+  const detalhamento: DetalhamentoMensal[] = []
+  const memoriaCalculo: any = {}
 
-  let val_Principal_IPCA = valorPrincipalOriginal;
-  let val_IPCA = totalContaOriginal;
-  let fatorOrigem = 0;
-  let fatorDestino = 0;
+  // 1. IPCA-E (FATOR) - somente Modelo A
+  let valorCorrigido = valorPrincipalOriginal
+  let fatorOrigem = 0
+  let fatorDestino = 0
 
-  if (aplica_ipca) {
-    if (overrides.ipca_fator_inicial !== undefined) {
-      fatorOrigem = overrides.ipca_fator_inicial;
-    } else {
-      fatorOrigem = getFatorIPCA(inicio.getMonth(), inicio.getFullYear());
-    }
+  const fatorTetoNov21 = TABELA_IPCA_FATORES_EC113["2021"]?.[10] ?? FATOR_TETO_DEZ21
+  const aplicaIpcaFator = baseMes <= DATA_FIM_JUROS_PRE22
 
-    if (overrides.ipca_fator_final !== undefined) {
-      fatorDestino = overrides.ipca_fator_final;
-    } else {
-      fatorDestino = FATOR_TETO_DEZ21;
-    }
+  if (aplicaIpcaFator) {
+    fatorOrigem = overrides.ipca_fator_inicial ?? getFatorIPCA(baseMes.getMonth(), baseMes.getFullYear())
+    fatorDestino = overrides.ipca_fator_final ?? fatorTetoNov21
 
     if (fatorOrigem > 0) {
-      // Fórmula Strict: (Principal / FatorInicial) * FatorFinal
-      val_Principal_IPCA = (valorPrincipalOriginal / fatorOrigem) * fatorDestino;
-      val_IPCA = val_Principal_IPCA; // Sync for return
+      valorCorrigido = (valorPrincipalOriginal / fatorOrigem) * fatorDestino
 
       detalhamento.push({
-        data: "IPCA-E (Correção)",
+        data: "IPCA-E (CorreÃ§Ã£o)",
         valor_anterior: valorPrincipalOriginal,
         indice: fatorDestino / fatorOrigem,
         tipo_indice: "IPCA-E",
-        correcao: val_Principal_IPCA - valorPrincipalOriginal,
-        valor_atualizado: val_Principal_IPCA
-      });
+        correcao: valorCorrigido - valorPrincipalOriginal,
+        valor_atualizado: valorCorrigido
+      })
 
       memoriaCalculo.ipca = {
         formula: "(Principal / FatorInicial) * FatorFinal",
@@ -211,166 +271,280 @@ function calcularAtualizacaoMensal(
         fatorFinal: fatorDestino,
         principalOriginal: valorPrincipalOriginal,
         base: valorPrincipalOriginal,
-        resultado: val_Principal_IPCA
-      };
+        resultado: valorCorrigido
+      }
+    } else {
+      memoriaCalculo.ipca = {
+        formula: "Fator IPCA inicial indisponÃ­vel (Sem CorreÃ§Ã£o)",
+        fatorInicial: fatorOrigem,
+        fatorFinal: fatorDestino,
+        principalOriginal: valorPrincipalOriginal,
+        base: valorPrincipalOriginal,
+        resultado: valorCorrigido
+      }
     }
   } else {
-    val_Principal_IPCA = valorPrincipalOriginal;
-    val_IPCA = valorPrincipalOriginal;
-
     memoriaCalculo.ipca = {
-      formula: "Data Início >= 01/2022 (Sem Correção IPCA-E)",
+      formula: "Sem CorreÃ§Ã£o IPCA-E por Fator (Data Base >= 12/2021)",
       fatorInicial: 0,
       fatorFinal: 0,
       principalOriginal: valorPrincipalOriginal,
       base: valorPrincipalOriginal,
-      resultado: val_Principal_IPCA
-    };
+      resultado: valorCorrigido
+    }
   }
 
-  // 2. CÁLCULO JUROS MORA (PRÉ-2022)
-  // Base: Principal Ajustado
-  const taxaJurosPre22 = taxaJurosMoraPre2022;
-  const val_JurosPre22 = val_Principal_IPCA * (taxaJurosPre22 / 100);
+  // 2. JUROS MORATORIOS (PRE-2022) - SOMA IPCA DO PERIODO
+  let somaIPCAPre22 = 0
+  const periodosJuros: Array<{ mesAno: string; ipca: number }> = []
 
-  if (taxaJurosPre22 > 0) {
-    detalhamento.push({
-      data: "Juros Moratórios",
-      valor_anterior: val_Principal_IPCA,
-      indice: taxaJurosPre22,
-      tipo_indice: "Juros Pré-22", // Internal
-      correcao: val_JurosPre22,
-      valor_atualizado: val_JurosPre22
-    });
+  const inicioJuros = baseMes
+  const fimJuros = DATA_FIM_JUROS_PRE22
+
+  if (inicioJuros <= fimJuros) {
+    forEachMesInclusivo(inicioJuros, fimJuros, (mes) => {
+      const mesAno = toMesAno(mes)
+      const ipca = getIndiceIpcaTabelaCompleta(mesAno)
+      somaIPCAPre22 += ipca
+      periodosJuros.push({ mesAno, ipca })
+    })
   }
 
-  memoriaCalculo.juros = {
-    formula: "Principal Corrigido(IPCA) * Percentual Juros Pré-22",
-    base: val_Principal_IPCA,
-    percentual: taxaJurosPre22,
-    resultado: val_JurosPre22
-  };
-
-
-  // 3. CÁLCULO SELIC (PÓS-2022)
-  // [UPDATED] Regra da Imagem: Aplicar % sobre o valor JÁ CORRIGIDO pelo IPCA
-
-  let somaSelicPercentual = 0;
-
-  if (overrides.selic_acumulada_percentual !== undefined) {
-    somaSelicPercentual = overrides.selic_acumulada_percentual;
-  } else {
-    let selicStart = inicio < dataCorte ? new Date(2022, 0, 1) : new Date(inicio.getFullYear(), inicio.getMonth(), 1);
-    somaSelicPercentual = getSumSELIC(selicStart, fim);
-  }
-
-  const val_Selic = val_Principal_IPCA * (somaSelicPercentual / 100);
+  const taxaJurosPre22 = somaIPCAPre22
+  const valorJurosPre22 = valorPrincipalOriginal * (taxaJurosPre22 / 100)
 
   detalhamento.push({
-    data: "SELIC Acumulada",
-    valor_anterior: val_Principal_IPCA, // Base
-    indice: somaSelicPercentual, // %
-    tipo_indice: "SELIC",
-    correcao: val_Selic,
-    valor_atualizado: val_Selic // Valor gerado
-  });
+    data: "Juros Moratórios (Pré-2022)",
+    valor_anterior: valorPrincipalOriginal,
+    indice: taxaJurosPre22,
+    tipo_indice: "Juros Pré-22",
+    correcao: valorJurosPre22,
+    valor_atualizado: valorJurosPre22
+  })
 
-  memoriaCalculo.selic = {
-    formula: "Principal Corrigido * Percentual SELIC Acumulada",
-    base: val_Principal_IPCA,
-    percentual: somaSelicPercentual,
-    resultado: val_Selic
+  memoriaCalculo.juros = {
+    formula: "Soma IPCA do período * Principal",
+    base: valorPrincipalOriginal,
+    somaIPCA: somaIPCAPre22,
+    meses: periodosJuros.length,
+    percentual: taxaJurosPre22,
+    resultado: valorJurosPre22,
+    periodos: periodosJuros
   }
 
+  // 3. SELIC (01/2022 A 12/2024) - SOMA DOS PERCENTUAIS (POR DATA BASE)
+  let somaSelicPercentual = 0
+  const periodosSelic: Array<{ mesAno: string; indice: number }> = []
+
+  const fimCalculoMes = inicioMes(fim)
+  const selicInicio = baseMes > DATA_INICIO_MODELO_B ? baseMes : DATA_INICIO_MODELO_B
+  const selicFim = minDate(fimCalculoMes, DATA_FIM_SELIC)
+  const aplicaSelic = selicInicio <= selicFim
+
+  if (aplicaSelic) {
+    forEachMesInclusivo(selicInicio, selicFim, (mes) => {
+      const mesAno = toMesAno(mes)
+      const indice = getIndiceSelicEC113(mesAno)
+      somaSelicPercentual += indice
+      periodosSelic.push({ mesAno, indice })
+    })
+  }
+
+  if (overrides.selic_acumulada_percentual !== undefined) {
+    somaSelicPercentual = overrides.selic_acumulada_percentual
+  }
+
+  const valorSelic = valorPrincipalOriginal * (somaSelicPercentual / 100)
+
+  if (aplicaSelic) {
+    detalhamento.push({
+      data: `SELIC Acumulada (${toMesAno(selicInicio)} a ${toMesAno(selicFim)})`,
+      valor_anterior: valorPrincipalOriginal,
+      indice: somaSelicPercentual,
+      tipo_indice: "SELIC",
+      correcao: valorSelic,
+      valor_atualizado: valorSelic
+    })
+
+    memoriaCalculo.selic = {
+      formula: `Soma percentuais SELIC (${toMesAno(selicInicio)} a ${toMesAno(selicFim)}) * Principal`,
+      base: valorPrincipalOriginal,
+      percentual: somaSelicPercentual,
+      meses: periodosSelic.length,
+      periodos: periodosSelic,
+      resultado: valorSelic
+    }
+  } else {
+    memoriaCalculo.selic = {
+      formula: "SELIC não aplicável (Data Base fora de 01/2022 a 12/2024)",
+      base: valorPrincipalOriginal,
+      percentual: 0,
+      meses: 0,
+      periodos: [],
+      resultado: 0
+    }
+  }
+
+  // 4. EC 136/2025 (IPCA 2025) - SOMA MÊS A MÊS A PARTIR DA DATA BASE
+  let somaIPCA2025Percentual = 0
+  const periodosIPCA2025: Array<{ mesAno: string; indice: number }> = []
+
+  const inicioIPCA2025Base = inicioMes(base)
+  const inicioIPCA2025 = inicioIPCA2025Base > DATA_INICIO_MODELO_C ? inicioIPCA2025Base : DATA_INICIO_MODELO_C
+  const fimIPCA2025 = inicioMes(new Date())
+  const aplicaIPCA2025 = inicioIPCA2025 <= fimIPCA2025
+
+  if (aplicaIPCA2025) {
+    forEachMesInclusivo(inicioIPCA2025, fimIPCA2025, (mes) => {
+      const mesAno = toMesAno(mes)
+      const indice = getIndiceIpcaE(mesAno)
+      somaIPCA2025Percentual += indice
+      periodosIPCA2025.push({ mesAno, indice })
+    })
+  }
+
+  if (overrides.ipca_2025_acumulada_percentual !== undefined) {
+    somaIPCA2025Percentual = overrides.ipca_2025_acumulada_percentual
+  }
+
+  const fatorIPCA2025 = 1 + somaIPCA2025Percentual / 100
+  const correcaoIPCA2025 = valorPrincipalOriginal * (somaIPCA2025Percentual / 100)
+  const resultadoIPCA2025 = correcaoIPCA2025
+
+  memoriaCalculo.ipca2025 = {
+    formula: "Soma dos índices IPCA-E 2025 mês a mês (EC 136/2025)",
+    base: valorPrincipalOriginal,
+    percentual: somaIPCA2025Percentual,
+    fator: fatorIPCA2025,
+    meses: periodosIPCA2025.length,
+    periodos: periodosIPCA2025,
+    resultado: resultadoIPCA2025
+  }
+
+  if (aplicaIPCA2025) {
+    detalhamento.push({
+      data: "EC 136/2025 (IPCA 2025)",
+      valor_anterior: valorPrincipalOriginal,
+      indice: somaIPCA2025Percentual,
+      tipo_indice: "IPCA-E",
+      correcao: correcaoIPCA2025,
+      valor_atualizado: resultadoIPCA2025
+    })
+  }
+
+  // 5. FORMULA FINAL
+  const valorAtualizadoFinal = valorCorrigido + valorJurosPre22 + valorSelic + correcaoIPCA2025
+
   return {
-    valorCorrigido: val_IPCA,
-    valorSelic: val_Selic,
-    valorJurosPre22: val_JurosPre22,
-    valorPrincipalAtualizado: val_Principal_IPCA,
+    modelo,
+    valorCorrigido,
+    valorSelic,
+    valorJurosPre22,
+    correcaoIPCA2025,
+    fatorIPCA2025,
+    valorAtualizadoFinal,
     detalhamento,
     memoriaCalculo
-  };
+  }
 }
 
 export function calcularPrecatorio(dados: DadosEntrada): ResultadoCalculo {
-  console.log("[v0] ===== INÍCIO CÁLCULO PRECATÓRIO (MODE: EC113 SPREADSHEET) =====")
+  console.log("[v0] ===== INÃCIO CÃLCULO PRECATÃ“RIO (MODE: EC113 SPREADSHEET) =====")
   console.log("[v0] Valor Principal Original:", dados.valor_principal_original)
 
-  let taxaTotalJurosPre22 = 0;
+  const dataInicioModelo = dados.data_inicial_calculo || dados.data_base
 
-  // Prioridade: Campo explícito > Cálculo automático
-  // [FORCE AUTO CALC] Desativando override para garantir regra de 0.5% a.m.
-  if (false && dados.taxa_juros_pre_22_acumulada !== undefined) {
-    taxaTotalJurosPre22 = dados.taxa_juros_pre_22_acumulada;
-    // console.log("[v0] Usando Taxa Juros Pré-22 Explícita:", taxaTotalJurosPre22);
-  } else {
-    // Cálculo automático meses * taxa mensal
-    // [STRICT RULE] Usuário definiu "adicionar 0,50 ao mês". Ignorando taxas de entrada para forçar 0.5%.
-    const jurosMoraPercentual = 0.005;
-    /* dados.taxa_juros_mora ??
-    dados.taxa_juros_moratorios ??
-    dados.juros_mora_percentual ??
-    0.005 */
+  // Base financeira: separamos campos informados para evitar dupla contagem.
+  const principalInformado = Number(dados.principal_informado ?? dados.valor_principal_original ?? 0)
+  const jurosInformados = Number(dados.juros_informados ?? dados.valor_juros_original ?? 0)
+  const multaInformada = Number(dados.multa_informada ?? dados.multa ?? 0)
 
-    const taxaMensalJuros = jurosMoraPercentual * 100; // 0.5%
-
-    // [UPDATED] Juros Moratórios: (Start -> Dec/2021 OR End if earlier)
-    // EC113/21: Juros de Mora stops when Selic starts (Jan/22)
-    const dataCalculo = new Date(dados.data_final_calculo);
-    const dataCorte = new Date(2021, 11, 31); // 31/12/2021
-
-    // Use the earliest date between Calculation Date and Cutoff Date
-    const fim = dataCalculo < dataCorte ? dataCalculo : dataCorte;
-
-    const inicio = new Date(dados.data_inicial_calculo || dados.data_base);
-
-    if (inicio < fim) {
-      const meses = (fim.getFullYear() - inicio.getFullYear()) * 12 + (fim.getMonth() - inicio.getMonth());
-      if (meses > 0) {
-        taxaTotalJurosPre22 = meses * taxaMensalJuros;
-        console.log(`[v2] Juros Moratórios Auto: ${meses} meses (Até ${fim.toLocaleDateString()}) = ${taxaTotalJurosPre22.toFixed(2)}%`)
-      }
-    }
-  }
-
-  const totalContaOriginal = dados.valor_principal_original + (dados.valor_juros_original || 0) + (dados.multa || 0)
+  // Soma principal + juros + multa/selic, conforme solicitado.
+  const valorPrincipalParaCalculo = principalInformado + jurosInformados + multaInformada
 
   const {
-    valorCorrigido, // IPCA Corrected Total
-    valorSelic, // SELIC Amount
-    valorJurosPre22, // Juros Mora Amount
+    valorCorrigido,
+    valorSelic,
+    valorJurosPre22,
+    correcaoIPCA2025,
+    valorAtualizadoFinal,
     detalhamento,
     memoriaCalculo
   } = calcularAtualizacaoMensal(
-    totalContaOriginal,
-    dados.valor_principal_original,
-    dados.data_inicial_calculo || dados.data_base, // Fallback to Data Base if Data Inicial undefined
+    valorPrincipalParaCalculo,
+    dados.data_base,
+    dataInicioModelo,
     dados.data_final_calculo,
-    taxaTotalJurosPre22,
     {
       ipca_fator_inicial: dados.ipca_fator_inicial,
       ipca_fator_final: dados.ipca_fator_final,
-      selic_acumulada_percentual: dados.selic_acumulada_percentual
+      selic_acumulada_percentual: dados.dados_selic?.taxaAcumulada ?? dados.selic_acumulada_percentual,
+      ipca_2025_acumulada_percentual: dados.dados_ipca_2025?.percentualAcumulado
     }
   )
 
-  // FÓRMULA FINAL DO USUÁRIO:
-  // Valor Atualizado = IPCA + Juros + Selic
-  const valorAtualizadoFinal = valorCorrigido + valorJurosPre22 + valorSelic;
+  console.log("[v0] MemÃ³ria de CÃ¡lculo:", memoriaCalculo)
+  console.log("[v0] Valor Atualizado Final:", valorAtualizadoFinal)
 
-  console.log("[v0] Memória de Cálculo:", memoriaCalculo);
-  console.log("[v0] Valor Atualizado Final:", valorAtualizadoFinal);
-
-  // --- CÁLCULO PSS E IRPF ---
+  // --- CÃLCULO PSS E IRPF ---
 
   // PSS
   let pss = 0
   if (dados.tem_desconto_pss && !dados.isencao_pss) {
     if (dados.pss_valor !== undefined && dados.pss_valor !== null) {
       pss = dados.pss_valor
-    } else if (dados.pss_oficio_valor && dados.juros_mora_percentual !== undefined) {
+    } else if (dados.pss_oficio_valor) {
       const round2 = (n: number) => Math.round((n + Number.EPSILON) * 100) / 100
-      pss = round2(dados.pss_oficio_valor * (1 + dados.juros_mora_percentual))
+      const pssBase = dados.pss_oficio_valor
+
+      const baseMesPss = inicioMes(new Date(dados.data_base))
+      const fatorTetoNov21 = TABELA_IPCA_FATORES_EC113["2021"]?.[10] ?? FATOR_TETO_DEZ21
+      const aplicaIpcaFator = baseMesPss <= DATA_FIM_JUROS_PRE22
+
+      let valorIpca = pssBase
+      if (aplicaIpcaFator) {
+        const fatorInicial = dados.ipca_fator_inicial ?? getFatorIPCA(baseMesPss.getMonth(), baseMesPss.getFullYear())
+        const fatorFinal = dados.ipca_fator_final ?? fatorTetoNov21
+        if (fatorInicial > 0) {
+          valorIpca = (pssBase / fatorInicial) * fatorFinal
+        }
+      }
+
+      let selicPercentual = dados.dados_selic?.taxaAcumulada ?? dados.selic_acumulada_percentual
+      if (selicPercentual === undefined) {
+        let somaSelic = 0
+        const fimCalculoPss = inicioMes(new Date(dados.data_final_calculo ?? dados.data_base ?? new Date()))
+        const selicInicio = baseMesPss > DATA_INICIO_MODELO_B ? baseMesPss : DATA_INICIO_MODELO_B
+        const selicFim = minDate(fimCalculoPss, DATA_FIM_SELIC)
+        if (selicInicio <= selicFim) {
+          forEachMesInclusivo(selicInicio, selicFim, (mes) => {
+            const mesAno = toMesAno(mes)
+            somaSelic += getIndiceSelicEC113(mesAno)
+          })
+        }
+        selicPercentual = somaSelic
+      }
+      const valorSelicPss = pssBase * (selicPercentual / 100)
+
+      let ipca2025Percentual = dados.dados_ipca_2025?.percentualAcumulado
+      if (ipca2025Percentual === undefined) {
+        const inicioIpca2025Base = inicioMes(new Date(dados.data_base))
+        const inicioIpca2025 = inicioIpca2025Base > DATA_INICIO_MODELO_C ? inicioIpca2025Base : DATA_INICIO_MODELO_C
+        const fimIpca2025 = inicioMes(new Date())
+        if (inicioIpca2025 <= fimIpca2025) {
+          let somaIpca2025 = 0
+          forEachMesInclusivo(inicioIpca2025, fimIpca2025, (mes) => {
+            const mesAno = toMesAno(mes)
+            somaIpca2025 += getIndiceIpcaE(mesAno)
+          })
+          ipca2025Percentual = somaIpca2025
+        } else {
+          ipca2025Percentual = 0
+        }
+      }
+      const valorIpca2025Pss = pssBase * (ipca2025Percentual / 100)
+
+      pss = round2(valorIpca + valorSelicPss + valorIpca2025Pss)
     } else {
       const baseIncidenciaPSS = valorAtualizadoFinal - dados.adiantamento_recebido
       const salarioMinimo = dados.salario_minimo_referencia || 1518
@@ -392,6 +566,10 @@ export function calcularPrecatorio(dados: DadosEntrada): ResultadoCalculo {
       dados.valor_juros_original,
       dados.multa,
       dados.meses_execucao_anterior,
+      dados.tipo_beneficiario,
+      valorCorrigido,
+      valorSelic,
+      correcaoIPCA2025,
     )
   }
 
@@ -484,13 +662,50 @@ function calcularIRPFComMeses(
   juros: number,
   multa: number,
   meses: number,
+  tipoBeneficiario?: "credor" | "advogado",
+  valorCorrigidoMonetariamente?: number,
+  valorSelicAplicada?: number,
+  correcaoIpca2025?: number,
 ): number {
-  if (meses <= 0) return 0
+  const tipo = (tipoBeneficiario ?? "credor")
+  const mesesRra = meses > 0 ? meses : 1
+
+  if (tipo !== "advogado") {
+    // Base = Principal + CorreÃ§Ã£o IPCA + SELIC + EC136/2025
+    const correcaoIpca = Math.max(0, (valorCorrigidoMonetariamente ?? principal) - principal)
+    const selicValor = Math.max(0, valorSelicAplicada ?? 0)
+    const ec136Valor = Math.max(0, correcaoIpca2025 ?? 0)
+    const baseBruta = principal + correcaoIpca + selicValor + ec136Valor
+    const baseMensal = baseBruta / mesesRra
+
+    let aliquota = 0
+    let parcela = 0
+
+    if (baseMensal <= 1903.8) {
+      aliquota = 0
+      parcela = 0
+    } else if (baseMensal <= 2826.65) {
+      aliquota = 7.5
+      parcela = 142.80
+    } else if (baseMensal <= 3751.05) {
+      aliquota = 15.0
+      parcela = 354.80
+    } else if (baseMensal <= 4664.68) {
+      aliquota = 22.5
+      parcela = 636.13
+    } else {
+      aliquota = 27.5
+      parcela = 869.36
+    }
+
+    const impostoTotal = Math.max(0, baseBruta * (aliquota / 100) - parcela * mesesRra)
+    return impostoTotal
+  }
 
   const baseExecucao = principal + juros + multa
-  const baseMensal = baseExecucao / meses
+  const baseMensal = baseExecucao / mesesRra
 
-  console.log("[v0] ========== CÁLCULO IRPF RRA (DUAS BASES) ==========")
+  console.log("[v0] ========== CÃLCULO IRPF RRA (DUAS BASES) ==========")
   console.log("[v0] BASE 1 - Para descobrir faixa:", baseMensal.toFixed(2))
 
   const faixas = [
@@ -509,7 +724,7 @@ function calcularIRPFComMeses(
     }
   }
 
-  const deducaoTotal = faixaSelecionada.parcela_deduzir * meses
+  const deducaoTotal = faixaSelecionada.parcela_deduzir * mesesRra
 
   const irBruto = saldoCredorSemDesconto * faixaSelecionada.aliquota
   const irpfTotal = irBruto - deducaoTotal
@@ -528,3 +743,4 @@ export function exportarParaJSON(dados: DadosEntrada, resultado: ResultadoCalcul
 
   return JSON.stringify(exportData, null, 2)
 }
+

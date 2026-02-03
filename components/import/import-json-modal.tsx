@@ -56,6 +56,23 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
     return null
   }
 
+  function normalizarEsferaDevedor(v?: string) {
+    if (!v) return null
+    const normalized = v
+      .trim()
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toUpperCase()
+
+    if (!normalized) return null
+    if (normalized === "UNIAO" || normalized === "FEDERAL" || normalized === "UNIAO FEDERAL") return "UNIAO"
+    if (normalized === "ESTADO" || normalized === "ESTADUAL") return "ESTADO"
+    if (normalized === "MUNICIPIO" || normalized === "MUNICIPAL") return "MUNICIPIO"
+    if (normalized === "DF" || normalized === "DISTRITO FEDERAL") return "DF"
+    if (normalized === "INDEFINIDO" || normalized === "INDEFINIDA" || normalized === "NAO DEFINIDO") return "INDEFINIDO"
+    return null
+  }
+
   function confirmDate(target: any, key: string, value: string) {
     const d = normalizarData(value)
     if (d) target[key] = d
@@ -199,9 +216,13 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
           ]
 
           optFields.forEach(f => {
-            if (precatorio[f] && typeof precatorio[f] === 'string' && precatorio[f].trim()) {
-              dadosNormalizados[f] = precatorio[f].trim()
+            if (!precatorio[f] || typeof precatorio[f] !== 'string' || !precatorio[f].trim()) return
+            if (f === 'esfera_devedor') {
+              const esfera = normalizarEsferaDevedor(precatorio[f])
+              if (esfera) dadosNormalizados[f] = esfera
+              return
             }
+            dadosNormalizados[f] = precatorio[f].trim()
           })
 
           // Tratamentos Específicos
@@ -317,7 +338,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
           valor_principal: 10000.00,
           valor_atualizado: 12000.00,
           tribunal: "TJSP",
-          esfera_devedor: "Estadual",
+          esfera_devedor: "ESTADO",
           devedor: "Fazenda Pública",
           observacoes: "Observações opcionais"
         }

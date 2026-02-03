@@ -9,12 +9,12 @@ CHECK (status_kanban IN (
   'entrada',
   'triagem_interesse',
   'aguardando_oficio',   -- NOVO
+  'analise_processual_inicial',
   'docs_credor',         -- Mantido por compatibilidade
   'certidoes',
   'pronto_calculo',
   'calculo_andamento',
-  'analise_juridica',
-  'recalculo_pos_juridico',
+  'juridico',
   'calculo_concluido',
   'proposta_negociacao',
   'sem_interesse',       -- NOVO

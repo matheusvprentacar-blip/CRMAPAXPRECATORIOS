@@ -182,40 +182,36 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 5. FUNÇÃO: Validar Gate de Análise Jurídica → Recálculo
+-- ============================================
+-- 5. FUNÇÃO: Validar Gate de Jurídico → Pronto para Cálculo
 -- ============================================
 
-CREATE OR REPLACE FUNCTION validar_gate_juridico_para_recalculo(p_precatorio_id UUID)
+CREATE OR REPLACE FUNCTION validar_gate_juridico_para_pronto(p_precatorio_id UUID)
 RETURNS JSONB AS $$
 DECLARE
   v_parecer_status VARCHAR(50);
   v_parecer_texto TEXT;
   v_result JSONB;
 BEGIN
-  -- Buscar parecer
   SELECT juridico_parecer_status, juridico_parecer_texto
   INTO v_parecer_status, v_parecer_texto
   FROM public.precatorios
   WHERE id = p_precatorio_id;
 
-  -- Validar
-  IF v_parecer_status IS NOT NULL AND v_parecer_texto IS NOT NULL THEN
-    IF v_parecer_status = 'IMPEDIMENTO' THEN
-      v_result := jsonb_build_object(
-        'valido', true,
-        'pode_fechar', true,
-        'mensagem', 'Impedimento jurídico - pode mover para Fechado'
-      );
-    ELSE
-      v_result := jsonb_build_object(
-        'valido', true,
-        'mensagem', 'Gate aprovado: Parecer jurídico preenchido (' || v_parecer_status || ')'
-      );
-    END IF;
-  ELSE
+  IF v_parecer_status IS NULL OR v_parecer_texto IS NULL THEN
     v_result := jsonb_build_object(
       'valido', false,
       'mensagem', 'Bloqueado: Parecer jurídico não preenchido'
+    );
+  ELSIF v_parecer_status = 'IMPEDIMENTO' THEN
+    v_result := jsonb_build_object(
+      'valido', false,
+      'mensagem', 'Parecer indica impedimento. Mova para Reprovado/Não elegível.'
+    );
+  ELSE
+    v_result := jsonb_build_object(
+      'valido', true,
+      'mensagem', 'Gate aprovado: Parecer jurídico preenchido (' || v_parecer_status || ')'
     );
   END IF;
 
@@ -224,7 +220,38 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 6. FUNÇÃO: Validar Gate de Recálculo → Cálculo Concluído
+-- 6. FUNÇÃO: Validar Gate de Jurídico → Reprovado
+-- ============================================
+
+CREATE OR REPLACE FUNCTION validar_gate_juridico_para_reprovado(p_precatorio_id UUID)
+RETURNS JSONB AS $$
+DECLARE
+  v_parecer_status VARCHAR(50);
+  v_result JSONB;
+BEGIN
+  SELECT juridico_parecer_status INTO v_parecer_status
+  FROM public.precatorios
+  WHERE id = p_precatorio_id;
+
+  IF v_parecer_status = 'IMPEDIMENTO' THEN
+    v_result := jsonb_build_object(
+      'valido', true,
+      'mensagem', 'Gate aprovado: Impedimento registrado'
+    );
+  ELSE
+    v_result := jsonb_build_object(
+      'valido', false,
+      'mensagem', 'Bloqueado: Apenas parecer com IMPEDIMENTO pode reprovar'
+    );
+  END IF;
+
+  RETURN v_result;
+END;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
+
+-- ============================================
+-- 7. FUNÇÃO: Validar Gate de Cálculo em Andamento → Cálculo Concluído
+-- (mantem o nome da funcao por compatibilidade)
 -- ============================================
 
 CREATE OR REPLACE FUNCTION validar_gate_recalculo_para_concluido(p_precatorio_id UUID)
@@ -256,7 +283,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 7. FUNÇÃO: Validar Gate de Concluído → Proposta
+-- 8. FUNÇÃO: Validar Gate de Concluído → Proposta
 -- ============================================
 
 CREATE OR REPLACE FUNCTION validar_gate_concluido_para_proposta(p_precatorio_id UUID)
@@ -317,7 +344,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 8. FUNÇÃO: Validar se pode acessar Área de Cálculos
+-- 9. FUNÇÃO: Validar se pode acessar Área de Cálculos
 -- ============================================
 
 CREATE OR REPLACE FUNCTION pode_acessar_area_calculos(
@@ -347,8 +374,6 @@ BEGIN
   IF v_status_kanban NOT IN (
     'pronto_calculo',
     'calculo_andamento',
-    'analise_juridica',
-    'recalculo_pos_juridico',
     'calculo_concluido'
   ) THEN
     v_motivos_bloqueio := array_append(
@@ -392,7 +417,7 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 9. FUNÇÃO: Validar movimentação completa
+-- 10. FUNÇÃO: Validar movimentação completa
 -- ============================================
 
 CREATE OR REPLACE FUNCTION validar_movimentacao_kanban(
@@ -423,10 +448,13 @@ BEGIN
     WHEN v_coluna_atual = 'pronto_calculo' AND p_coluna_destino = 'calculo_andamento' THEN
       v_validacao := validar_gate_pronto_para_calculo(p_precatorio_id);
     
-    WHEN v_coluna_atual = 'analise_juridica' AND p_coluna_destino = 'recalculo_pos_juridico' THEN
-      v_validacao := validar_gate_juridico_para_recalculo(p_precatorio_id);
-    
-    WHEN v_coluna_atual = 'recalculo_pos_juridico' AND p_coluna_destino = 'calculo_concluido' THEN
+    WHEN v_coluna_atual = 'juridico' AND p_coluna_destino = 'pronto_calculo' THEN
+      v_validacao := validar_gate_juridico_para_pronto(p_precatorio_id);
+
+    WHEN v_coluna_atual = 'juridico' AND p_coluna_destino = 'reprovado' THEN
+      v_validacao := validar_gate_juridico_para_reprovado(p_precatorio_id);
+
+    WHEN v_coluna_atual = 'calculo_andamento' AND p_coluna_destino = 'calculo_concluido' THEN
       v_validacao := validar_gate_recalculo_para_concluido(p_precatorio_id);
     
     WHEN v_coluna_atual = 'calculo_concluido' AND p_coluna_destino = 'proposta_negociacao' THEN
@@ -445,15 +473,16 @@ END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
 -- ============================================
--- 10. GRANTS
+-- 11. GRANTS
 -- ============================================
 
 GRANT EXECUTE ON FUNCTION validar_gate_triagem_para_docs TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_gate_docs_para_certidoes TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_gate_certidoes_para_pronto TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_gate_pronto_para_calculo TO authenticated;
-GRANT EXECUTE ON FUNCTION validar_gate_juridico_para_recalculo TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_gate_recalculo_para_concluido TO authenticated;
+GRANT EXECUTE ON FUNCTION validar_gate_juridico_para_pronto TO authenticated;
+GRANT EXECUTE ON FUNCTION validar_gate_juridico_para_reprovado TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_gate_concluido_para_proposta TO authenticated;
 GRANT EXECUTE ON FUNCTION pode_acessar_area_calculos TO authenticated;
 GRANT EXECUTE ON FUNCTION validar_movimentacao_kanban TO authenticated;

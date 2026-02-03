@@ -1,242 +1,361 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ArrowRight, Table as TableIcon } from "lucide-react"
+import { KpiCard } from "@/components/ui/calc/KpiCard"
+import { SectionPanel } from "@/components/ui/calc/SectionPanel"
+import { CalendarDays, Percent, Table as TableIcon, TrendingUp } from "lucide-react"
+import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { TABELA_IPCA_FATORES_EC113, TABELA_SELIC_PERCENTUAL_EC113, FATOR_TETO_DEZ21 } from "@/lib/calculos/dados-ec113"
+import { IPCA_E_MENSAL, TABELA_INDICES_COMPLETA } from "@/lib/calculos/indices"
+
+const IPCA_TABELA_COMPLETA_MAP = new Map<string, number>()
+for (const item of TABELA_INDICES_COMPLETA) {
+  if (item.periodo.startsWith("IPCA")) {
+    IPCA_TABELA_COMPLETA_MAP.set(item.dataRef.slice(0, 7), item.indice)
+  }
+}
+
+const formatMesAno = (data: Date): string =>
+  data.toLocaleDateString("pt-BR", { month: "2-digit", year: "numeric" })
+
+const inicioMes = (data: Date): Date => new Date(data.getFullYear(), data.getMonth(), 1)
+
+const getIndiceIpcaE = (mesAno: string): number => {
+  const mapa = IPCA_E_MENSAL as Record<string, number>
+  if (Object.prototype.hasOwnProperty.call(mapa, mesAno)) {
+    return mapa[mesAno]
+  }
+  return IPCA_TABELA_COMPLETA_MAP.get(mesAno) ?? 0
+}
 
 interface StepIndicesProps {
-    dados: any
-    setDados: (dados: any) => void
-    onCompletar: (resultado: any) => void
-    voltar: () => void
-    resultadosEtapas: any[]
+  dados: any
+  setDados: (dados: any) => void
+  onCompletar: (resultado: any) => void
+  voltar: () => void
+  resultadosEtapas: any[]
+  precatorioId?: string
 }
 
 export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndicesProps) {
-    const [dataBase, setDataBase] = useState<string>(dados.data_base || new Date().toISOString().split('T')[0])
-    const [dataFinal, setDataFinal] = useState<string>(dados.data_calculo || new Date().toISOString().split('T')[0])
+  const [dataBase, setDataBase] = useState<string>(dados.data_base || new Date().toISOString().split("T")[0])
+  const [dataFinal, setDataFinal] = useState<string>(dados.data_calculo || new Date().toISOString().split("T")[0])
 
-    // State for separate sections
-    const [dadosIpca, setDadosIpca] = useState<{
-        fatorNaData: number,
-        fatorTeto: number,
-        multiplicador: number
-    } | null>(null)
+  const [dadosIpca, setDadosIpca] = useState<{
+    fatorNaData: number
+    fatorTeto: number
+    multiplicador: number
+  } | null>(null)
 
-    const [dadosSelic, setDadosSelic] = useState<{
-        taxaAcumulada: number,
-        inicioPeriodo: string,
-        fimPeriodo: string,
-        regra: string
-    } | null>(null)
+  const [dadosSelic, setDadosSelic] = useState<{
+    taxaAcumulada: number
+    inicioPeriodo: string
+    fimPeriodo: string
+    regra: string
+  } | null>(null)
 
-    useEffect(() => {
-        consultarIndices(dataBase, dataFinal)
-    }, [dataBase, dataFinal])
+  const [dadosIpca2025, setDadosIpca2025] = useState<{
+    percentualAcumulado: number
+    inicioPeriodo: string
+    fimPeriodo: string
+    regra: string
+  } | null>(null)
 
-    const getSumSELIC = (start: Date, end: Date): number => {
-        let sum = 0
-        let current = new Date(start.getFullYear(), start.getMonth(), 1)
-        const endDate = new Date(end.getFullYear(), end.getMonth(), 1)
+  useEffect(() => {
+    consultarIndices(dataBase, dataFinal)
+  }, [dataBase, dataFinal])
 
-        while (current <= endDate) {
-            const anoStr = current.getFullYear().toString()
-            const mesIndex = current.getMonth() // 0-based
+  const getSumSELIC = (start: Date, end: Date): number => {
+    let sum = 0
+    let current = new Date(start.getFullYear(), start.getMonth(), 1)
+    const endDate = new Date(end.getFullYear(), end.getMonth(), 1)
 
-            if (TABELA_SELIC_PERCENTUAL_EC113[anoStr]) {
-                sum += TABELA_SELIC_PERCENTUAL_EC113[anoStr][mesIndex] || 0
-            }
+    while (current <= endDate) {
+      const anoStr = current.getFullYear().toString()
+      const mesIndex = current.getMonth()
 
-            current.setMonth(current.getMonth() + 1)
-        }
-        return sum
+      if (TABELA_SELIC_PERCENTUAL_EC113[anoStr]) {
+        sum += TABELA_SELIC_PERCENTUAL_EC113[anoStr][mesIndex] || 0
+      }
+
+      current.setMonth(current.getMonth() + 1)
+    }
+    return sum
+  }
+
+  const consultarIndices = (dtBase: string, dtFinal: string) => {
+    if (!dtBase || !dtFinal) return
+
+    const [anoStr, mesStr] = dtBase.split("-")
+    const ano = parseInt(anoStr)
+    const mes = parseInt(mesStr) - 1
+    const dataObj = new Date(ano, mes, 1)
+
+    const dataCorteIpcaFator = new Date(2021, 11, 1) // 01/12/2021 (IPCA fator até Nov/2021)
+    const dataInicioIpca2025 = new Date(2025, 0, 1) // 01/01/2025
+
+    const [anoFim, mesFim] = dtFinal.split("-").map(Number)
+    const dataFinalObj = new Date(anoFim, mesFim - 1, 1)
+
+    if (dataObj < dataCorteIpcaFator) {
+      const tabelaIpca = TABELA_IPCA_FATORES_EC113[anoStr]
+      const fator = tabelaIpca ? tabelaIpca[mes] : 0
+      const fatorTetoNov21 = TABELA_IPCA_FATORES_EC113["2021"]?.[10] ?? FATOR_TETO_DEZ21
+      const multiplicador = fator > 0 ? fatorTetoNov21 / fator : 0
+
+      setDadosIpca({
+        fatorNaData: fator,
+        fatorTeto: fatorTetoNov21,
+        multiplicador,
+      })
+    } else {
+      setDadosIpca(null)
     }
 
-    const consultarIndices = (dtBase: string, dtFinal: string) => {
-        if (!dtBase || !dtFinal) return
+    const selicReferenciaInicio = new Date(2022, 0, 1)
+    const selicReferenciaFim = new Date(2024, 11, 1)
+    const selicInicio = dataObj > selicReferenciaInicio ? inicioMes(dataObj) : selicReferenciaInicio
+    const selicFim = dataFinalObj < selicReferenciaFim ? dataFinalObj : selicReferenciaFim
+    const aplicaSelic = selicInicio <= selicFim
 
-        const [anoStr, mesStr] = dtBase.split('-')
-        const ano = parseInt(anoStr)
-        const mes = parseInt(mesStr) - 1 // 0-indexed for array access
-        const dataObj = new Date(ano, mes, 1)
-        const dataCorte = new Date(2022, 0, 1) // Jan 1st 2022
+    if (aplicaSelic) {
+      const taxaAcumulada = getSumSELIC(selicInicio, selicFim)
+      const regra = `Soma da SELIC acumulada de ${formatMesAno(selicInicio)} até ${formatMesAno(selicFim)}.`
 
-        // Final Date
-        const [anoFim, mesFim] = dtFinal.split('-').map(Number)
-        const dataFinalObj = new Date(anoFim, mesFim - 1, 1)
-
-        // 1. Lógica IPCA-E
-        if (dataObj < dataCorte) {
-            const tabelaIpca = TABELA_IPCA_FATORES_EC113[anoStr]
-            const fator = tabelaIpca ? tabelaIpca[mes] : 0
-            const multiplicador = fator > 0 ? FATOR_TETO_DEZ21 / fator : 0
-
-            setDadosIpca({
-                fatorNaData: fator,
-                fatorTeto: FATOR_TETO_DEZ21,
-                multiplicador
-            })
-        } else {
-            setDadosIpca(null)
-        }
-
-        // 2. Lógica SELIC
-        let selicStart: Date
-        let regra = ""
-
-        if (dataObj < dataCorte) {
-            // Se data base < 2022, SELIC começa em Jan/2022
-            selicStart = new Date(2022, 0, 1)
-            regra = "Soma da SELIC acumulada de 01/2022 até a Data Final."
-        } else {
-            // Se data base >= 2022, SELIC começa na data base
-            selicStart = new Date(dataObj)
-            regra = "Soma da SELIC acumulada da Data Base até a Data Final."
-        }
-
-        const taxaAcumulada = getSumSELIC(selicStart, dataFinalObj)
-
-        setDadosSelic({
-            taxaAcumulada,
-            inicioPeriodo: selicStart.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
-            fimPeriodo: dataFinalObj.toLocaleDateString('pt-BR', { month: '2-digit', year: 'numeric' }),
-            regra
-        })
+      setDadosSelic({
+        taxaAcumulada,
+        inicioPeriodo: formatMesAno(selicInicio),
+        fimPeriodo: formatMesAno(selicFim),
+        regra,
+      })
+    } else {
+      setDadosSelic(null)
     }
 
-    const handleAvancar = () => {
-        const payload = {
-            data_base: dataBase,
-            data_final: dataFinal,
-            dados_ipca: dadosIpca,
-            dados_selic: dadosSelic,
-            // [NEW] Flattened fields for calculation engine
-            ipca_fator_inicial: dadosIpca ? dadosIpca.fatorNaData : 0,
-            ipca_fator_final: dadosIpca ? dadosIpca.fatorTeto : 0,
-            selic_acumulada_percentual: dadosSelic ? dadosSelic.taxaAcumulada : 0
-        }
+    const fimIpca2025 = inicioMes(new Date())
+    const inicioIpca2025 = dataObj > dataInicioIpca2025 ? inicioMes(dataObj) : dataInicioIpca2025
+    const aplicaIpca2025 = inicioIpca2025 <= fimIpca2025
 
-        // Update global context immediately so next step receives it
-        setDados({
-            ...dados,
-            ...payload
-        })
+    if (aplicaIpca2025) {
+      let somaPercentual = 0
+      let current = new Date(inicioIpca2025.getFullYear(), inicioIpca2025.getMonth(), 1)
+      const endDate = new Date(fimIpca2025.getFullYear(), fimIpca2025.getMonth(), 1)
 
-        onCompletar(payload)
+      while (current <= endDate) {
+        const mesAno = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`
+        const indice = getIndiceIpcaE(mesAno)
+        somaPercentual += indice
+        current.setMonth(current.getMonth() + 1)
+      }
+
+      setDadosIpca2025({
+        percentualAcumulado: somaPercentual,
+        inicioPeriodo: formatMesAno(inicioIpca2025),
+        fimPeriodo: formatMesAno(fimIpca2025),
+        regra: "Soma dos índices IPCA-E mês a mês a partir da Data Base (>= 01/2025) até a Data Atual.",
+      })
+    } else {
+      setDadosIpca2025(null)
+    }
+  }
+
+  const handleAvancar = () => {
+    const payload = {
+      data_base: dataBase,
+      data_final: dataFinal,
+      dados_ipca: dadosIpca,
+      dados_selic: dadosSelic,
+      dados_ipca_2025: dadosIpca2025,
+      ipca_fator_inicial: dadosIpca ? dadosIpca.fatorNaData : 0,
+      ipca_fator_final: dadosIpca ? dadosIpca.fatorTeto : 0,
+      selic_acumulada_percentual: dadosSelic ? dadosSelic.taxaAcumulada : 0,
     }
 
-    return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <TableIcon className="w-5 h-5" />
-                    Consulta de Índices (EC 113/21)
-                </CardTitle>
-                <CardDescription>
-                    Visualize a aplicação das regras de correção monetária e juros para o período informado.
-                </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
+    setDados({
+      ...dados,
+      ...payload,
+    })
 
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                        <Label>Data Base (Início)</Label>
-                        <Input
-                            type="date"
-                            value={dataBase}
-                            onChange={(e) => setDataBase(e.target.value)}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <Label>Data Final (Cálculo)</Label>
-                        <Input
-                            type="date"
-                            value={dataFinal}
-                            onChange={(e) => setDataFinal(e.target.value)}
-                        />
-                    </div>
+    onCompletar(payload)
+  }
+
+  return (
+    <Card className="calc-card relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+      <CardHeader className="space-y-2">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+            <TableIcon className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle className="calc-title">Consulta de índices (EC 113/21)</CardTitle>
+            <CardDescription className="calc-subtitle">
+              Visualize a aplicação das regras de correção monetária e juros para o período informado.
+            </CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent>
+        <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <KpiCard
+            label="Data Base"
+            value={dataBase ? new Date(dataBase + "T12:00:00").toLocaleDateString("pt-BR") : "?"}
+            helper="Início do período"
+            tone="info"
+            icon={<CalendarDays className="h-4 w-4" />}
+          />
+          <KpiCard
+            label="SELIC acumulada"
+            value={dadosSelic ? `${dadosSelic.taxaAcumulada.toFixed(2)}%` : "?"}
+            helper={dadosSelic ? `${dadosSelic.inicioPeriodo} a ${dadosSelic.fimPeriodo}` : "Sem aplicação"}
+            tone="success"
+            icon={<TrendingUp className="h-4 w-4" />}
+          />
+          <KpiCard
+            label="IPCA 2025"
+            value={dadosIpca2025 ? `${dadosIpca2025.percentualAcumulado.toFixed(2)}%` : "?"}
+            helper={dadosIpca2025 ? `${dadosIpca2025.inicioPeriodo} a ${dadosIpca2025.fimPeriodo}` : "Sem aplicação"}
+            tone="primary"
+            icon={<Percent className="h-4 w-4" />}
+          />
+        </div>
+
+        <SectionPanel
+          title="Período de cálculo"
+          description="Defina a data base e a data final para consultar os índices."
+          tone="info"
+        >
+          <div className="grid grid-cols-12 gap-6">
+            <div className="col-span-12 space-y-2 md:col-span-6">
+              <Label className="text-sm text-muted-foreground">Data Base (Início)</Label>
+              <Input
+                type="date"
+                value={dataBase}
+                onChange={(e) => setDataBase(e.target.value)}
+                className="rounded-md"
+              />
+            </div>
+            <div className="col-span-12 space-y-2 md:col-span-6">
+              <Label className="text-sm text-muted-foreground">Data Final (Cálculo)</Label>
+              <Input
+                type="date"
+                value={dataFinal}
+                onChange={(e) => setDataFinal(e.target.value)}
+                className="rounded-md"
+              />
+            </div>
+          </div>
+        </SectionPanel>
+
+        <SectionPanel
+          title="Regras e índices aplicados"
+          description="Resumo automático das regras vigentes no período informado."
+          tone="primary"
+        >
+          <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
+            {dadosIpca ? (
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">1. IPCA-E</p>
+                    <p className="text-xs text-muted-foreground">Até Nov/2021</p>
+                  </div>
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                    Fatores
+                  </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* CARTÃO 1: IPCA-E (Condicional) */}
-                    {dadosIpca ? (
-                        <div className="p-4 rounded-lg border bg-blue-50 border-blue-200 dark:bg-blue-950/30 dark:border-blue-800 flex flex-col gap-3">
-                            <div className="flex items-center justify-between border-b border-blue-200/50 pb-2">
-                                <span className="font-bold text-lg text-blue-900 dark:text-blue-100">1. IPCA-E</span>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-300">
-                                    Até Dez/2021
-                                </span>
-                            </div>
+                <div className="space-y-3">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fator Data Base</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                      {dadosIpca.fatorNaData.toFixed(7)}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Fator Teto (Nov/21)</p>
+                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                      {dadosIpca.fatorTeto.toFixed(7)}
+                    </p>
+                  </div>
+                  <div className="rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
+                    <strong>Regra:</strong> Atualização proporcional até 11/2021 usando a razão entre fatores.
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-center text-muted-foreground">
+                <span className="text-sm font-semibold">IPCA-E não aplicável</span>
+                <span className="text-xs">Data posterior a Nov/2021. Apenas SELIC e IPCA 2025 serão aplicados.</span>
+              </div>
+            )}
 
-                            <div className="space-y-3">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <Label className="text-xs text-muted-foreground">Fator Data Base</Label>
-                                        <div className="text-xl font-mono font-bold text-blue-700 dark:text-blue-400">
-                                            {dadosIpca.fatorNaData.toFixed(7)}
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <Label className="text-xs text-muted-foreground">Fator Teto (Dez/21)</Label>
-                                        <div className="text-xl font-mono font-bold text-slate-600 dark:text-slate-400">
-                                            {dadosIpca.fatorTeto.toFixed(7)}
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="bg-white/50 dark:bg-black/20 p-2 rounded text-xs text-blue-800 dark:text-blue-300">
-                                    <strong>Regra:</strong> Atualização proporcional até 12/2021 usando a razão entre fatores.
-                                </div>
-                            </div>
-                        </div>
-                    ) : (
-                        <div className="p-4 rounded-lg border border-dashed text-muted-foreground flex items-center justify-center flex-col gap-2 bg-muted/20">
-                            <span className="font-medium">IPCA-E Não Aplicável</span>
-                            <span className="text-xs text-center">Data posterior a Dez/2021.<br />Apenas SELIC será aplicada.</span>
-                        </div>
-                    )}
-
-                    {/* CARTÃO 2: SELIC (Sempre presente) */}
-                    {dadosSelic && (
-                        <div className="p-4 rounded-lg border bg-green-50 border-green-200 dark:bg-green-950/30 dark:border-green-800 flex flex-col gap-3">
-                            <div className="flex items-center justify-between border-b border-green-200/50 pb-2">
-                                <span className="font-bold text-lg text-green-900 dark:text-green-100">2. SELIC</span>
-                                <span className="text-xs font-medium px-2 py-0.5 rounded bg-green-100 text-green-800 dark:bg-green-900 dark:text-green-300">
-                                    {dadosSelic.inicioPeriodo} a {dadosSelic.fimPeriodo}
-                                </span>
-                            </div>
-
-                            <div className="space-y-3">
-                                <div>
-                                    <Label className="text-xs text-muted-foreground">Taxa Acumulada no Período</Label>
-                                    <div className="text-4xl font-mono font-bold text-green-700 dark:text-green-400">
-                                        {dadosSelic.taxaAcumulada.toFixed(2)}%
-                                    </div>
-                                </div>
-
-                                <div className="bg-white/50 dark:bg-black/20 p-2 rounded text-xs text-green-800 dark:text-green-300">
-                                    <strong>Regra:</strong> {dadosSelic.regra}
-                                </div>
-                            </div>
-                        </div>
-                    )}
+            {dadosSelic && (
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">2. SELIC</p>
+                    <p className="text-xs text-muted-foreground">{dadosSelic.inicioPeriodo} a {dadosSelic.fimPeriodo}</p>
+                  </div>
+                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-500">
+                    Acumulada
+                  </span>
                 </div>
 
-                <div className="flex justify-between mt-8">
-                    <Button variant="outline" size="sm" onClick={voltar}>
-                        <ArrowLeft className="h-4 w-4 mr-1" />
-                        Voltar
-                    </Button>
-                    <Button size="sm" onClick={handleAvancar}>
-                        Avançar
-                        <ArrowRight className="h-4 w-4 ml-1" />
-                    </Button>
+                <div>
+                  <p className="text-xs text-muted-foreground">Taxa acumulada no período</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
+                    {dadosSelic.taxaAcumulada.toFixed(2)}%
+                  </p>
                 </div>
-            </CardContent>
-        </Card>
-    )
+
+                <div className="rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <strong>Regra:</strong> {dadosSelic.regra}
+                </div>
+              </div>
+            )}
+
+            {dadosIpca2025 ? (
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-sky-500/25 bg-sky-500/5 p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">3. IPCA-E 2025</p>
+                    <p className="text-xs text-muted-foreground">{dadosIpca2025.inicioPeriodo} a {dadosIpca2025.fimPeriodo}</p>
+                  </div>
+                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-500">
+                    Projeção
+                  </span>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground">Soma acumulada no período</p>
+                  <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
+                    {dadosIpca2025.percentualAcumulado.toFixed(2)}%
+                  </p>
+                </div>
+
+                <div className="rounded-lg border border-border/60 bg-background/70 p-3 text-xs text-muted-foreground">
+                  <strong>Regra:</strong> {dadosIpca2025.regra}
+                </div>
+              </div>
+            ) : (
+              <div className="flex h-full flex-col items-center justify-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-4 text-center text-muted-foreground">
+                <span className="text-sm font-semibold">IPCA-E 2025 não aplicável</span>
+                <span className="text-xs">Data base anterior a Jan/2025. Nenhum IPCA 2025 acumulado.</span>
+              </div>
+            )}
+          </div>
+        </SectionPanel>
+
+        </div>
+        <StepFooter onBack={voltar} onNext={handleAvancar} />
+      </CardContent>
+    </Card>
+  )
+
 }
+

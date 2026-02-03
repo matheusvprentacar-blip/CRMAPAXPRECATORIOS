@@ -90,7 +90,7 @@ export function PdfViewerModal({ open, onOpenChange, pdfUrl, titulo, precatorioI
           )}
 
           {!loading && !error && viewerUrl && (
-            <iframe src={viewerUrl} className="w-full h-full border-none" title="Visualizador de PDF" />
+            <iframe src={viewerUrl} className="w-full h-full border-none" title="Visualizador de PDF" scrolling="yes" />
           )}
 
           {!loading && !error && !pdfUrl && (

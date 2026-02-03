@@ -16,8 +16,6 @@ DO $$ BEGIN
     'certidao_casamento',
     'certidao_nascimento',
     'comprovante_residencia',
-    'profissao_credor',
-    'profissao_conjuge',
     'dados_bancarios',
     'certidao_negativa_municipal',
     'certidao_negativa_estadual',
@@ -293,8 +291,6 @@ ORDER BY enumsortorder;
 -- 4. certidao_casamento - Certidão de casamento
 -- 5. certidao_nascimento - Certidão de nascimento
 -- 6. comprovante_residencia - Comprovante de residência
--- 7. profissao_credor - Declaração de profissão do credor
--- 8. profissao_conjuge - Declaração de profissão do cônjuge
 -- 9. dados_bancarios - Dados bancários
 -- 10. certidao_negativa_municipal - Certidão negativa municipal
 -- 11. certidao_negativa_estadual - Certidão negativa estadual

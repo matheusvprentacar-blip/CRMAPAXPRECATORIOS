@@ -120,8 +120,13 @@ Deno.serve(async (req) => {
                         'observacoes', 'contatos'
                     ]
                     optFields.forEach(f => {
-                        if (precatorio[f] && precatorio[f].trim && precatorio[f].trim())
-                            dadosNormalizados[f] = precatorio[f].trim()
+                        if (!precatorio[f] || !precatorio[f].trim || !precatorio[f].trim()) return
+                        if (f === 'esfera_devedor') {
+                            const esfera = normalizarEsferaDevedor(precatorio[f])
+                            if (esfera) dadosNormalizados[f] = esfera
+                            return
+                        }
+                        dadosNormalizados[f] = precatorio[f].trim()
                     })
 
                     if (precatorio.estado) dadosNormalizados.estado = precatorio.estado.trim().toUpperCase()
@@ -186,6 +191,22 @@ function normalizarData(v: string) {
         const m = v.match(f)
         if (m) return (f === formats[1]) ? m[0] : `${m[3]}-${m[2]}-${m[1]}`
     }
+    return null
+}
+function normalizarEsferaDevedor(v: string) {
+    if (!v) return null
+    const normalized = v
+        .trim()
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toUpperCase()
+
+    if (!normalized) return null
+    if (normalized === "UNIAO" || normalized === "FEDERAL" || normalized === "UNIAO FEDERAL") return "UNIAO"
+    if (normalized === "ESTADO" || normalized === "ESTADUAL") return "ESTADO"
+    if (normalized === "MUNICIPIO" || normalized === "MUNICIPAL") return "MUNICIPIO"
+    if (normalized === "DF" || normalized === "DISTRITO FEDERAL") return "DF"
+    if (normalized === "INDEFINIDO" || normalized === "INDEFINIDA" || normalized === "NAO DEFINIDO") return "INDEFINIDO"
     return null
 }
 function validarCPF(cpf: string) {

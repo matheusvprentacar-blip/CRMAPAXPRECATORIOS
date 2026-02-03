@@ -42,10 +42,13 @@ BEGIN
     WHEN v_coluna_atual = 'pronto_calculo' AND p_coluna_destino = 'calculo_andamento' THEN
       v_validacao := validar_gate_pronto_para_calculo(p_precatorio_id);
     
-    WHEN v_coluna_atual = 'analise_juridica' AND p_coluna_destino = 'recalculo_pos_juridico' THEN
-      v_validacao := validar_gate_juridico_para_recalculo(p_precatorio_id);
-    
-    WHEN v_coluna_atual = 'recalculo_pos_juridico' AND p_coluna_destino = 'calculo_concluido' THEN
+    WHEN v_coluna_atual = 'juridico' AND p_coluna_destino = 'pronto_calculo' THEN
+      v_validacao := validar_gate_juridico_para_pronto(p_precatorio_id);
+
+    WHEN v_coluna_atual = 'juridico' AND p_coluna_destino = 'reprovado' THEN
+      v_validacao := validar_gate_juridico_para_reprovado(p_precatorio_id);
+
+    WHEN v_coluna_atual = 'calculo_andamento' AND p_coluna_destino = 'calculo_concluido' THEN
       v_validacao := validar_gate_recalculo_para_concluido(p_precatorio_id);
     
     WHEN v_coluna_atual = 'calculo_concluido' AND p_coluna_destino = 'proposta_negociacao' THEN

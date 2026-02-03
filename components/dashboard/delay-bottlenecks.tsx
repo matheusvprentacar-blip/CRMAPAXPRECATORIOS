@@ -35,7 +35,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground">Nenhum atraso registrado</p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Nenhum atraso registrado</p>
           </div>
         </CardContent>
       </Card>
@@ -46,7 +46,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
     <Card>
       <CardHeader>
         <CardTitle>Gargalos por Motivo de Atraso</CardTitle>
-        <p className="text-sm text-muted-foreground">Principais motivos que travam precatórios</p>
+        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Principais motivos que travam precatórios</p>
       </CardHeader>
       <CardContent>
         <Table>
@@ -67,7 +67,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
                     size="sm" 
                   />
                 </TableCell>
-                <TableCell className="text-right font-medium">{item.total}</TableCell>
+                <TableCell className="text-right font-medium font-mono tabular-nums">{item.total}</TableCell>
                 <TableCell className="text-right">
                   {item.com_sla_estourado > 0 ? (
                     <Badge variant="destructive" className="font-mono">
@@ -77,7 +77,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
                     <span className="text-muted-foreground">0</span>
                   )}
                 </TableCell>
-                <TableCell className="text-right text-muted-foreground">
+                <TableCell className="text-right text-muted-foreground font-mono tabular-nums">
                   {item.percentual.toFixed(1)}%
                 </TableCell>
               </TableRow>

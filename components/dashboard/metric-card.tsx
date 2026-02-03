@@ -62,13 +62,15 @@ export function MetricCard({
   return (
     <Card className={cn(variantStyles[variant], className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium text-muted-foreground">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
+        <CardTitle className="text-xs font-semibold tracking-wide uppercase text-zinc-500">{title}</CardTitle>
+        {Icon && <Icon className="h-4 w-4 text-zinc-400" />}
       </CardHeader>
       <CardContent>
         <div className="space-y-1">
-          <div className="text-2xl font-bold">{value}</div>
-          {subtitle && <p className="text-xs text-muted-foreground">{subtitle}</p>}
+          <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
+            {value}
+          </div>
+          {subtitle && <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{subtitle}</p>}
           {trend && trendValue && (
             <div className={cn("flex items-center gap-1 text-xs font-medium", getTrendColor())}>
               {getTrendIcon()}

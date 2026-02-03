@@ -83,6 +83,7 @@ export function PDFViewer({ pdfUrl }: PDFViewerProps) {
         <iframe
           src={viewerUrl}
           className="flex-1 w-full rounded-md border border-border min-h-[550px]"
+          scrolling="yes"
           title="Visualizador de PDF"
         />
       )}

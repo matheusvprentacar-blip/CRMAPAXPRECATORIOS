@@ -351,7 +351,7 @@
             <div class="company-info">
                 <h1>Apax Investimentos Ltda.</h1>
                 <p>CNPJ: 09.121.790/0001-38</p>
-                <p>Av. Paulista, 1000 - São Paulo/SP</p>
+                <p>Rua Horeslau Savinski, 443, Jardim Apucarana, CEP 86809-070</p>
             </div>
         </header>
 
@@ -364,7 +364,7 @@
             <div class="info-grid">
                 <p><strong>Cód. Interno:</strong> <span id="doc-code">—</span></p>
                 <p><strong>Emissão:</strong> <span id="doc-date">—</span></p>
-                <p><strong>Credor:</strong> <span id="credor-nome">—</span></p>
+                <p><strong><span id="label-credor">Credor</span>:</strong> <span id="credor-nome">—</span></p>
                 <p><strong>CPF/CNPJ:</strong> <span id="credor-doc">—</span></p>
                 <p><strong>Número Processo:</strong> <span id="processo-num">—</span></p>
                 <p><strong>Número Precatório:</strong> <span id="precatorio-num">—</span></p>
@@ -419,6 +419,7 @@
             // Preencher Identificação
             document.getElementById('doc-code').textContent = data.documento.codigo_interno;
             document.getElementById('doc-date').textContent = data.documento.data_emissao;
+            document.getElementById('label-credor').textContent = (data.labels && data.labels.credor) ? data.labels.credor : 'Credor';
             document.getElementById('credor-nome').textContent = data.credor.nome;
             document.getElementById('credor-doc').textContent = data.credor.cpf_cnpj;
             document.getElementById('processo-num').textContent = data.processo.numero;
@@ -435,6 +436,11 @@
             if (data.titulo_documento) {
                 document.getElementById('doc-title').textContent = data.titulo_documento;
             }
+
+            const fileTitle = (data.documento && data.documento.nome_arquivo)
+                ? data.documento.nome_arquivo
+                : (data.titulo_documento || document.title);
+            document.title = fileTitle;
 
             // Renderizar Tabela
             const container = document.getElementById('values-table');

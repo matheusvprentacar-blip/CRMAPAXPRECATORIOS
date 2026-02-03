@@ -3,8 +3,60 @@ export interface Usuario {
   nome: string
   email: string
   telefone?: string
-  role: "admin" | "operador" | "analista" | "gestor"
+  role: string[]
   ativo: boolean
+  created_at: string
+  updated_at: string
+  // HR Fields
+  admission_date?: string
+  position?: string
+  bank_info?: Record<string, any>
+  address?: Record<string, any>
+}
+
+export interface HRDocument {
+  id: string
+  user_id: string
+  title: string
+  type: "documento" | "contrato" | "atestado" | "outros"
+  url: string
+  created_at: string
+  updated_at: string
+}
+
+export interface FinancialTransaction {
+  id: string
+  description: string
+  amount: number
+  type: "income" | "expense"
+  category: string
+  status: "pendente" | "pago" | "cancelado" | "atrasado"
+  due_date: string
+  payment_date?: string
+  user_id?: string
+  installment_number?: number
+  total_installments?: number
+  recurrence_id?: string
+  department?: string
+  document_url?: string
+  notes?: string
+  created_at: string
+  updated_at: string
+  // Joins
+  usuarios?: {
+    nome: string
+    email: string
+  }
+}
+
+export interface HRLeave {
+  id: string
+  user_id: string
+  type: "atestado" | "falta" | "ferias" | "licenca"
+  start_date: string
+  end_date?: string
+  description?: string
+  document_url?: string
   created_at: string
   updated_at: string
 }
@@ -29,6 +81,9 @@ export interface Precatorio {
   credor_endereco?: string
   credor_cidade?: string
   credor_uf?: string
+  credor_cep?: string
+  credor_telefone?: string
+  credor_email?: string
   advogado_nome?: string
   advogado_cpf_cnpj?: string
   cessionario?: string
@@ -101,6 +156,24 @@ export interface Precatorio {
 
   // Dados extras
   dados_calculo: any
+
+  // Análise processual
+  analise_penhora?: boolean | null
+  analise_cessao?: boolean | null
+  analise_herdeiros?: string | null
+  analise_viavel?: boolean | null
+  analise_observacoes?: string | null
+  analise_penhora_valor?: number | null
+  analise_penhora_percentual?: number | null
+  analise_cessao_valor?: number | null
+  analise_cessao_percentual?: number | null
+  analise_adiantamento_valor?: number | null
+  analise_adiantamento_percentual?: number | null
+  analise_honorarios_valor?: number | null
+  analise_honorarios_percentual?: number | null
+  analise_itcmd?: boolean | null
+  analise_itcmd_valor?: number | null
+  analise_itcmd_percentual?: number | null
 
   // Timestamps
   created_at: string

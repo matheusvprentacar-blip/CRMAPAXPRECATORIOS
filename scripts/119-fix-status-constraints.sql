@@ -12,6 +12,8 @@ ADD CONSTRAINT precatorios_status_check
 CHECK (status IN (
   -- Legacy statuses
   'novo', 'em_contato', 'em_calculo', 'calculado', 'aguardando_cliente', 'concluido', 'cancelado',
+  -- Outros legados encontrados em produção
+  'fila_calculo',
   
   -- New Kanban columns
   'entrada',
@@ -19,11 +21,13 @@ CHECK (status IN (
   'pronto_calculo',
   'calculo_andamento',
   'certidoes',
-  'analise_juridica',
-  'recalculo_pos_juridico',
+  'juridico',
   'calculo_concluido',
   'proposta_negociacao',
-  'fechado'
+  'fechado',
+
+  -- Paralelos / fim de fluxo
+  'sem_interesse'
 ));
 
 -- 3. Removed update to atividades constraint since code was adapted to use existing 'calculo' type.

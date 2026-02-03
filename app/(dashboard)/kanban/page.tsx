@@ -2,16 +2,18 @@
 /* eslint-disable */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useState, useRef } from "react"
+import { useEffect, useMemo, useState, useRef, useCallback, memo, type RefObject } from "react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Lock, LockOpen, CheckCircle2, Clock, Kanban, FileText } from "lucide-react"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Bell, Lock, LockOpen, CheckCircle2, Clock, Kanban, FileText, User, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "@/components/ui/use-toast"
+import { maskProcesso } from "@/lib/masks"
 import {
   Dialog,
   DialogContent,
@@ -30,15 +32,36 @@ import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "lucide-react"
 
-// 11 Colunas do Kanban com Gates
+// Colunas do Kanban com Gates
 const COLUNAS = KANBAN_COLUMNS;
 
 // Colunas que permitem acesso à área de cálculos
 const COLUNAS_CALCULO_PERMITIDO = [
   "pronto_calculo",
   "calculo_andamento",
-  "analise_juridica",
   "calculo_concluido",
+]
+
+const ENCERRADOS_STATUS = [
+  "pos_fechamento",
+  "pausado_credor",
+  "pausado_documentos",
+  "sem_interesse",
+]
+
+const ENCERRADOS_LABELS: Record<string, string> = {
+  pos_fechamento: "Pós-fechamento",
+  pausado_credor: "Pausado (credor)",
+  pausado_documentos: "Pausado (documentos)",
+  sem_interesse: "Sem interesse",
+}
+
+const TRIAGEM_STATUS_OPTIONS = [
+  { value: "SEM_CONTATO", label: "Sem contato" },
+  { value: "CONTATO_EM_ANDAMENTO", label: "Contato em andamento" },
+  { value: "PEDIR_RETORNO", label: "Pedir retorno" },
+  { value: "SEM_INTERESSE", label: "Sem interesse" },
+  { value: "TEM_INTERESSE", label: "Tem interesse" },
 ]
 
 interface PrecatorioCard {
@@ -50,6 +73,8 @@ interface PrecatorioCard {
   tribunal: string | null
   status_kanban: string
   interesse_status: string | null
+  juridico_parecer_status?: string | null
+  juridico_resultado_final?: string | null
   calculo_desatualizado: boolean
   calculo_ultima_versao: number
   valor_principal: number | null
@@ -57,6 +82,7 @@ interface PrecatorioCard {
   saldo_liquido: number | null
   responsavel_calculo_id: string | null
   created_at: string
+  updated_at?: string | null
   file_url?: string | null // [NEW] Campo de Ofício
   // Campos para filtros avançados
   nivel_complexidade?: 'baixa' | 'media' | 'alta' | null
@@ -65,6 +91,9 @@ interface PrecatorioCard {
   impacto_atraso?: 'baixo' | 'medio' | 'alto' | null
   urgente?: boolean
   titular_falecido?: boolean
+  motivo_atraso_calculo?: string | null
+  motivo_sem_interesse?: string | null
+  data_recontato?: string | null
   data_entrada_calculo?: string | null
   status?: string // Usado para filtro de status também
   resumo_itens?: {
@@ -76,7 +105,354 @@ interface PrecatorioCard {
     percentual_docs: number
     percentual_certidoes: number
   }
+  responsavel_perfil?: { nome: string } | null
 }
+
+const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HTMLDivElement>) => {
+  useEffect(() => {
+    if (!isDragging) return
+    const container = containerRef.current
+    if (!container) return
+
+    const SCROLL_ZONE = 110
+    const SCROLL_SPEED = 12
+
+    let frameId: number | null = null
+    let pointerX = container.getBoundingClientRect().left + container.getBoundingClientRect().width / 2
+
+    const handleMouseMove = (e: MouseEvent) => {
+      pointerX = e.clientX
+    }
+
+    const loop = () => {
+      const rect = container.getBoundingClientRect()
+      const leftZone = rect.left + SCROLL_ZONE
+      const rightZone = rect.right - SCROLL_ZONE
+
+      let delta = 0
+      if (pointerX < leftZone) {
+        const intensity = Math.min(1, (leftZone - pointerX) / SCROLL_ZONE)
+        delta = -SCROLL_SPEED * intensity
+      } else if (pointerX > rightZone) {
+        const intensity = Math.min(1, (pointerX - rightZone) / SCROLL_ZONE)
+        delta = SCROLL_SPEED * intensity
+      }
+
+      if (delta !== 0) {
+        container.scrollLeft += delta
+        container.dispatchEvent(new Event("scroll"))
+      }
+
+      frameId = window.requestAnimationFrame(loop)
+    }
+
+    window.addEventListener("mousemove", handleMouseMove)
+    frameId = window.requestAnimationFrame(loop)
+
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove)
+      if (frameId) window.cancelAnimationFrame(frameId)
+    }
+  }, [isDragging, containerRef])
+}
+
+const formatBR = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+const getParecerLabel = (status?: string | null) => {
+  switch (status) {
+    case "APROVADO":
+      return "Aprovado"
+    case "AJUSTAR_DADOS":
+      return "Ajustar dados"
+    case "RISCO_ALTO":
+      return "Risco alto"
+    case "IMPEDIMENTO":
+      return "Impedimento"
+    case "NAO_ELEGIVEL":
+      return "Não elegível"
+    default:
+      return status || "Parecer"
+  }
+}
+
+type KanbanColumn = (typeof KANBAN_COLUMNS)[number]
+
+type KanbanCardItemProps = {
+  precatorio: PrecatorioCard
+  colunaId: string
+  isAtualizado: boolean
+  podeCalculos: boolean
+  isDragging: boolean
+  onOpenDetails: (precatorioId: string, updatedAt?: string | null) => void
+  onOpenCalculo: (precatorioId: string) => void
+}
+
+const KanbanCardItem = memo(function KanbanCardItem({
+  precatorio,
+  colunaId,
+  isAtualizado,
+  podeCalculos,
+  isDragging,
+  onOpenDetails,
+  onOpenCalculo,
+}: KanbanCardItemProps) {
+  const numeroPrecatorio = precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : null
+
+  return (
+    <Card
+      className={`cursor-pointer rounded-xl border bg-zinc-50/90 dark:bg-zinc-900/70 shadow-sm group hover:shadow-md hover:border-primary/30 transition ${isDragging
+        ? "shadow-xl ring-2 ring-primary/50"
+        : precatorio.motivo_atraso_calculo
+          ? "border-red-500 dark:border-red-500 ring-1 ring-red-500/20"
+          : "border-zinc-200/80 dark:border-zinc-800/70"
+        }`}
+    >
+      <CardContent className="p-3">
+        <div className="space-y-2">
+          <div className="flex items-start justify-between gap-2">
+            <h4
+              className="font-semibold text-sm flex-1 leading-snug text-foreground line-clamp-2 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
+              onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
+            >
+              {precatorio.titulo || numeroPrecatorio || "Sem título"}
+            </h4>
+            {isAtualizado && (
+              <span
+                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15 text-red-600"
+                title="Atualizado"
+              >
+                <Bell className="h-3.5 w-3.5" />
+              </span>
+            )}
+          </div>
+
+          {numeroPrecatorio && (
+            <div className="text-[11px] font-medium text-muted-foreground">
+              Precatório: <span className="text-foreground/90">{numeroPrecatorio}</span>
+            </div>
+          )}
+
+          <p className="text-xs text-muted-foreground line-clamp-1">{precatorio.credor_nome}</p>
+
+          <div className="flex flex-wrap gap-1.5 pt-1">
+            {colunaId === "encerrados" && (
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                {ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
+              </Badge>
+            )}
+            {precatorio.urgente && (
+              <Badge variant="destructive" className="text-[10px] h-5 px-1.5">
+                Urgente
+              </Badge>
+            )}
+            {precatorio.titular_falecido && (
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                Titular falecido
+              </Badge>
+            )}
+            {precatorio.calculo_desatualizado && (
+              <Badge
+                variant="outline"
+                className="text-[10px] h-5 px-1.5 border-amber-300 text-amber-700 dark:text-amber-300"
+              >
+                Cálculo desatualizado
+              </Badge>
+            )}
+            {precatorio.interesse_status && (
+              <Badge
+                variant={precatorio.interesse_status === "TEM_INTERESSE" ? "default" : "secondary"}
+                className="text-[10px] h-5 px-1.5"
+              >
+                {precatorio.interesse_status === "TEM_INTERESSE" ? (
+                  <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
+                ) : (
+                  <Clock className="h-2.5 w-2.5 mr-1" />
+                )}
+                {precatorio.interesse_status === "TEM_INTERESSE" ? "Interesse" : "Análise"}
+              </Badge>
+            )}
+
+            {precatorio.calculo_ultima_versao > 0 && (
+              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
+                v{precatorio.calculo_ultima_versao}
+              </Badge>
+            )}
+
+            {precatorio.file_url && (
+              <a href={precatorio.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
+                <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400">
+                  <FileText className="h-2.5 w-2.5" />
+                  Ofício
+                </Badge>
+              </a>
+            )}
+
+            {precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status && (
+              <Badge
+                variant="outline"
+                className="text-[10px] h-5 px-1.5 border-red-200 text-red-700 dark:text-red-300"
+              >
+                Jurídico: {getParecerLabel(precatorio.juridico_parecer_status)}
+              </Badge>
+            )}
+
+            {precatorio.motivo_atraso_calculo && (
+              <Badge variant="destructive" className="text-[10px] h-5 px-1.5 animate-pulse">
+                <AlertCircle className="h-2.5 w-2.5 mr-1" />
+                Em Atraso
+              </Badge>
+            )}
+          </div>
+
+          {((precatorio.valor_atualizado && precatorio.valor_atualizado > 0) || (precatorio.valor_principal && precatorio.valor_principal > 0)) && (
+            <div className="flex items-center justify-between pt-2 border-t border-border/50">
+              <span className="text-[10px] text-muted-foreground">
+                {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
+              </span>
+              <span className="text-xs font-bold text-foreground">
+                {formatBR((precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? precatorio.valor_atualizado : precatorio.valor_principal) ?? 0)}
+              </span>
+            </div>
+          )}
+
+          <div className="pt-2 flex items-center justify-between gap-2">
+            {precatorio.responsavel_perfil?.nome && (
+              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md max-w-[55%] truncate shrink-0" title={`Responsável: ${precatorio.responsavel_perfil.nome}`}>
+                <User className="h-3 w-3 shrink-0" />
+                <span className="truncate">{precatorio.responsavel_perfil.nome.split(" ")[0]}</span>
+              </div>
+            )}
+
+            <Button
+              variant={podeCalculos ? "secondary" : "ghost"}
+              size="sm"
+              className={`flex-1 text-[10px] h-7 ${!podeCalculos ? "opacity-50" : "hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"}`}
+              disabled={!podeCalculos}
+              onClick={(e) => {
+                e.stopPropagation()
+                if (podeCalculos) {
+                  onOpenCalculo(precatorio.id)
+                }
+              }}
+            >
+              {podeCalculos ? (
+                <>
+                  <LockOpen className="h-3 w-3 mr-1.5" />
+                  Cálculo
+                </>
+              ) : (
+                <>
+                  <Lock className="h-3 w-3 mr-1.5" />
+                  Bloqueado
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+})
+
+type KanbanColumnProps = {
+  coluna: KanbanColumn
+  precatorios: PrecatorioCard[]
+  totalColuna: number
+  isDragging: boolean
+  updatedPrecatorios: Set<string>
+  podeAcessarCalculos: (precatorio: PrecatorioCard) => boolean
+  onOpenDetails: (precatorioId: string, updatedAt?: string | null) => void
+  onOpenCalculo: (precatorioId: string) => void
+}
+
+const KanbanColumn = memo(function KanbanColumn({
+  coluna,
+  precatorios,
+  totalColuna,
+  isDragging,
+  updatedPrecatorios,
+  podeAcessarCalculos,
+  onOpenDetails,
+  onOpenCalculo,
+}: KanbanColumnProps) {
+  const c = coluna.color
+
+  return (
+    <div className="flex-shrink-0 min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col snap-start">
+      <Droppable droppableId={coluna.id}>
+        {(provided) => (
+          <Card
+            ref={provided.innerRef}
+            {...provided.droppableProps}
+            className={`flex flex-col h-full rounded-2xl ring-1 ${c.ring} bg-zinc-100/90 dark:bg-zinc-900/75 border border-zinc-300/60 dark:border-zinc-800/70 shadow-sm`}
+          >
+            <CardHeader className={`pb-3 z-10 rounded-t-2xl sticky top-0 shadow-sm ring-1 ${c.ring} ${c.bg} border-b border-zinc-200/70 dark:border-zinc-800/70 backdrop-blur`}>
+              <div className="flex items-center gap-2">
+                <span className={`h-4 w-1.5 rounded-full ${c.bar}`} />
+                <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
+                <CardTitle className={`text-sm font-semibold ${c.text}`}>{coluna.titulo}</CardTitle>
+                <span className="ml-auto text-xs font-medium text-zinc-700 dark:text-zinc-200 bg-zinc-50/90 dark:bg-zinc-900/70 px-1.5 py-0.5 rounded-full ring-1 ring-zinc-200/70 dark:ring-zinc-800/70">
+                  {precatorios.length}
+                </span>
+              </div>
+              <div className="text-xs font-semibold text-zinc-800 dark:text-zinc-100 mt-1 flex justify-between items-center">
+                <span>Total:</span>
+                <span className="font-mono tabular-nums">{formatBR(totalColuna)}</span>
+              </div>
+            </CardHeader>
+
+            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
+              <div
+                data-kanban-scroll
+                className={`space-y-3 p-3 h-full min-h-[120px] ${isDragging ? "overflow-y-hidden" : "overflow-y-auto"} overscroll-contain rounded-b-2xl bg-zinc-100/40 dark:bg-zinc-900/40`}
+              >
+                {precatorios.map((precatorio, index) => {
+                  const podeCalculos = podeAcessarCalculos(precatorio)
+                  const isAtualizado = updatedPrecatorios.has(precatorio.id)
+
+                  return (
+                    <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
+                      {(provided, snapshot) => (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          style={{
+                            ...provided.draggableProps.style,
+                            opacity: snapshot.isDragging ? 0.9 : 1,
+                          }}
+                        >
+                          <KanbanCardItem
+                            precatorio={precatorio}
+                            colunaId={coluna.id}
+                            isAtualizado={isAtualizado}
+                            podeCalculos={podeCalculos}
+                            isDragging={snapshot.isDragging}
+                            onOpenDetails={onOpenDetails}
+                            onOpenCalculo={onOpenCalculo}
+                          />
+                        </div>
+                      )}
+                    </Draggable>
+                  )
+                })}
+                {provided.placeholder}
+                {precatorios.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-10 opacity-60">
+                    <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-3 mb-2">
+                      <Kanban className="h-6 w-6 text-muted-foreground/50" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Arraste aqui</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+      </Droppable>
+    </div>
+  )
+})
 
 export default function KanbanPageNewGates() {
   const { profile } = useAuth()
@@ -84,6 +460,11 @@ export default function KanbanPageNewGates() {
   const [precatorios, setPrecatorios] = useState<PrecatorioCard[]>([])
   const [loading, setLoading] = useState(true)
   const [filtros, setFiltros] = useState<FiltrosPrecatorios>({}) // Filtros state
+  const [updatedPrecatorios, setUpdatedPrecatorios] = useState<Set<string>>(new Set())
+  const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
+  const canEnviarCalculoRoles = roles.some((role) =>
+    ["admin", "juridico", "analista", "analista_processual"].includes(role)
+  )
 
   const [moveDialog, setMoveDialog] = useState<{
     open: boolean
@@ -97,6 +478,18 @@ export default function KanbanPageNewGates() {
     colunaDestino: null,
     validacao: null,
   })
+  const [triagemModal, setTriagemModal] = useState<{
+    open: boolean
+    precatorioId: string | null
+    status: string
+    observacao: string
+  }>({
+    open: false,
+    precatorioId: null,
+    status: "SEM_CONTATO",
+    observacao: "",
+  })
+  const [triagemSaving, setTriagemSaving] = useState(false)
   const [motivoFechamento, setMotivoFechamento] = useState("")
   const [semInteresseDialog, setSemInteresseDialog] = useState<{
     open: boolean
@@ -106,6 +499,15 @@ export default function KanbanPageNewGates() {
     precatorioId: null,
   })
 
+  const [encerradosDialog, setEncerradosDialog] = useState<{
+    open: boolean
+    precatorioId: string | null
+    colunaDestino: string
+  }>({
+    open: false,
+    precatorioId: null,
+    colunaDestino: "pos_fechamento",
+  })
   const [isDragging, setIsDragging] = useState(false)
 
   /*
@@ -157,6 +559,72 @@ export default function KanbanPageNewGates() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile])
 
+  const UPDATES_STORAGE_KEY = "kanban_precatorio_last_seen_v1"
+
+  const readLastSeenMap = () => {
+    if (typeof window === "undefined") return {} as Record<string, string>
+    try {
+      const raw = window.localStorage.getItem(UPDATES_STORAGE_KEY)
+      if (!raw) return {} as Record<string, string>
+      const parsed = JSON.parse(raw)
+      return parsed && typeof parsed === "object" ? parsed : ({} as Record<string, string>)
+    } catch {
+      return {} as Record<string, string>
+    }
+  }
+
+  const writeLastSeenMap = (map: Record<string, string>) => {
+    if (typeof window === "undefined") return
+    try {
+      window.localStorage.setItem(UPDATES_STORAGE_KEY, JSON.stringify(map))
+    } catch {
+      return
+    }
+  }
+
+  const updateUpdatedFlags = (items: PrecatorioCard[]) => {
+    const lastSeen = readLastSeenMap()
+    const hasSeed = Object.keys(lastSeen).length > 0
+
+    if (!hasSeed) {
+      const seeded: Record<string, string> = { ...lastSeen }
+      items.forEach((prec) => {
+        const stamp = prec.updated_at || prec.created_at
+        if (stamp) seeded[prec.id] = stamp
+      })
+      writeLastSeenMap(seeded)
+      setUpdatedPrecatorios(new Set())
+      return
+    }
+
+    const updated = new Set<string>()
+    items.forEach((prec) => {
+      const stamp = prec.updated_at || prec.created_at
+      if (!stamp) return
+      const last = lastSeen[prec.id]
+      if (!last || new Date(stamp).getTime() > new Date(last).getTime()) {
+        updated.add(prec.id)
+      }
+    })
+    setUpdatedPrecatorios(updated)
+  }
+
+  const markPrecatorioUpdateSeen = useCallback((precatorioId: string, updatedAt?: string | null) => {
+    const lastSeen = readLastSeenMap()
+    const current =
+      updatedAt ||
+      precatorios.find((p) => p.id === precatorioId)?.updated_at ||
+      precatorios.find((p) => p.id === precatorioId)?.created_at
+    if (!current) return
+    lastSeen[precatorioId] = current
+    writeLastSeenMap(lastSeen)
+    setUpdatedPrecatorios((prev) => {
+      const next = new Set(prev)
+      next.delete(precatorioId)
+      return next
+    })
+  }, [precatorios])
+
   async function loadPrecatorios() {
     try {
       const supabase = createBrowserClient()
@@ -164,40 +632,62 @@ export default function KanbanPageNewGates() {
 
       setLoading(true)
 
-      const { data: precatoriosData, error } = await supabase
+      const selectFields = `
+        id,
+        titulo,
+        numero_precatorio,
+        credor_nome,
+        devedor,
+        tribunal,
+        status_kanban,
+        interesse_status,
+        juridico_parecer_status,
+        juridico_resultado_final,
+        calculo_desatualizado,
+        calculo_ultima_versao,
+        valor_principal,
+        valor_atualizado,
+        saldo_liquido,
+        prioridade,
+        responsavel,
+        responsavel_certidoes_id,
+        responsavel_juridico_id,
+        responsavel_calculo_id,
+        created_at,
+        updated_at,
+        nivel_complexidade,
+        sla_status,
+        tipo_atraso,
+        impacto_atraso,
+        urgente,
+        status,
+        file_url,
+        motivo_atraso_calculo,
+        motivo_sem_interesse,
+        data_recontato,
+        responsavel_perfil:usuarios!responsavel(nome)
+      `
+
+      let precatoriosData: any[] | null = null
+      const { data, error } = await supabase
         .from('precatorios')
-        .select(`
-          id,
-          titulo,
-          numero_precatorio,
-          credor_nome,
-          devedor,
-          tribunal,
-          status_kanban,
-          interesse_status,
-          calculo_desatualizado,
-          calculo_ultima_versao,
-          valor_principal,
-          valor_atualizado,
-          saldo_liquido,
-          prioridade,
-          responsavel,
-          responsavel_certidoes_id,
-          responsavel_juridico_id,
-          responsavel_calculo_id,
-          created_at,
-          nivel_complexidade,
-          sla_status,
-          tipo_atraso,
-          impacto_atraso,
-          urgente,
-          status,
-          file_url
-        `)
+        .select(selectFields)
         .is('deleted_at', null)
         .order('created_at', { ascending: false })
 
-      if (error) throw error
+      if (error) {
+        // Fallback para bancos ainda sem colunas novas (evita quebra da tela)
+        console.warn("[Kanban] Falha no select detalhado, tentando fallback:", error)
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from('precatorios')
+          .select('*')
+          .is('deleted_at', null)
+          .order('created_at', { ascending: false })
+        if (fallbackError) throw fallbackError
+        precatoriosData = fallbackData
+      } else {
+        precatoriosData = data
+      }
 
       // Buscar resumos
       const precatoriosComResumo = await Promise.all(
@@ -243,11 +733,18 @@ export default function KanbanPageNewGates() {
       })
 
       setPrecatorios(precatoriosFiltrados as PrecatorioCard[])
+      updateUpdatedFlags(precatoriosFiltrados as PrecatorioCard[])
     } catch (error) {
       console.error("[Kanban] Erro ao carregar:", error)
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : typeof error === "string"
+            ? error
+            : JSON.stringify(error)
       toast({
         title: "Erro",
-        description: "Não foi possível carregar os precatórios",
+        description: errorMessage || "Não foi possível carregar os precatórios",
         variant: "destructive",
       })
     } finally {
@@ -342,13 +839,14 @@ export default function KanbanPageNewGates() {
   }
 
   const filtrosAtivos = getFiltrosAtivos(filtros)
-  const filteredPrecatorios = getFilteredPrecatorios()
+  const filteredPrecatorios = useMemo(() => getFilteredPrecatorios(), [precatorios, filtros])
 
   const agruparPorColuna = () => {
     const grupos: Record<string, PrecatorioCard[]> = {}
 
     COLUNAS.forEach((coluna) => {
-      grupos[coluna.id] = filteredPrecatorios.filter((p) => p.status_kanban === coluna.id)
+      const statusIds = coluna.statusIds ?? [coluna.id]
+      grupos[coluna.id] = filteredPrecatorios.filter((p) => statusIds.includes(p.status_kanban))
     })
 
     return grupos
@@ -358,10 +856,6 @@ export default function KanbanPageNewGates() {
   const setSearchTerm = (term: string) => {
     setFiltros(prev => ({ ...prev, termo: term }))
   }
-
-  // ... restante do componente ... 
-
-  // Inside return statement replace header:
 
 
   const calcularTotalColuna = (precatorios: PrecatorioCard[]) => {
@@ -374,20 +868,35 @@ export default function KanbanPageNewGates() {
     }, 0)
   }
 
-  const formatBR = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+  function abrirTriagemModal(precatorioId: string) {
+    const precatorio = precatorios.find((p) => p.id === precatorioId)
+    setTriagemModal({
+      open: true,
+      precatorioId,
+      status: precatorio?.interesse_status || "SEM_CONTATO",
+      observacao: precatorio?.interesse_observacao || "",
+    })
+  }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  async function onDragEnd(result: any) {
-    const { destination, source, draggableId } = result
+  const podeEnviarParaCalculo = (precatorioId: string, colunaDestino: string) => {
+    if (colunaDestino !== "pronto_calculo") return true
+    const precatorioAtual = precatorios.find((p) => p.id === precatorioId)
+    const colunaAtual = precatorioAtual?.status_kanban || precatorioAtual?.status
+    if (colunaAtual !== "analise_processual_inicial") return true
+    return canEnviarCalculoRoles
+  }
 
-    if (!destination) return
-    if (destination.droppableId === source.droppableId) return
-
-    const colunaDestino = destination.droppableId
-
-    // [NEW] Validation: Require Ofício to move to Pronto p/ Cálculo
+  async function moverPrecatorio(precatorioId: string, colunaDestino: string) {
+    if (!podeEnviarParaCalculo(precatorioId, colunaDestino)) {
+      toast({
+        title: "Movimentação restrita",
+        description: "Somente jurídico, admin ou analista processual podem enviar para cálculo.",
+        variant: "destructive",
+      })
+      return
+    }
     if (colunaDestino === "pronto_calculo") {
-      const precatorio = precatorios.find(p => p.id === draggableId)
+      const precatorio = precatorios.find(p => p.id === precatorioId)
       if (!precatorio?.file_url) {
         toast({
           title: "Bloqueado",
@@ -398,11 +907,23 @@ export default function KanbanPageNewGates() {
       }
     }
 
-    // [NEW] Intercept move to "Sem Interesse"
+    const precatorioAtual = precatorios.find(p => p.id === precatorioId)
+    if (precatorioAtual?.status_kanban === "proposta_aceita" && colunaDestino === "certidoes") {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
+      if (!roles.includes("juridico")) {
+        toast({
+          title: "Movimentação restrita",
+          description: "Somente o Jurídico pode liberar de Jurídico de fechamento para Certidões.",
+          variant: "destructive",
+        })
+        return
+      }
+    }
     if (colunaDestino === "sem_interesse") {
       setSemInteresseDialog({
         open: true,
-        precatorioId: draggableId
+        precatorioId: precatorioId
       })
       return
     }
@@ -414,24 +935,22 @@ export default function KanbanPageNewGates() {
       // Validar movimentação
       const { data: validacao, error: validacaoError } = await supabase
         .rpc('validar_movimentacao_kanban', {
-          p_precatorio_id: draggableId,
+          p_precatorio_id: precatorioId,
           p_coluna_destino: colunaDestino
         })
 
       if (validacaoError) throw validacaoError
 
       if (!validacao.valido) {
-        // Movimentação bloqueada
         setMoveDialog({
           open: true,
-          precatorioId: draggableId,
+          precatorioId: precatorioId,
           colunaDestino: colunaDestino,
           validacao: validacao,
         })
         return
       }
 
-      // Mapeamento de status do Kanban para status do sistema
       const statusMapping: Record<string, string> = {
         pronto_calculo: 'em_calculo',
         calculo_andamento: 'em_calculo',
@@ -444,16 +963,14 @@ export default function KanbanPageNewGates() {
         updated_at: new Date().toISOString()
       }
 
-      // Se houver um mapeamento para o novo status, atualizar também
       if (statusMapping[colunaDestino]) {
         updateData.status = statusMapping[colunaDestino]
       }
 
-      // Se sucesso, atualizar
       const { error: updateError } = await supabase
         .from('precatorios')
         .update(updateData)
-        .eq('id', draggableId)
+        .eq('id', precatorioId)
 
       if (updateError) throw updateError
 
@@ -473,8 +990,61 @@ export default function KanbanPageNewGates() {
     }
   }
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  async function onDragEnd(result: any) {
+    const { destination, source, draggableId } = result
+
+    if (!destination) return
+    if (destination.droppableId === source.droppableId) return
+
+    const colunaDestino = destination.droppableId
+
+    if (colunaDestino === "encerrados") {
+      setEncerradosDialog({
+        open: true,
+        precatorioId: draggableId,
+        colunaDestino: ENCERRADOS_STATUS[0],
+      })
+      return
+    }
+
+    if (colunaDestino === "triagem_interesse") {
+      abrirTriagemModal(draggableId)
+      return
+    }
+
+    await moverPrecatorio(draggableId, colunaDestino)
+  }
+
+  async function confirmarEncerrados() {
+    if (!encerradosDialog.precatorioId) return
+
+    const destino = encerradosDialog.colunaDestino || ENCERRADOS_STATUS[0]
+
+    if (destino === "sem_interesse") {
+      setEncerradosDialog((prev) => ({ ...prev, open: false }))
+      setSemInteresseDialog({
+        open: true,
+        precatorioId: encerradosDialog.precatorioId,
+      })
+      return
+    }
+
+    setEncerradosDialog((prev) => ({ ...prev, open: false }))
+    await moverPrecatorio(encerradosDialog.precatorioId, destino)
+  }
+
   async function confirmarMovimentacao() {
     if (!moveDialog.precatorioId || !moveDialog.colunaDestino) return
+    if (!podeEnviarParaCalculo(moveDialog.precatorioId, moveDialog.colunaDestino)) {
+      toast({
+        title: "Movimentação restrita",
+        description: "Somente jurídico, admin ou analista processual podem enviar para cálculo.",
+        variant: "destructive",
+      })
+      setMoveDialog({ open: false, precatorioId: null, colunaDestino: null, validacao: null })
+      return
+    }
 
     try {
       const supabase = createBrowserClient()
@@ -526,8 +1096,87 @@ export default function KanbanPageNewGates() {
     }
   }
 
-  function podeAcessarCalculos(precatorio: PrecatorioCard): boolean {
-    // Verificar se está em coluna permitida
+  async function confirmarTriagemModal() {
+    if (!triagemModal.precatorioId) return
+
+    if (triagemModal.status === "SEM_INTERESSE") {
+      setTriagemModal({
+        open: false,
+        precatorioId: null,
+        status: "SEM_CONTATO",
+        observacao: "",
+      })
+      setSemInteresseDialog({
+        open: true,
+        precatorioId: triagemModal.precatorioId,
+      })
+      return
+    }
+
+    setTriagemSaving(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) return
+
+      const { data: validacao, error: validacaoError } = await supabase.rpc("validar_movimentacao_kanban", {
+        p_precatorio_id: triagemModal.precatorioId,
+        p_coluna_destino: "triagem_interesse",
+      })
+
+      if (validacaoError) throw validacaoError
+
+      if (validacao && !validacao.valido) {
+        setTriagemModal((prev) => ({ ...prev, open: false }))
+        setMoveDialog({
+          open: true,
+          precatorioId: triagemModal.precatorioId,
+          colunaDestino: "triagem_interesse",
+          validacao,
+        })
+        return
+      }
+
+      const updateData: any = {
+        status_kanban: "triagem_interesse",
+        interesse_status: triagemModal.status,
+        interesse_observacao: triagemModal.observacao.trim() || null,
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error: updateError } = await supabase
+        .from("precatorios")
+        .update(updateData)
+        .eq("id", triagemModal.precatorioId)
+
+      if (updateError) throw updateError
+
+      toast({
+        title: "Triagem registrada",
+        description: "O interesse do credor foi registrado com sucesso.",
+      })
+
+      setTriagemModal({
+        open: false,
+        precatorioId: null,
+        status: "SEM_CONTATO",
+        observacao: "",
+      })
+
+      await loadPrecatorios()
+    } catch (error: any) {
+      console.error("[Kanban] Erro na triagem:", error)
+      toast({
+        title: "Erro",
+        description: error?.message || "Não foi possível registrar a triagem.",
+        variant: "destructive",
+      })
+    } finally {
+      setTriagemSaving(false)
+    }
+  }
+
+  const podeAcessarCalculos = useCallback((precatorio: PrecatorioCard): boolean => {
+    // Verificar se est? em coluna permitida
     if (!COLUNAS_CALCULO_PERMITIDO.includes(precatorio.status_kanban)) {
       return false
     }
@@ -539,29 +1188,30 @@ export default function KanbanPageNewGates() {
     // Admin e Gestor tem acesso total
     if (roles.includes("admin") || roles.includes("gestor")) return true
 
-    // Operador de cálculo tem acesso se estiver na coluna correta
-    // (A responsabilidade já foi verificada no filtro de visualização da página)
+    // Operador de c?lculo tem acesso se estiver na coluna correta
+    // (A responsabilidade j? foi verificada no filtro de visualiza??o da p?gina)
     if (roles.includes("operador_calculo")) {
       return true
     }
 
     return false
-  }
+  }, [profile?.role])
 
-  function abrirDetalhe(precatorioId: string) {
-    // Operador comercial vai para página de visualização
-    // Admin e Operador de Cálculo vão para página de edição completa
+  const abrirDetalhe = useCallback((precatorioId: string, updatedAt?: string | null) => {
+    void markPrecatorioUpdateSeen(precatorioId, updatedAt)
+    // Operador comercial vai para p?gina de visualiza??o
+    // Admin e Operador de C?lculo v?o para p?gina de edi??o completa
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
     if (roles.includes("operador_comercial")) {
       router.push(`/precatorios/detalhes?id=${precatorioId}`)
     } else {
-      router.push(`/precatorios/visualizar?id=${precatorioId}`)
+      router.push(`/precatorios/detalhes?id=${precatorioId}`)
     }
-  }
+  }, [markPrecatorioUpdateSeen, profile?.role, router])
 
-  async function abrirAreaCalculos(precatorioId: string) {
-    // Atualizar status para Em Cálculo
+  const abrirAreaCalculos = useCallback(async (precatorioId: string) => {
+    // Atualizar status para Em C?lculo
     const supabase = createBrowserClient()
     if (supabase) {
       const { error } = await supabase
@@ -585,91 +1235,100 @@ export default function KanbanPageNewGates() {
       }
     }
 
-    // Redirecionar para a Calculadora (não para a fila)
+    // Redirecionar para a Calculadora (n?o para a fila)
     router.push(`/calcular?id=${precatorioId}`)
-  }
+  }, [router])
 
-  const grupos = agruparPorColuna()
+  const grupos = useMemo(() => agruparPorColuna(), [filteredPrecatorios])
+  const semInteressePrecatorio = semInteresseDialog.precatorioId
+    ? precatorios.find((p) => p.id === semInteresseDialog.precatorioId)
+    : undefined
 
   const scrollContainerRef = useRef<HTMLDivElement>(null)
+  const [canScrollLeft, setCanScrollLeft] = useState(false)
+  const [canScrollRight, setCanScrollRight] = useState(false)
+
+  const updateScrollButtons = useCallback(() => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    const maxScroll = container.scrollWidth - container.clientWidth
+    setCanScrollLeft(container.scrollLeft > 8)
+    setCanScrollRight(container.scrollLeft < maxScroll - 8)
+  }, [])
+
+  const handleWheel = useCallback((e: any) => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    if (e.shiftKey) return
+
+    const absX = Math.abs(e.deltaX || 0)
+    const absY = Math.abs(e.deltaY || 0)
+
+    if (absX > absY) {
+      container.scrollLeft += e.deltaX
+      e.preventDefault()
+      return
+    }
+
+    const target = e.target as HTMLElement | null
+    const scrollArea = target?.closest?.("[data-kanban-scroll]") as HTMLElement | null
+    if (scrollArea) {
+      const canScroll = scrollArea.scrollHeight > scrollArea.clientHeight + 1
+      if (canScroll) {
+        const atTop = scrollArea.scrollTop <= 0
+        const atBottom = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 1
+        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+          return
+        }
+      }
+    }
+
+    container.scrollLeft += e.deltaY
+    e.preventDefault()
+  }, [])
 
   useEffect(() => {
     const container = scrollContainerRef.current
     if (!container) return
 
-    const handleWheel = (e: WheelEvent) => {
-      if (e.deltaY !== 0) {
-        // Se o usuário não estiver segurando Shift (que já faz scroll horizontal nativo)
-        if (!e.shiftKey) {
-          e.preventDefault()
-          container.scrollLeft += e.deltaY * 1.5 // Multiplicador para velocidade
-        }
-      }
-    }
+    updateScrollButtons()
 
-    container.addEventListener('wheel', handleWheel, { passive: false })
+    const handleScroll = () => updateScrollButtons()
+    container.addEventListener("scroll", handleScroll, { passive: true })
+    window.addEventListener("resize", handleScroll)
 
     return () => {
-      container.removeEventListener('wheel', handleWheel)
+      container.removeEventListener("scroll", handleScroll)
+      window.removeEventListener("resize", handleScroll)
     }
-  }, [])
+  }, [updateScrollButtons])
 
-  // REACTIVATED & FIXED: Custom auto-scroll with MANUAL EVENT DISPATCH
-  // This solves the sync issue by forcing the library to detect the scroll change
   useEffect(() => {
-    if (!isDragging) return;
-    const container = scrollContainerRef.current;
-    if (!container) return;
+    const frame = window.requestAnimationFrame(() => updateScrollButtons())
+    return () => window.cancelAnimationFrame(frame)
+  }, [updateScrollButtons, filteredPrecatorios.length])
 
-    const SCROLL_ZONE = 100; // px form edge
-    const SCROLL_SPEED = 15; // px per frame
-
-    let animationFrameId: number;
-
-    const handleMouseMove = (e: MouseEvent) => {
-      const rect = container.getBoundingClientRect();
-      const relativeX = e.clientX - rect.left;
-
-      let scrollAmount = 0;
-
-      // Calculate scroll based on mouse position relative to container
-      if (relativeX < SCROLL_ZONE) {
-        // Scroll Left
-        const intensity = (SCROLL_ZONE - relativeX) / SCROLL_ZONE;
-        scrollAmount = -SCROLL_SPEED * intensity;
-      } else if (rect.width - relativeX < SCROLL_ZONE) {
-        // Scroll Right
-        const intensity = (SCROLL_ZONE - (rect.width - relativeX)) / SCROLL_ZONE;
-        scrollAmount = SCROLL_SPEED * intensity;
-      }
-
-      if (scrollAmount !== 0) {
-        container.scrollLeft += scrollAmount;
-        // CRITICAL FIX: Manually dispatch scroll event so react-beautiful-dnd updates coordinates
-        // This prevents the visual Desync
-        container.dispatchEvent(new Event('scroll'));
-      }
-    };
-
-    const loop = () => {
-      animationFrameId = requestAnimationFrame(loop);
-    };
-
-    window.addEventListener('mousemove', handleMouseMove);
-    animationFrameId = requestAnimationFrame(loop);
-
-    return () => {
-      window.removeEventListener('mousemove', handleMouseMove);
-      cancelAnimationFrame(animationFrameId);
-    };
-  }, [isDragging]);
+  useHorizontalAutoScroll(isDragging, scrollContainerRef)
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent mx-auto" />
-          <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
+      <div className="w-full px-4 h-[calc(100vh-7rem)] flex flex-col space-y-4">
+        <div className="space-y-4 border-b pb-6">
+          <div className="h-8 w-60 rounded-xl bg-muted/60 animate-pulse" />
+          <div className="h-4 w-80 rounded-lg bg-muted/40 animate-pulse" />
+        </div>
+        <div className="flex-1 min-h-0 overflow-hidden">
+          <div className="flex gap-4 overflow-hidden">
+            {COLUNAS.slice(0, 4).map((coluna) => (
+              <div
+                key={coluna.id}
+                className="min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col"
+              >
+                <div className="h-full rounded-2xl border border-border/60 bg-muted/30 animate-pulse" />
+              </div>
+            ))}
+          </div>
         </div>
       </div>
     )
@@ -687,6 +1346,14 @@ export default function KanbanPageNewGates() {
               Kanban Workflow
             </h1>
             <p className="text-muted-foreground mt-1">Fluxo controlado com gates de validação automática</p>
+            <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+              <Badge variant="secondary" className="px-2 py-0.5">
+                Total: {precatorios.length}
+              </Badge>
+              <Badge variant="outline" className="px-2 py-0.5">
+                Visíveis: {filteredPrecatorios.length}
+              </Badge>
+            </div>
           </div>
           <div className="flex items-center gap-2 w-full md:w-auto">
             <div className="w-full md:w-80">
@@ -733,10 +1400,16 @@ export default function KanbanPageNewGates() {
         )}
       </div>
 
+      {filteredPrecatorios.length === 0 && (
+        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
+          Nenhum precatório encontrado com os filtros atuais. Ajuste os filtros ou limpe a busca para ver todos.
+        </div>
+      )}
+
       {/* Container Principal com Altura Fixa */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <DragDropContext
-          disableAutoScroll={true} // Custom handler used instead
+          // Custom handler used instead for auto scroll
           onDragEnd={(result) => {
             setIsDragging(false);
             onDragEnd(result);
@@ -746,183 +1419,94 @@ export default function KanbanPageNewGates() {
             // Optional: Add class to body to prevent text selection
           }}
         >
-          <div
-            ref={scrollContainerRef}
-            id="kanban-scroll-container"
-            className="flex gap-4 overflow-x-auto pb-4 h-full px-1"
-          >
-            {COLUNAS.map((coluna) => {
-              const precatoriosColuna = grupos[coluna.id] || []
-              const totalColuna = calcularTotalColuna(precatoriosColuna)
+          <div className="relative h-full">
+            <div
+              ref={scrollContainerRef}
+              id="kanban-scroll-container"
+              className="flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-4 h-full px-1 snap-x snap-mandatory scroll-smooth overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+              onWheelCapture={handleWheel}
+            >
+              {COLUNAS.map((coluna) => {
+                const precatoriosColuna = grupos[coluna.id] || []
+                const totalColuna = calcularTotalColuna(precatoriosColuna)
 
-              return (
-                <div key={coluna.id} className="flex-shrink-0 w-80 h-full flex flex-col">
-                  <Card className="flex flex-col h-full shadow-md border-border/50 bg-card/50">
-                    {/* Header Sticky */}
-                    <CardHeader className="pb-3 border-b bg-card/95 z-10 rounded-t-lg sticky top-0 shadow-sm">
-                      <div className="flex items-center gap-2">
-                        <div className={`w-3 h-3 rounded-full ${coluna.cor}`} />
-                        <CardTitle className="text-sm font-bold text-orange-700 dark:text-orange-400 uppercase tracking-tighter">{coluna.titulo}</CardTitle>
-                        <span className="ml-auto text-xs font-medium text-muted-foreground bg-muted px-1.5 py-0.5 rounded-full">
-                          {precatoriosColuna.length}
-                        </span>
-                      </div>
-                      <div className="text-xs font-bold text-primary mt-1 flex justify-between items-center">
-                        <span>Total:</span>
-                        <span>{formatBR(totalColuna)}</span>
-                      </div>
-                    </CardHeader>
-
-                    {/* Área de Drop com Scroll Interno */}
-                    <Droppable
-                      droppableId={coluna.id}
-                      ignoreContainerClipping={true}
-                    >
-                      {(provided) => (
-                        <CardContent
-                          ref={provided.innerRef}
-                          {...provided.droppableProps}
-                          className="space-y-3 p-3 flex-1 overflow-y-auto min-h-[100px]"
-                        >
-                          {precatoriosColuna.map((precatorio, index) => {
-                            const podeCalculos = podeAcessarCalculos(precatorio)
-
-                            return (
-                              <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
-                                {(provided, snapshot) => (
-                                  <div
-                                    ref={provided.innerRef}
-                                    {...provided.draggableProps}
-                                    {...provided.dragHandleProps}
-                                    style={{
-                                      ...provided.draggableProps.style,
-                                      opacity: snapshot.isDragging ? 0.9 : 1,
-                                    }}
-                                  >
-                                    <Card
-                                      className={`cursor-pointer hover:shadow-lg hover:border-primary/40 border-border/60 bg-card group ${snapshot.isDragging ? 'shadow-xl ring-2 ring-primary/50 rotate-2 scale-105' : 'transition-all duration-200'
-                                        }`}
-                                    >
-                                      <CardContent className="p-3">
-                                        <div className="space-y-2">
-                                          {/* Título */}
-                                          <div className="flex items-start justify-between gap-2">
-                                            <h4
-                                              className="font-bold text-sm flex-1 leading-tight text-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
-                                              onClick={() => abrirDetalhe(precatorio.id)}
-                                            >
-                                              {precatorio.titulo || precatorio.numero_precatorio || "Sem título"}
-                                            </h4>
-                                          </div>
-
-                                          {/* Credor */}
-                                          <p className="text-xs text-muted-foreground line-clamp-1">{precatorio.credor_nome}</p>
-
-                                          {/* Badges de Status */}
-                                          <div className="flex flex-wrap gap-1.5 pt-1">
-                                            {/* Interesse */}
-                                            {precatorio.interesse_status && (
-                                              <Badge
-                                                variant={
-                                                  precatorio.interesse_status === "TEM_INTERESSE"
-                                                    ? "default"
-                                                    : "secondary"
-                                                }
-                                                className="text-[10px] h-5 px-1.5"
-                                              >
-                                                {precatorio.interesse_status === "TEM_INTERESSE" ? (
-                                                  <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                                                ) : (
-                                                  <Clock className="h-2.5 w-2.5 mr-1" />
-                                                )}
-                                                {precatorio.interesse_status === "TEM_INTERESSE" ? "Interesse" : "Análise"}
-                                              </Badge>
-                                            )}
-
-                                            {/* Versão do Cálculo */}
-                                            {precatorio.calculo_ultima_versao > 0 && (
-                                              <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
-                                                v{precatorio.calculo_ultima_versao}
-                                              </Badge>
-                                            )}
-
-                                            {/* Ofício (PDF) */}
-                                            {precatorio.file_url && (
-                                              <a href={precatorio.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                                                <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400">
-                                                  <FileText className="h-2.5 w-2.5" />
-                                                  Ofício
-                                                </Badge>
-                                              </a>
-                                            )}
-                                          </div>
-
-                                          {/* Valores */}
-                                          {((precatorio.valor_atualizado && precatorio.valor_atualizado > 0) || (precatorio.valor_principal && precatorio.valor_principal > 0)) && (
-                                            <div className="flex items-center justify-between pt-2 border-t border-border/50">
-                                              <span className="text-[10px] text-muted-foreground">
-                                                {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
-                                              </span>
-                                              <span className="text-xs font-bold text-foreground">
-                                                {formatBR((precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? precatorio.valor_atualizado : precatorio.valor_principal) ?? 0)}
-                                              </span>
-                                            </div>
-                                          )}
-
-                                          {/* Botão Área de Cálculos */}
-                                          <div className="pt-2">
-                                            <Button
-                                              variant={podeCalculos ? "secondary" : "ghost"}
-                                              size="sm"
-                                              className={`w-full text-[10px] h-7 ${!podeCalculos ? 'opacity-50' : 'hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 dark:hover:text-orange-400'}`}
-                                              disabled={!podeCalculos}
-                                              onClick={(e) => {
-                                                e.stopPropagation()
-                                                if (podeCalculos) {
-                                                  abrirAreaCalculos(precatorio.id)
-                                                }
-                                              }}
-                                            >
-                                              {podeCalculos ? (
-                                                <>
-                                                  <LockOpen className="h-3 w-3 mr-1.5" />
-                                                  Área de Cálculos
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <Lock className="h-3 w-3 mr-1.5" />
-                                                  Bloqueado
-                                                </>
-                                              )}
-                                            </Button>
-                                          </div>
-                                        </div>
-                                      </CardContent>
-                                    </Card>
-                                  </div>
-                                )}
-                              </Draggable>
-                            )
-                          })}
-                          {provided.placeholder}
-                          {precatoriosColuna.length === 0 && (
-                            <div className="flex flex-col items-center justify-center py-10 opacity-50">
-                              <div className="border-2 border-dashed border-muted-foreground/30 rounded-lg p-3 mb-2">
-                                <Kanban className="h-6 w-6 text-muted-foreground/50" />
-                              </div>
-                              <p className="text-xs text-muted-foreground">Vazio</p>
-                            </div>
-                          )}
-                        </CardContent>
-                      )}
-                    </Droppable>
-                  </Card>
-                </div>
-              )
-            })}
+                return (
+                  <KanbanColumn
+                    key={coluna.id}
+                    coluna={coluna}
+                    precatorios={precatoriosColuna}
+                    totalColuna={totalColuna}
+                    isDragging={isDragging}
+                    updatedPrecatorios={updatedPrecatorios}
+                    podeAcessarCalculos={podeAcessarCalculos}
+                    onOpenDetails={abrirDetalhe}
+                    onOpenCalculo={abrirAreaCalculos}
+                  />
+                )
+              })}
+            </div>
+            {canScrollLeft && (
+              <button
+                type="button"
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: -360, behavior: "smooth" })}
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full border border-border/60 bg-background/80 backdrop-blur shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+                aria-label="Scroll para a esquerda"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+            )}
+            {canScrollRight && (
+              <button
+                type="button"
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: 360, behavior: "smooth" })}
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full border border-border/60 bg-background/80 backdrop-blur shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition"
+                aria-label="Scroll para a direita"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            )}
           </div>
         </DragDropContext>
-      </div>
+      </div >
+
+      <Dialog open={encerradosDialog.open} onOpenChange={(open) => setEncerradosDialog((prev) => ({ ...prev, open }))}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Definir status do encerramento</DialogTitle>
+            <DialogDescription>Escolha em qual status esse precat\u00f3rio deve ficar.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3">
+            <Select
+              value={encerradosDialog.colunaDestino}
+              onValueChange={(value) =>
+                setEncerradosDialog((prev) => ({ ...prev, colunaDestino: value }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status" />
+              </SelectTrigger>
+              <SelectContent>
+                {ENCERRADOS_STATUS.map((status) => (
+                  <SelectItem key={status} value={status}>
+                    {ENCERRADOS_LABELS[status] || status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {encerradosDialog.colunaDestino === "sem_interesse" && (
+              <p className="text-xs text-muted-foreground">
+                Ao confirmar, você preencherá o motivo e o recontato no próximo modal.
+              </p>
+            )}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEncerradosDialog((prev) => ({ ...prev, open: false }))}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarEncerrados}>Confirmar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Dialog de Validação/Bloqueio */}
       <Dialog open={moveDialog.open} onOpenChange={(open) => !open && setMoveDialog({ ...moveDialog, open: false })}>
@@ -1005,11 +1589,22 @@ export default function KanbanPageNewGates() {
         precatorioId={semInteresseDialog.precatorioId || ""}
         onConfirm={async (motivo, dataRecontato) => {
           const supabase = createBrowserClient()
+          if (!supabase) return
+
+          const precatorioId = semInteresseDialog.precatorioId
+          const precatorioInfo = precatorios.find((p) => p.id === precatorioId)
+          const precatorioLabel =
+            precatorioInfo?.titulo ||
+            precatorioInfo?.numero_precatorio ||
+            precatorioInfo?.credor_nome ||
+            "PrecatÃ³rio"
+
           const { error } = await supabase
             .from("precatorios")
             .update({
               status_kanban: "sem_interesse",
               localizacao_kanban: "sem_interesse", // Sync both fields
+              interesse_status: "SEM_INTERESSE",
               motivo_sem_interesse: motivo,
               data_recontato: dataRecontato ? dataRecontato.toISOString() : null,
               updated_at: new Date().toISOString(),
@@ -1018,6 +1613,26 @@ export default function KanbanPageNewGates() {
 
           if (error) {
             throw error
+          }
+
+          if (dataRecontato && profile?.id && precatorioId) {
+            const dateLabel = dataRecontato.toLocaleDateString("pt-BR")
+            const { error: notificationError } = await supabase
+              .from("notifications")
+              .insert({
+                user_id: profile.id,
+                title: `Recontato agendado - ${precatorioLabel}`,
+                body: `Recontato marcado para ${dateLabel}.`,
+                kind: "warn",
+                link_url: `/precatorios/detalhes?id=${precatorioId}&tab=detalhes`,
+                entity_type: "precatorio",
+                entity_id: precatorioId,
+                event_type: "recontato",
+              })
+
+            if (notificationError) {
+              console.warn("Erro ao criar notificaÃ§Ã£o de recontato:", notificationError)
+            }
           }
 
           // Update local state
@@ -1036,7 +1651,58 @@ export default function KanbanPageNewGates() {
           // Refresh list to ensure consistency
           await loadPrecatorios()
         }}
+        initialMotivo={semInteressePrecatorio?.motivo_sem_interesse ?? ""}
+        initialDataRecontato={
+          semInteressePrecatorio?.data_recontato
+            ? new Date(semInteressePrecatorio.data_recontato)
+            : null
+        }
       />
-    </div>
+
+      <Dialog
+        open={triagemModal.open}
+        onOpenChange={(open) => !open && setTriagemModal((prev) => ({ ...prev, open: false }))}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Registrar Triagem</DialogTitle>
+            <DialogDescription>Informe o interesse do credor antes de mover para a triagem.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4">
+            <Select
+              value={triagemModal.status}
+              onValueChange={(value) => setTriagemModal((prev) => ({ ...prev, status: value }))}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o status de interesse" />
+              </SelectTrigger>
+              <SelectContent>
+                {TRIAGEM_STATUS_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <Textarea
+              value={triagemModal.observacao}
+              onChange={(e) => setTriagemModal((prev) => ({ ...prev, observacao: e.target.value }))}
+              placeholder="Observações (opcional)"
+              rows={3}
+            />
+          </div>
+          <DialogFooter className="mt-2">
+            <Button variant="outline" onClick={() => setTriagemModal((prev) => ({ ...prev, open: false }))}>
+              Cancelar
+            </Button>
+            <Button onClick={confirmarTriagemModal} disabled={triagemSaving}>
+              {triagemSaving ? "Registrando..." : "Confirmar triagem"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </div >
   )
 }
+
+

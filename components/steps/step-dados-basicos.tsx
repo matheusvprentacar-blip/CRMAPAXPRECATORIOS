@@ -1,163 +1,276 @@
-"use client"
+﻿"use client"
 
-import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { CurrencyInput } from "@/components/ui/currency-input"
-import { Textarea } from "@/components/ui/textarea"
-import { ArrowLeft, ArrowRight } from "lucide-react"
+import { KpiCard } from "@/components/ui/calc/KpiCard"
+import { SectionPanel } from "@/components/ui/calc/SectionPanel"
+import { Banknote, CalendarDays, Percent } from "lucide-react"
+import { StepFooter } from "@/components/ui/calc/StepFooter"
 
 interface StepDadosBasicosProps {
   dados: any
   setDados: (dados: any) => void
   onCompletar: (resultado: any) => void
   voltar: () => void
+  precatorioId?: string
 }
 
 export function StepDadosBasicos({ dados, setDados, onCompletar, voltar }: StepDadosBasicosProps) {
+  const principal = Number(dados.valor_principal_original || 0)
+  const juros = Number(dados.valor_juros_original || 0)
+  const multa = Number(dados.multa || 0)
+
+  const formatarMoeda = (valor: number) =>
+    valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+  const formatarMoedaOpcional = (valor: any) => {
+    if (valor === null || valor === undefined || valor === "") return "—"
+    const parsed = Number(valor)
+    if (!Number.isFinite(parsed)) return "—"
+    return formatarMoeda(parsed)
+  }
+
+  const formatarPercentual = (valor: any) => {
+    if (valor === null || valor === undefined || valor === "") return "—"
+    const parsed = Number(valor)
+    if (!Number.isFinite(parsed)) return "—"
+    return parsed.toLocaleString("pt-BR", { maximumFractionDigits: 2 }) + "%"
+  }
+
+  const formatarSimNao = (valor: any) => {
+    if (valor === true) return "Sim"
+    if (valor === false) return "Não"
+    return "Não informado"
+  }
+
+  const formatarHerdeiros = (valor: any) => {
+    if (typeof valor === "string" && valor.trim()) return valor
+    return formatarSimNao(valor)
+  }
+
+  const hasAnaliseInfo = [
+    dados.analise_penhora_valor,
+    dados.analise_penhora_percentual,
+    dados.analise_cessao_valor,
+    dados.analise_cessao_percentual,
+    dados.analise_adiantamento_valor,
+    dados.analise_adiantamento_percentual,
+    dados.analise_honorarios_valor,
+    dados.analise_honorarios_percentual,
+    dados.analise_itcmd,
+    dados.analise_itcmd_valor,
+    dados.analise_itcmd_percentual,
+    dados.analise_herdeiros,
+    dados.analise_observacoes,
+  ].some((valor) => valor !== null && valor !== undefined && valor !== "")
+
   const handleChange = (field: string, value: any) => {
     setDados({ ...dados, [field]: value })
   }
 
   const handleAvancar = () => {
+    const principalValor = Number(dados.valor_principal_original || 0)
+    const jurosValor = Number(dados.valor_juros_original || 0)
+    const multaValor = Number(dados.multa || 0)
+    // Regra solicitada: somar principal + juros + multa/selic como base para o cálculo
+    const principalSomado = principalValor + jurosValor + multaValor
+
     const resultado = {
       ...dados,
-      // Valores financeiros originais
-      valor_principal_original: dados.valor_principal_original || 0,
-      valor_juros_original: dados.valor_juros_original || 0,
-      multa: dados.multa || 0,
+      // Valores financeiros ajustados
+      valor_principal_original: principalSomado,
+      valor_juros_original: 0, // já incorporado ao principal
+      multa: 0, // já incorporada ao principal
+      principal_informado: principalValor,
+      juros_informados: jurosValor,
+      multa_informada: multaValor,
     }
     onCompletar(resultado)
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <CardTitle>Dados Básicos do Precatório</CardTitle>
-        <CardDescription>Preencha as informações cadastrais e valores do precatório</CardDescription>
+    <Card className="calc-card relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+      <CardHeader className="space-y-2">
+        <CardTitle className="calc-title">Dados Básicos do Precatório</CardTitle>
+        <CardDescription className="calc-subtitle">
+          Informe apenas os valores financeiros essenciais para iniciar o cálculo.
+        </CardDescription>
       </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-xs">Autor / Credor Originário</Label>
-            <Input
-              value={dados.autor_credor_originario || ""}
-              onChange={(e) => handleChange("autor_credor_originario", e.target.value)}
-              placeholder="Nome do credor"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Advogado da Ação</Label>
-            <Input
-              value={dados.advogado_acao || ""}
-              onChange={(e) => handleChange("advogado_acao", e.target.value)}
-              placeholder="Nome do advogado"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-xs">Número do Precatório</Label>
-            <Input
-              value={dados.numero_precatorio || ""}
-              onChange={(e) => handleChange("numero_precatorio", e.target.value)}
-              placeholder="0000000-00.0000.0.00.0000"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Número do Ofício Requisitório</Label>
-            <Input
-              value={dados.numero_oficio_requisitorio || ""}
-              onChange={(e) => handleChange("numero_oficio_requisitorio", e.target.value)}
-              placeholder="00000000/0000"
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-xs">Autos de Execução</Label>
-            <Input
-              value={dados.autos_execucao || ""}
-              onChange={(e) => handleChange("autos_execucao", e.target.value)}
-              placeholder="Número do processo"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Data de Expedição</Label>
-            <Input
-              type="date"
-              value={dados.data_expedicao || ""}
-              onChange={(e) => handleChange("data_expedicao", e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid gap-4 md:grid-cols-2">
-          <div className="space-y-2">
-            <Label className="text-xs">Vara de Origem</Label>
-            <Input
-              value={dados.vara_origem || ""}
-              onChange={(e) => handleChange("vara_origem", e.target.value)}
-              placeholder="Ex: 1ª Vara Federal"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label className="text-xs">Natureza do Ativo</Label>
-            <Input
-              value={dados.natureza_ativo || ""}
-              onChange={(e) => handleChange("natureza_ativo", e.target.value)}
-              placeholder="Ex: Alimentar, Comum"
-            />
-          </div>
-        </div>
-
-        <div className="space-y-2">
-          <Label className="text-xs">Observações</Label>
-          <Textarea
-            value={dados.observacoes || ""}
-            onChange={(e) => handleChange("observacoes", e.target.value)}
-            placeholder="Observações gerais sobre o precatório..."
-            className="min-h-[80px]"
-          />
-        </div>
-
-        <div className="border-t pt-4 mt-4">
-          <h4 className="text-sm font-medium mb-3">Valores Financeiros</h4>
+      <CardContent>
+        <div className="space-y-6">
           <div className="grid gap-4 md:grid-cols-3">
-            <div className="space-y-2">
-              <Label className="text-xs">Valor Principal</Label>
-              <CurrencyInput
-                value={dados.valor_principal_original || 0}
-                onChange={(value) => handleChange("valor_principal_original", value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Juros</Label>
-              <CurrencyInput
-                value={dados.valor_juros_original || 0}
-                onChange={(value) => handleChange("valor_juros_original", value)}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label className="text-xs">Valor Selic</Label>
-              <CurrencyInput value={dados.multa || 0} onChange={(value) => handleChange("multa", value)} />
-            </div>
+            <KpiCard
+              label="Valor Principal"
+              value={formatarMoeda(principal)}
+              helper="Base informada"
+              tone="primary"
+              icon={<Banknote className="h-4 w-4" />}
+            />
+            <KpiCard
+              label="Juros + Multa"
+              value={formatarMoeda(juros + multa)}
+              helper="Itens incorporados"
+              tone="warning"
+              icon={<Percent className="h-4 w-4" />}
+            />
+            <KpiCard
+              label="Data Base"
+              value={dados.data_base ? new Date(dados.data_base + "T12:00:00").toLocaleDateString("pt-BR") : "—"}
+              helper="Início do período"
+              tone="info"
+              icon={<CalendarDays className="h-4 w-4" />}
+            />
           </div>
+
+          <SectionPanel
+            title="Informações financeiras"
+            description="Preencha os valores conforme o ofício do precatório."
+            tone="primary"
+          >
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 space-y-2 md:col-span-6">
+                <Label className="text-sm text-muted-foreground">Valor Principal</Label>
+                <CurrencyInput
+                  value={dados.valor_principal_original || 0}
+                  onChange={(value) => handleChange("valor_principal_original", value)}
+                />
+              </div>
+              <div className="col-span-12 space-y-2 md:col-span-6">
+                <Label className="text-sm text-muted-foreground">Data Base</Label>
+                <Input
+                  type="date"
+                  value={dados.data_base || ""}
+                  onChange={(e) => handleChange("data_base", e.target.value)}
+                />
+              </div>
+              <div className="col-span-12 space-y-2 md:col-span-6">
+                <Label className="text-sm text-muted-foreground">Juros</Label>
+                <CurrencyInput
+                  value={dados.valor_juros_original || 0}
+                  onChange={(value) => handleChange("valor_juros_original", value)}
+                />
+              </div>
+              <div className="col-span-12 space-y-2 md:col-span-6">
+                <Label className="text-sm text-muted-foreground">Multa / Selic</Label>
+                <CurrencyInput
+                  value={dados.multa || 0}
+                  onChange={(value) => handleChange("multa", value)}
+                />
+              </div>
+            </div>
+          </SectionPanel>
+
+          <SectionPanel
+            title="Observações da análise processual"
+            description="Dados registrados na análise para apoiar o cálculo."
+            tone="warning"
+          >
+            {hasAnaliseInfo ? (
+              <div className="space-y-3">
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Penhora (R$)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarMoedaOpcional(dados.analise_penhora_valor)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Penhora (%)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarPercentual(dados.analise_penhora_percentual)}
+                    </p>
+                  </div>
+                  {dados.analise_cessao === true && (
+                    <>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Cessão (R$)</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatarMoedaOpcional(dados.analise_cessao_valor)}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">Cessão (%)</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatarPercentual(dados.analise_cessao_percentual)}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Adiantamento recebido (R$)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarMoedaOpcional(dados.analise_adiantamento_valor)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Adiantamento recebido (%)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarPercentual(dados.analise_adiantamento_percentual)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Honorários contratuais (R$)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarMoedaOpcional(dados.analise_honorarios_valor)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Honorários contratuais (%)</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarPercentual(dados.analise_honorarios_percentual)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">Herdeiros habilitados</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarHerdeiros(dados.analise_herdeiros)}
+                    </p>
+                  </div>
+                  <div className="space-y-1">
+                    <p className="text-xs text-muted-foreground">ITCMD</p>
+                    <p className="text-sm font-semibold text-foreground">
+                      {formatarSimNao(dados.analise_itcmd)}
+                    </p>
+                  </div>
+                  {dados.analise_itcmd === true && (
+                    <>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">ITCMD (R$)</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatarMoedaOpcional(dados.analise_itcmd_valor)}
+                        </p>
+                      </div>
+                      <div className="space-y-1">
+                        <p className="text-xs text-muted-foreground">ITCMD (%)</p>
+                        <p className="text-sm font-semibold text-foreground">
+                          {formatarPercentual(dados.analise_itcmd_percentual)}
+                        </p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {dados.analise_observacoes && (
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                    <p className="text-xs text-muted-foreground mb-1">Observações</p>
+                    <p className="text-sm text-foreground whitespace-pre-line">
+                      {dados.analise_observacoes}
+                    </p>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <p className="text-xs text-muted-foreground">
+                Nenhuma observação registrada na análise processual.
+              </p>
+            )}
+          </SectionPanel>
         </div>
 
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" size="sm" onClick={voltar}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Voltar
-          </Button>
-          <Button size="sm" onClick={handleAvancar}>
-            Avançar
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
-        </div>
+        <StepFooter onBack={voltar} onNext={handleAvancar} />
       </CardContent>
     </Card>
   )

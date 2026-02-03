@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
 import { Scale, AlertCircle, FileText, User, CalendarClock, Briefcase } from "lucide-react"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getSupabase } from "@/lib/supabase/client"
@@ -69,8 +70,8 @@ export default function JuridicoPage() {
             usuarios!responsavel(nome)
           `
                     )
-                    // Filtro: Tudo que está em 'juridico' ou 'analise_juridica' ou atribuído
-                    .or(`status_kanban.eq.juridico,status_kanban.eq.analise_juridica,responsavel_juridico_id.eq.${currentUser.id}`)
+                    // Filtro: Tudo que está em 'juridico' ou atribuído
+                    .or(`status_kanban.eq.juridico,status_kanban.eq.proposta_aceita,responsavel_juridico_id.eq.${currentUser.id}`)
                     .order("created_at", { ascending: true }) // FIFO
 
                 if (fetchError) {
@@ -98,7 +99,7 @@ export default function JuridicoPage() {
     }, [])
 
     const handleAbrir = (id: string) => {
-        router.push(`/precatorios/visualizar?id=${id}`)
+        router.push(`/precatorios/detalhes?id=${id}`)
     }
 
     if (loading) {
@@ -139,16 +140,29 @@ export default function JuridicoPage() {
             )}
 
             <div className="grid gap-4">
-                {precatorios.map((p, index) => (
-                    <Card
-                        key={p.id}
-                        className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-blue-500/40 group relative overflow-hidden"
-                        onClick={() => handleAbrir(p.id)}
-                    >
-                        <div className="absolute inset-0 bg-blue-500/0 group-hover:bg-blue-500/5 transition-colors" />
+                {precatorios.map((p, index) => {
+                    const isFechamento = p.status_kanban === "proposta_aceita"
+                    return (
+                        <Card
+                            key={p.id}
+                            className={cn(
+                                "hover:shadow-md transition-shadow cursor-pointer border-l-4 group relative overflow-hidden",
+                                isFechamento ? "border-l-emerald-500/70" : "border-l-blue-500/40"
+                            )}
+                            onClick={() => handleAbrir(p.id)}
+                        >
+                            <div className={cn(
+                                "absolute inset-0 transition-colors",
+                                isFechamento ? "bg-emerald-500/0 group-hover:bg-emerald-500/5" : "bg-blue-500/0 group-hover:bg-blue-500/5"
+                            )} />
 
-                        <CardContent className="p-6 flex items-center justify-between relative z-10">
-                            <div className="flex items-start gap-6 flex-1">
+                            <CardContent className="p-6 flex items-center justify-between relative z-10">
+                                {isFechamento && (
+                                    <Badge className="absolute right-5 top-4 bg-emerald-600 text-white">
+                                        Jurídico de fechamento
+                                    </Badge>
+                                )}
+                                <div className="flex items-start gap-6 flex-1">
                                 {/* Índice */}
                                 <div className="flex flex-col items-center justify-center min-w-[3rem]">
                                     <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-blue-500/40 transition-colors">
@@ -203,8 +217,10 @@ export default function JuridicoPage() {
                             </div>
                         </CardContent>
                     </Card>
-                ))}
+                    )
+                })}
             </div>
         </div>
     )
 }
+

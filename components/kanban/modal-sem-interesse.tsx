@@ -1,5 +1,5 @@
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
@@ -9,9 +9,8 @@ import { Calendar } from "@/components/ui/calendar"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { cn } from "@/lib/utils"
 import { CalendarIcon, Loader2 } from "lucide-react"
-import { format } from "date-fns"
+import { addDays, format } from "date-fns"
 import { ptBR } from "date-fns/locale"
-import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 
 interface ModalSemInteresseProps {
@@ -19,13 +18,36 @@ interface ModalSemInteresseProps {
     onOpenChange: (open: boolean) => void
     precatorioId: string
     onConfirm: (motivo: string, dataRecontato: Date | undefined) => void
+    initialMotivo?: string | null
+    initialDataRecontato?: Date | null
 }
 
-export function ModalSemInteresse({ open, onOpenChange, precatorioId, onConfirm }: ModalSemInteresseProps) {
-    const [motivo, setMotivo] = useState("")
-    const [agendarRecontato, setAgendarRecontato] = useState(false)
-    const [dataRecontato, setDataRecontato] = useState<Date | undefined>(undefined)
+export function ModalSemInteresse({
+    open,
+    onOpenChange,
+    precatorioId,
+    onConfirm,
+    initialMotivo,
+    initialDataRecontato,
+}: ModalSemInteresseProps) {
+    const [motivo, setMotivo] = useState(initialMotivo?.trim() ?? "")
+    const [agendarRecontato, setAgendarRecontato] = useState(!!initialDataRecontato)
+    const [dataRecontato, setDataRecontato] = useState<Date | undefined>(
+        initialDataRecontato ?? undefined
+    )
     const [saving, setSaving] = useState(false)
+
+    useEffect(() => {
+        if (!open) return
+        setMotivo(initialMotivo?.trim() ?? "")
+        if (initialDataRecontato) {
+            setAgendarRecontato(true)
+            setDataRecontato(initialDataRecontato)
+        } else {
+            setAgendarRecontato(false)
+            setDataRecontato(undefined)
+        }
+    }, [open, initialMotivo, initialDataRecontato, precatorioId])
 
     const handleSave = async () => {
         if (!motivo.trim()) {
@@ -76,10 +98,16 @@ export function ModalSemInteresse({ open, onOpenChange, precatorioId, onConfirm 
                     </div>
 
                     <div className="flex items-center space-x-2">
-                        <Checkbox
+                    <Checkbox
                             id="recontato"
                             checked={agendarRecontato}
-                            onCheckedChange={(checked) => setAgendarRecontato(!!checked)}
+                            onCheckedChange={(checked) => {
+                                const enabled = !!checked
+                                setAgendarRecontato(enabled)
+                                if (enabled && !dataRecontato) {
+                                    setDataRecontato(addDays(new Date(), 7))
+                                }
+                            }}
                         />
                         <Label htmlFor="recontato">Agendar Recontato?</Label>
                     </div>

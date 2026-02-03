@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -65,8 +65,8 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
             const { error: updateError } = await supabase
                 .from("precatorios")
                 .update({
-                    status: "analise_juridica",
-                    localizacao_kanban: "analise_juridica",
+                    status_kanban: "juridico",
+                    localizacao_kanban: "juridico",
                     juridico_motivo: motivo,
                     juridico_descricao_bloqueio: descricao.trim(),
                     updated_at: new Date().toISOString(),
@@ -80,7 +80,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                 precatorio_id: precatorioId,
                 usuario_id: user.id,
                 tipo: "mudanca_status",
-                descricao: `Enviado para Análise Jurídica: ${MOTIVOS_JURIDICOS.find((t) => t.value === motivo)?.label}`,
+                descricao: `Enviado para Jurídico: ${MOTIVOS_JURIDICOS.find((t) => t.value === motivo)?.label}`,
                 dados_novos: {
                     motivo: motivo,
                     descricao: descricao.trim(),
@@ -109,7 +109,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
                         <Scale className="h-5 w-5 text-purple-500" />
-                        Enviar para Análise Jurídica
+                        Enviar para Jurídico
                     </DialogTitle>
                     <DialogDescription>
                         Isso moverá o precatório <span className="font-medium">{precatorioTitulo}</span> para a fila do Jurídico.
@@ -182,3 +182,5 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
         </Dialog>
     )
 }
+
+

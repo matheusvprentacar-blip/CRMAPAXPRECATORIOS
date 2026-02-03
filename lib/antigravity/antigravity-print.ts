@@ -49,6 +49,10 @@ export async function antigravityPrint({ tipo, data, validacao, customTexts, pro
     // 2. Normalizar e preparar o objeto para o template (data-k)
     // Se tiver config e for tipo Credor, usamos a lógica dinâmica
     const printData = buildPropostaData(data, customTexts, proposalConfig)
+    printData.documento = {
+        ...printData.documento,
+        nome_arquivo: buildPropostaFilename(tipo, printData),
+    }
 
     // 3. Carregar o template HTML
     let templatePath = "/print/template-proposta-credor-apax.html"; // Fallback
@@ -116,6 +120,25 @@ export async function antigravityPrint({ tipo, data, validacao, customTexts, pro
         console.error("[AntigravityPrint] Erro:", error)
         throw error
     }
+}
+
+const INVALID_FILENAME_CHARS = /[\\/:*?"<>|]+/g
+
+function buildPropostaFilename(tipo: PrintConfig["tipo"], printData: any) {
+    const nomeParte = tipo === "honorarios"
+        ? (printData?.advogado?.nome || "Advogado")
+        : (printData?.credor?.nome || "Credor")
+
+    const base = tipo === "honorarios"
+        ? "Proposta de Aquisição de Honorários"
+        : "Proposta de Aquisição de Crédito"
+
+    const rawTitle = `${base} - ${nomeParte}`
+
+    return String(rawTitle)
+        .replace(INVALID_FILENAME_CHARS, "-")
+        .replace(/\s+/g, " ")
+        .trim()
 }
 
 /**
@@ -190,7 +213,7 @@ function buildPropostaData(p: any, customTexts?: any, config?: any) {
     return {
         empresa: {
             cnpj: "09.121.790/0001-38",
-            endereco: "Av. Paulista, 1000 - Bela Vista, São Paulo - SP",
+            endereco: "Rua Horeslau Savinski, 443, Jardim Apucarana, CEP 86809-070",
             representante_nome: "Representante Legal Apax"
         },
         documento: {
@@ -199,6 +222,10 @@ function buildPropostaData(p: any, customTexts?: any, config?: any) {
             versao: "1.0",
             gerado_por: "Sistema CRM Apax",
             observacoes: "Este documento é uma proposta comercial sujeita a análise definitiva."
+        },
+        titulo_documento: p.titulo_documento,
+        labels: {
+            credor: p.credor_label || "Credor"
         },
         credor: {
             nome: p.credor_nome || "NOME NÃO INFORMADO",

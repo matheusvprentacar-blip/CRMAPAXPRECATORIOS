@@ -246,7 +246,7 @@
             <div class="company-info">
                 <h1>Apax Investimentos Ltda.</h1>
                 <p>CNPJ: <span data-k="empresa.cnpj">09.121.790/0001-38</span></p>
-                <p data-k="empresa.endereco">Av. Paulista, 1000 - São Paulo/SP</p>
+                <p data-k="empresa.endereco">Rua Horeslau Savinski, 443, Jardim Apucarana, CEP 86809-070</p>
             </div>
         </header>
 
@@ -372,6 +372,11 @@
 
                 el.innerText = value;
             });
+
+            const fileTitle = (data.documento && data.documento.nome_arquivo)
+                ? data.documento.nome_arquivo
+                : (data.titulo_documento || document.title);
+            document.title = fileTitle;
         }
         window.render = render;
     </script>

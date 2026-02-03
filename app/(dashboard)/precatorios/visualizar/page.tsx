@@ -26,6 +26,7 @@ import {
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
+import { maskProcesso } from "@/lib/masks"
 
 // Supabase non-null helper
 type SupabaseClientType = NonNullable<ReturnType<typeof createBrowserClient>>
@@ -65,6 +66,19 @@ function PrecatorioDetailContent() {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<any>({})
   const [userRole, setUserRole] = useState<string[] | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const canManageOficio =
+    userRole?.some((role) =>
+      [
+        "admin",
+        "operador_comercial",
+        "operador_calculo",
+        "operador",
+        "gestor",
+        "gestor_oficio",
+        "gestor_certidoes",
+      ].includes(role),
+    ) ?? false
 
   async function loadPrecatorio() {
     if (!id) return
@@ -75,12 +89,15 @@ function PrecatorioDetailContent() {
 
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
+        setCurrentUserId(user.id)
         const { data: userData } = await supabase
           .from("usuarios")
           .select("role")
           .eq("id", user.id)
           .single()
         setUserRole(userData?.role || null)
+      } else {
+        setCurrentUserId(null)
       }
 
       const { data, error } = await supabase
@@ -522,11 +539,11 @@ function PrecatorioDetailContent() {
                             {isEditing ? (
                               <Input
                                 value={editData.numero_precatorio || ""}
-                                onChange={(e) => updateEditField("numero_precatorio", e.target.value)}
+                                onChange={(e) => updateEditField("numero_precatorio", maskProcesso(e.target.value))}
                                 className="h-8 text-sm"
                               />
                             ) : (
-                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_precatorio || "-"}</div>
+                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"}</div>
                             )}
                           </div>
                           <div className="space-y-1">
@@ -534,11 +551,11 @@ function PrecatorioDetailContent() {
                             {isEditing ? (
                               <Input
                                 value={editData.numero_processo || ""}
-                                onChange={(e) => updateEditField("numero_processo", e.target.value)}
+                                onChange={(e) => updateEditField("numero_processo", maskProcesso(e.target.value))}
                                 className="h-8 text-sm"
                               />
                             ) : (
-                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_processo || "-"}</div>
+                              <div className="px-2 py-1 bg-muted/30 rounded text-sm border border-transparent">{precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}</div>
                             )}
                           </div>
                         </div>
@@ -720,8 +737,8 @@ function PrecatorioDetailContent() {
                   precatorioId={precatorio.id}
                   fileUrl={precatorio.file_url}
                   onFileUpdate={loadPrecatorio}
-                  // Readonly for everyone except Admin and Gestor de Ofício
-                  readonly={!userRole?.some(r => ['admin', 'gestor_oficio'].includes(r))}
+                  readonly={!canManageOficio}
+                  currentStatus={precatorio.status_kanban || precatorio.localizacao_kanban || precatorio.status}
                 />
               </TabsContent>
 
@@ -766,7 +783,8 @@ function PrecatorioDetailContent() {
                   precatorioId={precatorio.id}
                   precatorio={precatorio}
                   onUpdate={loadPrecatorio}
-                  userRole={userRole ? userRole[0] : null}
+                  userRole={userRole}
+                  currentUserId={currentUserId}
                 />
               </TabsContent>
 
@@ -786,6 +804,7 @@ function PrecatorioDetailContent() {
                       <iframe
                         src={precatorio.file_url}
                         className="absolute inset-0 w-full h-full border-none"
+                        scrolling="yes"
                         title="PDF Viewer"
                       />
                     ) : (
@@ -831,3 +850,4 @@ export default function PrecatorioDetailPage() {
     </Suspense>
   )
 }
+

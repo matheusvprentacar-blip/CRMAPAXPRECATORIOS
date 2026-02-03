@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState, useEffect } from "react"
 import {
@@ -11,6 +11,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Loader2, FileText, CheckCircle2, Scale, Calculator, History, FileCheck } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
+import { maskProcesso } from "@/lib/masks"
 import { FormInteresse } from "./form-interesse"
 import { ChecklistDocumentos } from "./checklist-documentos"
 import { ChecklistCertidoes } from "./checklist-certidoes"
@@ -26,6 +27,15 @@ interface ModalDetalhesKanbanProps {
   precatorioId: string
   onUpdate: () => void
 }
+type Herdeiro = {
+  id: string
+  nome_completo: string | null
+  cpf: string | null
+  telefone: string | null
+  endereco: string | null
+  email: string | null
+  percentual_participacao: number | null
+}
 
 export function ModalDetalhesKanban({
   open,
@@ -34,9 +44,25 @@ export function ModalDetalhesKanban({
   onUpdate,
 }: ModalDetalhesKanbanProps) {
   const [precatorio, setPrecatorio] = useState<any>(null)
+  const [herdeiros, setHerdeiros] = useState<Herdeiro[]>([])
+  const [herdeirosLoading, setHerdeirosLoading] = useState(false)
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState("geral")
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRole, setUserRole] = useState<string[] | string | null>(null)
+  const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!open || !precatorioId) return
+    const key = `precatorio-tab:${precatorioId}:modal`
+    const saved = sessionStorage.getItem(key)
+    if (saved) setActiveTab(saved)
+  }, [open, precatorioId])
+
+  useEffect(() => {
+    if (!open || !precatorioId) return
+    const key = `precatorio-tab:${precatorioId}:modal`
+    sessionStorage.setItem(key, activeTab)
+  }, [activeTab, open, precatorioId])
 
   useEffect(() => {
     if (open && precatorioId) {
@@ -51,6 +77,7 @@ export function ModalDetalhesKanban({
 
     const { data } = await supabase.auth.getUser()
     setUserRole(data.user?.app_metadata?.role || null)
+    setCurrentUserId(data.user?.id || null)
   }
 
   async function loadPrecatorio() {
@@ -73,9 +100,24 @@ export function ModalDetalhesKanban({
       if (error) throw error
 
       setPrecatorio(data)
+      setHerdeirosLoading(true)
+      const { data: herdeirosData, error: herdeirosError } = await supabase
+        .from("precatorio_herdeiros")
+        .select("id, nome_completo, cpf, telefone, endereco, email, percentual_participacao")
+        .eq("precatorio_id", precatorioId)
+        .order("created_at", { ascending: true })
+
+      if (herdeirosError) {
+        console.error("[Modal Detalhes] Erro ao carregar herdeiros:", herdeirosError)
+        setHerdeiros([])
+      } else {
+        setHerdeiros(herdeirosData || [])
+      }
+      setHerdeirosLoading(false)
     } catch (error) {
       console.error("[Modal Detalhes] Erro:", error)
     } finally {
+      setHerdeirosLoading(false)
       setLoading(false)
     }
   }
@@ -89,6 +131,9 @@ export function ModalDetalhesKanban({
     return (
       <Dialog open={open} onOpenChange={onOpenChange}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Carregando...</DialogTitle>
+          </DialogHeader>
           <div className="flex items-center justify-center py-8">
             <Loader2 className="h-8 w-8 animate-spin" />
           </div>
@@ -99,11 +144,12 @@ export function ModalDetalhesKanban({
 
   if (!precatorio) return null
 
-  const podeEditarInteresse = ["admin", "operador_comercial"].includes(userRole || "")
-  const podeEditarItens = ["admin", "operador_comercial", "operador_calculo"].includes(userRole || "")
-  const podeSolicitarJuridico = ["admin", "operador_calculo"].includes(userRole || "")
-  const podeDarParecer = ["admin", "juridico"].includes(userRole || "")
-  const podeExportarCalculo = ["admin", "operador_calculo"].includes(userRole || "")
+  const roles = Array.isArray(userRole) ? userRole : userRole ? [userRole] : []
+  const podeEditarInteresse = ["admin", "operador_comercial"].some((role) => roles.includes(role))
+  const podeEditarItens = ["admin", "operador_comercial", "operador_calculo"].some((role) => roles.includes(role))
+  const podeSolicitarJuridico = ["admin", "operador_calculo"].some((role) => roles.includes(role))
+  const podeDarParecer = ["admin", "juridico"].some((role) => roles.includes(role))
+  const podeExportarCalculo = ["admin", "operador_calculo"].some((role) => roles.includes(role))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -161,12 +207,49 @@ export function ModalDetalhesKanban({
               </div>
               <div>
                 <label className="text-sm font-medium">Número do Precatório</label>
-                <p className="text-sm text-muted-foreground">{precatorio.numero_precatorio || "-"}</p>
+                <p className="text-sm text-muted-foreground">{precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"}</p>
               </div>
               <div>
                 <label className="text-sm font-medium">Processo</label>
-                <p className="text-sm text-muted-foreground">{precatorio.numero_processo || "-"}</p>
+                <p className="text-sm text-muted-foreground">{precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}</p>
               </div>
+            </div>
+
+            <div className="pt-4 border-t space-y-3">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium">Herdeiros</label>
+                {herdeiros.length > 0 && (
+                  <Badge variant="secondary">{herdeiros.length}</Badge>
+                )}
+              </div>
+              {herdeirosLoading ? (
+                <p className="text-sm text-muted-foreground">Carregando herdeiros...</p>
+              ) : herdeiros.length === 0 ? (
+                <p className="text-sm text-muted-foreground">Nenhum herdeiro informado.</p>
+              ) : (
+                <div className="space-y-2">
+                  {herdeiros.map((herdeiro) => (
+                    <div key={herdeiro.id} className="rounded-md border bg-muted/30 p-2">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">{herdeiro.nome_completo || "Herdeiro"}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {herdeiro.cpf || "-"} {herdeiro.telefone ? `• ${herdeiro.telefone}` : ""}
+                          </p>
+                          {herdeiro.endereco && (
+                            <p className="text-xs text-muted-foreground">{herdeiro.endereco}</p>
+                          )}
+                        </div>
+                        {herdeiro.percentual_participacao !== null && herdeiro.percentual_participacao !== undefined && (
+                          <Badge variant="outline" className="text-xs">
+                            {Number(herdeiro.percentual_participacao).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
 
             {precatorio.valor_atualizado && (
@@ -195,7 +278,7 @@ export function ModalDetalhesKanban({
 
             {precatorio.calculo_desatualizado && (
               <div className="p-4 bg-destructive/10 border border-destructive rounded-lg">
-                <p className="text-sm font-medium text-destructive">⚠️ Cálculo Desatualizado</p>
+                <p className="text-sm font-medium text-destructive">⚠ï¸ Cálculo Desatualizado</p>
                 <p className="text-xs text-muted-foreground mt-1">
                   Houve mudanças em documentos ou certidões. É necessário recalcular antes de prosseguir.
                 </p>
@@ -224,7 +307,7 @@ export function ModalDetalhesKanban({
 
           {/* Aba Jurídico */}
           <TabsContent value="juridico">
-            {precatorio.status_kanban === "analise_juridica" ? (
+            {precatorio.status_kanban === "juridico" ? (
               podeDarParecer ? (
                 <FormParecerJuridico precatorioId={precatorioId} precatorio={precatorio} onUpdate={handleUpdate} />
               ) : (
@@ -249,7 +332,7 @@ export function ModalDetalhesKanban({
               <FormSolicitarJuridico precatorioId={precatorioId} onUpdate={handleUpdate} />
             ) : (
               <div className="text-center py-8 text-muted-foreground">
-                <p>Análise jurídica não solicitada para este precatório.</p>
+                <p>Jurídico não solicitado para este precatório.</p>
               </div>
             )}
           </TabsContent>
@@ -262,6 +345,7 @@ export function ModalDetalhesKanban({
               precatorio={precatorio}
               onUpdate={handleUpdate}
               userRole={userRole}
+              currentUserId={currentUserId}
             />
           </TabsContent>
 
@@ -344,3 +428,12 @@ function AuditoriaTimeline({ precatorioId }: { precatorioId: string }) {
     </div>
   )
 }
+
+
+
+
+
+
+
+
+

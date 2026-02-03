@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { createBrowserClient } from "@/lib/supabase/client";
+import { maskProcesso } from "@/lib/masks";
 
 interface PrecatorioData {
     credor_nome?: string;
@@ -12,6 +13,7 @@ interface PrecatorioData {
     numero_precatorio?: string;
     tribunal?: string;
     credor_cpf_cnpj?: string;
+    credor_telefone?: string;
     numero_processo?: string;
     natureza?: string;
     file_url?: string;
@@ -29,10 +31,11 @@ interface ModalCriarPrecatorioProps {
 export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess }: ModalCriarPrecatorioProps) {
     const [credor, setCredor] = useState(data?.credor_nome ?? "");
     const [valor, setValor] = useState(data?.valor_principal?.toString() ?? "");
-    const [numero, setNumero] = useState(data?.numero_precatorio ?? "");
+    const [numero, setNumero] = useState(maskProcesso(data?.numero_precatorio ?? ""));
     const [tribunal, setTribunal] = useState(data?.tribunal ?? "");
     const [cpf, setCpf] = useState(data?.credor_cpf_cnpj ?? "");
-    const [processo, setProcesso] = useState(data?.numero_processo ?? "");
+    const [telefone, setTelefone] = useState(data?.credor_telefone ?? "");
+    const [processo, setProcesso] = useState(maskProcesso(data?.numero_processo ?? ""));
     const [natureza, setNatureza] = useState(data?.natureza ?? "");
     const [saving, setSaving] = useState(false);
 
@@ -41,10 +44,11 @@ export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess 
         if (!data) return;
         setCredor(data.credor_nome ?? "");
         setValor(data.valor_principal ? String(data.valor_principal) : "");
-        setNumero(data.numero_precatorio ?? "");
+        setNumero(maskProcesso(data.numero_precatorio ?? ""));
         setTribunal(data.tribunal ?? "");
         setCpf(data.credor_cpf_cnpj ?? "");
-        setProcesso(data.numero_processo ?? "");
+        setTelefone(data.credor_telefone ?? "");
+        setProcesso(maskProcesso(data.numero_processo ?? ""));
         setNatureza(data.natureza ?? "");
     }, [data]);
 
@@ -77,6 +81,7 @@ export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess 
             numero_precatorio: numero,
             tribunal: tribunal,
             credor_cpf_cnpj: cpf,
+            credor_telefone: telefone,
             numero_processo: processo,
             natureza: natureza,
             status: "novo",
@@ -120,16 +125,20 @@ export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess 
                             <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" />
                         </div>
                         <div className="space-y-2">
+                            <Label>Telefone do Credor</Label>
+                            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
+                        </div>
+                        <div className="space-y-2">
                             <Label>Valor Principal</Label>
                             <Input type="number" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
                         </div>
                         <div className="space-y-2">
                             <Label>Número do Precatório</Label>
-                            <Input value={numero} onChange={(e) => setNumero(e.target.value)} placeholder="0000000-00.0000.0.00.0000" />
+                            <Input value={numero} onChange={(e) => setNumero(maskProcesso(e.target.value))} placeholder="0000000-00.0000.0.00.0000" />
                         </div>
                         <div className="space-y-2">
                             <Label>Número do Processo (Originário)</Label>
-                            <Input value={processo} onChange={(e) => setProcesso(e.target.value)} placeholder="Numeração Única" />
+                            <Input value={processo} onChange={(e) => setProcesso(maskProcesso(e.target.value))} placeholder="Numeração Única" />
                         </div>
                         <div className="space-y-2">
                             <Label>Tribunal</Label>
@@ -163,6 +172,7 @@ export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess 
                                 <iframe
                                     src={data.file_url}
                                     className="absolute inset-0 w-full h-full"
+                                    scrolling="yes"
                                     title="Document Viewer"
                                 />
                             ) : (

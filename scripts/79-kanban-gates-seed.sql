@@ -35,8 +35,6 @@ BEGIN
   (p_precatorio_id, 'DOC_CREDOR', 'Certidão de casamento (ou nascimento se solteiro)', 'PENDENTE'),
   (p_precatorio_id, 'DOC_CREDOR', 'Averbação (se divórcio)', 'PENDENTE'),
   (p_precatorio_id, 'DOC_CREDOR', 'Comprovante de residência (≤ 30 dias)', 'PENDENTE'),
-  (p_precatorio_id, 'DOC_CREDOR', 'Profissão do credor', 'PENDENTE'),
-  (p_precatorio_id, 'DOC_CREDOR', 'Profissão do cônjuge', 'PENDENTE'),
   (p_precatorio_id, 'DOC_CREDOR', 'Dados bancários (agência/conta)', 'PENDENTE');
 
   -- ============================================
@@ -57,7 +55,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION criar_itens_padrao_precatorio TO authenticated;
+GRANT EXECUTE ON FUNCTION public.criar_itens_padrao_precatorio(UUID) TO authenticated;
 
 -- ============================================
 -- 2. TRIGGER: Criar itens automaticamente em novos precatórios
@@ -160,7 +158,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION adicionar_item_customizado TO authenticated;
+GRANT EXECUTE ON FUNCTION public.adicionar_item_customizado(UUID, VARCHAR, VARCHAR, TEXT) TO authenticated;
 
 -- ============================================
 -- 5. FUNÇÃO: Atualizar status de item
@@ -226,7 +224,7 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION atualizar_status_item TO authenticated;
+GRANT EXECUTE ON FUNCTION public.atualizar_status_item(UUID, VARCHAR, DATE, TEXT, TEXT) TO authenticated;
 
 -- ============================================
 -- 6. VIEW: Resumo de itens por precatório
@@ -320,16 +318,16 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
 
-GRANT EXECUTE ON FUNCTION obter_itens_precatorio TO authenticated;
+GRANT EXECUTE ON FUNCTION public.obter_itens_precatorio(UUID) TO authenticated;
 
 -- ============================================
 -- 8. COMENTÁRIOS
 -- ============================================
 
-COMMENT ON FUNCTION criar_itens_padrao_precatorio IS 'Cria os 11 itens padrão (8 docs + 3 certidões) para um precatório';
-COMMENT ON FUNCTION adicionar_item_customizado IS 'Adiciona um item customizado ao checklist de um precatório';
-COMMENT ON FUNCTION atualizar_status_item IS 'Atualiza o status de um item do checklist';
-COMMENT ON FUNCTION obter_itens_precatorio IS 'Retorna todos os itens de um precatório ordenados por prioridade';
+COMMENT ON FUNCTION public.criar_itens_padrao_precatorio(UUID) IS 'Cria os 11 itens padrão (8 docs + 3 certidões) para um precatório';
+COMMENT ON FUNCTION public.adicionar_item_customizado(UUID, VARCHAR, VARCHAR, TEXT) IS 'Adiciona um item customizado ao checklist de um precatório';
+COMMENT ON FUNCTION public.atualizar_status_item(UUID, VARCHAR, DATE, TEXT, TEXT) IS 'Atualiza o status de um item do checklist';
+COMMENT ON FUNCTION public.obter_itens_precatorio(UUID) IS 'Retorna todos os itens de um precatório ordenados por prioridade';
 COMMENT ON VIEW view_resumo_itens_precatorio IS 'Resumo de documentos e certidões por precatório';
 
 -- ============================================

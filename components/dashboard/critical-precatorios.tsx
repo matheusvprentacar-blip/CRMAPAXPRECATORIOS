@@ -45,7 +45,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm text-muted-foreground">Nenhum precatório crítico no momento</p>
+            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Nenhum precatório crítico no momento</p>
             <p className="text-xs text-muted-foreground mt-2">
               Precatórios com alta complexidade, SLA estourado ou atraso de alto impacto aparecerão aqui
             </p>
@@ -74,7 +74,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
           <AlertTriangle className="h-5 w-5 text-orange-500" />
           Precatórios Críticos
         </CardTitle>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
           Precatórios que precisam atenção imediata (ordenados por criticidade)
         </p>
       </CardHeader>

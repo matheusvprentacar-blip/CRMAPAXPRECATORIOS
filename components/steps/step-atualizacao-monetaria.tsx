@@ -1,18 +1,47 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ArrowRight, Info } from "lucide-react"
+import { KpiCard } from "@/components/ui/calc/KpiCard"
+import { SectionPanel } from "@/components/ui/calc/SectionPanel"
+import { Banknote, CalendarDays, Info, Sparkles } from "lucide-react"
+import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { calcularPrecatorio } from "@/lib/calculos/calcular-precatorio"
-import { calcularJurosMoratoriosAcumulados } from "@/lib/calculos/indices"
+import { getIndiceIpcaPre2022 } from "@/lib/calculos/indices"
+
+const inicioMes = (data: Date): Date => new Date(data.getFullYear(), data.getMonth(), 1)
+
+const forEachMesInclusivo = (inicio: Date, fim: Date, fn: (mes: Date) => void): void => {
+  if (inicio > fim) return
+  const current = new Date(inicio.getFullYear(), inicio.getMonth(), 1)
+  const end = new Date(fim.getFullYear(), fim.getMonth(), 1)
+
+  while (current <= end) {
+    fn(new Date(current))
+    current.setMonth(current.getMonth() + 1)
+  }
+}
+
+const somarIpcaPre22 = (dataBase: string): number => {
+  const inicio = inicioMes(new Date(`${dataBase}T12:00:00`))
+  const fim = new Date(2021, 10, 1) // Nov/2021
+  let soma = 0
+
+  forEachMesInclusivo(inicio, fim, (mes) => {
+    const mesAno = `${mes.getFullYear()}-${String(mes.getMonth() + 1).padStart(2, "0")}`
+    soma += getIndiceIpcaPre2022(mesAno)
+  })
+
+  return soma
+}
 
 interface StepAtualizacaoMonetariaProps {
   dados: any
   setDados: (dados: any) => void
   onCompletar: (resultado: any) => void
   voltar: () => void
+  precatorioId?: string
 }
 
 export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar }: StepAtualizacaoMonetariaProps) {
@@ -26,26 +55,23 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
     }
   }, [])
 
-  // Effect for Juros Calculation (remains active for reference)
   useEffect(() => {
     if (dados.data_base) {
-      const resultado = calcularJurosMoratoriosAcumulados(dados.data_base)
-      setTaxaJurosMora(resultado.taxaTotal)
+      const taxa = somarIpcaPre22(dados.data_base)
+      setTaxaJurosMora(taxa)
     }
   }, [dados.data_base])
 
-  // AUTOMATIC CALCULATION EFFECT
   useEffect(() => {
-    // Only calculate if we have minimal data
     if (dados.data_base && dados.valor_principal_original) {
       try {
-        console.log("[v0] Auto-calculating in StepAtualizacaoMonetaria...", dados);
+        console.log("[v0] Auto-calculating in StepAtualizacaoMonetaria...", dados)
         const calc = calcularPrecatorio({
           ...dados,
           taxa_juros_mora: taxaJurosMora,
           taxa_juros_moratorios: taxaJurosMora,
           juros_mora_percentual: taxaJurosMora / 100,
-          taxa_juros_pre_22_acumulada: taxaJurosMora, // Pass pre-calculated rate
+          taxa_juros_pre_22_acumulada: taxaJurosMora,
           aliquota_irpf: 0,
           aliquota_pss: 0,
           tem_desconto_pss: true,
@@ -61,12 +87,11 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
   }, [dados, taxaJurosMora])
 
   const handleAvancar = () => {
-    if (!resultado) return;
+    if (!resultado) return
 
     const finalResult = {
       ...resultado,
       taxa_juros_mora: taxaJurosMora,
-      // Ensure we pass the calculated values
       valorJuros: resultado.valorJuros,
       juros_mora: resultado.valorJuros,
       multa: dados.multa || 0,
@@ -85,133 +110,158 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
   }
 
   return (
-    <Card>
-      <CardHeader>
-        <div className="flex items-center justify-between">
+    <Card className="calc-card relative overflow-hidden">
+      <div className="pointer-events-none absolute -top-24 right-0 h-48 w-48 rounded-full bg-primary/10 blur-3xl" />
+      <CardHeader className="space-y-2">
+        <div className="flex items-start gap-3">
+          <div className="flex h-11 w-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+            <Sparkles className="h-5 w-5" />
+          </div>
           <div>
-            <CardTitle>Atualização Monetária (Automática)</CardTitle>
-            <CardDescription>
-              Cálculo realizado com base nos índices e datas configurados.
-            </CardDescription>
+            <CardTitle className="calc-title">Atualização Monetária (Automática)</CardTitle>
+            <CardDescription className="calc-subtitle">Cálculo realizado com base nos índices e datas configurados.</CardDescription>
           </div>
         </div>
       </CardHeader>
-      <CardContent className="space-y-4">
-        {/* Read-only Data Summary */}
-        <div className="grid gap-4 md:grid-cols-3 p-4 bg-muted/20 rounded-lg border border-dashed">
-          <div>
-            <Label className="text-xs text-muted-foreground">Data Base</Label>
-            <div className="font-medium text-sm">{dados.data_base ? new Date(dados.data_base + 'T12:00:00').toLocaleDateString("pt-BR") : "-"}</div>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Data Cálculo Final</Label>
-            <div className="font-medium text-sm">{dados.data_final_calculo ? new Date(dados.data_final_calculo + 'T12:00:00').toLocaleDateString("pt-BR") : "-"}</div>
-          </div>
-          <div>
-            <Label className="text-xs text-muted-foreground">Principal Original</Label>
-            <div className="font-medium text-sm">{(dados.valor_principal_original || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}</div>
-          </div>
+      <CardContent>
+        <div className="space-y-6">
+        <div className="grid gap-4 md:grid-cols-3">
+          <KpiCard
+            label="Data Base"
+            value={dados.data_base ? new Date(dados.data_base + "T12:00:00").toLocaleDateString("pt-BR") : "?"}
+            helper="Início da correção"
+            tone="info"
+            icon={<CalendarDays className="h-4 w-4" />}
+          />
+          <KpiCard
+            label="Data Final"
+            value={dados.data_final_calculo ? new Date(dados.data_final_calculo + "T12:00:00").toLocaleDateString("pt-BR") : "?"}
+            helper="Data de cálculo"
+            tone="primary"
+            icon={<CalendarDays className="h-4 w-4" />}
+          />
+          <KpiCard
+            label="Principal Original"
+            value={(dados.valor_principal_original || 0).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+            helper="Base inicial"
+            tone="warning"
+            icon={<Banknote className="h-4 w-4" />}
+          />
         </div>
 
-        {/* MEMÓRIA DE CÁLCULO DETALHADA */}
         {resultado?.memoriaCalculo ? (
-          <div className="space-y-3 border rounded-md p-3 bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 animate-in fade-in duration-500">
-            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 border-b pb-2 mb-2">
-              <Info className="w-4 h-4" />
-              <h4 className="text-sm font-bold">Memória de Cálculo (Detalhamento)</h4>
-            </div>
-
-            <div className="grid gap-3 text-xs">
-              {/* Etapa 1: IPCA */}
-              {resultado.memoriaCalculo.ipca && (
-                <div className="grid grid-cols-[1fr_auto] gap-2 items-center">
-                  <div>
-                    <span className="font-semibold text-blue-700 dark:text-blue-400 block">1. Correção Monetária (IPCA-E)</span>
-                    <span className="text-muted-foreground font-mono">
+          <SectionPanel
+            title="Memória de Cálculo (Detalhamento)"
+            description="Composição da atualização monetária mês a mês."
+            tone="primary"
+          >
+            {resultado.memoriaCalculo.ipca && (
+              <div className="rounded-2xl border border-primary/20 bg-primary/5 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">1. Correção Monetária (IPCA-E)</p>
+                    <p className="text-xs text-muted-foreground font-mono break-words">
                       {resultado.memoriaCalculo.ipca.formula}
-                    </span>
-                    <div className="text-slate-500 mt-1">
+                    </p>
+                    <p className="text-xs text-muted-foreground">
                       {resultado.memoriaCalculo.ipca.base ? (
                         <>
-                          ({resultado.memoriaCalculo.ipca.principalOriginal?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} ÷ {resultado.memoriaCalculo.ipca.fatorInicial?.toFixed(7)}) × {resultado.memoriaCalculo.ipca.fatorFinal?.toFixed(7)}
+                          ({resultado.memoriaCalculo.ipca.principalOriginal?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} ÷ {resultado.memoriaCalculo.ipca.fatorInicial?.toFixed(7)}) × {resultado.memoriaCalculo.ipca.fatorFinal?.toFixed(7)}
                         </>
                       ) : (
                         <>Fator In: {resultado.memoriaCalculo.ipca.fatorInicial?.toFixed(7)} | Fator Out: {resultado.memoriaCalculo.ipca.fatorFinal?.toFixed(7)}</>
                       )}
-                    </div>
+                    </p>
                   </div>
-                  <div className="font-bold font-mono text-base text-blue-800 dark:text-blue-300">
-                    {resultado.memoriaCalculo.ipca.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                    {resultado.memoriaCalculo.ipca.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Etapa 2: Juros */}
-              {resultado.memoriaCalculo.juros && (
-                <div className="grid grid-cols-[1fr_auto] gap-2 items-center border-t border-dashed pt-2">
-                  <div>
-                    <span className="font-semibold text-orange-700 dark:text-orange-400 block">2. Juros Moratórios (Pré-2022)</span>
-                    <span className="text-muted-foreground font-mono">
+            {resultado.memoriaCalculo.juros && (
+              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">2. Juros Moratórios (Pré-2022)</p>
+                    <p className="text-xs text-muted-foreground font-mono break-words">
                       {resultado.memoriaCalculo.juros.formula}
-                    </span>
-                    <div className="text-slate-500 mt-1">
-                      {resultado.memoriaCalculo.juros.base?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {resultado.memoriaCalculo.juros.percentual?.toFixed(4)}%
-                    </div>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {resultado.memoriaCalculo.juros.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.juros.percentual?.toFixed(4)}%
+                    </p>
                   </div>
-                  <div className="font-bold font-mono text-base text-orange-800 dark:text-orange-300">
-                    {resultado.memoriaCalculo.juros.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                    {resultado.memoriaCalculo.juros.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Etapa 3: SELIC */}
-              {resultado.memoriaCalculo.selic && (
-                <div className="grid grid-cols-[1fr_auto] gap-2 items-center border-t border-dashed pt-2">
-                  <div>
-                    <span className="font-semibold text-green-700 dark:text-green-400 block">3. SELIC Acumulada (Pós-2022)</span>
-                    <span className="text-muted-foreground font-mono">
+            {resultado.memoriaCalculo.selic && (
+              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">3. SELIC Acumulada (Pós-2022)</p>
+                    <p className="text-xs text-muted-foreground font-mono break-words">
                       {resultado.memoriaCalculo.selic.formula}
-                    </span>
-                    <div className="text-slate-500 mt-1">
-                      {resultado.memoriaCalculo.selic.base?.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })} × {resultado.memoriaCalculo.selic.percentual?.toFixed(4)}%
-                    </div>
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {resultado.memoriaCalculo.selic.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.selic.percentual?.toFixed(4)}%
+                    </p>
                   </div>
-                  <div className="font-bold font-mono text-base text-green-800 dark:text-green-300">
-                    {resultado.memoriaCalculo.selic.resultado.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
+                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                    {resultado.memoriaCalculo.selic.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
-              )}
+              </div>
+            )}
 
-              {/* Total Calculation */}
-              <div className="border-t-2 border-slate-300 pt-3 mt-2 flex justify-between items-center bg-slate-100 dark:bg-slate-800 p-3 rounded">
-                <div>
-                  <span className="font-bold uppercase text-xs text-muted-foreground block">Valor Atualizado Final</span>
-                  <span className="text-[10px] text-muted-foreground">(Soma dos itens 1, 2 e 3)</span>
+            {resultado.memoriaCalculo.ipca2025 && (
+              <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-3">
+                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div className="space-y-1">
+                    <p className="text-sm font-semibold text-foreground">4. EC 136/2025 (IPCA 2025)</p>
+                    <p className="text-xs text-muted-foreground font-mono break-words">
+                      {resultado.memoriaCalculo.ipca2025.formula}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {resultado.memoriaCalculo.ipca2025.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.ipca2025.percentual?.toFixed(4)}%
+                    </p>
+                  </div>
+                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                    {resultado.memoriaCalculo.ipca2025.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                  </div>
                 </div>
-                <span className="font-bold text-2xl text-slate-900 dark:text-white">
-                  {(resultado.memoriaCalculo.ipca.resultado + resultado.memoriaCalculo.juros.resultado + resultado.memoriaCalculo.selic.resultado).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}
-                </span>
+              </div>
+            )}
+
+            <div className="rounded-2xl border border-border/60 bg-muted/30 p-4">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm text-muted-foreground">Valor atualizado final</p>
+                  <p className="text-xs text-muted-foreground">(Soma dos itens 1, 2, 3 e 4)</p>
+                </div>
+                <p className="text-2xl font-semibold tabular-nums text-emerald-400">
+                  {(resultado.memoriaCalculo.ipca.resultado + resultado.memoriaCalculo.juros.resultado + resultado.memoriaCalculo.selic.resultado + (resultado.memoriaCalculo.ipca2025?.resultado || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
+                </p>
               </div>
             </div>
-          </div>
+          </SectionPanel>
         ) : (
-          <div className="p-8 text-center text-muted-foreground bg-muted/10 rounded-lg flex flex-col items-center gap-2">
-            <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent"></div>
-            <p>Calculando atualização monetária...</p>
-          </div>
+          <SectionPanel title="Memória de cálculo" description="Processando índices oficiais." tone="info">
+            <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-border/60 bg-muted/20 p-8 text-center text-muted-foreground">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              <p>Calculando atualização monetária...</p>
+            </div>
+          </SectionPanel>
         )}
 
-        <div className="flex justify-between mt-4">
-          <Button variant="outline" size="sm" onClick={voltar}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Voltar
-          </Button>
-          <Button size="sm" onClick={handleAvancar} disabled={!resultado}>
-            Avançar
-            <ArrowRight className="h-4 w-4 ml-1" />
-          </Button>
         </div>
+        <StepFooter onBack={voltar} onNext={handleAvancar} nextDisabled={!resultado} />
       </CardContent>
     </Card>
   )
+
 }

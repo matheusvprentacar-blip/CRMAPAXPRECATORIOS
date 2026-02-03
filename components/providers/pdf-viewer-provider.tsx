@@ -42,6 +42,7 @@ export function PDFViewerProvider({ children }: { children: React.ReactNode }) {
                     <iframe
                         src={pdfUrl}
                         className="w-full h-full border-none"
+                        scrolling="yes"
                         title={title}
                     />
                 </FloatingWindow>

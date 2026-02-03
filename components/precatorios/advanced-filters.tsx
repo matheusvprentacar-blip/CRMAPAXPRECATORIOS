@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Filter, X, ChevronDown } from "lucide-react"
+import { Filter, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -16,7 +16,6 @@ import {
   SheetFooter,
 } from "@/components/ui/sheet"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Badge } from "@/components/ui/badge"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import {
   STATUS_OPTIONS,
@@ -31,6 +30,8 @@ interface AdvancedFiltersProps {
   onFilterChange: (filtros: FiltrosPrecatorios) => void
   onClearFilters: () => void
   totalFiltrosAtivos: number
+  responsaveis?: { id: string; nome: string }[]
+  showResponsavelFilter?: boolean
 }
 
 export function AdvancedFilters({
@@ -38,9 +39,12 @@ export function AdvancedFilters({
   onFilterChange,
   onClearFilters,
   totalFiltrosAtivos,
+  responsaveis = [],
+  showResponsavelFilter = false,
 }: AdvancedFiltersProps) {
   const [open, setOpen] = useState(false)
   const [localFiltros, setLocalFiltros] = useState<FiltrosPrecatorios>(filtros)
+  const [responsavelTerm, setResponsavelTerm] = useState("")
 
   useEffect(() => {
     setLocalFiltros(filtros)
@@ -54,6 +58,16 @@ export function AdvancedFilters({
   const handleClearFilters = () => {
     setLocalFiltros({})
     onClearFilters()
+    setOpen(false)
+  }
+
+  const applyResponsavel = (id?: string) => {
+    const next = {
+      ...localFiltros,
+      responsavel_id: id || undefined,
+    }
+    setLocalFiltros(next)
+    onFilterChange(next)
     setOpen(false)
   }
 
@@ -77,15 +91,7 @@ export function AdvancedFilters({
       <SheetTrigger asChild>
         <Button variant="outline" className="relative">
           <Filter className="h-4 w-4 mr-2" />
-          Filtros Avançados
-          {totalFiltrosAtivos > 0 && (
-            <Badge
-              variant="destructive"
-              className="ml-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs"
-            >
-              {totalFiltrosAtivos}
-            </Badge>
-          )}
+          {totalFiltrosAtivos > 0 ? `Filtros (${totalFiltrosAtivos})` : "Filtros"}
         </Button>
       </SheetTrigger>
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
@@ -97,6 +103,58 @@ export function AdvancedFilters({
         </SheetHeader>
 
         <div className="space-y-6 py-6">
+          {showResponsavelFilter && responsaveis.length > 0 && (
+            <div className="space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <Label className="text-base font-semibold">Responsável</Label>
+                {localFiltros.responsavel_id && (
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => applyResponsavel(undefined)}
+                    className="h-7 text-xs"
+                  >
+                    Limpar
+                  </Button>
+                )}
+              </div>
+
+              <Input
+                value={responsavelTerm}
+                onChange={(e) => setResponsavelTerm(e.target.value)}
+                placeholder="Buscar responsável..."
+              />
+
+              <div className="flex flex-col gap-2 max-h-56 overflow-auto pr-1">
+                {responsaveis
+                  .filter((r) =>
+                    (r.nome || "").toLowerCase().includes(responsavelTerm.trim().toLowerCase())
+                  )
+                  .map((responsavel) => {
+                    const active = localFiltros.responsavel_id === responsavel.id
+                    return (
+                      <button
+                        key={responsavel.id}
+                        type="button"
+                        onClick={() => applyResponsavel(responsavel.id)}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
+                          active
+                            ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
+                            : "border-border/60 bg-background hover:bg-muted/60 text-foreground"
+                        }`}
+                      >
+                        <span className="truncate">{responsavel.nome}</span>
+                        {active && (
+                          <span className="text-[10px] uppercase tracking-wide text-primary">Selecionado</span>
+                        )}
+                      </button>
+                    )
+                  })}
+              </div>
+            </div>
+          )}
+
           {/* Status */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Status</Label>

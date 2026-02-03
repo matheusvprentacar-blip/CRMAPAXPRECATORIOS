@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 /* eslint-disable */
 
 import { useEffect, useState, Suspense } from "react"
@@ -82,7 +82,7 @@ function AnaliseJuridicaContent() {
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                            Análise Jurídica
+                            Jurídico
                             <Badge variant="outline">{precatorio.numero_processo}</Badge>
                         </h1>
                         <p className="text-muted-foreground">{precatorio.credor_nome} - {precatorio.tribunal}</p>
@@ -127,11 +127,11 @@ function AnaliseJuridicaContent() {
                         </CardHeader>
                         <CardContent>
                             {/* 
-                        Se estiver em 'analise_juridica', mostra o form de parecer.
+                        Se estiver em 'juridico', mostra o form de parecer.
                         Se não, mostra alerta ou o form de solicitação (caso queira re-solicitar? 
                         Mas na página de análise geralmente é para DAR o parecer).
                      */}
-                            {precatorio.status_kanban === "analise_juridica" ? (
+                            {precatorio.status_kanban === "juridico" ? (
                                 <FormParecerJuridico
                                     precatorioId={id!}
                                     precatorio={precatorio}
@@ -143,7 +143,7 @@ function AnaliseJuridicaContent() {
                             ) : (
                                 <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/20 rounded-lg">
                                     <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
-                                    <h3 className="text-lg font-semibold">Este precatório não está em análise jurídica</h3>
+                                    <h3 className="text-lg font-semibold">Este precatório não está em Jurídico</h3>
                                     <p className="text-muted-foreground mt-2">
                                         Status atual: <span className="font-mono">{precatorio.status_kanban}</span>
                                     </p>
@@ -167,3 +167,4 @@ export default function AnaliseJuridicaClient() {
         </Suspense>
     )
 }
+

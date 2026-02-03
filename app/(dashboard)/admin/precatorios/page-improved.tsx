@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
@@ -44,6 +44,7 @@ import {
 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
+import { maskProcesso } from "@/lib/masks"
 import { toast } from "sonner"
 
 interface Usuario {
@@ -72,30 +73,42 @@ interface PrecatorioAdmin {
 
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
-  triagem: 15,
-  documentos_credor: 25,
-  certidoes: 35,
-  pronto_calculo: 50,
-  em_calculo: 65,
-  analise_juridica: 75,
-  recalculo: 80,
-  calculo_concluido: 90,
-  proposta: 95,
+  triagem_interesse: 15,
+  analise_processual_inicial: 25,
+  docs_credor: 35,
+  pronto_calculo: 45,
+  calculo_andamento: 55,
+  juridico: 65,
+  calculo_concluido: 75,
+  proposta_negociacao: 85,
+  proposta_aceita: 90,
+  certidoes: 95,
   fechado: 100,
+  pos_fechamento: 100,
+  pausado_credor: 20,
+  pausado_documentos: 30,
+  sem_interesse: 100,
+  reprovado: 100,
 }
 
 const KANBAN_LABELS: Record<string, string> = {
   entrada: "Entrada",
-  triagem: "Triagem",
-  documentos_credor: "Documentos",
+  triagem_interesse: "Triagem",
+  analise_processual_inicial: "Análise Processual Inicial",
+  docs_credor: "Documentos do credor",
+  pronto_calculo: "Pronto para cálculo",
+  calculo_andamento: "Cálculo em andamento",
+  juridico: "Jurídico",
+  calculo_concluido: "Cálculo concluído",
+  proposta_negociacao: "Proposta / Negociação",
+  proposta_aceita: "Proposta aceita",
   certidoes: "Certidões",
-  pronto_calculo: "Pronto p/ Cálculo",
-  em_calculo: "Em Cálculo",
-  analise_juridica: "Análise Jurídica",
-  recalculo: "Recálculo",
-  calculo_concluido: "Cálculo Concluído",
-  proposta: "Proposta",
   fechado: "Fechado",
+  pos_fechamento: "Pós-fechamento",
+  pausado_credor: "Pausado (credor)",
+  pausado_documentos: "Pausado (documentos)",
+  sem_interesse: "Sem interesse",
+  reprovado: "Reprovado / não elegível",
 }
 
 export default function AdminPrecatoriosPageImproved() {
@@ -599,7 +612,7 @@ export default function AdminPrecatoriosPageImproved() {
                 <Label>Número do Precatório *</Label>
                 <Input
                   value={newPrecatorio.numero_precatorio}
-                  onChange={(e) => setNewPrecatorio({ ...newPrecatorio, numero_precatorio: e.target.value })}
+                  onChange={(e) => setNewPrecatorio({ ...newPrecatorio, numero_precatorio: maskProcesso(e.target.value) })}
                   placeholder="Ex: 0000132-37.2013.8.16.7000"
                 />
               </div>
@@ -743,3 +756,5 @@ export default function AdminPrecatoriosPageImproved() {
     </RoleGuard>
   )
 }
+
+

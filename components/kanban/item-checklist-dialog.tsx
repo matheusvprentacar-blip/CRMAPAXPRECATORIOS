@@ -288,8 +288,7 @@ export function ItemChecklistDialog({
                   <AlertDialogHeader>
                     <AlertDialogTitle>Tem certeza?</AlertDialogTitle>
                     <AlertDialogDescription>
-                      Isso irá limpar os dados deste item. Ele voltará para o status "Pendente".
-                      O histórico do arquivo e a validade serão removidos.
+                      Isso ira excluir este item do precatorio.
                     </AlertDialogDescription>
                   </AlertDialogHeader>
                   <AlertDialogFooter>

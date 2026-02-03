@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
-import { ArrowLeft, Save, CheckCircle2, User, FileText, Wallet, Sparkles, AlertCircle, ChevronRight, ChevronLeft } from "lucide-react"
+import { ArrowLeft, Save, CheckCircle2, User, Users, FileText, Wallet, Sparkles, AlertCircle, ChevronRight, ChevronLeft, Trash2, Plus } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
 import { savePrecatorio } from "@/lib/storage/local-storage"
 import type { Precatorio } from "@/lib/types/database"
@@ -32,6 +32,12 @@ export default function NovoPrecatorioPage() {
   const [currentStep, setCurrentStep] = useState(1)
   const [userRole, setUserRole] = useState<string | null>(null)
   const [aiModalOpen, setAiModalOpen] = useState(false)
+  const [herdeiros, setHerdeiros] = useState<Array<{
+    nome_completo: string
+    cpf: string
+    endereco: string
+    telefone: string
+  }>>([])
 
   const [formData, setFormData] = useState<Partial<Precatorio>>({
     status: "novo",
@@ -92,6 +98,7 @@ export default function NovoPrecatorioPage() {
       titulo: `Precatório ${(data.credor_nome?.split(' ')[0] || '').toUpperCase()} - ${(data.numero_precatorio || '').toUpperCase()}`,
       credor_nome: data.credor_nome?.toUpperCase(),
       credor_cpf_cnpj: data.credor_cpf_cnpj,
+      credor_telefone: data.credor_telefone || prev.credor_telefone,
       valor_principal: data.valor_principal || prev.valor_principal,
       numero_precatorio: data.numero_precatorio?.toUpperCase(),
       numero_processo: data.numero_processo?.toUpperCase(),
@@ -110,35 +117,56 @@ export default function NovoPrecatorioPage() {
     const supabase = getSupabase()
 
     try {
-      // Validação de Duplicidade
-      if (supabase) {
-        if (formData.numero_precatorio) {
-          const { data: existing } = await supabase
-            .from("precatorios")
-            .select("id, usuarios!responsavel(nome)")
-            .eq("numero_precatorio", formData.numero_precatorio)
-            .is("deleted_at", null)
-            .limit(1)
+      let currentUserId: string | undefined
 
-          if (existing && existing.length > 0) {
-            throw new Error(`Duplicidade: Precatório já cadastrado por ${(existing[0] as any).usuarios?.nome || "alguém"}.`)
-          }
-        }
+      const herdeirosComDados = herdeiros.filter((h) =>
+        [h.nome_completo, h.cpf, h.endereco, h.telefone].some((v) => v && v.trim().length > 0)
+      )
+      const herdeirosInvalidos = herdeirosComDados.filter((h) => !h.nome_completo?.trim())
+      if (herdeirosInvalidos.length > 0) {
+        toast.error("Preencha o nome de todos os herdeiros informados.")
+        setSaving(false)
+        return
       }
 
       if (supabase) {
-        const { data: userData } = await supabase.auth.getUser()
+        if (!currentUserId) {
+          const { data: userData } = await supabase.auth.getUser()
+          currentUserId = userData.user?.id
+        }
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const precatorioData: any = {
           ...formData, // Spread all form data
-          criado_por: userData.user?.id,
-          responsavel: userData.user?.id,
+          criado_por: currentUserId,
+          responsavel: currentUserId,
+          dono_usuario_id: currentUserId,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
 
-        const { error } = await supabase.from("precatorios").insert([precatorioData])
+        const { data: inserted, error } = await supabase
+          .from("precatorios")
+          .insert([precatorioData])
+          .select("id")
         if (error) throw error
+
+        const precatorioId = inserted?.[0]?.id
+        if (precatorioId && herdeirosComDados.length > 0) {
+          const herdeirosPayload = herdeirosComDados.map((h) => ({
+            precatorio_id: precatorioId,
+            nome_completo: h.nome_completo.trim().toUpperCase(),
+            cpf: h.cpf?.trim() || null,
+            telefone: h.telefone?.trim() || null,
+            endereco: h.endereco?.trim() || null,
+            percentual_participacao: 0,
+          }))
+
+          const { error: herdeirosError } = await supabase
+            .from("precatorio_herdeiros")
+            .insert(herdeirosPayload)
+
+          if (herdeirosError) throw herdeirosError
+        }
       } else {
         savePrecatorio(formData as Precatorio)
       }
@@ -258,9 +286,9 @@ export default function NovoPrecatorioPage() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <Label>Tribunal</Label>
+                      <Label>Vara de origem</Label>
                       <Input
-                        placeholder="Ex: TJSP"
+                        placeholder="Ex: 2ª Vara Cível"
                         value={formData.tribunal || ""}
                         onChange={e => setFormData({ ...formData, tribunal: e.target.value.toUpperCase() })}
                       />
@@ -295,22 +323,30 @@ export default function NovoPrecatorioPage() {
                         autoFocus
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label>CPF / CNPJ *</Label>
-                      <Input
-                        placeholder="000.000.000-00"
-                        value={formData.credor_cpf_cnpj || ""}
-                        onChange={e => {
-                          const val = e.target.value
-                          setFormData({ ...formData, credor_cpf_cnpj: val.length > 14 ? maskCNPJ(val) : maskCPF(val) })
-                        }}
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label>Cidade</Label>
-                      <Input
-                        placeholder="Cidade"
-                        value={formData.credor_cidade || ""}
+                      <div className="space-y-2">
+                        <Label>CPF / CNPJ *</Label>
+                        <Input
+                          placeholder="000.000.000-00"
+                          value={formData.credor_cpf_cnpj || ""}
+                          onChange={e => {
+                            const val = e.target.value
+                            setFormData({ ...formData, credor_cpf_cnpj: val.length > 14 ? maskCNPJ(val) : maskCPF(val) })
+                          }}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Telefone</Label>
+                        <Input
+                          placeholder="(00) 00000-0000"
+                          value={formData.credor_telefone || ""}
+                          onChange={e => setFormData({ ...formData, credor_telefone: e.target.value })}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Cidade</Label>
+                        <Input
+                          placeholder="Cidade"
+                          value={formData.credor_cidade || ""}
                         onChange={e => setFormData({ ...formData, credor_cidade: e.target.value.toUpperCase() })}
                       />
                     </div>
@@ -323,6 +359,103 @@ export default function NovoPrecatorioPage() {
                         onChange={e => setFormData({ ...formData, credor_uf: e.target.value.toUpperCase() })}
                       />
                     </div>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-l-4 border-l-emerald-500 shadow-sm">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-emerald-500" /> Herdeiros</CardTitle>
+                    <CardDescription>Informe os herdeiros para o rateio do crédito</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {herdeiros.length === 0 ? (
+                      <div className="text-sm text-muted-foreground">
+                        Nenhum herdeiro adicionado.
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        {herdeiros.map((herdeiro, index) => (
+                          <div key={index} className="relative grid md:grid-cols-2 gap-4 border rounded-lg p-4">
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>Nome Completo</Label>
+                              <Input
+                                placeholder="Nome do herdeiro"
+                                value={herdeiro.nome_completo}
+                                onChange={(e) => {
+                                  const updated = [...herdeiros]
+                                  updated[index] = { ...updated[index], nome_completo: e.target.value.toUpperCase() }
+                                  setHerdeiros(updated)
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>CPF</Label>
+                              <Input
+                                placeholder="000.000.000-00"
+                                value={herdeiro.cpf}
+                                onChange={(e) => {
+                                  const updated = [...herdeiros]
+                                  updated[index] = { ...updated[index], cpf: maskCPF(e.target.value) }
+                                  setHerdeiros(updated)
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Telefone</Label>
+                              <Input
+                                placeholder="(00) 00000-0000"
+                                value={herdeiro.telefone}
+                                onChange={(e) => {
+                                  const updated = [...herdeiros]
+                                  updated[index] = { ...updated[index], telefone: e.target.value }
+                                  setHerdeiros(updated)
+                                }}
+                              />
+                            </div>
+                            <div className="space-y-2 md:col-span-2">
+                              <Label>Endereço</Label>
+                              <Input
+                                placeholder="Rua, número, bairro, cidade/UF"
+                                value={herdeiro.endereco}
+                                onChange={(e) => {
+                                  const updated = [...herdeiros]
+                                  updated[index] = { ...updated[index], endereco: e.target.value.toUpperCase() }
+                                  setHerdeiros(updated)
+                                }}
+                              />
+                            </div>
+                            <Button
+                              type="button"
+                              variant="ghost"
+                              size="icon"
+                              className="absolute top-3 right-3 text-muted-foreground hover:text-red-600"
+                              onClick={() => {
+                                const updated = herdeiros.filter((_, i) => i !== index)
+                                setHerdeiros(updated)
+                              }}
+                              aria-label="Remover herdeiro"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() =>
+                        setHerdeiros((prev) => [
+                          ...prev,
+                          { nome_completo: "", cpf: "", endereco: "", telefone: "" },
+                        ])
+                      }
+                    >
+                      <Plus className="h-4 w-4" />
+                      Adicionar herdeiro
+                    </Button>
                   </CardContent>
                 </Card>
               </div>
@@ -399,18 +532,21 @@ export default function NovoPrecatorioPage() {
                     <CardContent>
                       <p className="font-semibold text-lg">{formData.titulo}</p>
                       <p className="text-sm">Precatório: {formData.numero_precatorio}</p>
-                      <p className="text-sm">Tribunal: {formData.tribunal}</p>
+                      <p className="text-sm">Vara de origem: {formData.tribunal}</p>
                       <p className="text-sm">Devedor: {formData.devedor}</p>
                     </CardContent>
                   </Card>
-                  <Card>
-                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Credor</CardTitle></CardHeader>
-                    <CardContent>
-                      <p className="font-semibold text-lg">{formData.credor_nome}</p>
-                      <p className="text-sm">CPF/CNPJ: {formData.credor_cpf_cnpj}</p>
-                      <p className="text-sm">{formData.credor_cidade} - {formData.credor_uf}</p>
-                    </CardContent>
-                  </Card>
+                    <Card>
+                      <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Credor</CardTitle></CardHeader>
+                      <CardContent>
+                        <p className="font-semibold text-lg">{formData.credor_nome}</p>
+                        <p className="text-sm">CPF/CNPJ: {formData.credor_cpf_cnpj}</p>
+                        {formData.credor_telefone && (
+                          <p className="text-sm">Telefone: {formData.credor_telefone}</p>
+                        )}
+                        <p className="text-sm">{formData.credor_cidade} - {formData.credor_uf}</p>
+                      </CardContent>
+                    </Card>
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Financeiro</CardTitle></CardHeader>
                     <CardContent>

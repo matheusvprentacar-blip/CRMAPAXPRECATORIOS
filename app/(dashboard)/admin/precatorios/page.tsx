@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
@@ -46,18 +46,10 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
   FileText,
   Search,
-  UserPlus,
   Send,
+  Bell,
   CheckCircle2,
   Clock,
   Plus,
@@ -102,30 +94,62 @@ interface PrecatorioAdmin {
 
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
-  triagem: 15,
-  documentos_credor: 25,
-  certidoes: 35,
-  pronto_calculo: 50,
-  em_calculo: 65,
-  analise_juridica: 75,
-  recalculo: 80,
-  calculo_concluido: 90,
-  proposta: 95,
+  triagem_interesse: 15,
+  analise_processual_inicial: 25,
+  docs_credor: 35,
+  pronto_calculo: 45,
+  calculo_andamento: 55,
+  juridico: 65,
+  calculo_concluido: 75,
+  proposta_negociacao: 85,
+  proposta_aceita: 90,
+  certidoes: 95,
   fechado: 100,
+  pos_fechamento: 100,
+  pausado_credor: 20,
+  pausado_documentos: 30,
+  sem_interesse: 100,
+  reprovado: 100,
 }
 
 const KANBAN_LABELS: Record<string, string> = {
   entrada: "Entrada",
-  triagem: "Triagem",
-  documentos_credor: "Documentos",
+  triagem_interesse: "Triagem",
+  analise_processual_inicial: "Análise Processual Inicial",
+  docs_credor: "Documentos do credor",
+  pronto_calculo: "Pronto para cálculo",
+  calculo_andamento: "Cálculo em andamento",
+  juridico: "Jurídico",
+  calculo_concluido: "Cálculo concluído",
+  proposta_negociacao: "Proposta / Negociação",
+  proposta_aceita: "Proposta aceita",
   certidoes: "Certidões",
-  pronto_calculo: "Pronto p/ Cálculo",
-  em_calculo: "Em Cálculo",
-  analise_juridica: "Análise Jurídica",
-  recalculo: "Recálculo",
-  calculo_concluido: "Cálculo Concluído",
-  proposta: "Proposta",
   fechado: "Fechado",
+  pos_fechamento: "Pós-fechamento",
+  pausado_credor: "Pausado (credor)",
+  pausado_documentos: "Pausado (documentos)",
+  sem_interesse: "Sem interesse",
+  reprovado: "Reprovado / não elegível",
+}
+
+const STATUS_TONES: Record<string, string> = {
+  entrada: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
+  triagem_interesse: "border-blue-200 text-blue-700 bg-blue-50/60 dark:border-blue-900/50 dark:text-blue-200 dark:bg-blue-950/40",
+  analise_processual_inicial: "border-amber-200 text-amber-700 bg-amber-50/60 dark:border-amber-900/50 dark:text-amber-200 dark:bg-amber-950/40",
+  docs_credor: "border-indigo-200 text-indigo-700 bg-indigo-50/60 dark:border-indigo-900/50 dark:text-indigo-200 dark:bg-indigo-950/40",
+  pronto_calculo: "border-cyan-200 text-cyan-700 bg-cyan-50/60 dark:border-cyan-900/50 dark:text-cyan-200 dark:bg-cyan-950/40",
+  calculo_andamento: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
+  juridico: "border-purple-200 text-purple-700 bg-purple-50/60 dark:border-purple-900/50 dark:text-purple-200 dark:bg-purple-950/40",
+  calculo_concluido: "border-emerald-200 text-emerald-700 bg-emerald-50/60 dark:border-emerald-900/50 dark:text-emerald-200 dark:bg-emerald-950/40",
+  proposta_negociacao: "border-yellow-200 text-yellow-700 bg-yellow-50/60 dark:border-yellow-900/50 dark:text-yellow-200 dark:bg-yellow-950/40",
+  proposta_aceita: "border-green-200 text-green-700 bg-green-50/60 dark:border-green-900/50 dark:text-green-200 dark:bg-green-950/40",
+  certidoes: "border-teal-200 text-teal-700 bg-teal-50/60 dark:border-teal-900/50 dark:text-teal-200 dark:bg-teal-950/40",
+  fechado: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
+  pos_fechamento: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
+  pausado_credor: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
+  pausado_documentos: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
+  sem_interesse: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
+  reprovado: "border-red-200 text-red-700 bg-red-50/60 dark:border-red-900/50 dark:text-red-200 dark:bg-red-950/40",
 }
 
 export default function AdminPrecatoriosPage() {
@@ -145,6 +169,10 @@ export default function AdminPrecatoriosPage() {
   const [ocrData, setOcrData] = useState<PrecatorioData | null>(null)
   const [createModalOpen, setCreateModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
+  const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
+  const [notifyMessage, setNotifyMessage] = useState("")
+  const [notifyRecipients, setNotifyRecipients] = useState<string[]>([])
+  const [sendingNotice, setSendingNotice] = useState(false)
 
   // Bulk Deletion State
   const [selectedIds, setSelectedIds] = useState<string[]>([])
@@ -155,6 +183,23 @@ export default function AdminPrecatoriosPage() {
     responsavel_calculo_id: "none",
     prioridade: "media" as "baixa" | "media" | "alta" | "urgente",
   })
+
+  const recipientOptions = selectedPrecatorio
+    ? ([
+        selectedPrecatorio.dono_usuario_id
+          ? {
+              id: selectedPrecatorio.dono_usuario_id,
+              label: `Comercial: ${selectedPrecatorio.usuario_dono?.nome ?? "Operador"}`,
+            }
+          : null,
+        selectedPrecatorio.responsavel_calculo_id
+          ? {
+              id: selectedPrecatorio.responsavel_calculo_id,
+              label: `C\u00e1lculo: ${selectedPrecatorio.usuario_calculo?.nome ?? "Operador"}`,
+            }
+          : null,
+      ].filter(Boolean) as { id: string; label: string }[])
+    : []
   useEffect(() => {
     loadCurrentUser()
   }, [])
@@ -162,6 +207,59 @@ export default function AdminPrecatoriosPage() {
   useEffect(() => {
     if (currentUser) loadData()
   }, [currentUser])
+
+  function getPrecatorioRecipients(prec: PrecatorioAdmin) {
+    return [prec.dono_usuario_id, prec.responsavel_calculo_id].filter(Boolean)
+  }
+
+  function openNotifyDialog(prec: PrecatorioAdmin) {
+    setSelectedPrecatorio(prec)
+    const recipients = Array.from(new Set(getPrecatorioRecipients(prec)))
+    setNotifyRecipients(recipients)
+    setNotifyMessage("")
+    setNotifyDialogOpen(true)
+  }
+
+  async function handleSendNotification() {
+    if (!selectedPrecatorio) return
+    const mensagem = notifyMessage.trim()
+    if (!mensagem || notifyRecipients.length === 0) return
+
+    const supabase = createBrowserClient()
+    if (!supabase) return
+
+    try {
+      setSendingNotice(true)
+      const uniqueRecipients = Array.from(new Set(notifyRecipients)).filter(Boolean)
+      const precatorioNome =
+        selectedPrecatorio.titulo ||
+        selectedPrecatorio.numero_precatorio ||
+        selectedPrecatorio.credor_nome ||
+        "Precatorio"
+      const precatorioStatus = selectedPrecatorio.status_kanban || null
+      const payload = uniqueRecipients.map((usuarioId) => ({
+        usuario_id: usuarioId,
+        precatorio_id: selectedPrecatorio.id,
+        tipo: "admin_aviso",
+        mensagem,
+        lida: false,
+        precatorio_nome: precatorioNome,
+        precatorio_status: precatorioStatus,
+      }))
+
+      const { error } = await supabase.from("notificacoes").insert(payload)
+      if (error) throw error
+
+      toast.success("Aviso enviado com sucesso.")
+      setNotifyDialogOpen(false)
+      setNotifyMessage("")
+    } catch (error: any) {
+      console.error("Erro ao enviar aviso:", error)
+      toast.error(error?.message || "Erro ao enviar aviso")
+    } finally {
+      setSendingNotice(false)
+    }
+  }
 
   async function loadCurrentUser() {
     const supabase = createBrowserClient()
@@ -285,6 +383,35 @@ export default function AdminPrecatoriosPage() {
           distribuicao
         })
         throw error
+      }
+
+      const precatorioLabel =
+        selectedPrecatorio.titulo ||
+        selectedPrecatorio.numero_precatorio ||
+        selectedPrecatorio.credor_nome ||
+        "Precatório"
+
+      try {
+        if (distribuicao.dono_usuario_id) {
+          const { error: notificationError } = await supabase
+            .from("notifications")
+            .insert({
+              user_id: distribuicao.dono_usuario_id,
+              title: `Precatório distribuído - ${precatorioLabel}`,
+              body: "Um precatório foi atribuído a você pelo administrador.",
+              kind: "info",
+              link_url: `/precatorios/detalhes?id=${selectedPrecatorio.id}`,
+              entity_type: "precatorio",
+              entity_id: selectedPrecatorio.id,
+              event_type: "distribuicao",
+            })
+
+          if (notificationError) {
+            console.warn("Erro ao criar notificação de distribuição:", notificationError)
+          }
+        }
+      } catch (notificationErr) {
+        console.warn("Falha ao enviar notificação de distribuição:", notificationErr)
       }
 
       console.log('[Admin] Precatório distribuído com sucesso')
@@ -562,106 +689,150 @@ export default function AdminPrecatoriosPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="rounded-md border bg-card">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[50px]">
-                            <Checkbox
-                              checked={isAllSelected}
-                              onCheckedChange={toggleSelectAll}
-                              aria-label="Select all"
-                            />
-                          </TableHead>
-                          <TableHead>Precatório</TableHead>
-                          <TableHead>Status</TableHead>
-                          <TableHead>Valor</TableHead>
-                          <TableHead className="text-right">Ações</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {precatoriosFiltrados.map((prec) => {
-                          const statusLabel = KANBAN_LABELS[prec.status_kanban || "entrada"] || prec.status_kanban
-                          const isSelected = selectedIds.includes(prec.id)
+                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    {precatoriosFiltrados.map((prec) => {
+                      const statusKey = prec.status_kanban || "entrada"
+                      const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
+                      const statusTone = STATUS_TONES[statusKey] || "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40"
+                      const progress = KANBAN_PROGRESS[statusKey] || 0
+                      const isSelected = selectedIds.includes(prec.id)
+                      const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
+                      const valorPrincipal = prec.valor_principal || 0
+                      const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
+                      const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
+                      const showNumeroPrecatorio = Boolean(prec.titulo && prec.numero_precatorio)
 
-                          return (
-                            <TableRow key={prec.id} data-state={isSelected ? "selected" : undefined}>
-                              <TableCell>
-                                <Checkbox
-                                  checked={isSelected}
-                                  onCheckedChange={() => toggleSelection(prec.id)}
-                                  aria-label={`Select ${prec.numero_precatorio}`}
-                                />
-                              </TableCell>
-                              <TableCell className="font-medium">
-                                <div className="flex flex-col">
-                                  <span className="font-semibold">{prec.titulo || prec.numero_precatorio}</span>
-                                  <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                    <span>{prec.numero_processo || "Sem processo"}</span>
-                                    {prec.file_url && (
-                                      <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
-                                        <FileText className="h-2 w-2" />
-                                        PDF
-                                      </Badge>
-                                    )}
-                                  </div>
+                      return (
+                        <Card
+                          key={prec.id}
+                          className={`border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
+                        >
+                          <CardHeader className="pb-3">
+                            <div className="flex items-start gap-3">
+                              <Checkbox
+                                checked={isSelected}
+                                onCheckedChange={() => toggleSelection(prec.id)}
+                                aria-label={`Selecionar ${prec.numero_precatorio || prec.titulo || "precatório"}`}
+                                className="mt-1"
+                              />
+                              <div className="flex-1 space-y-1">
+                                <CardTitle className="text-base leading-snug line-clamp-2">{titulo}</CardTitle>
+                                <CardDescription className="line-clamp-1">
+                                  {prec.credor_nome || "Credor não informado"}
+                                </CardDescription>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{prec.numero_processo || "Sem processo"}</span>
+                                  {showNumeroPrecatorio && <span>• {prec.numero_precatorio}</span>}
+                                  {prec.file_url && (
+                                    <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
+                                      <FileText className="h-2 w-2" />
+                                      PDF
+                                    </Badge>
+                                  )}
                                 </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="outline" className="text-xs whitespace-nowrap">
-                                  {statusLabel}
+                              </div>
+                              <div className="flex flex-col items-end gap-2">
+                                <Badge variant="outline" className={`text-xs whitespace-nowrap ${statusTone}`}>
+                                  {statusLabel || "Status não definido"}
                                 </Badge>
-                              </TableCell>
-                              <TableCell>
-                                <div className="text-sm font-medium">
-                                  {formatCurrency(prec.valor_atualizado || prec.valor_principal)}
+                                <Badge variant={getPrioridadeVariant(prec.prioridade)} className="text-xs capitalize">
+                                  {prec.prioridade || "média"}
+                                </Badge>
+                              </div>
+                            </div>
+                          </CardHeader>
+
+                          <CardContent className="space-y-4">
+                            <div className="space-y-2">
+                              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                <span>Status atual</span>
+                                <span>{progress}%</span>
+                              </div>
+                              <Progress value={progress} className="h-2" />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-3 text-sm">
+                              <div>
+                                <p className="text-xs text-muted-foreground">Valor principal</p>
+                                <p className="font-semibold">{formatCurrency(valorPrincipal)}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-muted-foreground">Valor atualizado</p>
+                                <p className="font-semibold text-emerald-700">{formatCurrency(valorAtualizado)}</p>
+                              </div>
+                            </div>
+
+                            <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <User className="h-3 w-3" />
+                                  <span>Responsável distribuído</span>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-right">
-                                <div className="flex justify-end gap-2">
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    className="h-8 w-8 p-0"
-                                    title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
-                                    onClick={() => {
-                                      setSelectedPrecatorio(prec)
-                                      setDistribuicao({
-                                        dono_usuario_id: prec.dono_usuario_id || "",
-                                        responsavel_calculo_id: prec.responsavel_calculo_id || "none",
-                                        prioridade: (prec.prioridade as any) || "media",
-                                      })
-                                      setDistributeDialogOpen(true)
-                                    }}
-                                  >
-                                    <Send className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0"
-                                    onClick={() => router.push(`/precatorios/visualizar?id=${prec.id}`)}
-                                  >
-                                    <FileText className="h-4 w-4" />
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                    onClick={() => {
-                                      setSelectedPrecatorio(prec)
-                                      setDeleteDialogOpen(true)
-                                    }}
-                                  >
-                                    <Trash2 className="h-4 w-4" />
-                                  </Button>
+                                <span className="font-medium text-foreground">{responsavelNome}</span>
+                              </div>
+                              {prec.responsavel_calculo_id && (
+                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>Cálculo</span>
+                                  <span className="font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
                                 </div>
-                              </TableCell>
-                            </TableRow>
-                          )
-                        })}
-                      </TableBody>
-                    </Table>
+                              )}
+                            </div>
+
+                            <div className="flex flex-wrap gap-2 pt-1">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 min-w-[140px]"
+                                title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                onClick={() => {
+                                  setSelectedPrecatorio(prec)
+                                  setDistribuicao({
+                                    dono_usuario_id: prec.dono_usuario_id || "",
+                                    responsavel_calculo_id: prec.responsavel_calculo_id || "none",
+                                    prioridade: (prec.prioridade as any) || "media",
+                                  })
+                                  setDistributeDialogOpen(true)
+                                }}
+                              >
+                                <Send className="h-3 w-3 mr-1" />
+                                {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="flex-1 min-w-[120px]"
+                                title="Enviar aviso"
+                                onClick={() => openNotifyDialog(prec)}
+                              >
+                                <Bell className="h-3 w-3 mr-1" />
+                                Aviso
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                title="Ver detalhes"
+                                onClick={() => router.push(`/precatorios/detalhes?id=${prec.id}`)}
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                title="Excluir"
+                                onClick={() => {
+                                  setSelectedPrecatorio(prec)
+                                  setDeleteDialogOpen(true)
+                                }}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      )
+                    })}
                   </div>
                 )}
               </TabsContent>
@@ -780,6 +951,74 @@ export default function AdminPrecatoriosPage() {
           </DialogContent>
         </Dialog>
 
+        {/* Dialog de Aviso (Notificacao) */}
+        <Dialog open={notifyDialogOpen} onOpenChange={setNotifyDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Enviar aviso</DialogTitle>
+              <DialogDescription>
+                Notifique os respons\u00e1veis vinculados a este precat\u00f3rio.
+              </DialogDescription>
+            </DialogHeader>
+            {selectedPrecatorio && (
+              <div className="bg-muted p-4 rounded-lg mb-4">
+                <p className="font-semibold">{selectedPrecatorio.titulo || selectedPrecatorio.numero_precatorio}</p>
+                <p className="text-sm text-muted-foreground">Credor: {selectedPrecatorio.credor_nome}</p>
+                <p className="text-sm text-muted-foreground">
+                  Valor: {formatCurrency(selectedPrecatorio.valor_atualizado || selectedPrecatorio.valor_principal)}
+                </p>
+              </div>
+            )}
+            <div className="space-y-3">
+              <div className="space-y-2">
+                <Label>Destinat\u00e1rios</Label>
+                {recipientOptions.length === 0 && (
+                  <p className="text-xs text-muted-foreground">
+                    Nenhum destinat\u00e1rio vinculado.
+                  </p>
+                )}
+                <div className="space-y-2">
+                  {recipientOptions.map((option) => (
+                    <label key={option.id} className="flex items-center gap-2 text-sm">
+                      <Checkbox
+                        checked={notifyRecipients.includes(option.id)}
+                        onCheckedChange={(checked) => {
+                          setNotifyRecipients((prev) => {
+                            if (checked) return Array.from(new Set([...prev, option.id]))
+                            return prev.filter((id) => id !== option.id)
+                          })
+                        }}
+                      />
+                      <span>{option.label}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label>Mensagem</Label>
+                <Textarea
+                  value={notifyMessage}
+                  onChange={(e) => setNotifyMessage(e.target.value)}
+                  placeholder="Digite o aviso..."
+                  rows={4}
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNotifyDialogOpen(false)} disabled={sendingNotice}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleSendNotification}
+                disabled={sendingNotice || notifyRecipients.length === 0 || !notifyMessage.trim()}
+              >
+                {sendingNotice ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Bell className="h-4 w-4 mr-2" />}
+                Enviar aviso
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
         {/* AlertDialog de Exclusão Individual */}
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
@@ -861,3 +1100,4 @@ export default function AdminPrecatoriosPage() {
     </RoleGuard >
   )
 }
+

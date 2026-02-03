@@ -127,7 +127,7 @@ export default function MeusPrecatoriosPage() {
             <Card
               key={precatorio.id}
               className="group cursor-pointer hover:shadow-md transition-all duration-200 border-border/50 hover:border-primary/30"
-              onClick={() => router.push(`/precatorios/visualizar?id=${precatorio.id}`)}
+              onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
             >
               <CardContent className="p-6">
                 <div className="flex gap-4">
@@ -207,7 +207,7 @@ export default function MeusPrecatoriosPage() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => router.push(`/precatorios/visualizar?id=${precatorio.id}`)}>
+                            <DropdownMenuItem onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}>
                               <FileText className="h-4 w-4 mr-2" />
                               Ver Detalhes
                             </DropdownMenuItem>

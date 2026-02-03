@@ -65,12 +65,13 @@ BEGIN
     CHECK (status_kanban IN (
       'entrada',
       'triagem_interesse',
+      'aguardando_oficio',
+      'analise_processual_inicial',
       'docs_credor',
       'certidoes',
       'pronto_calculo',
       'calculo_andamento',
-      'analise_juridica',
-      'recalculo_pos_juridico',
+      'juridico',
       'calculo_concluido',
       'proposta_negociacao',
       'fechado'

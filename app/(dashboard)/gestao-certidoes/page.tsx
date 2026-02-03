@@ -101,7 +101,7 @@ export default function GestaoCertidoesPage() {
     }, [])
 
     const handleAbrir = (id: string) => {
-        router.push(`/precatorios/visualizar?id=${id}`)
+        router.push(`/precatorios/detalhes?id=${id}`)
     }
 
     if (loading) {
