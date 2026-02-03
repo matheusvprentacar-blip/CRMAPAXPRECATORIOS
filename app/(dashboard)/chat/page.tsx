@@ -253,6 +253,25 @@ export default function ChatPage() {
     if (data) {
       setMensagens((prev) => [...prev, data as ChatMensagem])
     }
+    if (data && selectedUser?.id && selectedUser.id !== senderId) {
+      const senderName = profile?.nome || "Usuário"
+      const bodyText = data.arquivo_nome
+        ? `📎 ${data.arquivo_nome}`
+        : data.texto || "Nova mensagem"
+      const { error: notifyError } = await supabase.from("notifications").insert({
+        user_id: selectedUser.id,
+        title: `Nova mensagem - ${senderName}`,
+        body: bodyText,
+        kind: "info",
+        link_url: "/chat",
+        entity_type: "chat",
+        entity_id: senderId,
+        event_type: "mensagem",
+      })
+      if (notifyError) {
+        console.warn("Erro ao criar notificação de mensagem:", notifyError)
+      }
+    }
     setMessageText("")
     setAttachedFile(null)
     if (fileInputRef.current) fileInputRef.current.value = ""

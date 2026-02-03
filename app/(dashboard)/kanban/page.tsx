@@ -27,13 +27,13 @@ import { Textarea } from "@/components/ui/textarea"
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
 import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
-import { KANBAN_COLUMNS } from "./columns";
+import { KANBAN_COLUMNS } from "./columns"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "lucide-react"
 
 // Colunas do Kanban com Gates
-const COLUNAS = KANBAN_COLUMNS;
+const COLUNAS = KANBAN_COLUMNS
 
 // Colunas que permitem acesso à área de cálculos
 const COLUNAS_CALCULO_PERMITIDO = [
@@ -73,29 +73,43 @@ interface PrecatorioCard {
   tribunal: string | null
   status_kanban: string
   interesse_status: string | null
+  interesse_observacao?: string | null
+
   juridico_parecer_status?: string | null
   juridico_resultado_final?: string | null
+
   calculo_desatualizado: boolean
   calculo_ultima_versao: number
+
   valor_principal: number | null
   valor_atualizado: number | null
   saldo_liquido: number | null
+
+  prioridade?: number | null
+
+  responsavel?: string | null
+  responsavel_certidoes_id?: string | null
+  responsavel_juridico_id?: string | null
   responsavel_calculo_id: string | null
+
   created_at: string
   updated_at?: string | null
-  file_url?: string | null // [NEW] Campo de Ofício
+
+  file_url?: string | null // Campo de Ofício
+
   // Campos para filtros avançados
-  nivel_complexidade?: 'baixa' | 'media' | 'alta' | null
-  sla_status?: 'nao_iniciado' | 'no_prazo' | 'atencao' | 'atrasado' | 'concluido' | null
+  nivel_complexidade?: "baixa" | "media" | "alta" | null
+  sla_status?: "nao_iniciado" | "no_prazo" | "atencao" | "atrasado" | "concluido" | null
   tipo_atraso?: string | null
-  impacto_atraso?: 'baixo' | 'medio' | 'alto' | null
+  impacto_atraso?: "baixo" | "medio" | "alto" | null
   urgente?: boolean
   titular_falecido?: boolean
   motivo_atraso_calculo?: string | null
   motivo_sem_interesse?: string | null
   data_recontato?: string | null
   data_entrada_calculo?: string | null
-  status?: string // Usado para filtro de status também
+  status?: string
+
   resumo_itens?: {
     total_docs: number
     docs_recebidos: number
@@ -104,7 +118,8 @@ interface PrecatorioCard {
     certidoes_nao_aplicavel: number
     percentual_docs: number
     percentual_certidoes: number
-  }
+  } | null
+
   responsavel_perfil?: { nome: string } | null
 }
 
@@ -114,15 +129,20 @@ const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HT
     const container = containerRef.current
     if (!container) return
 
-    const SCROLL_ZONE = 110
-    const SCROLL_SPEED = 12
+    const SCROLL_ZONE = 120
+    const SCROLL_SPEED = 14
 
     let frameId: number | null = null
     let pointerX = container.getBoundingClientRect().left + container.getBoundingClientRect().width / 2
 
-    const handleMouseMove = (e: MouseEvent) => {
-      pointerX = e.clientX
+    const updatePointer = (clientX?: number | null) => {
+      if (typeof clientX === "number") pointerX = clientX
     }
+
+    const handlePointerMove = (e: PointerEvent) => updatePointer(e.clientX)
+    const handleMouseMove = (e: MouseEvent) => updatePointer(e.clientX)
+    const handleTouchMove = (e: TouchEvent) => updatePointer(e.touches?.[0]?.clientX ?? null)
+    const handleDragOver = (e: DragEvent) => updatePointer(e.clientX)
 
     const loop = () => {
       const rect = container.getBoundingClientRect()
@@ -146,14 +166,78 @@ const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HT
       frameId = window.requestAnimationFrame(loop)
     }
 
-    window.addEventListener("mousemove", handleMouseMove)
+    // capture:true ajuda quando o DnD “segura” eventos
+    window.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true })
+    window.addEventListener("mousemove", handleMouseMove, { passive: true, capture: true })
+    window.addEventListener("touchmove", handleTouchMove, { passive: true, capture: true })
+    window.addEventListener("dragover", handleDragOver, { passive: true, capture: true })
+
     frameId = window.requestAnimationFrame(loop)
 
     return () => {
-      window.removeEventListener("mousemove", handleMouseMove)
+      window.removeEventListener("pointermove", handlePointerMove, true as any)
+      window.removeEventListener("mousemove", handleMouseMove, true as any)
+      window.removeEventListener("touchmove", handleTouchMove, true as any)
+      window.removeEventListener("dragover", handleDragOver, true as any)
       if (frameId) window.cancelAnimationFrame(frameId)
     }
   }, [isDragging, containerRef])
+}
+
+// Listener nativo de wheel (passive:false) — ESSENCIAL em desktop/webview
+const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement>) => {
+  useEffect(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const onWheel = (e: WheelEvent) => {
+      // pinch-zoom/ctrl+scroll: deixa passar
+      if (e.ctrlKey) return
+
+      const target = e.target as HTMLElement | null
+
+      // Se o wheel está sobre uma coluna com scroll vertical e ainda dá pra scrollar, deixa o vertical funcionar.
+      const scrollArea = target?.closest?.("[data-kanban-scroll]") as HTMLElement | null
+      if (scrollArea) {
+        const canScrollY = scrollArea.scrollHeight > scrollArea.clientHeight + 1
+        if (canScrollY) {
+          const atTop = scrollArea.scrollTop <= 0
+          const atBottom = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 1
+
+          // ainda tem espaço pra scroll vertical? deixa o browser cuidar.
+          if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
+            return
+          }
+        }
+      }
+
+      // Shift+wheel -> horizontal (padrão de muitos sistemas)
+      if (e.shiftKey) {
+        container.scrollLeft += e.deltaY
+        e.preventDefault()
+        return
+      }
+
+      const absX = Math.abs(e.deltaX || 0)
+      const absY = Math.abs(e.deltaY || 0)
+
+      // Trackpad com gesto horizontal real
+      if (absX > absY) {
+        container.scrollLeft += e.deltaX
+        e.preventDefault()
+        return
+      }
+
+      // Mouse wheel normal (vertical) vira horizontal
+      container.scrollLeft += e.deltaY
+      e.preventDefault()
+    }
+
+    container.addEventListener("wheel", onWheel, { passive: false })
+    return () => {
+      container.removeEventListener("wheel", onWheel as any)
+    }
+  }, [containerRef])
 }
 
 const formatBR = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
@@ -279,8 +363,16 @@ const KanbanCardItem = memo(function KanbanCardItem({
             )}
 
             {precatorio.file_url && (
-              <a href={precatorio.file_url} target="_blank" rel="noopener noreferrer" onClick={(e) => e.stopPropagation()}>
-                <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400">
+              <a
+                href={precatorio.file_url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                <Badge
+                  variant="outline"
+                  className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400"
+                >
                   <FileText className="h-2.5 w-2.5" />
                   Ofício
                 </Badge>
@@ -317,7 +409,10 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           <div className="pt-2 flex items-center justify-between gap-2">
             {precatorio.responsavel_perfil?.nome && (
-              <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md max-w-[55%] truncate shrink-0" title={`Responsável: ${precatorio.responsavel_perfil.nome}`}>
+              <div
+                className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md max-w-[55%] truncate shrink-0"
+                title={`Responsável: ${precatorio.responsavel_perfil.nome}`}
+              >
                 <User className="h-3 w-3 shrink-0" />
                 <span className="truncate">{precatorio.responsavel_perfil.nome.split(" ")[0]}</span>
               </div>
@@ -330,9 +425,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
               disabled={!podeCalculos}
               onClick={(e) => {
                 e.stopPropagation()
-                if (podeCalculos) {
-                  onOpenCalculo(precatorio.id)
-                }
+                if (podeCalculos) onOpenCalculo(precatorio.id)
               }}
             >
               {podeCalculos ? (
@@ -459,7 +552,7 @@ export default function KanbanPageNewGates() {
   const router = useRouter()
   const [precatorios, setPrecatorios] = useState<PrecatorioCard[]>([])
   const [loading, setLoading] = useState(true)
-  const [filtros, setFiltros] = useState<FiltrosPrecatorios>({}) // Filtros state
+  const [filtros, setFiltros] = useState<FiltrosPrecatorios>({})
   const [updatedPrecatorios, setUpdatedPrecatorios] = useState<Set<string>>(new Set())
   const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
   const canEnviarCalculoRoles = roles.some((role) =>
@@ -470,7 +563,6 @@ export default function KanbanPageNewGates() {
     open: boolean
     precatorioId: string | null
     colunaDestino: string | null
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     validacao: any
   }>({
     open: false,
@@ -478,6 +570,7 @@ export default function KanbanPageNewGates() {
     colunaDestino: null,
     validacao: null,
   })
+
   const [triagemModal, setTriagemModal] = useState<{
     open: boolean
     precatorioId: string | null
@@ -489,6 +582,7 @@ export default function KanbanPageNewGates() {
     status: "SEM_CONTATO",
     observacao: "",
   })
+
   const [triagemSaving, setTriagemSaving] = useState(false)
   const [motivoFechamento, setMotivoFechamento] = useState("")
   const [semInteresseDialog, setSemInteresseDialog] = useState<{
@@ -508,49 +602,8 @@ export default function KanbanPageNewGates() {
     precatorioId: null,
     colunaDestino: "pos_fechamento",
   })
+
   const [isDragging, setIsDragging] = useState(false)
-
-  /*
-    useEffect(() => {
-      if (!isDragging) return;
-  
-      const container = document.getElementById('kanban-scroll-container');
-      if (!container) return;
-  
-      const SCROLL_ZONE = 100; // px – tighter hot zone
-      const SCROLL_SPEED = 12; // px per frame – slightly faster scroll
-      let animationFrameId: number;
-      let mouseX = 0;
-  
-      const handleMouseMove = (e: MouseEvent) => {
-        mouseX = e.clientX;
-      };
-  
-      const scrollLoop = () => {
-        // DEBUG LOG
-        // console.log("Scroll Loop Active", mouseX, SCROLL_ZONE, window.innerWidth);
-  
-        // Check boundaries
-        if (mouseX < SCROLL_ZONE) {
-          container.scrollLeft -= SCROLL_SPEED;
-        } else if (mouseX > window.innerWidth - SCROLL_ZONE) {
-          container.scrollLeft += SCROLL_SPEED;
-        }
-        animationFrameId = requestAnimationFrame(scrollLoop);
-      };
-  
-      window.addEventListener('mousemove', handleMouseMove);
-      animationFrameId = requestAnimationFrame(scrollLoop);
-  
-      return () => {
-        window.removeEventListener('mousemove', handleMouseMove);
-        cancelAnimationFrame(animationFrameId);
-      };
-    }, [isDragging]);
-  */
-
-  // DEBUG INDICATOR (Remove later)
-  // console.log("Kanban Render. IsDragging:", isDragging);
 
   useEffect(() => {
     if (profile) {
@@ -641,6 +694,7 @@ export default function KanbanPageNewGates() {
         tribunal,
         status_kanban,
         interesse_status,
+        interesse_observacao,
         juridico_parecer_status,
         juridico_resultado_final,
         calculo_desatualizado,
@@ -660,6 +714,7 @@ export default function KanbanPageNewGates() {
         tipo_atraso,
         impacto_atraso,
         urgente,
+        titular_falecido,
         status,
         file_url,
         motivo_atraso_calculo,
@@ -670,32 +725,30 @@ export default function KanbanPageNewGates() {
 
       let precatoriosData: any[] | null = null
       const { data, error } = await supabase
-        .from('precatorios')
+        .from("precatorios")
         .select(selectFields)
-        .is('deleted_at', null)
-        .order('created_at', { ascending: false })
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
 
       if (error) {
-        // Fallback para bancos ainda sem colunas novas (evita quebra da tela)
         console.warn("[Kanban] Falha no select detalhado, tentando fallback:", error)
         const { data: fallbackData, error: fallbackError } = await supabase
-          .from('precatorios')
-          .select('*')
-          .is('deleted_at', null)
-          .order('created_at', { ascending: false })
+          .from("precatorios")
+          .select("*")
+          .is("deleted_at", null)
+          .order("created_at", { ascending: false })
         if (fallbackError) throw fallbackError
         precatoriosData = fallbackData
       } else {
         precatoriosData = data
       }
 
-      // Buscar resumos
       const precatoriosComResumo = await Promise.all(
         (precatoriosData || []).map(async (p) => {
           const { data: resumo } = await supabase
-            .from('view_resumo_itens_precatorio')
-            .select('*')
-            .eq('precatorio_id', p.id)
+            .from("view_resumo_itens_precatorio")
+            .select("*")
+            .eq("precatorio_id", p.id)
             .single()
 
           return {
@@ -705,13 +758,10 @@ export default function KanbanPageNewGates() {
         })
       )
 
-      // Filtragem Client-Side para "Kanban Único"
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
       const isAdmin = roles.includes("admin") || roles.includes("gestor")
       const userId = profile?.id
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const precatoriosFiltrados = precatoriosComResumo.filter((p: any) => {
         if (isAdmin) return true
 
@@ -725,7 +775,7 @@ export default function KanbanPageNewGates() {
           return p.responsavel_juridico_id === userId
         }
         if (roles.includes("operador_calculo")) {
-          const fasesCalculo = ['pronto_calculo', 'calculo_andamento', 'calculo_concluido']
+          const fasesCalculo = ["pronto_calculo", "calculo_andamento", "calculo_concluido"]
           return p.responsavel_calculo_id === userId || (!p.responsavel_calculo_id && fasesCalculo.includes(p.status_kanban))
         }
 
@@ -758,7 +808,6 @@ export default function KanbanPageNewGates() {
 
   const getFilteredPrecatorios = () => {
     return precatorios.filter(p => {
-      // 1. Busca por termo
       if (filtros.termo) {
         const term = normalizeString(filtros.termo)
         const matchTermo = (
@@ -771,34 +820,26 @@ export default function KanbanPageNewGates() {
         if (!matchTermo) return false
       }
 
-      // 2. Status
       if (filtros.status && filtros.status.length > 0) {
-        if (!filtros.status.includes(p.status || '')) return false
+        if (!filtros.status.includes(p.status || "")) return false
       }
 
-      // 3. Complexidade (Mapeado para nivel_complexidade)
       if (filtros.complexidade && filtros.complexidade.length > 0) {
         if (!p.nivel_complexidade || !filtros.complexidade.includes(p.nivel_complexidade)) return false
       }
 
-      // 4. SLA Status
       if (filtros.sla_status && filtros.sla_status.length > 0) {
         if (!p.sla_status || !filtros.sla_status.includes(p.sla_status)) return false
       }
 
-      // 5. Tipo Atraso
       if (filtros.tipo_atraso && filtros.tipo_atraso.length > 0) {
-        // Casting p.tipo_atraso to avoid type mismatch if needed, though defined as string | null
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (!p.tipo_atraso || !filtros.tipo_atraso.includes(p.tipo_atraso as any)) return false
       }
 
-      // 6. Impacto Atraso
       if (filtros.impacto_atraso && filtros.impacto_atraso.length > 0) {
         if (!p.impacto_atraso || !filtros.impacto_atraso.includes(p.impacto_atraso)) return false
       }
 
-      // 7. Datas de Criação
       if (filtros.data_criacao_inicio) {
         if (new Date(p.created_at) < new Date(filtros.data_criacao_inicio)) return false
       }
@@ -808,12 +849,10 @@ export default function KanbanPageNewGates() {
         if (new Date(p.created_at) > endDate) return false
       }
 
-      // 8. Valores
       const valor = (p.valor_atualizado && p.valor_atualizado > 0) ? p.valor_atualizado : (p.valor_principal || 0)
       if (filtros.valor_min && valor < filtros.valor_min) return false
       if (filtros.valor_max && valor > filtros.valor_max) return false
 
-      // 9. Flags
       if (filtros.urgente && !p.urgente) return false
       if (filtros.titular_falecido && !p.titular_falecido) return false
 
@@ -821,15 +860,8 @@ export default function KanbanPageNewGates() {
     })
   }
 
-  // Handlers para Filtros
-  const updateFiltros = (novosFiltros: FiltrosPrecatorios) => {
-    setFiltros(novosFiltros)
-  }
-
-  const clearFiltros = () => {
-    setFiltros({})
-  }
-
+  const updateFiltros = (novosFiltros: FiltrosPrecatorios) => setFiltros(novosFiltros)
+  const clearFiltros = () => setFiltros({})
   const removeFiltro = (key: string) => {
     setFiltros((prev) => {
       const newFiltros = { ...prev }
@@ -852,15 +884,12 @@ export default function KanbanPageNewGates() {
     return grupos
   }
 
-  // Helper para atualizar termo da searchbar
   const setSearchTerm = (term: string) => {
     setFiltros(prev => ({ ...prev, termo: term }))
   }
 
-
-  const calcularTotalColuna = (precatorios: PrecatorioCard[]) => {
-    return precatorios.reduce((acc, p) => {
-      // Se tiver valor atualizado, usa. Se não, usa valor principal.
+  const calcularTotalColuna = (precatoriosColuna: PrecatorioCard[]) => {
+    return precatoriosColuna.reduce((acc, p) => {
       const valor = (p.valor_atualizado && p.valor_atualizado > 0)
         ? p.valor_atualizado
         : (p.valor_principal ?? 0)
@@ -895,6 +924,7 @@ export default function KanbanPageNewGates() {
       })
       return
     }
+
     if (colunaDestino === "pronto_calculo") {
       const precatorio = precatorios.find(p => p.id === precatorioId)
       if (!precatorio?.file_url) {
@@ -909,7 +939,6 @@ export default function KanbanPageNewGates() {
 
     const precatorioAtual = precatorios.find(p => p.id === precatorioId)
     if (precatorioAtual?.status_kanban === "proposta_aceita" && colunaDestino === "certidoes") {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
       if (!roles.includes("juridico")) {
         toast({
@@ -920,11 +949,9 @@ export default function KanbanPageNewGates() {
         return
       }
     }
+
     if (colunaDestino === "sem_interesse") {
-      setSemInteresseDialog({
-        open: true,
-        precatorioId: precatorioId
-      })
+      setSemInteresseDialog({ open: true, precatorioId })
       return
     }
 
@@ -932,9 +959,8 @@ export default function KanbanPageNewGates() {
       const supabase = createBrowserClient()
       if (!supabase) return
 
-      // Validar movimentação
       const { data: validacao, error: validacaoError } = await supabase
-        .rpc('validar_movimentacao_kanban', {
+        .rpc("validar_movimentacao_kanban", {
           p_precatorio_id: precatorioId,
           p_coluna_destino: colunaDestino
         })
@@ -944,33 +970,31 @@ export default function KanbanPageNewGates() {
       if (!validacao.valido) {
         setMoveDialog({
           open: true,
-          precatorioId: precatorioId,
-          colunaDestino: colunaDestino,
-          validacao: validacao,
+          precatorioId,
+          colunaDestino,
+          validacao,
         })
         return
       }
 
       const statusMapping: Record<string, string> = {
-        pronto_calculo: 'em_calculo',
-        calculo_andamento: 'em_calculo',
-        calculo_concluido: 'calculado',
+        pronto_calculo: "pronto_calculo",
+        calculo_andamento: "em_calculo",
+        calculo_concluido: "calculado",
       }
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {
         status_kanban: colunaDestino,
-        updated_at: new Date().toISOString()
+        localizacao_kanban: colunaDestino,
+        updated_at: new Date().toISOString(),
       }
 
-      if (statusMapping[colunaDestino]) {
-        updateData.status = statusMapping[colunaDestino]
-      }
+      if (statusMapping[colunaDestino]) updateData.status = statusMapping[colunaDestino]
 
       const { error: updateError } = await supabase
-        .from('precatorios')
+        .from("precatorios")
         .update(updateData)
-        .eq('id', precatorioId)
+        .eq("id", precatorioId)
 
       if (updateError) throw updateError
 
@@ -990,10 +1014,8 @@ export default function KanbanPageNewGates() {
     }
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
   async function onDragEnd(result: any) {
     const { destination, source, draggableId } = result
-
     if (!destination) return
     if (destination.droppableId === source.droppableId) return
 
@@ -1023,10 +1045,7 @@ export default function KanbanPageNewGates() {
 
     if (destino === "sem_interesse") {
       setEncerradosDialog((prev) => ({ ...prev, open: false }))
-      setSemInteresseDialog({
-        open: true,
-        precatorioId: encerradosDialog.precatorioId,
-      })
+      setSemInteresseDialog({ open: true, precatorioId: encerradosDialog.precatorioId })
       return
     }
 
@@ -1050,17 +1069,16 @@ export default function KanbanPageNewGates() {
       const supabase = createBrowserClient()
       if (!supabase) return
 
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {
         status_kanban: moveDialog.colunaDestino,
-        updated_at: new Date().toISOString()
+        localizacao_kanban: moveDialog.colunaDestino,
+        updated_at: new Date().toISOString(),
       }
 
-      // Mapeamento de status
       const statusMapping: Record<string, string> = {
-        pronto_calculo: 'em_calculo',
-        calculo_andamento: 'em_calculo',
-        calculo_concluido: 'calculado',
+        pronto_calculo: "pronto_calculo",
+        calculo_andamento: "em_calculo",
+        calculo_concluido: "calculado",
       }
 
       if (statusMapping[moveDialog.colunaDestino]) {
@@ -1072,9 +1090,9 @@ export default function KanbanPageNewGates() {
       }
 
       const { error } = await supabase
-        .from('precatorios')
+        .from("precatorios")
         .update(updateData)
-        .eq('id', moveDialog.precatorioId)
+        .eq("id", moveDialog.precatorioId)
 
       if (error) throw error
 
@@ -1106,10 +1124,7 @@ export default function KanbanPageNewGates() {
         status: "SEM_CONTATO",
         observacao: "",
       })
-      setSemInteresseDialog({
-        open: true,
-        precatorioId: triagemModal.precatorioId,
-      })
+      setSemInteresseDialog({ open: true, precatorioId: triagemModal.precatorioId })
       return
     }
 
@@ -1176,32 +1191,17 @@ export default function KanbanPageNewGates() {
   }
 
   const podeAcessarCalculos = useCallback((precatorio: PrecatorioCard): boolean => {
-    // Verificar se est? em coluna permitida
-    if (!COLUNAS_CALCULO_PERMITIDO.includes(precatorio.status_kanban)) {
-      return false
-    }
+    if (!COLUNAS_CALCULO_PERMITIDO.includes(precatorio.status_kanban)) return false
 
-    // Checking roles safely
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
-
-    // Admin e Gestor tem acesso total
     if (roles.includes("admin") || roles.includes("gestor")) return true
-
-    // Operador de c?lculo tem acesso se estiver na coluna correta
-    // (A responsabilidade j? foi verificada no filtro de visualiza??o da p?gina)
-    if (roles.includes("operador_calculo")) {
-      return true
-    }
-
+    if (roles.includes("operador_calculo")) return true
     return false
   }, [profile?.role])
 
   const abrirDetalhe = useCallback((precatorioId: string, updatedAt?: string | null) => {
     void markPrecatorioUpdateSeen(precatorioId, updatedAt)
-    // Operador comercial vai para p?gina de visualiza??o
-    // Admin e Operador de C?lculo v?o para p?gina de edi??o completa
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+
     const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
     if (roles.includes("operador_comercial")) {
       router.push(`/precatorios/detalhes?id=${precatorioId}`)
@@ -1211,18 +1211,17 @@ export default function KanbanPageNewGates() {
   }, [markPrecatorioUpdateSeen, profile?.role, router])
 
   const abrirAreaCalculos = useCallback(async (precatorioId: string) => {
-    // Atualizar status para Em C?lculo
     const supabase = createBrowserClient()
     if (supabase) {
       const { error } = await supabase
-        .from('precatorios')
+        .from("precatorios")
         .update({
-          status: 'calculo_andamento', // ou 'em_calculo' dependendo do sistema
-          status_kanban: 'calculo_andamento',
-          localizacao_kanban: 'calculo_andamento',
+          status: "calculo_andamento",
+          status_kanban: "calculo_andamento",
+          localizacao_kanban: "calculo_andamento",
           updated_at: new Date().toISOString()
         })
-        .eq('id', precatorioId)
+        .eq("id", precatorioId)
 
       if (error) {
         console.error("Erro ao atualizar status:", error)
@@ -1231,11 +1230,10 @@ export default function KanbanPageNewGates() {
           description: error.message,
           variant: "destructive"
         })
-        return // Stop redirection on error
+        return
       }
     }
 
-    // Redirecionar para a Calculadora (n?o para a fila)
     router.push(`/calcular?id=${precatorioId}`)
   }, [router])
 
@@ -1254,38 +1252,6 @@ export default function KanbanPageNewGates() {
     const maxScroll = container.scrollWidth - container.clientWidth
     setCanScrollLeft(container.scrollLeft > 8)
     setCanScrollRight(container.scrollLeft < maxScroll - 8)
-  }, [])
-
-  const handleWheel = useCallback((e: any) => {
-    const container = scrollContainerRef.current
-    if (!container) return
-
-    if (e.shiftKey) return
-
-    const absX = Math.abs(e.deltaX || 0)
-    const absY = Math.abs(e.deltaY || 0)
-
-    if (absX > absY) {
-      container.scrollLeft += e.deltaX
-      e.preventDefault()
-      return
-    }
-
-    const target = e.target as HTMLElement | null
-    const scrollArea = target?.closest?.("[data-kanban-scroll]") as HTMLElement | null
-    if (scrollArea) {
-      const canScroll = scrollArea.scrollHeight > scrollArea.clientHeight + 1
-      if (canScroll) {
-        const atTop = scrollArea.scrollTop <= 0
-        const atBottom = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 1
-        if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
-          return
-        }
-      }
-    }
-
-    container.scrollLeft += e.deltaY
-    e.preventDefault()
   }, [])
 
   useEffect(() => {
@@ -1309,6 +1275,10 @@ export default function KanbanPageNewGates() {
     return () => window.cancelAnimationFrame(frame)
   }, [updateScrollButtons, filteredPrecatorios.length])
 
+  // ✅ FIX 1: wheel vertical -> scroll horizontal (nativo, passive:false)
+  useWheelToHorizontalScroll(scrollContainerRef)
+
+  // ✅ FIX 2: auto-scroll durante drag perto das bordas
   useHorizontalAutoScroll(isDragging, scrollContainerRef)
 
   if (loading) {
@@ -1333,8 +1303,6 @@ export default function KanbanPageNewGates() {
       </div>
     )
   }
-
-  // ... (Header code omitted for brevity as it is unchanged)
 
   return (
     <div className="w-full px-4 h-[calc(100vh-7rem)] flex flex-col space-y-4">
@@ -1373,7 +1341,6 @@ export default function KanbanPageNewGates() {
           </div>
         </div>
 
-        {/* Badges de Filtros Ativos */}
         {filtrosAtivos.length > 0 && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Filtros:</span>
@@ -1406,25 +1373,26 @@ export default function KanbanPageNewGates() {
         </div>
       )}
 
-      {/* Container Principal com Altura Fixa */}
       <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
         <DragDropContext
-          // Custom handler used instead for auto scroll
           onDragEnd={(result) => {
-            setIsDragging(false);
-            onDragEnd(result);
+            setIsDragging(false)
+            void onDragEnd(result)
           }}
           onDragStart={() => {
-            setIsDragging(true);
-            // Optional: Add class to body to prevent text selection
+            setIsDragging(true)
           }}
         >
           <div className="relative h-full">
             <div
               ref={scrollContainerRef}
               id="kanban-scroll-container"
-              className="flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-4 h-full px-1 snap-x snap-mandatory scroll-smooth overscroll-x-contain [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-              onWheelCapture={handleWheel}
+              tabIndex={0}
+              className="flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-2 h-full px-1 snap-x snap-proximity overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                overscrollBehaviorX: "contain",
+              }}
             >
               {COLUNAS.map((coluna) => {
                 const precatoriosColuna = grupos[coluna.id] || []
@@ -1445,6 +1413,7 @@ export default function KanbanPageNewGates() {
                 )
               })}
             </div>
+
             {canScrollLeft && (
               <button
                 type="button"
@@ -1467,13 +1436,13 @@ export default function KanbanPageNewGates() {
             )}
           </div>
         </DragDropContext>
-      </div >
+      </div>
 
       <Dialog open={encerradosDialog.open} onOpenChange={(open) => setEncerradosDialog((prev) => ({ ...prev, open }))}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Definir status do encerramento</DialogTitle>
-            <DialogDescription>Escolha em qual status esse precat\u00f3rio deve ficar.</DialogDescription>
+            <DialogDescription>Escolha em qual status esse precatório deve ficar.</DialogDescription>
           </DialogHeader>
           <div className="space-y-3">
             <Select
@@ -1508,7 +1477,6 @@ export default function KanbanPageNewGates() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog de Validação/Bloqueio */}
       <Dialog open={moveDialog.open} onOpenChange={(open) => !open && setMoveDialog({ ...moveDialog, open: false })}>
         <DialogContent>
           <DialogHeader>
@@ -1518,7 +1486,6 @@ export default function KanbanPageNewGates() {
             <DialogDescription>{moveDialog.validacao?.mensagem}</DialogDescription>
           </DialogHeader>
 
-          {/* Se for fechamento, pedir motivo */}
           {moveDialog.colunaDestino === "fechado" && (
             <div className="space-y-2">
               <label className="text-sm font-medium">Motivo do Fechamento *</label>
@@ -1531,7 +1498,6 @@ export default function KanbanPageNewGates() {
             </div>
           )}
 
-          {/* Detalhes do bloqueio */}
           {moveDialog.validacao && !moveDialog.validacao.valido && (
             <div className="space-y-2">
               {moveDialog.validacao.docs_pendentes && (
@@ -1597,13 +1563,13 @@ export default function KanbanPageNewGates() {
             precatorioInfo?.titulo ||
             precatorioInfo?.numero_precatorio ||
             precatorioInfo?.credor_nome ||
-            "PrecatÃ³rio"
+            "Precatório"
 
           const { error } = await supabase
             .from("precatorios")
             .update({
               status_kanban: "sem_interesse",
-              localizacao_kanban: "sem_interesse", // Sync both fields
+              localizacao_kanban: "sem_interesse",
               interesse_status: "SEM_INTERESSE",
               motivo_sem_interesse: motivo,
               data_recontato: dataRecontato ? dataRecontato.toISOString() : null,
@@ -1611,9 +1577,7 @@ export default function KanbanPageNewGates() {
             })
             .eq("id", semInteresseDialog.precatorioId)
 
-          if (error) {
-            throw error
-          }
+          if (error) throw error
 
           if (dataRecontato && profile?.id && precatorioId) {
             const dateLabel = dataRecontato.toLocaleDateString("pt-BR")
@@ -1631,11 +1595,10 @@ export default function KanbanPageNewGates() {
               })
 
             if (notificationError) {
-              console.warn("Erro ao criar notificaÃ§Ã£o de recontato:", notificationError)
+              console.warn("Erro ao criar notificação de recontato:", notificationError)
             }
           }
 
-          // Update local state
           setPrecatorios((prev) =>
             prev.map((p) =>
               p.id === semInteresseDialog.precatorioId
@@ -1648,7 +1611,6 @@ export default function KanbanPageNewGates() {
             description: "Precatório movido para Sem Interesse.",
           })
 
-          // Refresh list to ensure consistency
           await loadPrecatorios()
         }}
         initialMotivo={semInteressePrecatorio?.motivo_sem_interesse ?? ""}
@@ -1701,8 +1663,6 @@ export default function KanbanPageNewGates() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div >
+    </div>
   )
 }
-
-

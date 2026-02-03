@@ -126,7 +126,7 @@ export default function FilaCalculoPage() {
       // Filter based on active tab
       if (activeTab === "aguardando") {
         query = query
-          .or("status.in.(pronto_calculo),localizacao_kanban.in.(pronto_calculo)")
+          .or("status.in.(pronto_calculo),localizacao_kanban.in.(pronto_calculo,fila_calculo)")
           .is("motivo_atraso_calculo", null)
       } else if (activeTab === "iniciado") {
         query = query

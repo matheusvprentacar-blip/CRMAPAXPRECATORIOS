@@ -194,6 +194,7 @@ export default function PrecatorioDetailPage() {
   })
   const [fechamentoSaving, setFechamentoSaving] = useState(false)
   const [adminRecalcular, setAdminRecalcular] = useState(false)
+  const [sendingToCalculo, setSendingToCalculo] = useState(false)
 
  
 
@@ -938,6 +939,40 @@ export default function PrecatorioDetailPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const handleEnviarFilaCalculo = async () => {
+    if (!precatorio || !id) return
+    try {
+      setSendingToCalculo(true)
+      const supabase = requireSupabase()
+      const { error } = await supabase
+        .from("precatorios")
+        .update({
+          status: "pronto_calculo",
+          status_kanban: "pronto_calculo",
+          localizacao_kanban: "fila_calculo",
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", id)
+
+      if (error) throw error
+
+      toast({
+        title: "Enviado para fila de cálculo",
+        description: "O precatório voltou para a fila aguardando novo cálculo.",
+      })
+      await loadPrecatorio()
+    } catch (err: any) {
+      console.error("[Calculo] Erro ao enviar para fila:", err)
+      toast({
+        title: "Erro ao enviar",
+        description: err?.message || "Não foi possível enviar para a fila de cálculo.",
+        variant: "destructive",
+      })
+    } finally {
+      setSendingToCalculo(false)
     }
   }
 
@@ -2831,14 +2866,25 @@ export default function PrecatorioDetailPage() {
                   <Calculator className="h-5 w-5" />
                   Detalhamento do Cálculo
                 </h3>
-                <Button
-                  variant="secondary"
-                  className="h-9 rounded-xl px-4"
-                  onClick={() => setAdminRecalcular(true)}
-                >
-                  <RotateCcw className="h-4 w-4 mr-2" />
-                  Realizar novo cálculo
-                </Button>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    className="h-9 rounded-xl px-4"
+                    onClick={handleEnviarFilaCalculo}
+                    disabled={sendingToCalculo}
+                  >
+                    <ArrowRight className="h-4 w-4 mr-2" />
+                    Enviar para fila
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    className="h-9 rounded-xl px-4"
+                    onClick={() => setAdminRecalcular(true)}
+                  >
+                    <RotateCcw className="h-4 w-4 mr-2" />
+                    Realizar novo cálculo
+                  </Button>
+                </div>
               </div>
               <ResumoCalculoDetalhado precatorio={precatorio} />
 
