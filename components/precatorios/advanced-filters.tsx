@@ -155,6 +155,22 @@ export function AdvancedFilters({
             </div>
           )}
 
+
+          {/* Tribunal */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Tribunal</Label>
+            <Input
+              value={localFiltros.tribunal || ""}
+              onChange={(e) =>
+                setLocalFiltros({
+                  ...localFiltros,
+                  tribunal: e.target.value || undefined,
+                })
+              }
+              placeholder="Ex: TJSP, TRF1..."
+            />
+          </div>
+
           {/* Status */}
           <div className="space-y-3">
             <Label className="text-base font-semibold">Status</Label>
@@ -218,6 +234,68 @@ export function AdvancedFilters({
                   </label>
                 </div>
               ))}
+            </div>
+          </div>
+
+
+          {/* Cálculo */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Cálculo</Label>
+            <div className="space-y-2">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="valor-calculado"
+                  checked={localFiltros.valor_calculado || false}
+                  onCheckedChange={(checked) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      valor_calculado: checked ? true : undefined,
+                    })
+                  }
+                />
+                <label
+                  htmlFor="valor-calculado"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Valor já calculado
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="calculo-andamento"
+                  checked={localFiltros.calculo_em_andamento || false}
+                  onCheckedChange={(checked) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      calculo_em_andamento: checked ? true : undefined,
+                    })
+                  }
+                />
+                <label
+                  htmlFor="calculo-andamento"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Cálculo em andamento
+                </label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="calculo-finalizado"
+                  checked={localFiltros.calculo_finalizado || false}
+                  onCheckedChange={(checked) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      calculo_finalizado: checked ? true : undefined,
+                    })
+                  }
+                />
+                <label
+                  htmlFor="calculo-finalizado"
+                  className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                >
+                  Cálculo finalizado
+                </label>
+              </div>
             </div>
           </div>
 
@@ -343,38 +421,78 @@ export function AdvancedFilters({
             </div>
           </div>
 
-          {/* Faixa de Valores */}
+
+          {/* Valor Atualizado */}
           <div className="space-y-3">
-            <Label className="text-base font-semibold">Faixa de Valores</Label>
+            <Label className="text-base font-semibold">Valor atualizado</Label>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="valor-min" className="text-xs">
+                <Label htmlFor="valor-atualizado-min" className="text-xs">
                   Valor Mínimo
                 </Label>
                 <CurrencyInput
-                  id="valor-min"
+                  id="valor-atualizado-min"
                   placeholder="R$ 0,00"
-                  value={localFiltros.valor_min}
+                  value={localFiltros.valor_atualizado_min}
                   onValueChange={(value) =>
                     setLocalFiltros({
                       ...localFiltros,
-                      valor_min: value,
+                      valor_atualizado_min: value,
                     })
                   }
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="valor-max" className="text-xs">
+                <Label htmlFor="valor-atualizado-max" className="text-xs">
                   Valor Máximo
                 </Label>
                 <CurrencyInput
-                  id="valor-max"
+                  id="valor-atualizado-max"
                   placeholder="R$ 999.999,99"
-                  value={localFiltros.valor_max}
+                  value={localFiltros.valor_atualizado_max}
                   onValueChange={(value) =>
                     setLocalFiltros({
                       ...localFiltros,
-                      valor_max: value,
+                      valor_atualizado_max: value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Valor Sem Atualização */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Valor sem atualização</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="valor-sem-atualizacao-min" className="text-xs">
+                  Valor Mínimo
+                </Label>
+                <CurrencyInput
+                  id="valor-sem-atualizacao-min"
+                  placeholder="R$ 0,00"
+                  value={localFiltros.valor_sem_atualizacao_min}
+                  onValueChange={(value) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      valor_sem_atualizacao_min: value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valor-sem-atualizacao-max" className="text-xs">
+                  Valor Máximo
+                </Label>
+                <CurrencyInput
+                  id="valor-sem-atualizacao-max"
+                  placeholder="R$ 999.999,99"
+                  value={localFiltros.valor_sem_atualizacao_max}
+                  onValueChange={(value) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      valor_sem_atualizacao_max: value,
                     })
                   }
                 />

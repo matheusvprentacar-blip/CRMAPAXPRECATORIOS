@@ -1,9 +1,10 @@
 ﻿"use client"
 /* eslint-disable */
 
-import { useEffect, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
 
 import { ModalCriarPrecatorio } from "@/components/admin/modal-criar-precatorio"
+import { ModalTemplatePrecatorio } from "@/components/admin/modal-template-precatorio"
 
 // Tipo de dados extraídos via OCR
 interface PrecatorioData {
@@ -56,8 +57,10 @@ import {
   Loader2,
   Trash2,
   User,
-  Calculator,
+  Shuffle,
+  AlertTriangle,
   TrendingUp,
+  Star,
 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
@@ -79,8 +82,13 @@ interface PrecatorioAdmin {
   titulo: string
   numero_precatorio: string
   numero_processo: string
+  numero_oficio?: string
   credor_nome: string
+  credor_cpf_cnpj?: string
   tribunal: string
+  devedor?: string
+  advogado_nome?: string
+  advogado_cpf_cnpj?: string
   valor_principal: number
   valor_atualizado: number
   status_kanban: string
@@ -90,6 +98,60 @@ interface PrecatorioAdmin {
   file_url?: string
   usuario_dono?: Usuario
   usuario_calculo?: Usuario
+}
+
+const normalizeSearchText = (value: string) => {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim()
+}
+
+const onlyDigits = (value: string) => value.replace(/\D/g, "")
+
+const matchesPrecatorioSearch = (prec: PrecatorioAdmin, term: string) => {
+  const normalizedTerm = normalizeSearchText(term)
+  if (!normalizedTerm) return true
+
+  const tokens = normalizedTerm.split(/\s+/).filter(Boolean)
+  if (tokens.length === 0) return true
+
+  const textHaystack = normalizeSearchText(
+    [
+      prec.titulo,
+      prec.credor_nome,
+      prec.numero_precatorio,
+      prec.numero_processo,
+      prec.numero_oficio,
+      prec.tribunal,
+      prec.devedor,
+      prec.credor_cpf_cnpj,
+      prec.advogado_nome,
+      prec.advogado_cpf_cnpj,
+    ]
+      .filter(Boolean)
+      .join(" ")
+  )
+
+  const digitsHaystack = [
+    prec.numero_precatorio,
+    prec.numero_processo,
+    prec.numero_oficio,
+    prec.credor_cpf_cnpj,
+    prec.advogado_cpf_cnpj,
+  ]
+    .filter(Boolean)
+    .map((value) => onlyDigits(String(value)))
+    .join(" ")
+
+  return tokens.every((token) => {
+    if (/^\d+$/.test(token)) {
+      return digitsHaystack.includes(token)
+    }
+    return textHaystack.includes(token)
+  })
 }
 
 const KANBAN_PROGRESS: Record<string, number> = {
@@ -152,6 +214,86 @@ const STATUS_TONES: Record<string, string> = {
   reprovado: "border-red-200 text-red-700 bg-red-50/60 dark:border-red-900/50 dark:text-red-200 dark:bg-red-950/40",
 }
 
+type AutoDistribResult = {
+  assignments: Record<string, string[]>
+  sums: Record<string, number>
+  outliers: PrecatorioAdmin[]
+  eligible: PrecatorioAdmin[]
+  total: number
+  target: number
+}
+
+function getPrecatorioValue(prec: PrecatorioAdmin) {
+  const valorAtualizado = prec.valor_atualizado ?? 0
+  const base = valorAtualizado > 0 ? valorAtualizado : prec.valor_principal ?? 0
+  return Number(base) || 0
+}
+
+function shuffleArray<T>(items: T[]) {
+  const arr = [...items]
+  for (let i = arr.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(Math.random() * (i + 1))
+    ;[arr[i], arr[j]] = [arr[j], arr[i]]
+  }
+  return arr
+}
+
+function buildAutoDistribution(
+  precatorios: PrecatorioAdmin[],
+  operatorIds: string[],
+  outlierMultiplier: number
+): AutoDistribResult | null {
+  if (operatorIds.length === 0) return null
+  if (precatorios.length === 0) {
+    return {
+      assignments: Object.fromEntries(operatorIds.map((id) => [id, []])),
+      sums: Object.fromEntries(operatorIds.map((id) => [id, 0])),
+      outliers: [],
+      eligible: [],
+      total: 0,
+      target: 0,
+    }
+  }
+
+  const total = precatorios.reduce((acc, p) => acc + getPrecatorioValue(p), 0)
+  const target = operatorIds.length > 0 ? total / operatorIds.length : 0
+  const limit = target > 0 ? target * Math.max(outlierMultiplier, 1) : Number.POSITIVE_INFINITY
+
+  const outliers = precatorios.filter((p) => getPrecatorioValue(p) > limit)
+  const outlierIds = new Set(outliers.map((p) => p.id))
+  const eligible = precatorios.filter((p) => !outlierIds.has(p.id))
+
+  const sorted = shuffleArray(eligible).sort((a, b) => {
+    const diff = getPrecatorioValue(b) - getPrecatorioValue(a)
+    if (Math.abs(diff) < 0.01) return Math.random() - 0.5
+    return diff
+  })
+
+  const sums: Record<string, number> = {}
+  const assignments: Record<string, string[]> = {}
+  operatorIds.forEach((id) => {
+    sums[id] = 0
+    assignments[id] = []
+  })
+
+  sorted.forEach((prec) => {
+    const minSum = Math.min(...operatorIds.map((id) => sums[id]))
+    const candidates = operatorIds.filter((id) => Math.abs(sums[id] - minSum) < 0.01)
+    const pick = candidates[Math.floor(Math.random() * candidates.length)]
+    assignments[pick].push(prec.id)
+    sums[pick] += getPrecatorioValue(prec)
+  })
+
+  return {
+    assignments,
+    sums,
+    outliers,
+    eligible,
+    total,
+    target,
+  }
+}
+
 export default function AdminPrecatoriosPage() {
   const router = useRouter()
   const [precatorios, setPrecatorios] = useState<PrecatorioAdmin[]>([])
@@ -173,16 +315,32 @@ export default function AdminPrecatoriosPage() {
   const [notifyMessage, setNotifyMessage] = useState("")
   const [notifyRecipients, setNotifyRecipients] = useState<string[]>([])
   const [sendingNotice, setSendingNotice] = useState(false)
+  const [sendingInterest, setSendingInterest] = useState<string | null>(null)
+  const [templateModalOpen, setTemplateModalOpen] = useState(false)
 
   // Bulk Deletion State
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
+  const [autoDistribDialogOpen, setAutoDistribDialogOpen] = useState(false)
+  const [autoDistribOperatorIds, setAutoDistribOperatorIds] = useState<string[]>([])
+  const [autoDistribPrioridade, setAutoDistribPrioridade] = useState<"baixa" | "media" | "alta" | "urgente">("media")
+  const [autoDistribOutlierMultiplier, setAutoDistribOutlierMultiplier] = useState(1.6)
+  const [autoDistribSaving, setAutoDistribSaving] = useState(false)
 
   const [distribuicao, setDistribuicao] = useState({
     dono_usuario_id: "",
     responsavel_calculo_id: "none",
     prioridade: "media" as "baixa" | "media" | "alta" | "urgente",
   })
+
+  const operadoresComerciais = useMemo(
+    () => usuarios.filter((u) => u.role.includes("operador_comercial")),
+    [usuarios]
+  )
+  const operadoresCalculo = useMemo(
+    () => usuarios.filter((u) => u.role.includes("operador_calculo")),
+    [usuarios]
+  )
 
   const recipientOptions = selectedPrecatorio
     ? ([
@@ -207,6 +365,13 @@ export default function AdminPrecatoriosPage() {
   useEffect(() => {
     if (currentUser) loadData()
   }, [currentUser])
+
+  useEffect(() => {
+    if (!autoDistribDialogOpen) return
+    if (autoDistribOperatorIds.length > 0) return
+    if (operadoresComerciais.length === 0) return
+    setAutoDistribOperatorIds(operadoresComerciais.map((op) => op.id))
+  }, [autoDistribDialogOpen, autoDistribOperatorIds.length, operadoresComerciais])
 
   function getPrecatorioRecipients(prec: PrecatorioAdmin) {
     return [prec.dono_usuario_id, prec.responsavel_calculo_id].filter(Boolean)
@@ -258,6 +423,48 @@ export default function AdminPrecatoriosPage() {
       toast.error(error?.message || "Erro ao enviar aviso")
     } finally {
       setSendingNotice(false)
+    }
+  }
+
+  async function handleSendCalculoInteresse(prec: PrecatorioAdmin) {
+    if (!prec.responsavel_calculo_id) {
+      toast.error("Defina um operador de calculo para enviar o alerta.")
+      return
+    }
+
+    const supabase = createBrowserClient()
+    if (!supabase) return
+
+    try {
+      setSendingInterest(prec.id)
+
+      const precatorioLabel =
+        prec.titulo ||
+        prec.numero_precatorio ||
+        prec.credor_nome ||
+        "Precatório"
+
+      const { error } = await supabase
+        .from("notifications")
+        .insert({
+          user_id: prec.responsavel_calculo_id,
+          title: `Admin quer prioridade no calculo - ${precatorioLabel}`,
+          body: "O administrador sinalizou interesse no calculo deste precatorio. Priorize quando possivel.",
+          kind: "critical",
+          link_url: `/precatorios/detalhes?id=${prec.id}`,
+          entity_type: "precatorio",
+          entity_id: prec.id,
+          event_type: "interesse_calculo_admin",
+        })
+
+      if (error) throw error
+
+      toast.success("Alerta enviado ao operador de calculo.")
+    } catch (error: any) {
+      console.error("Erro ao enviar alerta de calculo:", error)
+      toast.error(error?.message || "Erro ao enviar alerta")
+    } finally {
+      setSendingInterest(null)
     }
   }
 
@@ -504,6 +711,16 @@ export default function AdminPrecatoriosPage() {
     return "secondary"
   }
 
+  const selectedPrecatorios = useMemo(
+    () => precatorios.filter((p) => selectedIds.includes(p.id)),
+    [precatorios, selectedIds]
+  )
+
+  const autoDistribPreview = useMemo(
+    () => buildAutoDistribution(selectedPrecatorios, autoDistribOperatorIds, autoDistribOutlierMultiplier),
+    [selectedPrecatorios, autoDistribOperatorIds, autoDistribOutlierMultiplier]
+  )
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -512,8 +729,6 @@ export default function AdminPrecatoriosPage() {
     )
   }
 
-  const operadoresComerciais = usuarios.filter((u) => u.role.includes("operador_comercial"))
-  const operadoresCalculo = usuarios.filter((u) => u.role.includes("operador_calculo"))
   const precatoriosDistribuidos = precatorios.filter((p) => p.dono_usuario_id)
   const precatoriosPendentes = precatorios.filter((p) => !p.dono_usuario_id)
 
@@ -521,13 +736,9 @@ export default function AdminPrecatoriosPage() {
   if (filtroTab === "distribuidos") precatoriosFiltrados = precatoriosDistribuidos
   if (filtroTab === "pendentes") precatoriosFiltrados = precatoriosPendentes
 
-  if (searchTerm) {
-    precatoriosFiltrados = precatoriosFiltrados.filter(
-      (p) =>
-        p.titulo?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.credor_nome?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        p.numero_precatorio?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
+  const trimmedSearch = searchTerm.trim()
+  if (trimmedSearch) {
+    precatoriosFiltrados = precatoriosFiltrados.filter((p) => matchesPrecatorioSearch(p, trimmedSearch))
   }
 
   const isAllSelected = precatoriosFiltrados.length > 0 && selectedIds.length === precatoriosFiltrados.length
@@ -537,6 +748,93 @@ export default function AdminPrecatoriosPage() {
       setSelectedIds([])
     } else {
       setSelectedIds(precatoriosFiltrados.map(p => p.id))
+    }
+  }
+
+  async function handleAutoDistribuir() {
+    if (!autoDistribPreview) return
+    const { assignments, outliers } = autoDistribPreview
+
+    const updates: Array<{ id: string; userId: string }> = []
+    Object.entries(assignments).forEach(([userId, precIds]) => {
+      precIds.forEach((id) => updates.push({ id, userId }))
+    })
+
+    const assignmentMap = new Map(updates.map((u) => [u.id, u.userId]))
+
+    if (updates.length === 0) {
+      toast.error("Nenhum precatorio elegivel para distribuicao")
+      return
+    }
+
+    setAutoDistribSaving(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error("Supabase nao disponivel")
+
+      const precatorioMap = new Map(precatorios.map((p) => [p.id, p]))
+      const now = new Date().toISOString()
+      let ok = 0
+      let fail = 0
+      const successIds: string[] = []
+
+      for (const update of updates) {
+        const { error } = await supabase
+          .from("precatorios")
+          .update({
+            responsavel: update.userId,
+            dono_usuario_id: update.userId,
+            prioridade: autoDistribPrioridade,
+            updated_at: now,
+          })
+          .eq("id", update.id)
+
+        if (error) {
+          fail += 1
+        } else {
+          ok += 1
+          successIds.push(update.id)
+        }
+      }
+
+      if (successIds.length > 0) {
+        const notificationsPayload = successIds.map((precId) => {
+          const prec = precatorioMap.get(precId)
+          const precatorioLabel =
+            prec?.titulo || prec?.numero_precatorio || prec?.credor_nome || "Precatorio"
+          const assignedTo = assignmentMap.get(precId)
+          return {
+            user_id: assignedTo,
+            title: `Precatorio distribuido - ${precatorioLabel}`,
+            body: "Distribuicao automatica realizada pelo administrador.",
+            kind: "info",
+            link_url: `/precatorios/detalhes?id=${precId}`,
+            entity_type: "precatorio",
+            entity_id: precId,
+            event_type: "distribuicao_auto",
+          }
+        })
+
+        try {
+          await supabase.from("notifications").insert(notificationsPayload)
+        } catch (notifyError) {
+          console.warn("Erro ao enviar notificacoes de distribuicao:", notifyError)
+        }
+      }
+
+      toast.success(
+        `Distribuicao concluida: ${ok} distribuido(s)${fail ? `, ${fail} falharam` : ""}${
+          outliers.length ? `, ${outliers.length} com valor destoante` : ""
+        }`
+      )
+
+      setAutoDistribDialogOpen(false)
+      setSelectedIds(outliers.map((p) => p.id))
+      await loadData()
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao distribuir automaticamente")
+    } finally {
+      setAutoDistribSaving(false)
     }
   }
 
@@ -558,6 +856,15 @@ export default function AdminPrecatoriosPage() {
             </Button>
             <Button
               size="sm"
+              variant="secondary"
+              onClick={() => setAutoDistribDialogOpen(true)}
+              disabled={saving || operadoresComerciais.length === 0}
+            >
+              <Shuffle className="h-4 w-4 mr-2" />
+              Distribuir Automatico
+            </Button>
+            <Button
+              size="sm"
               variant="ghost"
               onClick={() => setSelectedIds([])}
             >
@@ -575,6 +882,10 @@ export default function AdminPrecatoriosPage() {
             <Button variant="outline" onClick={() => setImportModalOpen(true)}>
               <FileText className="h-4 w-4 mr-2" />
               Importar (OCR)
+            </Button>
+            <Button variant="outline" onClick={() => setTemplateModalOpen(true)}>
+              <FileText className="h-4 w-4 mr-2" />
+              Template JSON
             </Button>
             <Button onClick={() => setUploadOficiosOpen(true)}>
               <Plus className="h-4 w-4 mr-2" />
@@ -809,6 +1120,25 @@ export default function AdminPrecatoriosPage() {
                               </Button>
                               <Button
                                 size="sm"
+                                variant="outline"
+                                className="flex-1 min-w-[150px]"
+                                title={
+                                  prec.responsavel_calculo_id
+                                    ? "Alertar operador de calculo"
+                                    : "Defina um operador de calculo primeiro"
+                                }
+                                disabled={!prec.responsavel_calculo_id || sendingInterest === prec.id}
+                                onClick={() => handleSendCalculoInteresse(prec)}
+                              >
+                                {sendingInterest === prec.id ? (
+                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                ) : (
+                                  <Star className="h-3 w-3 mr-1" />
+                                )}
+                                Interesse no calculo
+                              </Button>
+                              <Button
+                                size="sm"
                                 variant="ghost"
                                 className="h-8 w-8 p-0"
                                 title="Ver detalhes"
@@ -867,6 +1197,175 @@ export default function AdminPrecatoriosPage() {
             setOcrData(null);
           }}
         />
+
+        {/* Dialog de Distribuicao Automatica */}
+        <Dialog open={autoDistribDialogOpen} onOpenChange={setAutoDistribDialogOpen}>
+          <DialogContent className="max-w-4xl">
+            <DialogHeader>
+              <DialogTitle>Distribuicao automatica</DialogTitle>
+              <DialogDescription>
+                Balanceie valores entre operadores e deixe valores destoantes para distribuicao manual.
+              </DialogDescription>
+            </DialogHeader>
+
+            {selectedPrecatorios.length === 0 ? (
+              <div className="rounded-lg border border-dashed border-border/60 p-6 text-center text-sm text-muted-foreground">
+                Selecione precatorios para distribuir automaticamente.
+              </div>
+            ) : (
+              <div className="grid gap-4">
+                <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div>
+                      <p className="text-xs text-muted-foreground">Selecionados</p>
+                      <p className="font-semibold">{selectedPrecatorios.length} precatorio(s)</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Valor total</p>
+                      <p className="font-semibold">
+                        {formatCurrency(selectedPrecatorios.reduce((acc, p) => acc + getPrecatorioValue(p), 0))}
+                      </p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">Alvo por operador</p>
+                      <p className="font-semibold">
+                        {autoDistribPreview ? formatCurrency(autoDistribPreview.target) : "R$ 0,00"}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label>Operadores (comercial)</Label>
+                    <div className="max-h-52 overflow-y-auto rounded-lg border border-border/60 p-3 space-y-2">
+                      {operadoresComerciais.length === 0 && (
+                        <p className="text-xs text-muted-foreground">Nenhum operador comercial cadastrado.</p>
+                      )}
+                      {operadoresComerciais.map((op) => (
+                        <label key={op.id} className="flex items-center gap-2 text-sm">
+                          <Checkbox
+                            checked={autoDistribOperatorIds.includes(op.id)}
+                            onCheckedChange={(checked) => {
+                              setAutoDistribOperatorIds((prev) => {
+                                if (checked) return Array.from(new Set([...prev, op.id]))
+                                return prev.filter((id) => id !== op.id)
+                              })
+                            }}
+                          />
+                          <span>{op.nome}</span>
+                        </label>
+                      ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Selecione quem recebera a distribuicao automatica.
+                    </p>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Prioridade aplicada</Label>
+                      <Select
+                        value={autoDistribPrioridade}
+                        onValueChange={(v: any) => setAutoDistribPrioridade(v)}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="baixa">Baixa</SelectItem>
+                          <SelectItem value="media">Media</SelectItem>
+                          <SelectItem value="alta">Alta</SelectItem>
+                          <SelectItem value="urgente">Urgente</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="space-y-2">
+                      <Label>Limite de disparidade (x do alvo)</Label>
+                      <Input
+                        type="number"
+                        min="1"
+                        step="0.1"
+                        value={autoDistribOutlierMultiplier}
+                        onChange={(e) => setAutoDistribOutlierMultiplier(Number(e.target.value) || 1)}
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Creditos acima de {autoDistribOutlierMultiplier}x do alvo ficam fora da distribuicao.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {autoDistribPreview && (
+                  <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-sm space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">Previa por operador</p>
+                      <p className="text-xs text-muted-foreground">
+                        Elegiveis: {autoDistribPreview.eligible.length} | Destoantes: {autoDistribPreview.outliers.length}
+                      </p>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      {autoDistribOperatorIds.map((id) => {
+                        const op = operadoresComerciais.find((o) => o.id === id)
+                        const count = autoDistribPreview.assignments[id]?.length || 0
+                        const sum = autoDistribPreview.sums[id] || 0
+                        return (
+                          <div key={id} className="flex items-center justify-between rounded-md border border-border/60 bg-background/60 px-3 py-2">
+                            <div>
+                              <p className="text-xs text-muted-foreground">{op?.nome || "Operador"}</p>
+                              <p className="text-sm font-medium">{count} credito(s)</p>
+                            </div>
+                            <p className="text-sm font-semibold">{formatCurrency(sum)}</p>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {autoDistribPreview && autoDistribPreview.outliers.length > 0 && (
+                  <div className="rounded-lg border border-amber-300/40 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+                    <div className="flex items-center gap-2 font-medium">
+                      <AlertTriangle className="h-4 w-4" />
+                      Valores destoantes nao serao distribuidos automaticamente.
+                    </div>
+                    <div className="mt-2 grid gap-1 text-xs">
+                      {autoDistribPreview.outliers.slice(0, 6).map((prec) => (
+                        <div key={prec.id} className="flex items-center justify-between">
+                          <span className="truncate">{prec.titulo || prec.numero_precatorio || "Precatorio"}</span>
+                          <span>{formatCurrency(getPrecatorioValue(prec))}</span>
+                        </div>
+                      ))}
+                      {autoDistribPreview.outliers.length > 6 && (
+                        <span className="text-xs text-muted-foreground">
+                          +{autoDistribPreview.outliers.length - 6} outros
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setAutoDistribDialogOpen(false)} disabled={autoDistribSaving}>
+                Cancelar
+              </Button>
+              <Button
+                onClick={handleAutoDistribuir}
+                disabled={
+                  autoDistribSaving ||
+                  !autoDistribPreview ||
+                  autoDistribOperatorIds.length === 0 ||
+                  (autoDistribPreview?.eligible.length ?? 0) === 0
+                }
+              >
+                {autoDistribSaving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Shuffle className="h-4 w-4 mr-2" />}
+                Aplicar distribuicao
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Dialog de Distribuição */}
         <Dialog open={distributeDialogOpen} onOpenChange={setDistributeDialogOpen}>
@@ -1078,6 +1577,13 @@ export default function AdminPrecatoriosPage() {
               setCreateModalOpen(true)
             }, 300)
           }}
+        />
+
+        <ModalTemplatePrecatorio
+          open={templateModalOpen}
+          onOpenChange={setTemplateModalOpen}
+          createdById={currentUser?.id}
+          onSuccess={() => loadData()}
         />
 
         <ModalCriarPrecatorio

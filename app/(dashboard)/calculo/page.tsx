@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search } from "lucide-react"
+import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
 import { SLAIndicator } from "@/components/ui/sla-indicator"
 import { ModalAtraso } from "@/components/calculo/modal-atraso"
@@ -52,6 +52,7 @@ export default function FilaCalculoPage() {
   const [filaCalculo, setFilaCalculo] = useState<PrecatorioCalculo[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
+  const [adminInteresseIds, setAdminInteresseIds] = useState<Set<string>>(new Set())
   const [modalAtrasoOpen, setModalAtrasoOpen] = useState(false)
   const [modalJuridicoOpen, setModalJuridicoOpen] = useState(false)
   const [modalManualOpen, setModalManualOpen] = useState(false)
@@ -160,7 +161,30 @@ export default function FilaCalculoPage() {
         throw error
       }
 
-      setFilaCalculo((data as PrecatorioCalculo[]) || [])
+      const fila = (data as PrecatorioCalculo[]) || []
+      setFilaCalculo(fila)
+
+      try {
+        const { data: interestRows, error: interestError } = await supabase
+          .from("notifications")
+          .select("entity_id")
+          .eq("user_id", user.id)
+          .eq("event_type", "interesse_calculo_admin")
+          .is("read_at", null)
+
+        if (interestError) {
+          console.warn("[FILA CALCULO] Erro ao buscar alertas de interesse:", interestError)
+        }
+
+        const ids = new Set(
+          (interestRows || [])
+            .map((row: any) => row.entity_id)
+            .filter((id: string | null) => Boolean(id))
+        )
+        setAdminInteresseIds(ids)
+      } catch (interestErr) {
+        console.warn("[FILA CALCULO] Falha ao carregar alertas de interesse:", interestErr)
+      }
     } catch (error) {
       console.error("[FILA CALCULO] Erro:", error)
     } finally {
@@ -466,6 +490,11 @@ export default function FilaCalculoPage() {
                                       <User className="w-3 h-3" /> Credor
                                     </span>
                                     {precatorio.urgente && <Badge variant="destructive" className="text-[10px] h-4 px-1">Urgente</Badge>}
+                                    {adminInteresseIds.has(precatorio.id) && (
+                                      <Badge variant="destructive" className="text-[10px] h-4 px-1 flex items-center gap-1">
+                                        <Star className="h-3 w-3" /> Admin
+                                      </Badge>
+                                    )}
                                     <Badge variant="outline" className={cn("text-[10px] h-4 px-1 border", getStatusBadgeClass(statusAtual))}>
                                       {getStatusLabel(statusAtual)}
                                     </Badge>

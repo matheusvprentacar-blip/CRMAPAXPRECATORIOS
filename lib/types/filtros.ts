@@ -13,6 +13,9 @@ export interface FiltrosPrecatorios {
   responsavel_id?: string
   criador_id?: string
 
+  // Filtro por tribunal
+  tribunal?: string
+
   // Filtros de complexidade e SLA
   complexidade?: ('baixa' | 'media' | 'alta')[]
   sla_status?: ('nao_iniciado' | 'no_prazo' | 'atencao' | 'atrasado' | 'concluido')[]
@@ -30,10 +33,17 @@ export interface FiltrosPrecatorios {
   // Filtros de valores
   valor_min?: number
   valor_max?: number
+  valor_atualizado_min?: number
+  valor_atualizado_max?: number
+  valor_sem_atualizacao_min?: number
+  valor_sem_atualizacao_max?: number
 
   // Flags especiais
   urgente?: boolean
   titular_falecido?: boolean
+  valor_calculado?: boolean
+  calculo_em_andamento?: boolean
+  calculo_finalizado?: boolean
 }
 
 export type TipoAtraso =
@@ -60,14 +70,40 @@ export interface ResultadoBusca {
 
 // Labels para exibição
 export const STATUS_LABELS: Record<string, string> = {
+  // Fluxo Kanban atual
+  entrada: 'Entrada / Pré-cadastro',
+  triagem_interesse: 'Triagem (interesse do credor)',
+  aguardando_oficio: 'Aguardando ofício',
+  docs_credor: 'Documentos do credor',
+  analise_processual_inicial: 'Análise processual inicial',
+  pronto_calculo: 'Pronto para cálculo',
+  calculo_andamento: 'Cálculo em andamento',
+  juridico: 'Jurídico',
+  calculo_concluido: 'Cálculo concluído',
+  proposta_negociacao: 'Proposta / negociação',
+  proposta_aceita: 'Jurídico de fechamento',
+  certidoes: 'Certidões',
+  fechado: 'Fechado',
+  pos_fechamento: 'Pós-fechamento',
+  pausado_credor: 'Pausado (credor)',
+  pausado_documentos: 'Pausado (documentos)',
+  sem_interesse: 'Sem interesse',
+  reprovado: 'Reprovado / não elegível',
+  encerrados: 'Encerrados',
+  fila_calculo: 'Fila de cálculo',
+
+  // Status legados (ainda podem existir)
   novo: 'Novo',
-  pendente_distribuicao: 'Pendente Distribuição',
-  em_contato: 'Em Contato',
-  em_calculo: 'Em Cálculo',
-  aguardando_documentos: 'Aguardando Documentos',
-  em_negociacao: 'Em Negociação',
-  finalizado: 'Finalizado',
+  em_contato: 'Em contato',
+  em_calculo: 'Em cálculo',
+  calculado: 'Calculado',
+  aguardando_cliente: 'Aguardando cliente',
+  concluido: 'Concluído',
   cancelado: 'Cancelado',
+  pendente_distribuicao: 'Pendente distribuição',
+  aguardando_documentos: 'Aguardando documentos',
+  em_negociacao: 'Em negociação',
+  finalizado: 'Finalizado',
 }
 
 export const COMPLEXIDADE_LABELS: Record<string, string> = {
@@ -77,20 +113,20 @@ export const COMPLEXIDADE_LABELS: Record<string, string> = {
 }
 
 export const SLA_LABELS: Record<string, string> = {
-  nao_iniciado: 'Não Iniciado',
-  no_prazo: 'No Prazo',
+  nao_iniciado: 'Não iniciado',
+  no_prazo: 'No prazo',
   atencao: 'Atenção',
   atrasado: 'Atrasado',
   concluido: 'Concluído',
 }
 
 export const TIPO_ATRASO_LABELS: Record<TipoAtraso, string> = {
-  titular_falecido: 'Titular Falecido',
-  penhora: 'Penhora Identificada',
-  cessao_parcial: 'Cessão Parcial',
-  doc_incompleta: 'Documentação Incompleta',
-  duvida_juridica: 'Dúvida Jurídica',
-  aguardando_cliente: 'Aguardando Cliente',
+  titular_falecido: 'Titular falecido',
+  penhora: 'Penhora identificada',
+  cessao_parcial: 'Cessão parcial',
+  doc_incompleta: 'Documentação incompleta',
+  duvida_juridica: 'Dúvida jurídica',
+  aguardando_cliente: 'Aguardando cliente',
   outro: 'Outro',
 }
 
@@ -145,6 +181,16 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
       label: 'Status',
       value: filtros.status,
       displayValue: filtros.status.map((s) => STATUS_LABELS[s] || s).join(', '),
+    })
+  }
+
+
+  if (filtros.tribunal) {
+    ativos.push({
+      key: 'tribunal',
+      label: 'Tribunal',
+      value: filtros.tribunal,
+      displayValue: filtros.tribunal,
     })
   }
 
@@ -214,6 +260,37 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
     })
   }
 
+
+  if (filtros.valor_atualizado_min !== undefined || filtros.valor_atualizado_max !== undefined) {
+    const min = filtros.valor_atualizado_min
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(filtros.valor_atualizado_min)
+      : '...'
+    const max = filtros.valor_atualizado_max
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(filtros.valor_atualizado_max)
+      : '...'
+    ativos.push({
+      key: 'valor_atualizado',
+      label: 'Valor atualizado',
+      value: `${filtros.valor_atualizado_min || 0}-${filtros.valor_atualizado_max || 0}`,
+      displayValue: `${min} até ${max}`,
+    })
+  }
+
+  if (filtros.valor_sem_atualizacao_min !== undefined || filtros.valor_sem_atualizacao_max !== undefined) {
+    const min = filtros.valor_sem_atualizacao_min
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(filtros.valor_sem_atualizacao_min)
+      : '...'
+    const max = filtros.valor_sem_atualizacao_max
+      ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(filtros.valor_sem_atualizacao_max)
+      : '...'
+    ativos.push({
+      key: 'valor_sem_atualizacao',
+      label: 'Valor sem atualização',
+      value: `${filtros.valor_sem_atualizacao_min || 0}-${filtros.valor_sem_atualizacao_max || 0}`,
+      displayValue: `${min} até ${max}`,
+    })
+  }
+
   if (filtros.urgente === true) {
     ativos.push({
       key: 'urgente',
@@ -232,12 +309,40 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
     })
   }
 
+
+  if (filtros.valor_calculado === true) {
+    ativos.push({
+      key: 'valor_calculado',
+      label: 'Valor já calculado',
+      value: true,
+      displayValue: 'Sim',
+    })
+  }
+
+  if (filtros.calculo_em_andamento === true) {
+    ativos.push({
+      key: 'calculo_em_andamento',
+      label: 'Cálculo em andamento',
+      value: true,
+      displayValue: 'Sim',
+    })
+  }
+
+  if (filtros.calculo_finalizado === true) {
+    ativos.push({
+      key: 'calculo_finalizado',
+      label: 'Cálculo finalizado',
+      value: true,
+      displayValue: 'Sim',
+    })
+  }
+
   return ativos
 }
 
 // Helper para converter filtros para parâmetros da função RPC
 export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
-  return {
+  const params: Record<string, any> = {
     p_termo: filtros.termo || null,
     p_status: filtros.status || null,
     p_responsavel_id: filtros.responsavel_id || null,
@@ -255,4 +360,15 @@ export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
     p_urgente: filtros.urgente || null,
     p_titular_falecido: filtros.titular_falecido || null,
   }
+
+  if (filtros.tribunal) params.p_tribunal = filtros.tribunal
+  if (filtros.valor_atualizado_min !== undefined) params.p_valor_atualizado_min = filtros.valor_atualizado_min
+  if (filtros.valor_atualizado_max !== undefined) params.p_valor_atualizado_max = filtros.valor_atualizado_max
+  if (filtros.valor_sem_atualizacao_min !== undefined) params.p_valor_sem_atualizacao_min = filtros.valor_sem_atualizacao_min
+  if (filtros.valor_sem_atualizacao_max !== undefined) params.p_valor_sem_atualizacao_max = filtros.valor_sem_atualizacao_max
+  if (filtros.valor_calculado) params.p_valor_calculado = true
+  if (filtros.calculo_em_andamento) params.p_calculo_andamento = true
+  if (filtros.calculo_finalizado) params.p_calculo_finalizado = true
+
+  return params
 }
