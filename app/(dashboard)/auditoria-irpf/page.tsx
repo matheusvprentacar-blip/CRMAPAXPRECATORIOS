@@ -216,11 +216,11 @@ export default function AuditoriaIRPFPage() {
         let deducao = 0
         let aliquota = 0
 
-        if (baseMensal <= 2259.20) { aliquota = 0 }
-        else if (baseMensal <= 2826.65) { aliquota = 0.075; deducao = 169.44 }
-        else if (baseMensal <= 3751.05) { aliquota = 0.15; deducao = 381.44 }
-        else if (baseMensal <= 4664.68) { aliquota = 0.225; deducao = 662.77 }
-        else { aliquota = 0.275; deducao = 896.00 }
+        if (baseMensal <= 2428.80) { aliquota = 0 }
+        else if (baseMensal <= 2826.65) { aliquota = 0.075; deducao = 182.16 }
+        else if (baseMensal <= 3751.05) { aliquota = 0.15; deducao = 394.16 }
+        else if (baseMensal <= 4664.68) { aliquota = 0.225; deducao = 675.49 }
+        else { aliquota = 0.275; deducao = 908.73 }
 
         const impostoTotal = ((baseMensal * aliquota) - deducao) * meses
         return Math.max(0, impostoTotal)
