@@ -64,6 +64,14 @@ const TRIAGEM_STATUS_OPTIONS = [
   { value: "TEM_INTERESSE", label: "Tem interesse" },
 ]
 
+type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel"
+
+const TRIAGEM_DESTINO_OPTIONS: Array<{ value: TriagemDestinoReprovacao; label: string }> = [
+  { value: "none", label: "Fluxo normal" },
+  { value: "reprovado", label: "Reprovado" },
+  { value: "nao_elegivel", label: "Não elegível" },
+]
+
 interface PrecatorioCard {
   id: string
   titulo: string | null
@@ -129,56 +137,68 @@ const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HT
     const container = containerRef.current
     if (!container) return
 
-    const SCROLL_ZONE = 120
-    const SCROLL_SPEED = 14
+    const EDGE_ZONE = 160
+    const MAX_SCROLL_SPEED = 26
+    const VERTICAL_TOLERANCE = 48
 
     let frameId: number | null = null
-    let pointerX = container.getBoundingClientRect().left + container.getBoundingClientRect().width / 2
+    let pointerX = window.innerWidth / 2
+    let pointerY = window.innerHeight / 2
 
-    const updatePointer = (clientX?: number | null) => {
+    const updatePointer = (clientX?: number | null, clientY?: number | null) => {
       if (typeof clientX === "number") pointerX = clientX
+      if (typeof clientY === "number") pointerY = clientY
     }
 
-    const handlePointerMove = (e: PointerEvent) => updatePointer(e.clientX)
-    const handleMouseMove = (e: MouseEvent) => updatePointer(e.clientX)
-    const handleTouchMove = (e: TouchEvent) => updatePointer(e.touches?.[0]?.clientX ?? null)
-    const handleDragOver = (e: DragEvent) => updatePointer(e.clientX)
+    const handlePointerMove = (e: PointerEvent) => updatePointer(e.clientX, e.clientY)
+    const handleMouseMove = (e: MouseEvent) => updatePointer(e.clientX, e.clientY)
+    const handleTouchMove = (e: TouchEvent) => {
+      const touch = e.touches?.[0]
+      if (!touch) return
+      updatePointer(touch.clientX, touch.clientY)
+    }
+    const handleDragOver = (e: DragEvent) => updatePointer(e.clientX, e.clientY)
 
     const loop = () => {
       const rect = container.getBoundingClientRect()
-      const leftZone = rect.left + SCROLL_ZONE
-      const rightZone = rect.right - SCROLL_ZONE
+      const withinVerticalBand =
+        pointerY >= rect.top - VERTICAL_TOLERANCE && pointerY <= rect.bottom + VERTICAL_TOLERANCE
 
-      let delta = 0
-      if (pointerX < leftZone) {
-        const intensity = Math.min(1, (leftZone - pointerX) / SCROLL_ZONE)
-        delta = -SCROLL_SPEED * intensity
-      } else if (pointerX > rightZone) {
-        const intensity = Math.min(1, (pointerX - rightZone) / SCROLL_ZONE)
-        delta = SCROLL_SPEED * intensity
-      }
+      if (withinVerticalBand) {
+        const leftDistance = Math.max(0, EDGE_ZONE - (pointerX - rect.left))
+        const rightDistance = Math.max(0, EDGE_ZONE - (rect.right - pointerX))
 
-      if (delta !== 0) {
-        container.scrollLeft += delta
-        container.dispatchEvent(new Event("scroll"))
+        let delta = 0
+        if (leftDistance > 0) {
+          const intensity = Math.min(1, leftDistance / EDGE_ZONE)
+          delta = -MAX_SCROLL_SPEED * intensity
+        } else if (rightDistance > 0) {
+          const intensity = Math.min(1, rightDistance / EDGE_ZONE)
+          delta = MAX_SCROLL_SPEED * intensity
+        }
+
+        if (delta !== 0) {
+          const nextScroll = container.scrollLeft + delta
+          const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth)
+          container.scrollLeft = Math.min(maxScroll, Math.max(0, nextScroll))
+        }
       }
 
       frameId = window.requestAnimationFrame(loop)
     }
 
-    // capture:true ajuda quando o DnD “segura” eventos
-    window.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true })
-    window.addEventListener("mousemove", handleMouseMove, { passive: true, capture: true })
-    window.addEventListener("touchmove", handleTouchMove, { passive: true, capture: true })
-    window.addEventListener("dragover", handleDragOver, { passive: true, capture: true })
+    document.addEventListener("pointermove", handlePointerMove, { passive: true, capture: true })
+    document.addEventListener("mousemove", handleMouseMove, { passive: true, capture: true })
+    document.addEventListener("touchmove", handleTouchMove, { passive: true, capture: true })
+    document.addEventListener("dragover", handleDragOver, { passive: true, capture: true })
 
     frameId = window.requestAnimationFrame(loop)
 
     return () => {
-      window.removeEventListener("pointermove", handlePointerMove, true as any)
-      window.removeEventListener("mousemove", handleMouseMove, true as any)
-      window.removeEventListener("touchmove", handleTouchMove, true as any)
-      window.removeEventListener("dragover", handleDragOver, true as any)
+      document.removeEventListener("pointermove", handlePointerMove, true as any)
+      document.removeEventListener("mousemove", handleMouseMove, true as any)
+      document.removeEventListener("touchmove", handleTouchMove, true as any)
+      document.removeEventListener("dragover", handleDragOver, true as any)
       if (frameId) window.cancelAnimationFrame(frameId)
     }
   }, [isDragging, containerRef])
@@ -471,7 +491,11 @@ const KanbanColumn = memo(function KanbanColumn({
   const c = coluna.color
 
   return (
-    <div className="flex-shrink-0 min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col snap-start">
+    <div
+      className={`flex-shrink-0 min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col ${
+        isDragging ? "" : "snap-start"
+      }`}
+    >
       <Droppable droppableId={coluna.id}>
         {(provided) => (
           <Card
@@ -576,11 +600,13 @@ export default function KanbanPageNewGates() {
     precatorioId: string | null
     status: string
     observacao: string
+    destinoReprovacao: TriagemDestinoReprovacao
   }>({
     open: false,
     precatorioId: null,
     status: "SEM_CONTATO",
     observacao: "",
+    destinoReprovacao: "none",
   })
 
   const [triagemSaving, setTriagemSaving] = useState(false)
@@ -899,11 +925,17 @@ export default function KanbanPageNewGates() {
 
   function abrirTriagemModal(precatorioId: string) {
     const precatorio = precatorios.find((p) => p.id === precatorioId)
+    const destinoAtual =
+      precatorio?.status_kanban === "reprovado" &&
+      (precatorio?.juridico_resultado_final === "reprovado" || precatorio?.juridico_resultado_final === "nao_elegivel")
+        ? (precatorio.juridico_resultado_final as TriagemDestinoReprovacao)
+        : "none"
     setTriagemModal({
       open: true,
       precatorioId,
       status: precatorio?.interesse_status || "SEM_CONTATO",
       observacao: precatorio?.interesse_observacao || "",
+      destinoReprovacao: destinoAtual,
     })
   }
 
@@ -1117,12 +1149,15 @@ export default function KanbanPageNewGates() {
   async function confirmarTriagemModal() {
     if (!triagemModal.precatorioId) return
 
-    if (triagemModal.status === "SEM_INTERESSE") {
+    const destinoReprovacaoSelecionado = triagemModal.destinoReprovacao !== "none"
+
+    if (triagemModal.status === "SEM_INTERESSE" && !destinoReprovacaoSelecionado) {
       setTriagemModal({
         open: false,
         precatorioId: null,
         status: "SEM_CONTATO",
         observacao: "",
+        destinoReprovacao: "none",
       })
       setSemInteresseDialog({ open: true, precatorioId: triagemModal.precatorioId })
       return
@@ -1133,9 +1168,11 @@ export default function KanbanPageNewGates() {
       const supabase = createBrowserClient()
       if (!supabase) return
 
+      const colunaDestinoTriagem = destinoReprovacaoSelecionado ? "reprovado" : "triagem_interesse"
+
       const { data: validacao, error: validacaoError } = await supabase.rpc("validar_movimentacao_kanban", {
         p_precatorio_id: triagemModal.precatorioId,
-        p_coluna_destino: "triagem_interesse",
+        p_coluna_destino: colunaDestinoTriagem,
       })
 
       if (validacaoError) throw validacaoError
@@ -1145,17 +1182,24 @@ export default function KanbanPageNewGates() {
         setMoveDialog({
           open: true,
           precatorioId: triagemModal.precatorioId,
-          colunaDestino: "triagem_interesse",
+          colunaDestino: colunaDestinoTriagem,
           validacao,
         })
         return
       }
 
+      const precatorioAtual = precatorios.find((p) => p.id === triagemModal.precatorioId)
       const updateData: any = {
-        status_kanban: "triagem_interesse",
+        status_kanban: colunaDestinoTriagem,
+        localizacao_kanban: colunaDestinoTriagem,
         interesse_status: triagemModal.status,
         interesse_observacao: triagemModal.observacao.trim() || null,
         updated_at: new Date().toISOString(),
+      }
+      if (destinoReprovacaoSelecionado) {
+        updateData.juridico_resultado_final = triagemModal.destinoReprovacao
+      } else if (precatorioAtual?.status_kanban === "reprovado") {
+        updateData.juridico_resultado_final = null
       }
 
       const { error: updateError } = await supabase
@@ -1167,7 +1211,9 @@ export default function KanbanPageNewGates() {
 
       toast({
         title: "Triagem registrada",
-        description: "O interesse do credor foi registrado com sucesso.",
+        description: destinoReprovacaoSelecionado
+          ? "Registro salvo e crédito enviado para Reprovado / não elegível."
+          : "O interesse do credor foi registrado com sucesso.",
       })
 
       setTriagemModal({
@@ -1175,6 +1221,7 @@ export default function KanbanPageNewGates() {
         precatorioId: null,
         status: "SEM_CONTATO",
         observacao: "",
+        destinoReprovacao: "none",
       })
 
       await loadPrecatorios()
@@ -1330,6 +1377,8 @@ export default function KanbanPageNewGates() {
                 onChange={setSearchTerm}
                 onClear={() => setSearchTerm("")}
                 placeholder="Filtrar Cards..."
+                autoSearch={true}
+                showButton={false}
               />
             </div>
             <AdvancedFilters
@@ -1388,7 +1437,9 @@ export default function KanbanPageNewGates() {
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
-              className="flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-2 h-full px-1 snap-x snap-proximity overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent"
+              className={`flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-2 h-full px-1 overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent ${
+                isDragging ? "snap-none" : "snap-x snap-proximity"
+              }`}
               style={{
                 WebkitOverflowScrolling: "touch",
                 overscrollBehaviorX: "contain",
@@ -1646,6 +1697,23 @@ export default function KanbanPageNewGates() {
                 ))}
               </SelectContent>
             </Select>
+            <Select
+              value={triagemModal.destinoReprovacao}
+              onValueChange={(value) =>
+                setTriagemModal((prev) => ({ ...prev, destinoReprovacao: value as TriagemDestinoReprovacao }))
+              }
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o destino" />
+              </SelectTrigger>
+              <SelectContent>
+                {TRIAGEM_DESTINO_OPTIONS.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Textarea
               value={triagemModal.observacao}
               onChange={(e) => setTriagemModal((prev) => ({ ...prev, observacao: e.target.value }))}
@@ -1666,3 +1734,4 @@ export default function KanbanPageNewGates() {
     </div>
   )
 }
+

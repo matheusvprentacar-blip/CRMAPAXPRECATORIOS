@@ -6,9 +6,10 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Checkbox } from "@/components/ui/checkbox"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, User, MapPin, Phone, Mail, FileText, ChevronRight, Calculator, Clock } from "lucide-react"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Search, User, MapPin, Phone, Mail, FileText, ChevronRight, Calculator, Clock, Filter, X } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
 import { CredorView, Precatorio } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
@@ -28,6 +29,191 @@ type CredorResumo = CredorView & {
   ultimo_precatorio_valor: number
 }
 
+type ClientesAdminFilters = {
+  status?: string[]
+  cidade?: string
+  uf?: string
+  carteiraMin?: number
+  carteiraMax?: number
+  qtdMin?: number
+  qtdMax?: number
+  ultimaMovInicio?: string
+  ultimaMovFim?: string
+  apenasComContato?: boolean
+}
+
+type ClienteFilterChip = {
+  key: string
+  label: string
+  value: string
+}
+
+const normalizeText = (value?: string | null) =>
+  (value || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+
+const parseDateStart = (value?: string) => {
+  if (!value) return null
+  const parsed = new Date(`${value}T00:00:00.000`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const parseDateEnd = (value?: string) => {
+  if (!value) return null
+  const parsed = new Date(`${value}T23:59:59.999`)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const formatStatusLabel = (value?: string | null) => {
+  if (!value) return "N/I"
+  return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase())
+}
+
+const normalizeAdminFilters = (filters: ClientesAdminFilters): ClientesAdminFilters => {
+  const next: ClientesAdminFilters = { ...filters }
+  next.cidade = next.cidade?.trim() || undefined
+  next.uf = next.uf?.trim().toUpperCase() || undefined
+  next.status = next.status?.filter(Boolean) || undefined
+
+  const normalizeNumber = (value?: number) =>
+    value === undefined || value === null || Number.isNaN(Number(value)) ? undefined : Number(value)
+
+  next.carteiraMin = normalizeNumber(next.carteiraMin)
+  next.carteiraMax = normalizeNumber(next.carteiraMax)
+  next.qtdMin = normalizeNumber(next.qtdMin)
+  next.qtdMax = normalizeNumber(next.qtdMax)
+
+  if (
+    next.carteiraMin !== undefined &&
+    next.carteiraMax !== undefined &&
+    next.carteiraMin > next.carteiraMax
+  ) {
+    const temp = next.carteiraMin
+    next.carteiraMin = next.carteiraMax
+    next.carteiraMax = temp
+  }
+
+  if (next.qtdMin !== undefined && next.qtdMax !== undefined && next.qtdMin > next.qtdMax) {
+    const temp = next.qtdMin
+    next.qtdMin = next.qtdMax
+    next.qtdMax = temp
+  }
+
+  const start = parseDateStart(next.ultimaMovInicio)
+  const end = parseDateEnd(next.ultimaMovFim)
+  if (start && end && start > end) {
+    const temp = next.ultimaMovInicio
+    next.ultimaMovInicio = next.ultimaMovFim
+    next.ultimaMovFim = temp
+  }
+
+  next.apenasComContato = next.apenasComContato ? true : undefined
+
+  return next
+}
+
+const matchesClientesAdvancedFilters = (credor: CredorResumo, filters: ClientesAdminFilters) => {
+  if (filters.status && filters.status.length > 0) {
+    const statusAtual = credor.ultimo_status || ""
+    if (!filters.status.includes(statusAtual)) return false
+  }
+
+  if (filters.cidade) {
+    const cidade = normalizeText(credor.cidade)
+    if (!cidade.includes(normalizeText(filters.cidade))) return false
+  }
+
+  if (filters.uf) {
+    if ((credor.uf || "").toUpperCase() !== filters.uf.toUpperCase()) return false
+  }
+
+  const carteira = Number(credor.valor_total_atualizado || credor.valor_total_principal || 0)
+  if (filters.carteiraMin !== undefined && carteira < filters.carteiraMin) return false
+  if (filters.carteiraMax !== undefined && carteira > filters.carteiraMax) return false
+
+  const quantidade = Number(credor.total_precatorios || 0)
+  if (filters.qtdMin !== undefined && quantidade < filters.qtdMin) return false
+  if (filters.qtdMax !== undefined && quantidade > filters.qtdMax) return false
+
+  if (filters.apenasComContato) {
+    const hasContato = Boolean((credor.telefone || "").trim() || (credor.email || "").trim())
+    if (!hasContato) return false
+  }
+
+  if (filters.ultimaMovInicio || filters.ultimaMovFim) {
+    const ultimaMov = credor.ultimo_precatorio_data ? new Date(credor.ultimo_precatorio_data) : null
+    if (!ultimaMov || Number.isNaN(ultimaMov.getTime())) return false
+
+    const inicio = parseDateStart(filters.ultimaMovInicio)
+    const fim = parseDateEnd(filters.ultimaMovFim)
+    if (inicio && ultimaMov < inicio) return false
+    if (fim && ultimaMov > fim) return false
+  }
+
+  return true
+}
+
+const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[] => {
+  const chips: ClienteFilterChip[] = []
+
+  if (filters.status && filters.status.length > 0) {
+    chips.push({
+      key: "status",
+      label: "Status",
+      value: filters.status.map((status) => formatStatusLabel(status)).join(", "),
+    })
+  }
+
+  if (filters.cidade) {
+    chips.push({ key: "cidade", label: "Cidade", value: filters.cidade })
+  }
+
+  if (filters.uf) {
+    chips.push({ key: "uf", label: "UF", value: filters.uf })
+  }
+
+  if (filters.carteiraMin !== undefined || filters.carteiraMax !== undefined) {
+    chips.push({
+      key: "carteira",
+      label: "Carteira",
+      value: `${filters.carteiraMin !== undefined ? `R$ ${filters.carteiraMin.toLocaleString("pt-BR")}` : "..."} até ${
+        filters.carteiraMax !== undefined ? `R$ ${filters.carteiraMax.toLocaleString("pt-BR")}` : "..."
+      }`,
+    })
+  }
+
+  if (filters.qtdMin !== undefined || filters.qtdMax !== undefined) {
+    chips.push({
+      key: "qtd",
+      label: "Qtd. Precatórios",
+      value: `${filters.qtdMin ?? "..."} até ${filters.qtdMax ?? "..."}`,
+    })
+  }
+
+  if (filters.ultimaMovInicio || filters.ultimaMovFim) {
+    chips.push({
+      key: "ultimaMov",
+      label: "Última mov.",
+      value: `${filters.ultimaMovInicio ? new Date(`${filters.ultimaMovInicio}T00:00:00`).toLocaleDateString("pt-BR") : "..."} até ${
+        filters.ultimaMovFim ? new Date(`${filters.ultimaMovFim}T00:00:00`).toLocaleDateString("pt-BR") : "..."
+      }`,
+    })
+  }
+
+  if (filters.apenasComContato) {
+    chips.push({
+      key: "apenasComContato",
+      label: "Contato",
+      value: "Somente com contato",
+    })
+  }
+
+  return chips
+}
+
 export default function ClientsPage() {
   const router = useRouter()
   const { profile } = useAuth()
@@ -37,7 +223,7 @@ export default function ClientsPage() {
 
   // role pode vir como string ou array (evita includes quebrar)
   const roles = useMemo(() => {
-    const r: any = profile?.role
+    const r = profile?.role as string | string[] | undefined
     return Array.isArray(r) ? r : r ? [r] : []
   }, [profile?.role])
 
@@ -51,6 +237,21 @@ export default function ClientsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCredor, setEditingCredor] = useState(false)
   const [savingCredor, setSavingCredor] = useState(false)
+  const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
+  const [adminFilters, setAdminFilters] = useState<ClientesAdminFilters>({})
+  const [adminFiltersDraft, setAdminFiltersDraft] = useState<ClientesAdminFilters>({})
+
+  useEffect(() => {
+    if (!isAdmin) {
+      setAdminFilters({})
+      setAdminFiltersDraft({})
+    }
+  }, [isAdmin])
+
+  useEffect(() => {
+    if (!advancedFiltersOpen) return
+    setAdminFiltersDraft(adminFilters)
+  }, [advancedFiltersOpen, adminFilters])
 
   useEffect(() => {
     if (!profile?.id) return
@@ -245,25 +446,120 @@ export default function ClientsPage() {
         uf: payload.credor_uf,
       }
       await openCredorDetails(updatedCredor)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Erro ao atualizar cliente:", error)
-      toast.error(error?.message || "Erro ao atualizar cliente.")
+      const message = error instanceof Error ? error.message : "Erro ao atualizar cliente."
+      toast.error(message)
     } finally {
       setSavingCredor(false)
     }
   }
 
-  const filteredCredores = credores.filter((c) => {
-    const term = searchTerm.toLowerCase()
-    return (
-      c.credor_nome?.toLowerCase().includes(term) ||
-      c.credor_cpf_cnpj?.includes(searchTerm) ||
-      c.cidade?.toLowerCase().includes(term) ||
-      c.ultimo_status?.toLowerCase().includes(term) ||
-      c.email?.toLowerCase().includes(term) ||
-      c.telefone?.toLowerCase().includes(term)
-    )
-  })
+  const statusOptions = useMemo(
+    () =>
+      Array.from(new Set(credores.map((credor) => credor.ultimo_status).filter(Boolean) as string[])).sort((a, b) =>
+        formatStatusLabel(a).localeCompare(formatStatusLabel(b), "pt-BR")
+      ),
+    [credores]
+  )
+
+  const ufOptions = useMemo(
+    () =>
+      Array.from(new Set(credores.map((credor) => (credor.uf || "").toUpperCase()).filter(Boolean))).sort((a, b) =>
+        a.localeCompare(b, "pt-BR")
+      ),
+    [credores]
+  )
+
+  const searchedCredores = useMemo(() => {
+    const term = normalizeText(searchTerm)
+    if (!term) return credores
+
+    return credores.filter((credor) => {
+      const matchesNome = normalizeText(credor.credor_nome).includes(term)
+      const matchesCpf = (credor.credor_cpf_cnpj || "").includes(searchTerm.trim())
+      const matchesCidade = normalizeText(credor.cidade).includes(term)
+      const matchesStatus = normalizeText(credor.ultimo_status).includes(term)
+      const matchesEmail = normalizeText(credor.email).includes(term)
+      const matchesTelefone = normalizeText(credor.telefone).includes(term)
+      return matchesNome || matchesCpf || matchesCidade || matchesStatus || matchesEmail || matchesTelefone
+    })
+  }, [credores, searchTerm])
+
+  const filteredCredores = useMemo(
+    () =>
+      isAdmin ? searchedCredores.filter((credor) => matchesClientesAdvancedFilters(credor, adminFilters)) : searchedCredores,
+    [isAdmin, searchedCredores, adminFilters]
+  )
+
+  const adminFilterChips = useMemo(() => getAdminFilterChips(adminFilters), [adminFilters])
+  const totalAdminFilters = adminFilterChips.length
+
+  const updateDraftNumberFilter = (key: keyof ClientesAdminFilters, rawValue: string) => {
+    const normalized = rawValue.replace(",", ".")
+    const parsed = Number(normalized)
+    setAdminFiltersDraft((prev) => ({
+      ...prev,
+      [key]: rawValue === "" || Number.isNaN(parsed) ? undefined : parsed,
+    }))
+  }
+
+  const toggleDraftStatus = (status: string) => {
+    setAdminFiltersDraft((prev) => {
+      const current = prev.status || []
+      const nextStatus = current.includes(status) ? current.filter((item) => item !== status) : [...current, status]
+      return {
+        ...prev,
+        status: nextStatus.length > 0 ? nextStatus : undefined,
+      }
+    })
+  }
+
+  const applyAdminFilters = () => {
+    setAdminFilters(normalizeAdminFilters(adminFiltersDraft))
+    setAdvancedFiltersOpen(false)
+  }
+
+  const clearAdminFilters = () => {
+    setAdminFilters({})
+    setAdminFiltersDraft({})
+    setAdvancedFiltersOpen(false)
+  }
+
+  const removeAdminFilter = (key: string) => {
+    setAdminFilters((prev) => {
+      const next = { ...prev }
+      switch (key) {
+        case "status":
+          delete next.status
+          break
+        case "cidade":
+          delete next.cidade
+          break
+        case "uf":
+          delete next.uf
+          break
+        case "carteira":
+          delete next.carteiraMin
+          delete next.carteiraMax
+          break
+        case "qtd":
+          delete next.qtdMin
+          delete next.qtdMax
+          break
+        case "ultimaMov":
+          delete next.ultimaMovInicio
+          delete next.ultimaMovFim
+          break
+        case "apenasComContato":
+          delete next.apenasComContato
+          break
+        default:
+          break
+      }
+      return normalizeAdminFilters(next)
+    })
+  }
 
   const resumo = useMemo(() => {
     let totalCarteira = 0
@@ -285,10 +581,7 @@ export default function ClientsPage() {
 
   const formatCurrency = (value: number) => value.toLocaleString("pt-BR", { minimumFractionDigits: 2 })
 
-  const formatStatus = (value?: string | null) => {
-    if (!value) return "N/I"
-    return value.replace(/_/g, " ").replace(/\b\w/g, (l) => l.toUpperCase())
-  }
+  const formatStatus = formatStatusLabel
 
   const statusClass = (value?: string | null) => {
     switch (value) {
@@ -346,14 +639,28 @@ export default function ClientsPage() {
       <Card className="border border-zinc-200/70 dark:border-zinc-800/60 bg-white/90 dark:bg-zinc-900/70 overflow-hidden">
         <CardHeader className="pb-3">
           <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <div className="relative w-full md:max-w-md">
-              <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Buscar por nome, CPF/CNPJ, cidade ou status..."
-                className="pl-9 w-full bg-white/80 dark:bg-zinc-900/70"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-              />
+            <div className="w-full md:max-w-2xl flex items-center gap-2">
+              <div className="relative w-full md:max-w-md">
+                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Buscar por nome, CPF/CNPJ, cidade ou status..."
+                  className="pl-9 w-full bg-white/80 dark:bg-zinc-900/70"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
+              </div>
+
+              {isAdmin && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="whitespace-nowrap"
+                  onClick={() => setAdvancedFiltersOpen(true)}
+                >
+                  <Filter className="h-4 w-4 mr-2" />
+                  {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avançados"}
+                </Button>
+              )}
             </div>
 
             <div className="text-xs text-muted-foreground md:ml-auto">
@@ -370,6 +677,30 @@ export default function ClientsPage() {
               )}
             </div>
           </div>
+
+          {isAdmin && adminFilterChips.length > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-2">
+              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                Filtros:
+              </span>
+              {adminFilterChips.map((chip) => (
+                <Badge key={chip.key} variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1">
+                  <span className="font-semibold">{chip.label}:</span>
+                  <span>{chip.value}</span>
+                  <button
+                    type="button"
+                    className="ml-1 hover:text-destructive transition-colors"
+                    onClick={() => removeAdminFilter(chip.key)}
+                  >
+                    <X className="h-3 w-3" />
+                  </button>
+                </Badge>
+              ))}
+              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAdminFilters}>
+                Limpar
+              </Button>
+            </div>
+          )}
         </CardHeader>
 
         <CardContent className="p-0">
@@ -504,6 +835,198 @@ export default function ClientsPage() {
           )}
         </CardContent>
       </Card>
+
+      {isAdmin && (
+        <Dialog open={advancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Filtros avançados de clientes</DialogTitle>
+              <DialogDescription>Disponível somente para administrador.</DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-6 py-2">
+              <div className="space-y-2">
+                <Label className="text-sm font-semibold">Status atual</Label>
+                {statusOptions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">Sem status disponíveis.</p>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
+                    {statusOptions.map((status) => (
+                      <label
+                        key={status}
+                        className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
+                      >
+                        <Checkbox
+                          checked={adminFiltersDraft.status?.includes(status) || false}
+                          onCheckedChange={() => toggleDraftStatus(status)}
+                        />
+                        <span>{formatStatus(status)}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Cidade</Label>
+                  <Input
+                    value={adminFiltersDraft.cidade || ""}
+                    onChange={(e) =>
+                      setAdminFiltersDraft((prev) => ({
+                        ...prev,
+                        cidade: e.target.value || undefined,
+                      }))
+                    }
+                    placeholder="Ex: Curitiba"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>UF</Label>
+                  <Input
+                    value={adminFiltersDraft.uf || ""}
+                    onChange={(e) =>
+                      setAdminFiltersDraft((prev) => ({
+                        ...prev,
+                        uf: e.target.value.toUpperCase() || undefined,
+                      }))
+                    }
+                    placeholder="Ex: PR"
+                    maxLength={2}
+                  />
+                  {ufOptions.length > 0 && (
+                    <div className="flex flex-wrap gap-1">
+                      {ufOptions.map((uf) => {
+                        const isSelected = adminFiltersDraft.uf === uf
+                        return (
+                          <button
+                            key={uf}
+                            type="button"
+                            className={`rounded border px-2 py-0.5 text-xs transition ${
+                              isSelected
+                                ? "border-primary/40 bg-primary/10 text-foreground"
+                                : "border-border/60 hover:bg-muted/50"
+                            }`}
+                            onClick={() =>
+                              setAdminFiltersDraft((prev) => ({
+                                ...prev,
+                                uf: prev.uf === uf ? undefined : uf,
+                              }))
+                            }
+                          >
+                            {uf}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Carteira mínima</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={adminFiltersDraft.carteiraMin ?? ""}
+                    onChange={(e) => updateDraftNumberFilter("carteiraMin", e.target.value)}
+                    placeholder="0,00"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Carteira máxima</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={adminFiltersDraft.carteiraMax ?? ""}
+                    onChange={(e) => updateDraftNumberFilter("carteiraMax", e.target.value)}
+                    placeholder="9999999,99"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Qtd. mínima de precatórios</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={adminFiltersDraft.qtdMin ?? ""}
+                    onChange={(e) => updateDraftNumberFilter("qtdMin", e.target.value)}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Qtd. máxima de precatórios</Label>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={adminFiltersDraft.qtdMax ?? ""}
+                    onChange={(e) => updateDraftNumberFilter("qtdMax", e.target.value)}
+                    placeholder="999"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-2">
+                  <Label>Última movimentação (de)</Label>
+                  <Input
+                    type="date"
+                    value={adminFiltersDraft.ultimaMovInicio || ""}
+                    onChange={(e) =>
+                      setAdminFiltersDraft((prev) => ({
+                        ...prev,
+                        ultimaMovInicio: e.target.value || undefined,
+                      }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label>Última movimentação (até)</Label>
+                  <Input
+                    type="date"
+                    value={adminFiltersDraft.ultimaMovFim || ""}
+                    onChange={(e) =>
+                      setAdminFiltersDraft((prev) => ({
+                        ...prev,
+                        ultimaMovFim: e.target.value || undefined,
+                      }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <label className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
+                <Checkbox
+                  checked={adminFiltersDraft.apenasComContato || false}
+                  onCheckedChange={(checked) =>
+                    setAdminFiltersDraft((prev) => ({
+                      ...prev,
+                      apenasComContato: checked ? true : undefined,
+                    }))
+                  }
+                />
+                <span>Mostrar somente clientes com contato (telefone ou e-mail)</span>
+              </label>
+            </div>
+
+            <DialogFooter className="gap-2">
+              <Button type="button" variant="outline" onClick={clearAdminFilters}>
+                Limpar filtros
+              </Button>
+              <Button type="button" onClick={applyAdminFilters}>
+                Aplicar filtros
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Modal de Detalhes */}
       <Dialog

@@ -51,7 +51,7 @@ export default function AcessoControladoPage() {
                 .single()
 
             const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
-            const ok = roles.includes("admin") || roles.includes("gestor") || roles.includes("gestor_oficio") || roles.includes("gestor_certidoes")
+            const ok = roles.includes("admin") || roles.includes("gestor_certidoes") || roles.includes("juridico")
 
             setAllowed(ok)
             setLoading(false)
@@ -73,8 +73,9 @@ export default function AcessoControladoPage() {
 
             if (error) throw error
             setResults((data as ResultItem[]) || [])
-        } catch (e: any) {
-            setError(e?.message || "Erro ao buscar.")
+        } catch (e: unknown) {
+            const message = e instanceof Error ? e.message : "Erro ao buscar."
+            setError(message)
             setResults([])
         } finally {
             setSearching(false)
@@ -113,7 +114,7 @@ export default function AcessoControladoPage() {
                 <CardHeader className="space-y-2">
                     <CardTitle className="flex items-center gap-2">
                         <ShieldCheck className="h-5 w-5 text-primary" />
-                        Acesso Controlado (Gestores)
+                        Acesso Controlado
                     </CardTitle>
                     <p className="text-sm text-muted-foreground">
                         Busque por <b>Nome</b>, <b>Nº do Precatório</b> ou <b>Nº do Processo</b> (mínimo 3 caracteres).

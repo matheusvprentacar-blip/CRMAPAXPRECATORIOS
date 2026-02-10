@@ -14,7 +14,6 @@ import { getSupabase } from "@/lib/supabase/client"
 import type { Precatorio } from "@/lib/types/database"
 import { maskProcesso } from "@/lib/masks"
 import { useToast } from "@/hooks/use-toast"
-import { useDebounce } from "@/hooks/use-debounce"
 import { ImportJsonModal } from "@/components/import/import-json-modal"
 import {
   Dialog,
@@ -52,13 +51,13 @@ export default function PrecatoriosPage() {
     removeFiltro,
     setTermo,
     loading,
+    initialized,
     resultados: precatoriosRaw,
     filtrosAtivos,
     refetch,
   } = usePrecatoriosSearch()
 
   const [searchInput, setSearchInput] = useState("")
-  const debouncedSearch = useDebounce(searchInput, 400)
 
   // Estado para seleção em lote
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -194,9 +193,17 @@ export default function PrecatoriosPage() {
     setSearchInput(searchTerm)
   }, [searchTerm])
 
-  useEffect(() => {
-    setTermo(debouncedSearch)
-  }, [debouncedSearch, setTermo])
+  const handleRemoveFiltro = (key: string) => {
+    if (key === "termo") {
+      setSearchInput("")
+    }
+    removeFiltro(key)
+  }
+
+  const handleClearAllFiltros = () => {
+    setSearchInput("")
+    clearFiltros()
+  }
 
 
   async function handleDeletePrecatorio() {
@@ -313,7 +320,7 @@ export default function PrecatoriosPage() {
     }
   }
 
-  if (loading) {
+  if (loading && !initialized) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
@@ -372,6 +379,10 @@ export default function PrecatoriosPage() {
               <SearchBar
                 value={searchInput}
                 onChange={setSearchInput}
+                onSubmit={(value) => {
+                  setSearchInput(value)
+                  setTermo(value)
+                }}
                 onClear={() => setSearchInput("")}
                 placeholder="Busque por título, número, credor ou processo..."
                 autoSearch={false}
@@ -395,15 +406,21 @@ export default function PrecatoriosPage() {
               <AdvancedFilters
                 filtros={filtros}
                 onFilterChange={updateFiltros}
-                onClearFilters={clearFiltros}
+                onClearFilters={handleClearAllFiltros}
                 totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
                 responsaveis={responsaveis}
                 showResponsavelFilter={!!userRole?.includes("admin")}
               />
             </div>
             <div className="flex items-center gap-3 lg:ml-auto">
-              <div className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
-                {totalPrecatorios} registros
+              <div className="flex items-center gap-2 text-sm font-medium text-zinc-600 dark:text-zinc-300">
+                <span>{totalPrecatorios} registros</span>
+                {loading && initialized && (
+                  <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                    <Loader2 className="h-3 w-3 animate-spin" />
+                    Atualizando...
+                  </span>
+                )}
               </div>
               <div className="hidden md:inline-flex items-center rounded-full bg-zinc-100/70 dark:bg-zinc-800/60 p-1 ring-1 ring-zinc-200/70 dark:ring-zinc-800/60">
                 <button
@@ -437,7 +454,7 @@ export default function PrecatoriosPage() {
                   <span className="font-semibold">Responsável:</span>
                   <span>{responsavelAtivo}</span>
                   <button
-                    onClick={() => removeFiltro("responsavel_id")}
+                    onClick={() => handleRemoveFiltro("responsavel_id")}
                     className="ml-1 hover:text-destructive transition-colors"
                     type="button"
                   >
@@ -454,7 +471,7 @@ export default function PrecatoriosPage() {
                   <span className="font-semibold">{filtro.label}:</span>
                   <span>{filtro.displayValue}</span>
                   <button
-                    onClick={() => removeFiltro(filtro.key)}
+                    onClick={() => handleRemoveFiltro(filtro.key)}
                     className="ml-1 hover:text-destructive transition-colors"
                     type="button"
                   >
@@ -462,7 +479,7 @@ export default function PrecatoriosPage() {
                   </button>
                 </Badge>
               ))}
-              <Button variant="ghost" size="sm" onClick={clearFiltros} className="text-xs h-7">
+              <Button variant="ghost" size="sm" onClick={handleClearAllFiltros} className="text-xs h-7">
                 Limpar
               </Button>
             </div>
@@ -479,17 +496,17 @@ export default function PrecatoriosPage() {
               {searchTerm || temFiltrosAtivos ? <Filter className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm || temFiltrosAtivos ? "Nenhum resultado encontrado" : "Sua lista est? vazia"}
+              {searchTerm || temFiltrosAtivos ? "Nenhum resultado encontrado" : "Sua lista está vazia"}
             </h3>
             <p className="text-muted-foreground max-w-sm mb-6">
               {searchTerm || temFiltrosAtivos
                 ? "Tente ajustar os filtros ou termo de busca para encontrar o que procura."
-                : "Comece adicionando novos precat?rios para gerenci?-los aqui."}
+                : "Comece adicionando novos precatórios para gerenciá-los aqui."}
             </p>
             {!searchTerm && !temFiltrosAtivos && (
               <Button onClick={() => router.push("/precatorios/novo")}>
                 <Plus className="h-4 w-4 mr-2" />
-                Cadastrar Precat?rio
+                Cadastrar Precatório
               </Button>
             )}
           </div>
@@ -545,7 +562,7 @@ export default function PrecatoriosPage() {
                               <div className="space-y-1">
                                 <div className="flex items-center gap-2 flex-wrap">
                                   <h3 className="text-base font-semibold text-orange-500 dark:text-orange-400">
-                                    {precatorio.credor_nome || precatorio.titulo || `Precat?rio ${precatorio.numero_precatorio}`}
+                                    {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
                                   </h3>
                                   <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
                                     {statusLabel}
@@ -586,13 +603,13 @@ export default function PrecatoriosPage() {
                               )}
                               {precatorio.numero_precatorio && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N? Precat?rio</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Precatório</div>
                                   <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.numero_precatorio}</div>
                                 </div>
                               )}
                               {precatorio.numero_processo && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N? Processo</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Processo</div>
                                   <div className="font-medium text-zinc-800 dark:text-zinc-200">{maskProcesso(precatorio.numero_processo)}</div>
                                 </div>
                               )}
@@ -629,7 +646,7 @@ export default function PrecatoriosPage() {
                                       </Button>
                                     </DropdownMenuTrigger>
                                     <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>A??es</DropdownMenuLabel>
+                                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                       <DropdownMenuSeparator />
                                       <DropdownMenuItem
                                         className="text-destructive focus:text-destructive cursor-pointer"
@@ -639,7 +656,7 @@ export default function PrecatoriosPage() {
                                         }}
                                       >
                                         <Trash2 className="h-4 w-4 mr-2" />
-                                        Excluir Precat?rio
+                                        Excluir Precatório
                                       </DropdownMenuItem>
                                     </DropdownMenuContent>
                                   </DropdownMenu>
@@ -668,8 +685,8 @@ export default function PrecatoriosPage() {
                         <TableHead>Tribunal</TableHead>
                         <TableHead>Processo</TableHead>
                         <TableHead>Valor</TableHead>
-                        <TableHead>Atualiza??o</TableHead>
-                        <TableHead className="text-right">A??es</TableHead>
+                        <TableHead>Atualização</TableHead>
+                        <TableHead className="text-right">Ações</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -730,7 +747,7 @@ export default function PrecatoriosPage() {
                                     </Button>
                                   </DropdownMenuTrigger>
                                   <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>A??es</DropdownMenuLabel>
+                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem
                                       className="text-destructive focus:text-destructive cursor-pointer"
@@ -740,7 +757,7 @@ export default function PrecatoriosPage() {
                                       }}
                                     >
                                       <Trash2 className="h-4 w-4 mr-2" />
-                                      Excluir Precat?rio
+                                      Excluir Precatório
                                     </DropdownMenuItem>
                                   </DropdownMenuContent>
                                 </DropdownMenu>
@@ -786,7 +803,7 @@ export default function PrecatoriosPage() {
                                 <div className="space-y-1">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <h3 className="text-lg font-semibold text-orange-500 dark:text-orange-400">
-                                      {precatorio.credor_nome || precatorio.titulo || `Precat?rio ${precatorio.numero_precatorio}`}
+                                      {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
                                     </h3>
                                     <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
                                       {statusLabel}
@@ -828,13 +845,13 @@ export default function PrecatoriosPage() {
                                 )}
                                 {precatorio.numero_precatorio && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N? Precat?rio</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Precatório</div>
                                     <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.numero_precatorio}</div>
                                   </div>
                                 )}
                                 {precatorio.numero_processo && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">N? Processo</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Processo</div>
                                     <div className="font-medium text-zinc-800 dark:text-zinc-200">{maskProcesso(precatorio.numero_processo)}</div>
                                   </div>
                                 )}
@@ -871,7 +888,7 @@ export default function PrecatoriosPage() {
                                         </Button>
                                       </DropdownMenuTrigger>
                                       <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>A??es</DropdownMenuLabel>
+                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
                                         <DropdownMenuSeparator />
                                         <DropdownMenuItem
                                           className="text-destructive focus:text-destructive cursor-pointer"
@@ -881,7 +898,7 @@ export default function PrecatoriosPage() {
                                           }}
                                         >
                                           <Trash2 className="h-4 w-4 mr-2" />
-                                          Excluir Precat?rio
+                                          Excluir Precatório
                                         </DropdownMenuItem>
                                       </DropdownMenuContent>
                                     </DropdownMenu>
@@ -1005,7 +1022,3 @@ export default function PrecatoriosPage() {
     </div >
   )
 }
-
-
-
-

@@ -64,7 +64,7 @@ export interface FiltroAtivo {
 
 export interface ResultadoBusca {
   total: number
-  resultados: any[]
+  resultados: Array<Record<string, unknown>>
   filtrosAtivos: FiltroAtivo[]
 }
 
@@ -162,6 +162,44 @@ export const IMPACTO_OPTIONS = Object.entries(IMPACTO_LABELS).map(([value, label
   label,
 }))
 
+// Expansão de status para cobrir cenários legados x fluxo Kanban.
+// Ex.: ao filtrar "Calculado", também considerar "Cálculo concluído".
+const STATUS_EXPANSION_MAP: Record<string, string[]> = {
+  encerrados: ['encerrados', 'pos_fechamento', 'pausado_credor', 'pausado_documentos', 'sem_interesse'],
+  em_calculo: ['em_calculo', 'calculo_andamento'],
+  calculo_andamento: ['calculo_andamento', 'em_calculo'],
+  calculado: ['calculado', 'calculo_concluido'],
+  calculo_concluido: ['calculo_concluido', 'calculado'],
+  novo: ['novo', 'entrada'],
+  entrada: ['entrada', 'novo'],
+  em_contato: ['em_contato', 'triagem_interesse'],
+  triagem_interesse: ['triagem_interesse', 'em_contato'],
+  aguardando_documentos: ['aguardando_documentos', 'docs_credor'],
+  docs_credor: ['docs_credor', 'aguardando_documentos'],
+  em_negociacao: ['em_negociacao', 'proposta_negociacao'],
+  proposta_negociacao: ['proposta_negociacao', 'em_negociacao'],
+  concluido: ['concluido', 'fechado', 'finalizado'],
+  fechado: ['fechado', 'concluido', 'finalizado'],
+  finalizado: ['finalizado', 'fechado', 'concluido'],
+}
+
+function expandStatusFilters(statuses?: string[]): string[] | null {
+  if (!statuses || statuses.length === 0) return null
+  const expanded = new Set<string>()
+
+  for (const status of statuses) {
+    if (!status) continue
+    const mapped = STATUS_EXPANSION_MAP[status]
+    if (mapped && mapped.length > 0) {
+      mapped.forEach((item) => expanded.add(item))
+      continue
+    }
+    expanded.add(status)
+  }
+
+  return expanded.size > 0 ? Array.from(expanded) : null
+}
+
 // Helper para converter filtros em array de filtros ativos
 export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
   const ativos: FiltroAtivo[] = []
@@ -241,6 +279,21 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
       key: 'data_criacao',
       label: 'Data de Criação',
       value: `${filtros.data_criacao_inicio || ''}-${filtros.data_criacao_fim || ''}`,
+      displayValue: `${inicio} até ${fim}`,
+    })
+  }
+
+  if (filtros.data_entrada_calculo_inicio || filtros.data_entrada_calculo_fim) {
+    const inicio = filtros.data_entrada_calculo_inicio
+      ? new Date(filtros.data_entrada_calculo_inicio).toLocaleDateString('pt-BR')
+      : '...'
+    const fim = filtros.data_entrada_calculo_fim
+      ? new Date(filtros.data_entrada_calculo_fim).toLocaleDateString('pt-BR')
+      : '...'
+    ativos.push({
+      key: 'data_entrada_calculo',
+      label: 'Entrada em cálculo',
+      value: `${filtros.data_entrada_calculo_inicio || ''}-${filtros.data_entrada_calculo_fim || ''}`,
       displayValue: `${inicio} até ${fim}`,
     })
   }
@@ -342,9 +395,13 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
 
 // Helper para converter filtros para parâmetros da função RPC
 export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
-  const params: Record<string, any> = {
-    p_termo: filtros.termo || null,
-    p_status: filtros.status || null,
+  const termo = filtros.termo?.trim() || null
+  const tribunal = filtros.tribunal?.trim() || null
+  const statusExpandido = expandStatusFilters(filtros.status)
+
+  const params: Record<string, unknown> = {
+    p_termo: termo,
+    p_status: statusExpandido,
     p_responsavel_id: filtros.responsavel_id || null,
     p_criador_id: filtros.criador_id || null,
     p_complexidade: filtros.complexidade || null,
@@ -361,7 +418,7 @@ export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
     p_titular_falecido: filtros.titular_falecido || null,
   }
 
-  if (filtros.tribunal) params.p_tribunal = filtros.tribunal
+  if (tribunal) params.p_tribunal = tribunal
   if (filtros.valor_atualizado_min !== undefined) params.p_valor_atualizado_min = filtros.valor_atualizado_min
   if (filtros.valor_atualizado_max !== undefined) params.p_valor_atualizado_max = filtros.valor_atualizado_max
   if (filtros.valor_sem_atualizacao_min !== undefined) params.p_valor_sem_atualizacao_min = filtros.valor_sem_atualizacao_min

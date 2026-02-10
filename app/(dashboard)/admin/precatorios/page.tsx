@@ -61,6 +61,7 @@ import {
   AlertTriangle,
   TrendingUp,
   Star,
+  X,
 } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
@@ -69,6 +70,8 @@ import { UploadOficiosModal } from "@/components/admin/upload-oficios-modal"
 import { ModalImportarPrecatorio } from "@/components/admin/modal-importar-precatorio"
 import { trackSupabaseError, trackError } from "@/lib/utils/error-tracker"
 import { Checkbox } from "@/components/ui/checkbox"
+import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
+import { getFiltrosAtivos, type FiltrosPrecatorios } from "@/lib/types/filtros"
 
 interface Usuario {
   id: string
@@ -93,11 +96,29 @@ interface PrecatorioAdmin {
   valor_atualizado: number
   status_kanban: string
   prioridade: string
+  status?: string
   dono_usuario_id: string
+  responsavel?: string
   responsavel_calculo_id: string
+  urgente?: boolean
+  titular_falecido?: boolean
+  nivel_complexidade?: "baixa" | "media" | "alta" | null
+  sla_status?: "nao_iniciado" | "no_prazo" | "atencao" | "atrasado" | "concluido" | null
+  tipo_atraso?: "titular_falecido" | "penhora" | "cessao_parcial" | "doc_incompleta" | "duvida_juridica" | "aguardando_cliente" | "outro" | null
+  impacto_atraso?: "baixo" | "medio" | "alto" | null
+  data_entrada_calculo?: string
+  created_at?: string
   file_url?: string
   usuario_dono?: Usuario
   usuario_calculo?: Usuario
+}
+
+const RELATED_ADV_FILTER_KEYS: Record<string, Array<keyof FiltrosPrecatorios>> = {
+  data_criacao: ["data_criacao_inicio", "data_criacao_fim"],
+  data_entrada_calculo: ["data_entrada_calculo_inicio", "data_entrada_calculo_fim"],
+  valor: ["valor_min", "valor_max"],
+  valor_atualizado: ["valor_atualizado_min", "valor_atualizado_max"],
+  valor_sem_atualizacao: ["valor_sem_atualizacao_min", "valor_sem_atualizacao_max"],
 }
 
 const normalizeSearchText = (value: string) => {
@@ -152,6 +173,171 @@ const matchesPrecatorioSearch = (prec: PrecatorioAdmin, term: string) => {
     }
     return textHaystack.includes(token)
   })
+}
+
+const STATUS_EXPANSION_MAP: Record<string, string[]> = {
+  encerrados: ["encerrados", "pos_fechamento", "pausado_credor", "pausado_documentos", "sem_interesse"],
+  em_calculo: ["em_calculo", "calculo_andamento"],
+  calculo_andamento: ["calculo_andamento", "em_calculo"],
+  calculado: ["calculado", "calculo_concluido"],
+  calculo_concluido: ["calculo_concluido", "calculado"],
+  novo: ["novo", "entrada"],
+  entrada: ["entrada", "novo"],
+  em_contato: ["em_contato", "triagem_interesse"],
+  triagem_interesse: ["triagem_interesse", "em_contato"],
+  aguardando_documentos: ["aguardando_documentos", "docs_credor"],
+  docs_credor: ["docs_credor", "aguardando_documentos"],
+  em_negociacao: ["em_negociacao", "proposta_negociacao"],
+  proposta_negociacao: ["proposta_negociacao", "em_negociacao"],
+  concluido: ["concluido", "fechado", "finalizado"],
+  fechado: ["fechado", "concluido", "finalizado"],
+  finalizado: ["finalizado", "fechado", "concluido"],
+}
+
+const CALCULO_ANDAMENTO_STATUSES = new Set(["calculo_andamento", "em_calculo", "pronto_calculo", "juridico"])
+const CALCULO_FINALIZADO_STATUSES = new Set([
+  "calculo_concluido",
+  "calculado",
+  "concluido",
+  "finalizado",
+  "fechado",
+  "pos_fechamento",
+  "proposta_negociacao",
+  "proposta_aceita",
+  "certidoes",
+])
+
+const normalizeStatus = (status?: string | null) => (status || "").trim().toLowerCase()
+
+const expandStatus = (status?: string | null) => {
+  const normalized = normalizeStatus(status)
+  if (!normalized) return []
+  return STATUS_EXPANSION_MAP[normalized] || [normalized]
+}
+
+const parseDateBoundary = (value: string | undefined, endOfDay: boolean) => {
+  if (!value) return null
+  const trimmed = value.trim()
+  if (!trimmed) return null
+  const hasTime = trimmed.includes("T")
+  const normalized = hasTime
+    ? trimmed
+    : `${trimmed}T${endOfDay ? "23:59:59.999" : "00:00:00.000"}`
+  const parsed = new Date(normalized)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const parseRecordDate = (value?: string | null) => {
+  if (!value) return null
+  const parsed = new Date(value)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+const matchNumberRange = (value: number, min?: number, max?: number) => {
+  if (min !== undefined && value < min) return false
+  if (max !== undefined && value > max) return false
+  return true
+}
+
+const matchesAdvancedFilters = (prec: PrecatorioAdmin, filtros: FiltrosPrecatorios) => {
+  const statusTokens = new Set<string>()
+  ;[prec.status_kanban, prec.status].forEach((status) => {
+    const normalized = normalizeStatus(status)
+    if (!normalized) return
+    statusTokens.add(normalized)
+    expandStatus(normalized).forEach((expanded) => statusTokens.add(expanded))
+  })
+
+  if (filtros.status && filtros.status.length > 0) {
+    const selectedStatuses = new Set<string>()
+    filtros.status.forEach((status) => {
+      expandStatus(status).forEach((expanded) => selectedStatuses.add(expanded))
+    })
+
+    const hasStatusMatch = Array.from(selectedStatuses).some((status) => statusTokens.has(status))
+    if (!hasStatusMatch) return false
+  }
+
+  if (filtros.tribunal) {
+    const filtroTribunal = normalizeSearchText(filtros.tribunal)
+    const tribunal = normalizeSearchText(prec.tribunal || "")
+    if (!tribunal.includes(filtroTribunal)) return false
+  }
+
+  if (filtros.responsavel_id) {
+    const hasResponsavel = [prec.dono_usuario_id, prec.responsavel_calculo_id, prec.responsavel]
+      .filter(Boolean)
+      .some((id) => id === filtros.responsavel_id)
+    if (!hasResponsavel) return false
+  }
+
+  if (filtros.complexidade && filtros.complexidade.length > 0) {
+    if (!prec.nivel_complexidade || !filtros.complexidade.includes(prec.nivel_complexidade)) return false
+  }
+
+  if (filtros.sla_status && filtros.sla_status.length > 0) {
+    if (!prec.sla_status || !filtros.sla_status.includes(prec.sla_status)) return false
+  }
+
+  if (filtros.tipo_atraso && filtros.tipo_atraso.length > 0) {
+    if (!prec.tipo_atraso || !filtros.tipo_atraso.includes(prec.tipo_atraso)) return false
+  }
+
+  if (filtros.impacto_atraso && filtros.impacto_atraso.length > 0) {
+    if (!prec.impacto_atraso || !filtros.impacto_atraso.includes(prec.impacto_atraso)) return false
+  }
+
+  const createdAtStart = parseDateBoundary(filtros.data_criacao_inicio, false)
+  const createdAtEnd = parseDateBoundary(filtros.data_criacao_fim, true)
+  if (createdAtStart || createdAtEnd) {
+    const createdAt = parseRecordDate(prec.created_at)
+    if (!createdAt) return false
+    if (createdAtStart && createdAt < createdAtStart) return false
+    if (createdAtEnd && createdAt > createdAtEnd) return false
+  }
+
+  const entradaCalculoStart = parseDateBoundary(filtros.data_entrada_calculo_inicio, false)
+  const entradaCalculoEnd = parseDateBoundary(filtros.data_entrada_calculo_fim, true)
+  if (entradaCalculoStart || entradaCalculoEnd) {
+    const entradaCalculo = parseRecordDate(prec.data_entrada_calculo)
+    if (!entradaCalculo) return false
+    if (entradaCalculoStart && entradaCalculo < entradaCalculoStart) return false
+    if (entradaCalculoEnd && entradaCalculo > entradaCalculoEnd) return false
+  }
+
+  const valorBase = Number(getPrecatorioValue(prec))
+  if (!matchNumberRange(valorBase, filtros.valor_min, filtros.valor_max)) return false
+
+  const valorAtualizado = Number(prec.valor_atualizado || 0)
+  if (!matchNumberRange(valorAtualizado, filtros.valor_atualizado_min, filtros.valor_atualizado_max)) return false
+
+  const valorSemAtualizacao = Number(prec.valor_principal || 0)
+  if (
+    !matchNumberRange(
+      valorSemAtualizacao,
+      filtros.valor_sem_atualizacao_min,
+      filtros.valor_sem_atualizacao_max
+    )
+  ) {
+    return false
+  }
+
+  if (filtros.urgente && !prec.urgente) return false
+  if (filtros.titular_falecido && !prec.titular_falecido) return false
+
+  if (filtros.valor_calculado && !(valorAtualizado > 0)) return false
+
+  if (filtros.calculo_em_andamento) {
+    const inProgress = Array.from(statusTokens).some((status) => CALCULO_ANDAMENTO_STATUSES.has(status))
+    if (!inProgress) return false
+  }
+
+  if (filtros.calculo_finalizado) {
+    const finalized = Array.from(statusTokens).some((status) => CALCULO_FINALIZADO_STATUSES.has(status))
+    if (!finalized) return false
+  }
+
+  return true
 }
 
 const KANBAN_PROGRESS: Record<string, number> = {
@@ -302,6 +488,7 @@ export default function AdminPrecatoriosPage() {
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
   const [filtroTab, setFiltroTab] = useState<"todos" | "distribuidos" | "pendentes">("todos")
+  const [filtrosAvancados, setFiltrosAvancados] = useState<FiltrosPrecatorios>({})
 
   const [uploadOficiosOpen, setUploadOficiosOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -341,6 +528,25 @@ export default function AdminPrecatoriosPage() {
     () => usuarios.filter((u) => u.role.includes("operador_calculo")),
     [usuarios]
   )
+  const responsaveisFiltro = useMemo(
+    () =>
+      operadoresComerciais.map((operador) => ({
+        id: operador.id,
+        nome: operador.nome || "Sem nome",
+      })),
+    [operadoresComerciais]
+  )
+  const filtrosAvancadosAtivos = useMemo(
+    () => getFiltrosAtivos(filtrosAvancados),
+    [filtrosAvancados]
+  )
+  const responsavelAtivo = useMemo(() => {
+    if (!filtrosAvancados.responsavel_id) return null
+    const responsavel = responsaveisFiltro.find((item) => item.id === filtrosAvancados.responsavel_id)
+    return responsavel?.nome || filtrosAvancados.responsavel_id
+  }, [filtrosAvancados.responsavel_id, responsaveisFiltro])
+  const totalFiltrosAtivos = filtrosAvancadosAtivos.length + (filtrosAvancados.responsavel_id ? 1 : 0)
+  const temFiltrosAvancados = totalFiltrosAtivos > 0
 
   const recipientOptions = selectedPrecatorio
     ? ([
@@ -699,6 +905,27 @@ export default function AdminPrecatoriosPage() {
     )
   }
 
+  const clearFiltrosAvancados = () => {
+    setFiltrosAvancados({})
+  }
+
+  const removeFiltroAvancado = (key: string) => {
+    setFiltrosAvancados((prev) => {
+      const next = { ...prev }
+      const relatedKeys = RELATED_ADV_FILTER_KEYS[key]
+
+      if (relatedKeys && relatedKeys.length > 0) {
+        relatedKeys.forEach((relatedKey) => {
+          delete next[relatedKey]
+        })
+      } else {
+        delete next[key as keyof FiltrosPrecatorios]
+      }
+
+      return next
+    })
+  }
+
   const formatCurrency = (value: number | null | undefined) => {
     if (!value) return "R$ 0,00"
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
@@ -741,14 +968,31 @@ export default function AdminPrecatoriosPage() {
     precatoriosFiltrados = precatoriosFiltrados.filter((p) => matchesPrecatorioSearch(p, trimmedSearch))
   }
 
-  const isAllSelected = precatoriosFiltrados.length > 0 && selectedIds.length === precatoriosFiltrados.length
+  if (temFiltrosAvancados) {
+    precatoriosFiltrados = precatoriosFiltrados.filter((p) => matchesAdvancedFilters(p, filtrosAvancados))
+  }
+
+  const filteredIds = new Set(precatoriosFiltrados.map((p) => p.id))
+  const selectedInFilteredCount = selectedIds.reduce(
+    (count, id) => (filteredIds.has(id) ? count + 1 : count),
+    0
+  )
+  const isAllSelected = precatoriosFiltrados.length > 0 && selectedInFilteredCount === precatoriosFiltrados.length
 
   const toggleSelectAll = () => {
-    if (isAllSelected) {
-      setSelectedIds([])
-    } else {
-      setSelectedIds(precatoriosFiltrados.map(p => p.id))
-    }
+    const idsDaLista = precatoriosFiltrados.map((p) => p.id)
+    setSelectedIds((prev) => {
+      const selectedSet = new Set(prev)
+      const allSelected = idsDaLista.every((id) => selectedSet.has(id))
+
+      if (allSelected) {
+        idsDaLista.forEach((id) => selectedSet.delete(id))
+      } else {
+        idsDaLista.forEach((id) => selectedSet.add(id))
+      }
+
+      return Array.from(selectedSet)
+    })
   }
 
   async function handleAutoDistribuir() {
@@ -949,16 +1193,73 @@ export default function AdminPrecatoriosPage() {
                 <CardTitle>Meus Precatórios</CardTitle>
                 <CardDescription>Precatórios criados e gerenciados por você</CardDescription>
               </div>
-              <div className="relative w-full sm:w-64">
-                <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-8"
+              <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                <div className="relative w-full sm:w-72">
+                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar por título, número ou credor..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-8"
+                  />
+                </div>
+                <AdvancedFilters
+                  filtros={filtrosAvancados}
+                  onFilterChange={setFiltrosAvancados}
+                  onClearFilters={clearFiltrosAvancados}
+                  totalFiltrosAtivos={totalFiltrosAtivos}
+                  responsaveis={responsaveisFiltro}
+                  showResponsavelFilter={responsaveisFiltro.length > 0}
                 />
               </div>
             </div>
+
+            {temFiltrosAvancados && (
+              <div className="mt-4 flex items-center gap-2 flex-wrap border-t pt-4">
+                <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mr-1">
+                  Filtros:
+                </span>
+                {responsavelAtivo && (
+                  <Badge variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1">
+                    <span className="font-semibold">Responsável:</span>
+                    <span>{responsavelAtivo}</span>
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive transition-colors"
+                      onClick={() => removeFiltroAvancado("responsavel_id")}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                )}
+                {filtrosAvancadosAtivos.map((filtro, index) => (
+                  <Badge
+                    key={`${filtro.key}-${index}`}
+                    variant="secondary"
+                    className="flex items-center gap-1.5 px-2.5 py-1"
+                  >
+                    <span className="font-semibold">{filtro.label}:</span>
+                    <span>{filtro.displayValue}</span>
+                    <button
+                      type="button"
+                      className="ml-1 hover:text-destructive transition-colors"
+                      onClick={() => removeFiltroAvancado(filtro.key)}
+                    >
+                      <X className="h-3 w-3" />
+                    </button>
+                  </Badge>
+                ))}
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={clearFiltrosAvancados}
+                >
+                  Limpar
+                </Button>
+              </div>
+            )}
           </CardHeader>
 
           <CardContent>

@@ -132,7 +132,7 @@ const navigation = [
         <path d="m9 12 2 2 4-4" />
       </svg>
     ),
-    roles: ["admin", "gestor", "gestor_oficio", "gestor_certidoes"],
+    roles: ["admin", "gestor_certidoes", "juridico"],
   },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
   { name: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["admin"] },

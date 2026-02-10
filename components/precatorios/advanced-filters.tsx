@@ -34,6 +34,11 @@ interface AdvancedFiltersProps {
   showResponsavelFilter?: boolean
 }
 
+type ComplexidadeValue = NonNullable<FiltrosPrecatorios["complexidade"]>[number]
+type SlaValue = NonNullable<FiltrosPrecatorios["sla_status"]>[number]
+type TipoAtrasoValue = NonNullable<FiltrosPrecatorios["tipo_atraso"]>[number]
+type ImpactoAtrasoValue = NonNullable<FiltrosPrecatorios["impacto_atraso"]>[number]
+
 export function AdvancedFilters({
   filtros,
   onFilterChange,
@@ -201,8 +206,8 @@ export function AdvancedFilters({
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`complexidade-${option.value}`}
-                    checked={localFiltros.complexidade?.includes(option.value as any) || false}
-                    onCheckedChange={() => toggleArrayValue('complexidade', option.value as any)}
+                    checked={localFiltros.complexidade?.includes(option.value as ComplexidadeValue) || false}
+                    onCheckedChange={() => toggleArrayValue('complexidade', option.value as ComplexidadeValue)}
                   />
                   <label
                     htmlFor={`complexidade-${option.value}`}
@@ -223,8 +228,8 @@ export function AdvancedFilters({
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`sla-${option.value}`}
-                    checked={localFiltros.sla_status?.includes(option.value as any) || false}
-                    onCheckedChange={() => toggleArrayValue('sla_status', option.value as any)}
+                    checked={localFiltros.sla_status?.includes(option.value as SlaValue) || false}
+                    onCheckedChange={() => toggleArrayValue('sla_status', option.value as SlaValue)}
                   />
                   <label
                     htmlFor={`sla-${option.value}`}
@@ -307,8 +312,8 @@ export function AdvancedFilters({
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`tipo-atraso-${option.value}`}
-                    checked={localFiltros.tipo_atraso?.includes(option.value as any) || false}
-                    onCheckedChange={() => toggleArrayValue('tipo_atraso', option.value as any)}
+                    checked={localFiltros.tipo_atraso?.includes(option.value as TipoAtrasoValue) || false}
+                    onCheckedChange={() => toggleArrayValue('tipo_atraso', option.value as TipoAtrasoValue)}
                   />
                   <label
                     htmlFor={`tipo-atraso-${option.value}`}
@@ -329,8 +334,8 @@ export function AdvancedFilters({
                 <div key={option.value} className="flex items-center space-x-2">
                   <Checkbox
                     id={`impacto-${option.value}`}
-                    checked={localFiltros.impacto_atraso?.includes(option.value as any) || false}
-                    onCheckedChange={() => toggleArrayValue('impacto_atraso', option.value as any)}
+                    checked={localFiltros.impacto_atraso?.includes(option.value as ImpactoAtrasoValue) || false}
+                    onCheckedChange={() => toggleArrayValue('impacto_atraso', option.value as ImpactoAtrasoValue)}
                   />
                   <label
                     htmlFor={`impacto-${option.value}`}
@@ -421,6 +426,45 @@ export function AdvancedFilters({
             </div>
           </div>
 
+
+          {/* Valor Base (atualizado ou principal) */}
+          <div className="space-y-3">
+            <Label className="text-base font-semibold">Valor (base)</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="valor-min" className="text-xs">
+                  Valor Mínimo
+                </Label>
+                <CurrencyInput
+                  id="valor-min"
+                  placeholder="R$ 0,00"
+                  value={localFiltros.valor_min}
+                  onValueChange={(value) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      valor_min: value,
+                    })
+                  }
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="valor-max" className="text-xs">
+                  Valor Máximo
+                </Label>
+                <CurrencyInput
+                  id="valor-max"
+                  placeholder="R$ 999.999,99"
+                  value={localFiltros.valor_max}
+                  onValueChange={(value) =>
+                    setLocalFiltros({
+                      ...localFiltros,
+                      valor_max: value,
+                    })
+                  }
+                />
+              </div>
+            </div>
+          </div>
 
           {/* Valor Atualizado */}
           <div className="space-y-3">

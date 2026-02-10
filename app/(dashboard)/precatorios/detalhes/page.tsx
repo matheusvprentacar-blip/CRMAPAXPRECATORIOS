@@ -105,6 +105,8 @@ type Herdeiro = {
   percentual_participacao: number | null
 }
 
+type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel"
+
 /* ======================================================
    SUPABASE SAFE HELPER (resolve "supabase is possibly null")
 ====================================================== */
@@ -184,6 +186,7 @@ export default function PrecatorioDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState("detalhes")
   const [triagemStatusSelection, setTriagemStatusSelection] = useState<string>("")
+  const [triagemDestinoReprovacao, setTriagemDestinoReprovacao] = useState<TriagemDestinoReprovacao>("none")
   const [triagemSaving, setTriagemSaving] = useState(false)
   const [semInteresseModalOpen, setSemInteresseModalOpen] = useState(false)
   const lastStatusRef = useRef<string | null>(null)
@@ -317,6 +320,11 @@ export default function PrecatorioDetailPage() {
     value,
     label: meta.label,
   }))
+  const TRIAGEM_DESTINO_OPTIONS: Array<{ value: TriagemDestinoReprovacao; label: string }> = [
+    { value: "none", label: "Fluxo normal" },
+    { value: "reprovado", label: "Reprovado" },
+    { value: "nao_elegivel", label: "Não elegível" },
+  ]
   const triagemStatusMeta = getTriagemStatusMeta(precatorio?.interesse_status)
   const interesseObservacao = precatorio?.interesse_observacao?.trim()
   const semInteresseMotivo = precatorio?.motivo_sem_interesse?.trim()
@@ -544,7 +552,19 @@ export default function PrecatorioDetailPage() {
 
   useEffect(() => {
     setTriagemStatusSelection(precatorio?.interesse_status || "SEM_CONTATO")
-  }, [precatorio?.interesse_status])
+    const statusResolvido = resolveStatusColumnId(precatorio?.status_kanban || precatorio?.localizacao_kanban)
+    const resultadoFinal = precatorio?.juridico_resultado_final
+    const destinoAtual =
+      statusResolvido === "reprovado" && (resultadoFinal === "reprovado" || resultadoFinal === "nao_elegivel")
+        ? (resultadoFinal as TriagemDestinoReprovacao)
+        : "none"
+    setTriagemDestinoReprovacao(destinoAtual)
+  }, [
+    precatorio?.interesse_status,
+    precatorio?.status_kanban,
+    precatorio?.localizacao_kanban,
+    precatorio?.juridico_resultado_final,
+  ])
 
   useEffect(() => {
     // Se não veio id na URL, não tem o que carregar.
@@ -630,6 +650,7 @@ export default function PrecatorioDetailPage() {
       })
 
       setTriagemStatusSelection("SEM_INTERESSE")
+      setTriagemDestinoReprovacao("none")
       await loadPrecatorio()
     } finally {
       setTriagemSaving(false)
@@ -640,7 +661,9 @@ export default function PrecatorioDetailPage() {
     if (!id) return
     if (!triagemStatusSelection) return
 
-    if (triagemStatusSelection === "SEM_INTERESSE") {
+    const destinoReprovacaoSelecionado = triagemDestinoReprovacao !== "none"
+
+    if (triagemStatusSelection === "SEM_INTERESSE" && !destinoReprovacaoSelecionado) {
       setSemInteresseModalOpen(true)
       return
     }
@@ -649,25 +672,42 @@ export default function PrecatorioDetailPage() {
     try {
       const supabase = requireSupabase()
       const nextStatusKanban =
-        triagemStatusSelection === "TEM_INTERESSE"
+        destinoReprovacaoSelecionado
+          ? "reprovado"
+          : triagemStatusSelection === "TEM_INTERESSE"
           ? "docs_credor"
           : triagemStatusSelection === "SEM_INTERESSE"
           ? "sem_interesse"
           : "triagem_interesse"
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updatePayload: any = {
+        interesse_status: triagemStatusSelection,
+        status_kanban: nextStatusKanban,
+        localizacao_kanban: nextStatusKanban,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (destinoReprovacaoSelecionado) {
+        updatePayload.juridico_resultado_final = triagemDestinoReprovacao
+      } else {
+        const statusResolvido = resolveStatusColumnId(precatorio?.status_kanban || precatorio?.localizacao_kanban)
+        if (statusResolvido === "reprovado") {
+          updatePayload.juridico_resultado_final = null
+        }
+      }
+
       const { error } = await supabase
         .from("precatorios")
-        .update({
-          interesse_status: triagemStatusSelection,
-          status_kanban: nextStatusKanban,
-          updated_at: new Date().toISOString(),
-        })
+        .update(updatePayload)
         .eq("id", id)
 
       if (error) throw error
 
       toast({
         title: "Triagem atualizada",
-        description: "O interesse do credor foi registrado com sucesso.",
+        description: destinoReprovacaoSelecionado
+          ? "Registro salvo e crédito enviado para Reprovado / não elegível."
+          : "O interesse do credor foi registrado com sucesso.",
       })
 
       await loadPrecatorio()
@@ -1507,6 +1547,24 @@ export default function PrecatorioDetailPage() {
                     </SelectTrigger>
                     <SelectContent>
                       {TRIAGEM_STATUS_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1 text-xs">
+                  <span className="font-semibold">Encaminhar para</span>
+                  <Select
+                    value={triagemDestinoReprovacao}
+                    onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
+                  >
+                    <SelectTrigger className="min-w-[220px]">
+                      <SelectValue placeholder="Escolha o destino" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {TRIAGEM_DESTINO_OPTIONS.map((option) => (
                         <SelectItem key={option.value} value={option.value}>
                           {option.label}
                         </SelectItem>
