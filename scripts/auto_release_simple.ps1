@@ -129,6 +129,7 @@ if (-not (Test-Path $sigFile)) {
     Write-Host "    Signing EXE..."
     # Using npx tauri signer sign
     $pass = $env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD
+    if (-not $pass) { $pass = $env:TAURI_SIGNING_KEY_PASSWORD }
     if (-not $pass) { $pass = "" }
     
     # Run npx command. Note: quoting complexity with powershell/cmd.

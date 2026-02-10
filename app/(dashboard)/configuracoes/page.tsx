@@ -11,6 +11,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import Image from "next/image"
+import { UpdateChecker } from "@/components/settings/update-checker"
 
 export default function ConfiguracoesPage() {
   const { toast } = useToast()
@@ -375,6 +376,18 @@ export default function ConfiguracoesPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card className="md:max-w-md">
+          <CardHeader>
+            <CardTitle>Atualizacao do Aplicativo</CardTitle>
+            <CardDescription>
+              Verifique, baixe e instale novas versoes sem reinstalacao manual.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <UpdateChecker />
+          </CardContent>
+        </Card>
       </div>
     </RoleGuard>
   )
