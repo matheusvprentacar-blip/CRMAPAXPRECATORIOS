@@ -19,6 +19,31 @@ import { Badge } from "@/components/ui/badge"
 type UpdaterModule = typeof import("@tauri-apps/plugin-updater")
 type AvailableUpdate = Awaited<ReturnType<UpdaterModule["check"]>>
 
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) {
+    return error.message || "Erro desconhecido."
+  }
+
+  if (typeof error === "string") {
+    return error
+  }
+
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) {
+      return maybeMessage
+    }
+
+    try {
+      return JSON.stringify(error)
+    } catch {
+      return "Erro desconhecido."
+    }
+  }
+
+  return "Erro desconhecido."
+}
+
 function formatBytes(bytes: number): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B"
   const units = ["B", "KB", "MB", "GB"]
@@ -79,9 +104,10 @@ export function UpdateChecker() {
       })
     } catch (error) {
       console.error("Erro ao buscar atualizacoes:", error)
+      const details = getErrorMessage(error)
       toast({
         title: "Erro na verificacao",
-        description: "Nao foi possivel buscar atualizacoes agora.",
+        description: `Nao foi possivel buscar atualizacoes agora. ${details}`,
         variant: "destructive",
       })
     } finally {
@@ -125,9 +151,10 @@ export function UpdateChecker() {
       await relaunch()
     } catch (error) {
       console.error("Erro ao instalar atualizacao:", error)
+      const details = getErrorMessage(error)
       toast({
         title: "Erro ao atualizar",
-        description: "Falha ao baixar ou instalar a atualizacao.",
+        description: `Falha ao baixar ou instalar a atualizacao. ${details}`,
         variant: "destructive",
       })
     } finally {
