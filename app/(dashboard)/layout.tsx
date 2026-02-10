@@ -48,6 +48,9 @@ import Image from "next/image"
 import { NotificationsProvider } from "@/components/notifications/useNotifications"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { NotificationsModal } from "@/components/notifications/NotificationsModal"
+import { GlobalUpdateNotifier } from "@/components/settings/global-update-notifier"
+import { getVersion } from "@tauri-apps/api/app"
+import packageJson from "@/package.json"
 
 const navigation = [
   {
@@ -149,6 +152,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [nomeEmpresa, setNomeEmpresa] = useState("CRM Precatórios")
   const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
+  const [appVersion, setAppVersion] = useState<string>(packageJson.version)
 
   const ZOOM_MIN = 0.85
   const ZOOM_MAX = 1.15
@@ -170,6 +174,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     loadConfig()
 
 
+  }, [])
+
+  useEffect(() => {
+    const isTauriWindow =
+      typeof window !== "undefined" &&
+      ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
+
+    if (!isTauriWindow) return
+
+    getVersion().then(setAppVersion).catch(() => {
+      // Keep package.json version as fallback.
+    })
   }, [])
 
   useEffect(() => {
@@ -301,6 +317,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProtectedRoute>
       <NotificationsProvider>
+      <GlobalUpdateNotifier />
       <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-zinc-950 dark:to-zinc-900/60">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
@@ -386,7 +403,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* User section removed as per request to move to top header */}
             <div className="p-4 border-t border-border/50 bg-muted/5">
-              <p className="text-[10px] text-center text-muted-foreground">v0.5.2</p>
+              <p className="text-[10px] text-center text-muted-foreground">v{appVersion}</p>
             </div>
           </div>
         </aside>
