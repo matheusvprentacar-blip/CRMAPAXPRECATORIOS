@@ -1,7 +1,7 @@
 {
     "$schema": "https://schema.tauri.app/config/2",
     "productName": "CRMAPAXPRECATORIOS",
-    "version": "1.6.11",
+    "version": "1.6.12",
     "identifier": "com.apax.crmapaxprecatorios",
     "build": {
         "beforeDevCommand": "npm run dev",
@@ -28,7 +28,7 @@
                 "https://github.com/matheusvprentacar-blip/CRMAPAXPRECATORIOS/releases/latest/download/latest.json"
             ],
             "dialog": false,
-            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEJENUJEOUIwREI0RDMxOUUKUldTZU1VM2JzTmxidlVFejRCbkRCK0RJQ0pSMnFVN0s0RlpwS0FROHBIUWN1bkFhTjY1L0JsMXUK"
+            "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDBCM0QyOTEzMjZEMjhCNDYKUldSR2k5SW1FeWs5QzFXNUk1cCtVM2RPTkhvcE9MN2s2ZHdpWFhYTzJzRERrQVBVOGRkUHJlamcK"
         }
     },
     "bundle": {
