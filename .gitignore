@@ -14,10 +14,17 @@
 
 # production
 /build
+/dist
 
 # misc
 .DS_Store
 *.pem
+*.zip
+build_log*.txt
+
+# local artifacts
+/backups
+/supabase/.temp
 
 # debug
 npm-debug.log*

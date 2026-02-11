@@ -1,0 +1,21 @@
+Quando o usuario pedir "faca o update" (com ou sem cedilha):
+
+1) Execute:
+npm run release:update
+
+2) Esse comando deve:
+- atualizar versao (patch por padrao),
+- sincronizar package.json, src-tauri/tauri.conf.json e src-tauri/Cargo.toml,
+- criar commit,
+- criar tag vX.Y.Z,
+- push da branch atual e da tag.
+
+3) Para versao explicita:
+npm run release:update -- -Version X.Y.Z
+
+4) Para minor/major:
+npm run release:update:minor
+npm run release:update:major
+
+5) Nao incluir artefatos em commit:
+dist/, backups/, supabase/.temp/

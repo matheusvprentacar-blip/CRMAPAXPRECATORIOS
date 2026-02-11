@@ -2,17 +2,37 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { getFileDownloadUrl, uploadFile } from "@/lib/utils/file-upload"
+import { downloadFileAsArrayBuffer, getFileDownloadUrl, uploadFile } from "@/lib/utils/file-upload"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
+import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
+import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
 import { toast } from "sonner"
-import { ArrowDown, MoreVertical, Paperclip, Plus, Search, Send, Smile, X } from "lucide-react"
+import {
+  ArrowDown,
+  ArrowLeft,
+  Download,
+  Eye,
+  FileText,
+  MoreVertical,
+  Paperclip,
+  Plus,
+  Search,
+  Send,
+  Trash2,
+  X,
+} from "lucide-react"
 
 interface Usuario {
   id: string
@@ -36,9 +56,77 @@ interface ChatMensagem {
 }
 
 const CHAT_BUCKET = process.env.NEXT_PUBLIC_CHAT_BUCKET || "precatorios-pdf"
+const DELETED_MARKER = "__MENSAGEM_APAGADA__"
+const DEFAULT_SENT_ATTACHMENT_TEXT = "Arquivo enviado"
+
+function getFileNameFromUrl(url?: string | null): string {
+  if (!url) return "arquivo"
+  if (url.startsWith("storage:")) {
+    const match = url.match(/^storage:[^/]+\/(.+)$/)
+    if (match) {
+      const path = match[1]
+      return decodeURIComponent(path.split("/").pop() || "arquivo")
+    }
+  }
+
+  try {
+    const parsed = new URL(url)
+    return decodeURIComponent(parsed.pathname.split("/").pop() || "arquivo")
+  } catch {
+    return decodeURIComponent(url.split("/").pop() || "arquivo")
+  }
+}
+
+function getFileExt(name: string): string {
+  const base = name.split("?")[0]
+  const parts = base.split(".")
+  return parts.length > 1 ? (parts.pop() || "").toLowerCase() : ""
+}
+
+function isDeletedMessage(msg: Pick<ChatMensagem, "texto">): boolean {
+  return (msg.texto || "").trim() === DELETED_MARKER
+}
+
+function getMetaMessageText(msg: Pick<ChatMensagem, "texto" | "arquivo_nome">): string {
+  if (isDeletedMessage(msg)) return "Mensagem apagada"
+  if (msg.arquivo_nome) return `📎 ${msg.arquivo_nome}`
+  return msg.texto || ""
+}
+
+function isPdfAttachment(msg: Pick<ChatMensagem, "arquivo_nome" | "arquivo_url" | "arquivo_tipo">): boolean {
+  if (!msg.arquivo_url && !msg.arquivo_nome) return false
+  if ((msg.arquivo_tipo || "").toLowerCase().includes("pdf")) return true
+  const name = msg.arquivo_nome || getFileNameFromUrl(msg.arquivo_url)
+  return getFileExt(name) === "pdf"
+}
+
+function isImageAttachment(msg: Pick<ChatMensagem, "arquivo_nome" | "arquivo_url" | "arquivo_tipo">): boolean {
+  if (!msg.arquivo_url && !msg.arquivo_nome) return false
+  const mime = (msg.arquivo_tipo || "").toLowerCase()
+  if (mime.startsWith("image/")) return true
+  const name = msg.arquivo_nome || getFileNameFromUrl(msg.arquivo_url)
+  const ext = getFileExt(name)
+  return ["png", "jpg", "jpeg", "webp", "gif"].includes(ext)
+}
+
+function getErrorMessage(error: unknown): string {
+  if (error instanceof Error) return error.message || "Erro desconhecido."
+  if (typeof error === "string") return error
+  if (error && typeof error === "object") {
+    const maybeMessage = (error as { message?: unknown }).message
+    if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage
+    try {
+      return JSON.stringify(error)
+    } catch {
+      return "Erro desconhecido."
+    }
+  }
+  return "Erro desconhecido."
+}
 
 export default function ChatPage() {
   const { profile } = useAuth()
+  const { openPDF } = usePDFViewer()
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [loadingUsuarios, setLoadingUsuarios] = useState(true)
   const [selectedUser, setSelectedUser] = useState<Usuario | null>(null)
@@ -49,6 +137,9 @@ export default function ChatPage() {
   const [uploadingFile, setUploadingFile] = useState(false)
   const [searchTerm, setSearchTerm] = useState("")
   const [attachmentUrls, setAttachmentUrls] = useState<Record<string, string>>({})
+  const [pdfThumbs, setPdfThumbs] = useState<Record<string, string>>({})
+  const pdfThumbsRef = useRef<Record<string, string>>({})
+  const [deletingMessageId, setDeletingMessageId] = useState<string | null>(null)
   const [userMeta, setUserMeta] = useState<Record<string, { lastMessage?: string; lastAt?: string; unreadCount: number }>>({})
   const [isAtBottom, setIsAtBottom] = useState(true)
   const [showNewMessages, setShowNewMessages] = useState(false)
@@ -92,6 +183,80 @@ export default function ChatPage() {
 
   useEffect(() => {
     resolveAttachmentUrls()
+  }, [mensagens])
+
+  useEffect(() => {
+    pdfThumbsRef.current = pdfThumbs
+  }, [pdfThumbs])
+
+  useEffect(() => {
+    let alive = true
+
+    const renderPdfThumbs = async () => {
+      const targets = mensagens.filter((msg) => {
+        if (!msg.arquivo_url) return false
+        if (isDeletedMessage(msg)) return false
+        if (!isPdfAttachment(msg)) return false
+        return !pdfThumbsRef.current[msg.id]
+      })
+
+      if (targets.length === 0) return
+
+      const pdfjs = await import(
+        /* webpackIgnore: true */
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build/pdf.min.mjs"
+      )
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const { getDocument, GlobalWorkerOptions } = pdfjs as any
+      GlobalWorkerOptions.workerSrc =
+        "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build/pdf.worker.min.mjs"
+
+      const supabase = createBrowserClient()
+      if (!supabase) return
+
+      const next: Record<string, string> = {}
+
+      for (const msg of targets) {
+        try {
+          const buffer = await downloadFileAsArrayBuffer(
+            msg.arquivo_url!,
+            supabase,
+            msg.arquivo_nome || "arquivo"
+          )
+          if (!buffer) continue
+
+          const pdfBytes = new Uint8Array(buffer)
+          const loadingTask = getDocument({ data: pdfBytes, disableWorker: true })
+          const pdf = await loadingTask.promise
+          const page = await pdf.getPage(1)
+          const viewport = page.getViewport({ scale: 0.5 })
+          const canvas = document.createElement("canvas")
+          const context = canvas.getContext("2d")
+          if (!context) continue
+          canvas.height = viewport.height
+          canvas.width = viewport.width
+          await page.render({ canvasContext: context, viewport }).promise
+          next[msg.id] = canvas.toDataURL("image/png")
+          page.cleanup()
+          pdf.destroy()
+        } catch (err) {
+          console.warn("[Chat] Falha ao gerar thumbnail PDF:", err)
+        }
+      }
+
+      if (!alive || Object.keys(next).length === 0) return
+      setPdfThumbs((prev) => {
+        const merged = { ...prev, ...next }
+        pdfThumbsRef.current = merged
+        return merged
+      })
+    }
+
+    void renderPdfThumbs()
+
+    return () => {
+      alive = false
+    }
   }, [mensagens])
 
   useEffect(() => {
@@ -171,11 +336,7 @@ export default function ChatPage() {
 
       setUserMeta((prev) => {
         const last = list[list.length - 1]
-        const lastMessage = last
-          ? last.arquivo_nome
-            ? `📎 ${last.arquivo_nome}`
-            : last.texto
-          : prev[userId]?.lastMessage
+        const lastMessage = last ? getMetaMessageText(last) : prev[userId]?.lastMessage
         return {
           ...prev,
           [userId]: {
@@ -219,9 +380,9 @@ export default function ChatPage() {
         arquivo_nome = attachedFile.name
         arquivo_tipo = attachedFile.type
         arquivo_tamanho = attachedFile.size
-      } catch (error: any) {
+      } catch (error: unknown) {
         console.error("Erro ao enviar anexo:", error)
-        toast.error(error?.message || "Erro ao enviar anexo")
+        toast.error(getErrorMessage(error) || "Erro ao enviar anexo")
         setUploadingFile(false)
         return
       } finally {
@@ -234,7 +395,7 @@ export default function ChatPage() {
       .insert({
         remetente_id: senderId,
         destinatario_id: selectedUser.id,
-        texto: text || "Arquivo enviado",
+        texto: text || DEFAULT_SENT_ATTACHMENT_TEXT,
         arquivo_url,
         arquivo_nome,
         arquivo_tipo,
@@ -279,11 +440,111 @@ export default function ChatPage() {
       setUserMeta((prev) => ({
         ...prev,
         [selectedUser.id]: {
-          lastMessage: data?.arquivo_nome ? `📎 ${data.arquivo_nome}` : data?.texto,
+          lastMessage: data ? getMetaMessageText(data as ChatMensagem) : prev[selectedUser.id]?.lastMessage,
           lastAt: data?.created_at || new Date().toISOString(),
           unreadCount: prev[selectedUser.id]?.unreadCount ?? 0,
         },
       }))
+    }
+  }
+
+  async function handleDeleteMessage(msg: ChatMensagem) {
+    if (!profile?.id) return
+    if (!selectedUser?.id) return
+
+    // Only allow deleting your own sent messages.
+    if (msg.remetente_id !== profile.id) return
+    if (isDeletedMessage(msg)) return
+
+    const ok = window.confirm(
+      "Deseja apagar esta mensagem? Ela será substituída por “Mensagem apagada”."
+    )
+    if (!ok) return
+
+    const supabase = createBrowserClient()
+    if (!supabase) return
+
+    try {
+      setDeletingMessageId(msg.id)
+
+      const { data: persistedRow, error } = await supabase
+        .from("chat_mensagens")
+        .update({
+          texto: DELETED_MARKER,
+          arquivo_url: null,
+          arquivo_nome: null,
+          arquivo_tipo: null,
+          arquivo_tamanho: null,
+        })
+        .eq("id", msg.id)
+        .eq("remetente_id", profile.id)
+        .select("id")
+        .maybeSingle()
+
+      if (error) {
+        throw error
+      }
+      if (!persistedRow) {
+        throw new Error(
+          "A exclusão não foi persistida no banco (provável bloqueio de RLS). Execute o script 192-chat-permitir-apagar-mensagem.sql."
+        )
+      }
+
+      const updated = mensagens.map((m) =>
+        m.id === msg.id
+          ? {
+              ...m,
+              texto: DELETED_MARKER,
+              arquivo_url: null,
+              arquivo_nome: null,
+              arquivo_tipo: null,
+              arquivo_tamanho: null,
+            }
+          : m
+      )
+
+      setMensagens(updated)
+
+      const last = updated[updated.length - 1]
+      setUserMeta((prev) => ({
+        ...prev,
+        [selectedUser.id]: {
+          ...(prev[selectedUser.id] || { unreadCount: 0 }),
+          lastMessage: last ? getMetaMessageText(last) : prev[selectedUser.id]?.lastMessage,
+          lastAt: last?.created_at || prev[selectedUser.id]?.lastAt,
+          unreadCount: prev[selectedUser.id]?.unreadCount ?? 0,
+        },
+      }))
+
+      toast.success("Mensagem apagada")
+    } catch (error: unknown) {
+      console.error("Erro ao apagar mensagem:", error)
+      toast.error(getErrorMessage(error) || "Não foi possível apagar a mensagem")
+    } finally {
+      setDeletingMessageId(null)
+    }
+  }
+
+  async function handleDownloadAttachment(msg: ChatMensagem) {
+    if (!msg.arquivo_url) return
+
+    const supabase = createBrowserClient()
+    if (!supabase) return
+
+    const name = msg.arquivo_nome || getFileNameFromUrl(msg.arquivo_url)
+
+    try {
+      const buffer = await downloadFileAsArrayBuffer(msg.arquivo_url, supabase, name)
+      if (!buffer) throw new Error("Falha ao baixar arquivo")
+
+      const blob = new Blob([buffer], {
+        type: msg.arquivo_tipo || "application/octet-stream",
+      })
+
+      await saveFileWithPicker(blob, name)
+    } catch (error: unknown) {
+      console.error("Erro ao baixar anexo:", error)
+      toast.error(getErrorMessage(error) || "Não foi possível baixar o anexo")
     }
   }
 
@@ -305,22 +566,22 @@ export default function ChatPage() {
     }
 
     const meta: Record<string, { lastMessage?: string; lastAt?: string; unreadCount: number }> = {}
-    ;(data ?? []).forEach((msg) => {
-      const otherId = msg.remetente_id === profile.id ? msg.destinatario_id : msg.remetente_id
-      if (!meta[otherId]) {
-        meta[otherId] = {
-          lastMessage: msg.arquivo_nome ? `📎 ${msg.arquivo_nome}` : msg.texto,
-          lastAt: msg.created_at,
-          unreadCount: 0,
+      ; (data ?? []).forEach((msg) => {
+        const otherId = msg.remetente_id === profile.id ? msg.destinatario_id : msg.remetente_id
+        if (!meta[otherId]) {
+          meta[otherId] = {
+            lastMessage: getMetaMessageText(msg),
+            lastAt: msg.created_at,
+            unreadCount: 0,
+          }
         }
-      }
-      if (msg.destinatario_id === profile.id && msg.lida === false) {
-        meta[otherId] = {
-          ...meta[otherId],
-          unreadCount: (meta[otherId]?.unreadCount ?? 0) + 1,
+        if (msg.destinatario_id === profile.id && msg.lida === false) {
+          meta[otherId] = {
+            ...meta[otherId],
+            unreadCount: (meta[otherId]?.unreadCount ?? 0) + 1,
+          }
         }
-      }
-    })
+      })
 
     list.forEach((user) => {
       if (!meta[user.id]) meta[user.id] = { unreadCount: 0 }
@@ -409,442 +670,653 @@ export default function ChatPage() {
 
   return (
   <div className="relative w-full">
-    <div className="h-[calc(100dvh-7rem)] grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)] gap-4">
-      {/* LEFT — Conversas */}
-      <Card className="h-full flex flex-col overflow-hidden border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.35)]">
-        <CardHeader className="pb-3 border-b border-border/60 bg-card/80 backdrop-blur sticky top-0 z-10">
-          <div className="flex items-center justify-between gap-3">
-            <div className="min-w-0">
-              <CardTitle className="text-base font-semibold tracking-tight">Conversas</CardTitle>
-              <p className="text-xs text-muted-foreground">
-                {filteredUsuarios.length} contatos • clique para abrir
-              </p>
-            </div>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 rounded-full gap-2 border-border/70 bg-background/60 hover:bg-background"
-              onClick={() => {
-                setSelectedUser(null)
-                searchInputRef.current?.focus()
-              }}
-            >
-              <Plus className="h-4 w-4" />
-              Nova
-            </Button>
-          </div>
-
-          <div className="mt-3 relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              ref={searchInputRef}
-              placeholder="Buscar contato..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="h-10 pl-9 pr-9 rounded-full bg-background/60 border-border/70 focus-visible:ring-2 focus-visible:ring-emerald-500/40"
-            />
-            {searchTerm && (
-              <button
-                type="button"
-                onClick={() => setSearchTerm("")}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
-                aria-label="Limpar busca"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="flex-1 min-h-0 p-0">
-          <ScrollArea className="h-full">
-            <div className="p-3 space-y-2">
-              {loadingUsuarios && (
-                <div className="text-xs text-muted-foreground px-2 py-2">Carregando...</div>
-              )}
-
-              {!loadingUsuarios && filteredUsuarios.length === 0 && (
-                <div className="text-xs text-muted-foreground px-2 py-2">
-                  Nenhum usuário encontrado.
-                </div>
-              )}
-
-              {filteredUsuarios.map((user) => {
-                const isActive = selectedUser?.id === user.id
-                const meta = userMeta[user.id]
-                const lastMessage = meta?.lastMessage || "Nenhuma mensagem"
-                const unread = meta?.unreadCount || 0
-                const online = isRecent(meta?.lastAt ?? null)
-
-                return (
-                  <button
-                    key={user.id}
-                    onClick={() => setSelectedUser(user)}
-                    className={cn(
-                      "group relative w-full text-left flex items-center gap-3 rounded-2xl px-3 py-3 transition",
-                      "border border-transparent",
-                      isActive
-                        ? "bg-emerald-500/10 border-emerald-500/20"
-                        : "hover:bg-muted/50 hover:border-border/60"
-                    )}
-                  >
-                    {/* left accent */}
-                    {isActive && (
-                      <span className="absolute left-0 top-3 bottom-3 w-1 rounded-r-full bg-emerald-500" />
-                    )}
-
-                    <div className="relative">
-                      <Avatar className="w-10 h-10 ring-1 ring-border/60">
-                        <AvatarImage src={user.foto_url || "/placeholder.svg"} />
-                        <AvatarFallback
-                          className={cn(
-                            "text-white font-semibold bg-gradient-to-br",
-                            getAvatarGradient(user.id)
-                          )}
-                        >
-                          {user.nome?.slice(0, 2)?.toUpperCase()}
-                        </AvatarFallback>
-                      </Avatar>
-
-                      <span
-                        className={cn(
-                          "absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-card",
-                          online ? "bg-emerald-500" : "bg-muted-foreground/60"
-                        )}
-                        title={online ? "online" : "offline"}
-                      />
-                    </div>
-
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-semibold truncate">
-                          {user.nome}
-                        </span>
-
-                        <div className="flex items-center gap-2">
-                          <span className="text-[10px] text-muted-foreground">
-                            {meta?.lastAt
-                              ? new Date(meta.lastAt).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })
-                              : ""}
-                          </span>
-
-                          {unread > 0 && (
-                            <span className="min-w-[22px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-emerald-500 text-white flex items-center justify-center">
-                              {unread}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-
-                      <span className="text-[11px] text-muted-foreground truncate block">
-                        {user.email || "—"}
-                      </span>
-
-                      <span
-                        className={cn(
-                          "text-[11px] truncate block",
-                          isActive ? "text-foreground/80" : "text-muted-foreground"
-                        )}
-                      >
-                        {lastMessage}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* RIGHT — Chat */}
-      <Card className="h-full flex flex-col overflow-hidden border-border/60 bg-card/70 backdrop-blur supports-[backdrop-filter]:bg-card/60 shadow-[0_10px_30px_-12px_rgba(0,0,0,0.35)]">
-        <CardHeader className="pb-3 border-b border-border/60 bg-card/80 backdrop-blur sticky top-0 z-10">
-          {selectedUser ? (
-            <div className="flex items-center justify-between gap-3">
-              <div className="flex items-center gap-3 min-w-0">
-                <Avatar className="w-10 h-10 ring-1 ring-border/60">
-                  <AvatarImage src={selectedUser.foto_url || "/placeholder.svg"} />
-                  <AvatarFallback
-                    className={cn(
-                      "text-white font-semibold bg-gradient-to-br",
-                      getAvatarGradient(selectedUser.id)
-                    )}
-                  >
-                    {selectedUser.nome?.slice(0, 2)?.toUpperCase()}
-                  </AvatarFallback>
-                </Avatar>
-
+      <div
+        className={cn(
+          "h-[calc(100dvh-7rem)] w-full overflow-hidden rounded-2xl border border-border bg-background",
+          "grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]"
+        )}
+      >
+        {/* LEFT — Sidebar (Messenger-like) */}
+        <section
+          className={cn(
+            "h-full flex flex-col min-h-0",
+            "border-b lg:border-b-0 lg:border-r border-border",
+            // mobile behavior: hide list when a chat is selected
+            selectedUser ? "hidden lg:flex" : "flex"
+          )}
+        >
+          {/* Sidebar header */}
+          <div className="sticky top-0 z-10 bg-background">
+            <div className="px-4 pt-4 pb-3 border-b border-border">
+              <div className="flex items-center justify-between gap-3">
                 <div className="min-w-0">
-                  <CardTitle className="text-base font-semibold truncate">
-                    {selectedUser.nome}
-                  </CardTitle>
-                  <p className="text-xs text-muted-foreground truncate">
-                    {selectedUser.email || "Usuário interno"} • {formatRelative(userMeta[selectedUser.id]?.lastAt)}
+                  <h2 className="text-[15px] font-semibold tracking-tight">Chats</h2>
+                  <p className="text-xs text-muted-foreground">
+                    {filteredUsuarios.length} contatos
                   </p>
                 </div>
-              </div>
-
-              <div className="flex items-center gap-1">
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full" disabled>
-                  <Search className="h-4 w-4" />
-                </Button>
 
                 <Button
+                  type="button"
                   variant="ghost"
                   size="icon"
-                  className="h-9 w-9 rounded-full"
-                  onClick={() => fileInputRef.current?.click()}
-                  disabled={uploadingFile}
-                  title="Anexar"
+                  className="h-10 w-10 rounded-full hover:bg-muted"
+                  onClick={() => {
+                    setSelectedUser(null)
+                    searchInputRef.current?.focus()
+                  }}
+                  title="Nova conversa"
                 >
-                  <Paperclip className="h-4 w-4" />
-                </Button>
-
-                <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full">
-                  <MoreVertical className="h-4 w-4" />
+                  <Plus className="h-5 w-5" />
                 </Button>
               </div>
+
+              <div className="mt-3 relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  ref={searchInputRef}
+                  placeholder="Pesquisar no Messenger…"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className={cn(
+                    "h-10 pl-9 pr-9 rounded-full",
+                    "bg-muted/60 border-border focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                  )}
+                />
+                {searchTerm && (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition"
+                    aria-label="Limpar busca"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
             </div>
-          ) : (
-            <CardTitle className="text-base">Selecione um usuário</CardTitle>
-          )}
-        </CardHeader>
+          </div>
 
-        <CardContent className="relative flex-1 min-h-0 p-0">
-          {/* Floating "New messages" — agora no lugar certo */}
-          {showNewMessages && selectedUser && (
-            <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 flex justify-center">
-              <Button
-                size="sm"
-                className="pointer-events-auto rounded-full shadow-lg bg-emerald-600 hover:bg-emerald-700"
-                onClick={() => scrollToBottom("smooth")}
-              >
-                <ArrowDown className="h-4 w-4 mr-2" />
-                Novas mensagens
-              </Button>
-            </div>
-          )}
+          {/* Sidebar list */}
+          <div className="flex-1 min-h-0">
+            <ScrollArea className="h-full">
+              <div className="py-2">
+                {loadingUsuarios && (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">Carregando…</div>
+                )}
 
-          <ScrollArea ref={scrollAreaRef} className="h-full">
-            <div className="relative min-h-full px-5 py-6 space-y-3 bg-[radial-gradient(900px_circle_at_20%_-10%,rgba(16,185,129,0.14),transparent_45%),radial-gradient(700px_circle_at_90%_10%,rgba(99,102,241,0.10),transparent_42%)]">
-              {loadingMensagens && (
-                <div className="text-xs text-muted-foreground">Carregando mensagens...</div>
-              )}
-
-              {!loadingMensagens && !selectedUser && (
-                <div className="flex flex-col items-center justify-center text-center gap-2 py-16 text-muted-foreground">
-                  <div className="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center">
-                    <Search className="h-5 w-5" />
+                {!loadingUsuarios && filteredUsuarios.length === 0 && (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">
+                    Nenhum usuário encontrado.
                   </div>
-                  <p className="text-sm font-medium text-foreground">Selecione um usuário</p>
-                  <p className="text-xs">Escolha um contato para iniciar a conversa.</p>
-                </div>
-              )}
+                )}
 
-              {!loadingMensagens && selectedUser && mensagens.length === 0 && (
-                <div className="flex flex-col items-center justify-center text-center gap-2 py-16 text-muted-foreground">
-                  <div className="h-12 w-12 rounded-full bg-muted/60 flex items-center justify-center">
-                    <Send className="h-5 w-5" />
-                  </div>
-                  <p className="text-sm font-medium text-foreground">Nenhuma mensagem ainda</p>
-                  <p className="text-xs">Envie a primeira mensagem para começar.</p>
-                </div>
-              )}
+                {filteredUsuarios.map((user) => {
+                  const isActive = selectedUser?.id === user.id
+                  const meta = userMeta[user.id]
+                  const lastMessage = meta?.lastMessage || "Nenhuma mensagem"
+                  const unread = meta?.unreadCount || 0
+                  const online = isRecent(meta?.lastAt ?? null)
 
-              {mensagens.map((msg, index) => {
-                const isMine = msg.remetente_id === profile?.id
-                const prev = mensagens[index - 1]
-                const next = mensagens[index + 1]
+                  return (
+                    <button
+                      key={user.id}
+                      onClick={() => setSelectedUser(user)}
+                      className={cn(
+                        "w-full text-left",
+                        "px-3 py-2",
+                        "transition",
+                        isActive ? "bg-muted/70" : "hover:bg-muted/50"
+                      )}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="relative shrink-0">
+                          <Avatar className="w-11 h-11">
+                            <AvatarImage src={user.foto_url || "/placeholder.svg"} />
+                            <AvatarFallback
+                              className={cn(
+                                "text-white font-semibold bg-gradient-to-br",
+                                getAvatarGradient(user.id)
+                              )}
+                            >
+                              {user.nome?.slice(0, 2)?.toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
 
-                const prevSame =
-                  prev &&
-                  prev.remetente_id === msg.remetente_id &&
-                  Math.abs(new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime()) < 5 * 60 * 1000
-
-                const nextSame =
-                  next &&
-                  next.remetente_id === msg.remetente_id &&
-                  Math.abs(new Date(next.created_at).getTime() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000
-
-                const showDaySeparator =
-                  !prev ||
-                  new Date(prev.created_at).toDateString() !== new Date(msg.created_at).toDateString()
-
-                const showTimestamp = !nextSame
-
-                return (
-                  <div key={msg.id}>
-                    {showDaySeparator && (
-                      <div className="flex items-center justify-center my-5">
-                        <span className="px-3 py-1 rounded-full text-[11px] font-semibold bg-card/70 border border-border/60 text-muted-foreground backdrop-blur">
-                          {formatDayLabel(msg.created_at)}
-                        </span>
-                      </div>
-                    )}
-
-                    <div className={cn("flex", isMine ? "justify-end" : "justify-start", prevSame ? "mt-1" : "mt-3")}>
-                      <div
-                        className={cn(
-                          "max-w-[78%] rounded-2xl px-4 py-3 text-sm shadow-sm",
-                          "border",
-                          isMine
-                            ? "bg-emerald-500/14 border-emerald-500/20"
-                            : "bg-card/70 border-border/60",
-                          isMine ? (prevSame ? "rounded-tr-md" : "") : (prevSame ? "rounded-tl-md" : ""),
-                          isMine ? (nextSame ? "rounded-br-md" : "rounded-br-sm") : (nextSame ? "rounded-bl-md" : "rounded-bl-sm")
-                        )}
-                      >
-                        <p className="whitespace-pre-wrap leading-relaxed text-foreground">
-                          {msg.texto}
-                        </p>
-
-                        {msg.arquivo_url && (
-                          <div
+                          <span
                             className={cn(
-                              "mt-2 flex items-center justify-between gap-3 rounded-xl px-3 py-2 border text-[11px] bg-background/40",
-                              isMine ? "border-emerald-500/20" : "border-border/60"
+                              "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
+                              online ? "bg-emerald-500" : "bg-muted-foreground/60"
                             )}
-                          >
-                            <div className="flex items-center gap-2 min-w-0 text-muted-foreground">
-                              <Paperclip className="h-3 w-3" />
-                              <span className="truncate text-foreground/90">
-                                {msg.arquivo_nome || "Anexo"}
+                            title={online ? "online" : "offline"}
+                          />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-center justify-between gap-2">
+                            <span className={cn("truncate text-sm", unread > 0 ? "font-semibold" : "font-medium")}>
+                              {user.nome}
+                            </span>
+
+                            <div className="flex items-center gap-2 shrink-0">
+                              <span className="text-[11px] text-muted-foreground">
+                                {meta?.lastAt
+                                  ? new Date(meta.lastAt).toLocaleTimeString("pt-BR", {
+                                    hour: "2-digit",
+                                    minute: "2-digit",
+                                  })
+                                  : ""}
                               </span>
-                              {msg.arquivo_tamanho && (
-                                <span className="text-[10px] text-muted-foreground">
-                                  {formatFileSize(msg.arquivo_tamanho)}
+
+                              {unread > 0 && (
+                                <span className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white flex items-center justify-center">
+                                  {unread}
                                 </span>
                               )}
                             </div>
-
-                            <a
-                              href={attachmentUrls[msg.id] ?? "#"}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
-                              onClick={(e) => {
-                                if (!attachmentUrls[msg.id]) e.preventDefault()
-                              }}
-                            >
-                              Baixar
-                            </a>
                           </div>
-                        )}
 
-                        {showTimestamp && (
-                          <div className="mt-2 flex items-center justify-end gap-2 text-[10px] text-muted-foreground">
-                            <span>
-                              {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                          <div className="mt-0.5 flex items-center gap-2">
+                            <span className="text-[12px] text-muted-foreground truncate">
+                              {lastMessage}
                             </span>
-                            {isMine && <span>{msg.lida ? "✓✓" : "✓"}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    </button>
+                  )
+                })}
+              </div>
+            </ScrollArea>
+          </div>
+        </section>
+
+        {/* RIGHT — Chat panel */}
+        <section
+          className={cn(
+            "h-full min-h-0 flex flex-col",
+            // mobile behavior: show chat when selected
+            selectedUser ? "flex" : "hidden lg:flex"
+          )}
+        >
+          {/* Chat header */}
+          <div className="sticky top-0 z-10 bg-background border-b border-border">
+            {selectedUser ? (
+              <div className="px-3 lg:px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3 min-w-0">
+                  {/* Back (mobile) */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-full hover:bg-muted lg:hidden"
+                    onClick={() => setSelectedUser(null)}
+                    title="Voltar"
+                  >
+                    <ArrowLeft className="h-5 w-5" />
+                  </Button>
+
+                  <Avatar className="w-10 h-10">
+                    <AvatarImage src={selectedUser.foto_url || "/placeholder.svg"} />
+                    <AvatarFallback
+                      className={cn(
+                        "text-white font-semibold bg-gradient-to-br",
+                        getAvatarGradient(selectedUser.id)
+                      )}
+                    >
+                      {selectedUser.nome?.slice(0, 2)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h3 className="text-sm font-semibold truncate">{selectedUser.nome}</h3>
+                    </div>
+                    <p className="text-xs text-muted-foreground truncate">
+                      {selectedUser.email || "Usuário interno"} •{" "}
+                      {formatRelative(userMeta[selectedUser.id]?.lastAt)}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-full hover:bg-muted"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={uploadingFile}
+                    title="Anexar"
+                  >
+                    <Paperclip className="h-5 w-5" />
+                  </Button>
+
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-10 w-10 rounded-full hover:bg-muted"
+                    title="Mais"
+                  >
+                    <MoreVertical className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <div className="px-4 py-4">
+                <h3 className="text-sm font-semibold">Selecione uma conversa</h3>
+                <p className="text-xs text-muted-foreground">
+                  Escolha um contato à esquerda para começar.
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Messages */}
+          <div className="relative flex-1 min-h-0">
+            {/* Floating "New messages" */}
+            {showNewMessages && selectedUser && (
+              <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 flex justify-center">
+                <Button
+                  size="sm"
+                  className="pointer-events-auto rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
+                  onClick={() => scrollToBottom("smooth")}
+                >
+                  <ArrowDown className="h-4 w-4 mr-2" />
+                  Novas mensagens
+                </Button>
+              </div>
+            )}
+
+            <ScrollArea ref={scrollAreaRef} className="h-full">
+              <div
+                className={cn(
+                  "min-h-full px-3 lg:px-5 py-4 space-y-2",
+                  "bg-muted/30 dark:bg-muted/10"
+                )}
+              >
+                {loadingMensagens && (
+                  <div className="text-xs text-muted-foreground">Carregando mensagens…</div>
+                )}
+
+                {!loadingMensagens && !selectedUser && (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-16 text-muted-foreground">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                      <Search className="h-5 w-5" />
+                    </div>
+                    <p className="mt-3 text-sm font-medium text-foreground">Selecione um usuário</p>
+                    <p className="text-xs">Escolha um contato para iniciar a conversa.</p>
+                  </div>
+                )}
+
+                {!loadingMensagens && selectedUser && mensagens.length === 0 && (
+                  <div className="h-full flex flex-col items-center justify-center text-center py-16 text-muted-foreground">
+                    <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
+                      <Send className="h-5 w-5" />
+                    </div>
+                    <p className="mt-3 text-sm font-medium text-foreground">Nenhuma mensagem ainda</p>
+                    <p className="text-xs">Envie a primeira mensagem para começar.</p>
+                  </div>
+                )}
+
+                {mensagens.map((msg, index) => {
+                  const isMine = msg.remetente_id === profile?.id
+                  const prev = mensagens[index - 1]
+                  const next = mensagens[index + 1]
+
+                  const prevSame =
+                    prev &&
+                    prev.remetente_id === msg.remetente_id &&
+                    Math.abs(new Date(msg.created_at).getTime() - new Date(prev.created_at).getTime()) < 5 * 60 * 1000
+
+                  const nextSame =
+                    next &&
+                    next.remetente_id === msg.remetente_id &&
+                    Math.abs(new Date(next.created_at).getTime() - new Date(msg.created_at).getTime()) < 5 * 60 * 1000
+
+                  const showDaySeparator =
+                    !prev ||
+                    new Date(prev.created_at).toDateString() !== new Date(msg.created_at).toDateString()
+
+                  const showTimestamp = !nextSame
+
+                  return (
+                    <div key={msg.id}>
+                      {showDaySeparator && (
+                        <div className="flex items-center justify-center my-4">
+                          <span className="px-3 py-1 rounded-full text-[11px] font-medium bg-background/80 border border-border text-muted-foreground">
+                            {formatDayLabel(msg.created_at)}
+                          </span>
+                        </div>
+                      )}
+
+                      <div
+                        className={cn(
+                          "group flex items-end gap-2",
+                          isMine ? "justify-end" : "justify-start",
+                          prevSame ? "mt-1" : "mt-2.5"
+                        )}
+                      >
+                        {/* Avatar for other user (Messenger style shows it sometimes) */}
+                        {!isMine && (
+                          <div className={cn("w-8 shrink-0", nextSame ? "opacity-0" : "opacity-100")}>
+                            <Avatar className="w-8 h-8">
+                              <AvatarImage src={selectedUser?.foto_url || "/placeholder.svg"} />
+                              <AvatarFallback
+                                className={cn(
+                                  "text-white text-[10px] font-semibold bg-gradient-to-br",
+                                  getAvatarGradient(selectedUser?.id || "")
+                                )}
+                              >
+                                {selectedUser?.nome?.slice(0, 2)?.toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
                           </div>
                         )}
+
+                        <div className={cn("max-w-[78%] lg:max-w-[70%]")}>
+                          {(() => {
+                            const deleted = isDeletedMessage(msg)
+                            const hasAttachment = Boolean(msg.arquivo_url)
+                            const attachmentName =
+                              msg.arquivo_nome || (msg.arquivo_url ? getFileNameFromUrl(msg.arquivo_url) : "Anexo")
+                            const attachmentExt = getFileExt(attachmentName) || "arq"
+                            const resolvedUrl = msg.arquivo_url ? attachmentUrls[msg.id] : null
+                            const isPdf = hasAttachment ? isPdfAttachment(msg) : false
+                            const isImage = hasAttachment ? isImageAttachment(msg) : false
+                            const pdfThumb = isPdf ? pdfThumbs[msg.id] : null
+
+                            const text = (msg.texto || "").trim()
+                            const showText =
+                              !deleted && Boolean(text) && text !== DEFAULT_SENT_ATTACHMENT_TEXT
+                            const showAttachmentTitle = !deleted && hasAttachment && !showText
+
+                            const bubbleClasses = cn(
+                              "px-3.5 py-2.5 text-sm leading-relaxed",
+                              "rounded-2xl",
+                              isMine
+                                ? "bg-blue-600 text-white"
+                                : "bg-background border border-border text-foreground",
+                              // grouping corners (like Messenger)
+                              isMine ? (prevSame ? "rounded-tr-md" : "") : prevSame ? "rounded-tl-md" : "",
+                              isMine ? (nextSame ? "rounded-br-md" : "") : nextSame ? "rounded-bl-md" : ""
+                            )
+
+                            return (
+                              <div className={cn("flex items-start gap-1", isMine ? "flex-row-reverse" : "flex-row")}>
+                                {isMine && !deleted && (
+                                  <DropdownMenu>
+                                    <DropdownMenuTrigger asChild>
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className={cn(
+                                          "h-8 w-8 rounded-full",
+                                          "opacity-0 group-hover:opacity-100 transition-opacity",
+                                          "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
+                                        )}
+                                        onClick={(e) => e.stopPropagation()}
+                                        title="Opções"
+                                      >
+                                        <MoreVertical className="h-4 w-4" />
+                                      </Button>
+                                    </DropdownMenuTrigger>
+                                    <DropdownMenuContent align={isMine ? "end" : "start"}>
+                                      <DropdownMenuItem
+                                        onClick={(e) => {
+                                          e.preventDefault()
+                                          e.stopPropagation()
+                                          void handleDeleteMessage(msg)
+                                        }}
+                                        disabled={deletingMessageId === msg.id}
+                                        className="text-red-600 focus:text-red-600"
+                                      >
+                                        <Trash2 className="h-4 w-4" />
+                                        {deletingMessageId === msg.id ? "Excluindo..." : "Excluir mensagem"}
+                                      </DropdownMenuItem>
+                                    </DropdownMenuContent>
+                                  </DropdownMenu>
+                                )}
+
+                                <div className={bubbleClasses}>
+                                  {deleted ? (
+                                    <p className={cn("italic", isMine ? "text-white/80" : "text-muted-foreground")}>
+                                      Mensagem apagada
+                                    </p>
+                                  ) : (
+                                    <>
+                                      {showAttachmentTitle && (
+                                        <p className={cn("text-[13px] font-semibold", isMine ? "text-white" : "text-foreground")}>
+                                          Arquivo enviado
+                                        </p>
+                                      )}
+                                      {showText && <p className="whitespace-pre-wrap">{msg.texto}</p>}
+
+                                      {hasAttachment && (
+                                        <div className="mt-2">
+                                          <div
+                                            className={cn(
+                                              "overflow-hidden rounded-xl border",
+                                              isMine ? "border-white/15 bg-white/5" : "border-border bg-muted/20"
+                                            )}
+                                          >
+                                            <button
+                                              type="button"
+                                              className={cn(
+                                                "block w-full text-left",
+                                                "h-44 sm:h-48",
+                                                "bg-muted/40"
+                                              )}
+                                              onClick={() => {
+                                                if (!msg.arquivo_url) return
+                                                if (isPdf) {
+                                                  openPDF(msg.arquivo_url, attachmentName)
+                                                  return
+                                                }
+                                                if (isImage && resolvedUrl) {
+                                                  window.open(resolvedUrl, "_blank", "noopener,noreferrer")
+                                                  return
+                                                }
+                                              }}
+                                              disabled={!isPdf && !(isImage && resolvedUrl)}
+                                            >
+                                              {isImage && resolvedUrl ? (
+                                                <img
+                                                  src={resolvedUrl}
+                                                  alt={attachmentName}
+                                                  className="h-full w-full object-cover"
+                                                />
+                                              ) : isPdf && pdfThumb ? (
+                                                <img
+                                                  src={pdfThumb}
+                                                  alt={`PDF ${attachmentName}`}
+                                                  className="h-full w-full object-cover"
+                                                />
+                                              ) : (
+                                                <div className="flex h-full w-full flex-col items-center justify-center gap-2 px-3 text-center">
+                                                  <FileText className={cn("h-7 w-7", isMine ? "text-white/80" : "text-muted-foreground")} />
+                                                  <div className={cn("text-xs font-medium truncate max-w-full", isMine ? "text-white" : "text-foreground")}>
+                                                    {attachmentName}
+                                                  </div>
+                                                  <div
+                                                    className={cn(
+                                                      "rounded-full border px-2 py-0.5 text-[10px] uppercase",
+                                                      isMine ? "border-white/20 text-white/80" : "border-border text-muted-foreground"
+                                                    )}
+                                                  >
+                                                    {attachmentExt}
+                                                  </div>
+                                                </div>
+                                              )}
+                                            </button>
+
+                                            <div
+                                              className={cn(
+                                                "flex items-center justify-between gap-3 px-3 py-2",
+                                                isMine ? "bg-white/10" : "bg-muted/30"
+                                              )}
+                                            >
+                                              <div
+                                                className={cn(
+                                                  "flex items-center gap-2 min-w-0",
+                                                  isMine ? "text-white/80" : "text-muted-foreground"
+                                                )}
+                                              >
+                                                <Paperclip className={cn("h-4 w-4", isMine ? "text-white/85" : "text-muted-foreground")} />
+                                                <span className={cn("truncate text-[12px] font-semibold", isMine ? "text-white" : "text-foreground")}>
+                                                  {attachmentName}
+                                                </span>
+                                                {msg.arquivo_tamanho && (
+                                                  <span className={cn("text-[10px]", isMine ? "text-white/70" : "text-muted-foreground")}>
+                                                    {formatFileSize(msg.arquivo_tamanho)}
+                                                  </span>
+                                                )}
+                                              </div>
+
+                                              <div className="flex items-center gap-3">
+                                                {isPdf && msg.arquivo_url && (
+                                                  <button
+                                                    type="button"
+                                                    className={cn(
+                                                      "text-[11px] font-semibold hover:underline inline-flex items-center gap-1",
+                                                      isMine ? "text-white" : "text-blue-600 dark:text-blue-400"
+                                                    )}
+                                                    onClick={() => openPDF(msg.arquivo_url!, attachmentName)}
+                                                  >
+                                                    <Eye className="h-4 w-4" />
+                                                    Visualizar
+                                                  </button>
+                                                )}
+
+                                                <button
+                                                  type="button"
+                                                  className={cn(
+                                                    "text-[11px] font-semibold hover:underline inline-flex items-center gap-1",
+                                                    isMine ? "text-white" : "text-blue-600 dark:text-blue-400"
+                                                  )}
+                                                  onClick={() => void handleDownloadAttachment(msg)}
+                                                >
+                                                  <Download className="h-4 w-4" />
+                                                  Baixar
+                                                </button>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            )
+                          })()}
+
+                          {showTimestamp && (
+                            <div className={cn("mt-1 text-[11px] text-muted-foreground", isMine ? "text-right" : "text-left")}>
+                              {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
+                              {isMine && <span className="ml-2">{msg.lida ? "✓✓" : "✓"}</span>}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* spacer for mine to keep alignment */}
+                        {isMine && <div className="w-8 shrink-0" />}
                       </div>
                     </div>
-                  </div>
-                )
-              })}
+                  )
+                })}
 
-              <div ref={bottomRef} />
-            </div>
-          </ScrollArea>
-        </CardContent>
-
-        {/* Composer */}
-        <div className="border-t border-border/60 p-3 bg-card/80 backdrop-blur">
-          {attachedFile && (
-            <div className="mb-2 flex items-center justify-between rounded-full border border-border/60 px-3 py-1.5 text-xs bg-background/50">
-              <span className="truncate text-foreground/90">{attachedFile.name}</span>
-              <button
-                type="button"
-                className="text-muted-foreground hover:text-foreground transition"
-                disabled={uploadingFile}
-                onClick={() => {
-                  setAttachedFile(null)
-                  if (fileInputRef.current) fileInputRef.current.value = ""
-                }}
-                aria-label="Remover anexo"
-              >
-                <X className="h-3 w-3" />
-              </button>
-            </div>
-          )}
-
-          {uploadingFile && (
-            <div className="mb-2 h-1 rounded-full bg-muted overflow-hidden">
-              <div className="h-full w-1/2 animate-pulse bg-emerald-500" />
-            </div>
-          )}
-
-          <div className="flex items-end gap-2">
-            <input
-              ref={fileInputRef}
-              type="file"
-              className="hidden"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) setAttachedFile(file)
-              }}
-            />
-
-            <Button
-              variant="outline"
-              size="icon"
-              type="button"
-              onClick={() => fileInputRef.current?.click()}
-              disabled={!selectedUser || uploadingFile}
-              title="Anexar arquivo"
-              className="rounded-full h-10 w-10 border-border/70 bg-background/50 hover:bg-background"
-            >
-              <Paperclip className="w-4 h-4" />
-            </Button>
-
-            <Button
-              variant="outline"
-              size="icon"
-              type="button"
-              disabled={!selectedUser}
-              title="Emoji"
-              className="rounded-full h-10 w-10 border-border/70 bg-background/50 hover:bg-background"
-            >
-              <Smile className="w-4 h-4" />
-            </Button>
-
-            <Textarea
-              placeholder="Digite sua mensagem..."
-              value={messageText}
-              onChange={(e) => setMessageText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" && !e.shiftKey) {
-                  e.preventDefault()
-                  handleSendMessage()
-                }
-              }}
-              onInput={(e) => {
-                const el = e.currentTarget
-                el.style.height = "auto"
-                el.style.height = `${Math.min(el.scrollHeight, 140)}px`
-              }}
-              disabled={!selectedUser}
-              className="min-h-[44px] max-h-36 rounded-2xl bg-background/60 border-border/70 px-4 py-2 text-sm focus-visible:ring-2 focus-visible:ring-emerald-500/35"
-            />
-
-            <Button
-              onClick={handleSendMessage}
-              disabled={!selectedUser || (!messageText.trim() && !attachedFile) || uploadingFile}
-              className="rounded-full h-10 px-4 bg-emerald-600 hover:bg-emerald-700 shadow-md shadow-emerald-600/20"
-            >
-              <Send className="w-4 h-4 mr-2" />
-              Enviar
-            </Button>
+                <div ref={bottomRef} />
+              </div>
+            </ScrollArea>
           </div>
-        </div>
-      </Card>
+
+          {/* Composer (Messenger-like) */}
+          <div className="border-t border-border bg-background px-3 lg:px-4 py-3">
+            {attachedFile && (
+              <div className="mb-2 flex items-center justify-between rounded-full border border-border px-3 py-1.5 text-xs bg-muted/40">
+                <span className="truncate text-foreground/90">{attachedFile.name}</span>
+                <button
+                  type="button"
+                  className="text-muted-foreground hover:text-foreground transition"
+                  disabled={uploadingFile}
+                  onClick={() => {
+                    setAttachedFile(null)
+                    if (fileInputRef.current) fileInputRef.current.value = ""
+                  }}
+                  aria-label="Remover anexo"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            )}
+
+            {uploadingFile && (
+              <div className="mb-2 h-1 rounded-full bg-muted overflow-hidden">
+                <div className="h-full w-1/2 animate-pulse bg-blue-600" />
+              </div>
+            )}
+
+            <div className="flex items-end gap-2">
+              <input
+                ref={fileInputRef}
+                type="file"
+                className="hidden"
+                onChange={(e) => {
+                  const file = e.target.files?.[0]
+                  if (file) setAttachedFile(file)
+                }}
+              />
+
+              <Button
+                variant="ghost"
+                size="icon"
+                type="button"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={!selectedUser || uploadingFile}
+                title="Anexar"
+                className="rounded-full h-10 w-10 hover:bg-muted"
+              >
+                <Paperclip className="w-5 h-5" />
+              </Button>
+
+              <div className="flex-1">
+                <Textarea
+                  placeholder="Digite uma mensagem…"
+                  value={messageText}
+                  onChange={(e) => setMessageText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && !e.shiftKey) {
+                      e.preventDefault()
+                      handleSendMessage()
+                    }
+                  }}
+                  onInput={(e) => {
+                    const el = e.currentTarget
+                    el.style.height = "auto"
+                    el.style.height = `${Math.min(el.scrollHeight, 140)}px`
+                  }}
+                  disabled={!selectedUser}
+                  className={cn(
+                    "min-h-[44px] max-h-36",
+                    "rounded-3xl px-4 py-2 text-sm",
+                    "bg-muted/60 border-border",
+                    "focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                  )}
+                />
+              </div>
+
+              <Button
+                onClick={handleSendMessage}
+                disabled={!selectedUser || (!messageText.trim() && !attachedFile) || uploadingFile}
+                className="rounded-full h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700"
+                title="Enviar"
+              >
+                <Send className="w-5 h-5" />
+              </Button>
+            </div>
+          </div>
+        </section>
+      </div>
     </div>
-  </div>
   )
 }
-
