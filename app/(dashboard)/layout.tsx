@@ -149,7 +149,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const baseFontSizeRef = useRef<number | null>(null)
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [nomeEmpresa, setNomeEmpresa] = useState("CRM Precatórios")
+  const [nomeEmpresa, setNomeEmpresa] = useState("CRM APAX Precat\u00f3rios")
   const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
   const [appVersion, setAppVersion] = useState<string>(packageJson.version)
 
@@ -329,7 +329,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         >
           <div className="relative w-[500px] h-[500px]">
             <Image
-              src="/image.png"
+              src="/logo-apax.png"
               alt="Watermark"
               fill
               className="object-contain grayscale"
@@ -353,7 +353,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <div className="flex items-center gap-3 p-6 border-b border-border/50">
               <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-orange-100">
                 <Image
-                  src={logoUrl || "/image.png"}
+                  src={logoUrl || "/logo-apax.png"}
                   alt="Logo"
                   width={40}
                   height={40}

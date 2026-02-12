@@ -22,7 +22,7 @@ export default function ConfiguracoesPage() {
   const [config, setConfig] = useState({
     id: '',
     logo_url: '',
-    nome_empresa: 'CRM Precatórios',
+    nome_empresa: 'CRM APAX Precat\u00f3rios',
     subtitulo_empresa: 'Sistema de Gestão',
   })
 

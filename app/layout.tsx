@@ -24,8 +24,8 @@ const robotoMono = Roboto_Mono({
 })
 
 export const metadata: Metadata = {
-  title: "CRM de Precatórios | Sistema de Gestão",
-  description: "Sistema completo de gestão de precatórios com cálculos, workflows e relatórios",
+  title: "CRM APAX Precat\u00f3rios | Sistema de Gest\u00e3o",
+  description: "Sistema completo de gest\u00e3o de precat\u00f3rios com c\u00e1lculos, workflows e relat\u00f3rios",
   generator: "v0.app",
   icons: {
     icon: [
@@ -38,8 +38,8 @@ export const metadata: Metadata = {
         media: "(prefers-color-scheme: dark)",
       },
       {
-        url: "/icon.svg",
-        type: "image/svg+xml",
+        url: "/logo-apax.png",
+        type: "image/png",
       },
     ],
     apple: "/apple-icon.png",

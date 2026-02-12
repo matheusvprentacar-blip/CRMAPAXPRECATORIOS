@@ -105,7 +105,7 @@ type Herdeiro = {
   percentual_participacao: number | null
 }
 
-type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel"
+type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel" | "credito_vendido"
 
 /* ======================================================
    SUPABASE SAFE HELPER (resolve "supabase is possibly null")
@@ -324,6 +324,7 @@ export default function PrecatorioDetailPage() {
     { value: "none", label: "Fluxo normal" },
     { value: "reprovado", label: "Reprovado" },
     { value: "nao_elegivel", label: "Não elegível" },
+    { value: "credito_vendido", label: "Credor vendeu o crédito (Reprovado / não elegível)" },
   ]
   const triagemStatusMeta = getTriagemStatusMeta(precatorio?.interesse_status)
   const interesseObservacao = precatorio?.interesse_observacao?.trim()
@@ -662,6 +663,11 @@ export default function PrecatorioDetailPage() {
     if (!triagemStatusSelection) return
 
     const destinoReprovacaoSelecionado = triagemDestinoReprovacao !== "none"
+    const resultadoFinalTriagem =
+      triagemDestinoReprovacao === "credito_vendido"
+        ? "nao_elegivel"
+        : triagemDestinoReprovacao
+    const observacaoCreditoVendido = "Credor informou que vendeu o credito para outra pessoa ou empresa."
 
     if (triagemStatusSelection === "SEM_INTERESSE" && !destinoReprovacaoSelecionado) {
       setSemInteresseModalOpen(true)
@@ -688,7 +694,13 @@ export default function PrecatorioDetailPage() {
       }
 
       if (destinoReprovacaoSelecionado) {
-        updatePayload.juridico_resultado_final = triagemDestinoReprovacao
+        updatePayload.juridico_resultado_final = resultadoFinalTriagem
+        if (triagemDestinoReprovacao === "credito_vendido") {
+          const observacaoAtual = String(precatorio?.interesse_observacao || "").trim()
+          updatePayload.interesse_observacao = observacaoAtual
+            ? `${observacaoAtual}\n${observacaoCreditoVendido}`
+            : observacaoCreditoVendido
+        }
       } else {
         const statusResolvido = resolveStatusColumnId(precatorio?.status_kanban || precatorio?.localizacao_kanban)
         if (statusResolvido === "reprovado") {

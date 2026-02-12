@@ -64,12 +64,13 @@ const TRIAGEM_STATUS_OPTIONS = [
   { value: "TEM_INTERESSE", label: "Tem interesse" },
 ]
 
-type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel"
+type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel" | "credito_vendido"
 
 const TRIAGEM_DESTINO_OPTIONS: Array<{ value: TriagemDestinoReprovacao; label: string }> = [
   { value: "none", label: "Fluxo normal" },
   { value: "reprovado", label: "Reprovado" },
   { value: "nao_elegivel", label: "Não elegível" },
+  { value: "credito_vendido", label: "Credor vendeu o crédito (Reprovado / não elegível)" },
 ]
 
 interface PrecatorioCard {
@@ -1150,6 +1151,12 @@ export default function KanbanPageNewGates() {
     if (!triagemModal.precatorioId) return
 
     const destinoReprovacaoSelecionado = triagemModal.destinoReprovacao !== "none"
+    const resultadoFinalTriagem =
+      triagemModal.destinoReprovacao === "credito_vendido"
+        ? "nao_elegivel"
+        : triagemModal.destinoReprovacao
+    const observacaoTriagem = triagemModal.observacao.trim()
+    const observacaoCreditoVendido = "Credor informou que vendeu o credito para outra pessoa ou empresa."
 
     if (triagemModal.status === "SEM_INTERESSE" && !destinoReprovacaoSelecionado) {
       setTriagemModal({
@@ -1193,11 +1200,16 @@ export default function KanbanPageNewGates() {
         status_kanban: colunaDestinoTriagem,
         localizacao_kanban: colunaDestinoTriagem,
         interesse_status: triagemModal.status,
-        interesse_observacao: triagemModal.observacao.trim() || null,
+        interesse_observacao:
+          triagemModal.destinoReprovacao === "credito_vendido"
+            ? observacaoTriagem
+              ? `${observacaoTriagem}\n${observacaoCreditoVendido}`
+              : observacaoCreditoVendido
+            : observacaoTriagem || null,
         updated_at: new Date().toISOString(),
       }
       if (destinoReprovacaoSelecionado) {
-        updateData.juridico_resultado_final = triagemModal.destinoReprovacao
+        updateData.juridico_resultado_final = resultadoFinalTriagem
       } else if (precatorioAtual?.status_kanban === "reprovado") {
         updateData.juridico_resultado_final = null
       }

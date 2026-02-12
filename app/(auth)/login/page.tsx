@@ -42,7 +42,7 @@ export default function LoginPage() {
           <div className="flex justify-center mb-6">
             <div className="relative w-28 h-28 aspect-square">
               <Image
-                src="/login-logo.png"
+                src="/logo-apax.png"
                 alt="Logo"
                 fill
                 className="object-contain"
@@ -50,8 +50,8 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          <CardTitle className="text-2xl">CRM de Precatórios</CardTitle>
-          <CardDescription>Faça login para acessar o sistema</CardDescription>
+          <CardTitle className="text-2xl">CRM APAX Precat\u00f3rios</CardTitle>
+          <CardDescription>Fa\u00e7a login para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -72,7 +72,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -103,7 +103,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Não tem uma conta?{" "}
+              N\u00e3o tem uma conta?{" "}
               <Link href="/register" className="text-primary hover:underline font-medium">
                 Criar conta
               </Link>
