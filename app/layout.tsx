@@ -7,6 +7,7 @@ import { AuthProvider } from "@/lib/auth/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ClientToaster } from "@/components/client-toaster"
 import { PDFViewerProvider } from "@/components/providers/pdf-viewer-provider"
+import { GlobalUpdateNotifier } from "@/components/settings/global-update-notifier"
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -56,6 +57,7 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>
             <PDFViewerProvider>{children}</PDFViewerProvider>
+            <GlobalUpdateNotifier />
           </AuthProvider>
         </ThemeProvider>
         <ClientToaster />

@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { getVersion } from "@tauri-apps/api/app"
 import { relaunch } from "@tauri-apps/plugin-process"
 import { Badge } from "@/components/ui/badge"
@@ -17,6 +17,7 @@ import { CheckCircle2, Loader2, Upload } from "lucide-react"
 
 type UpdaterModule = typeof import("@tauri-apps/plugin-updater")
 type AvailableUpdate = Awaited<ReturnType<UpdaterModule["check"]>>
+const RECHECK_INTERVAL_MS = 15 * 60 * 1000
 
 function isTauriWindow(): boolean {
   return (
@@ -39,6 +40,7 @@ function formatBytes(bytes: number): string {
 
 export function GlobalUpdateNotifier() {
   const checkedRef = useRef(false)
+  const checkingRef = useRef(false)
 
   const [isTauri, setIsTauri] = useState(false)
   const [currentVersion, setCurrentVersion] = useState<string>("")
@@ -55,17 +57,45 @@ export function GlobalUpdateNotifier() {
   }, [downloadedBytes, totalBytes])
 
   useEffect(() => {
-    const tauri = isTauriWindow()
-    setIsTauri(tauri)
-
-    if (!tauri) return
+    let mounted = true
+    const tauriByWindow = isTauriWindow()
 
     getVersion()
-      .then(setCurrentVersion)
-      .catch(() => {
-        // ignore: keep empty / fallback UI
+      .then((version) => {
+        if (!mounted) return
+        setIsTauri(true)
+        setCurrentVersion(version)
       })
+      .catch(() => {
+        if (!mounted) return
+        setIsTauri(tauriByWindow)
+      })
+
+    return () => {
+      mounted = false
+    }
   }, [])
+
+  const checkForUpdates = useCallback(async () => {
+    if (!isTauri) return
+    if (checkingRef.current) return
+    checkingRef.current = true
+
+    try {
+      const { check } = await import("@tauri-apps/plugin-updater")
+      const update = await check()
+      if (!update) return
+
+      if (updateAvailable?.version === update.version) return
+
+      setUpdateAvailable(update)
+      setDialogOpen(true)
+    } catch (error) {
+      console.error("Erro ao buscar atualizacoes:", error)
+    } finally {
+      checkingRef.current = false
+    }
+  }, [isTauri, updateAvailable?.version])
 
   useEffect(() => {
     if (!isTauri) return
@@ -74,23 +104,38 @@ export function GlobalUpdateNotifier() {
 
     // Slight delay so we don't fight with initial layout/hydration.
     const timer = window.setTimeout(() => {
-      void (async () => {
-        try {
-          const { check } = await import("@tauri-apps/plugin-updater")
-          const update = await check()
-          if (!update) return
-
-          setUpdateAvailable(update)
-          setDialogOpen(true)
-        } catch (error) {
-          // Keep it quiet globally; user can still check manually in Settings.
-          console.error("Erro ao buscar atualizacoes:", error)
-        }
-      })()
+      void checkForUpdates()
     }, 1500)
 
     return () => window.clearTimeout(timer)
-  }, [isTauri])
+  }, [checkForUpdates, isTauri])
+
+  useEffect(() => {
+    if (!isTauri) return
+
+    const interval = window.setInterval(() => {
+      void checkForUpdates()
+    }, RECHECK_INTERVAL_MS)
+
+    const onFocus = () => {
+      void checkForUpdates()
+    }
+
+    const onVisibilityChange = () => {
+      if (document.visibilityState === "visible") {
+        void checkForUpdates()
+      }
+    }
+
+    window.addEventListener("focus", onFocus)
+    document.addEventListener("visibilitychange", onVisibilityChange)
+
+    return () => {
+      window.clearInterval(interval)
+      window.removeEventListener("focus", onFocus)
+      document.removeEventListener("visibilitychange", onVisibilityChange)
+    }
+  }, [checkForUpdates, isTauri])
 
   async function installUpdate() {
     if (!updateAvailable) return
@@ -227,4 +272,3 @@ export function GlobalUpdateNotifier() {
     </Dialog>
   )
 }
-

@@ -48,7 +48,6 @@ import Image from "next/image"
 import { NotificationsProvider } from "@/components/notifications/useNotifications"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { NotificationsModal } from "@/components/notifications/NotificationsModal"
-import { GlobalUpdateNotifier } from "@/components/settings/global-update-notifier"
 import { getVersion } from "@tauri-apps/api/app"
 import packageJson from "@/package.json"
 
@@ -317,7 +316,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProtectedRoute>
       <NotificationsProvider>
-      <GlobalUpdateNotifier />
       <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-zinc-950 dark:to-zinc-900/60">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
