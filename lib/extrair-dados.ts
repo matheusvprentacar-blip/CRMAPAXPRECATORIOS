@@ -16,113 +16,283 @@ export interface DadosExtraidos {
   data_expedicao?: string
 }
 
+const CNJ_REGEX = /\b\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4}\b/g
+const DATE_REGEX = /\b(\d{2})[\/.-](\d{2})[\/.-](\d{4})\b/g
+const MONEY_REGEX = /(?:R\$\s*)?(-?\d{1,3}(?:\.\d{3})*,\d{2}|-?\d+(?:,\d{2}))/g
+
+function normalizeForSearch(value: string): string {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+function cleanLabelValue(raw: string): string {
+  return raw
+    .replace(/^[\s:;.\-–—]+/, "")
+    .replace(/[\s:;.\-–—]+$/, "")
+    .replace(/\s+/g, " ")
+    .trim()
+}
+
+function parseMoney(raw: string): number | undefined {
+  const cleaned = raw
+    .replace(/\s/g, "")
+    .replace(/\.(?=\d{3}(?:\D|$))/g, "")
+    .replace(",", ".")
+
+  const parsed = Number(cleaned)
+  if (!Number.isFinite(parsed)) return undefined
+  if (parsed <= 0) return undefined
+  return parsed
+}
+
+function extractMoneyCandidates(text: string): number[] {
+  const values: number[] = []
+  const matches = text.matchAll(MONEY_REGEX)
+
+  for (const match of matches) {
+    const value = parseMoney(match[1])
+    if (value !== undefined) {
+      values.push(value)
+    }
+  }
+
+  return values
+}
+
+function extractDateIso(text: string): string | undefined {
+  const match = DATE_REGEX.exec(text)
+  DATE_REGEX.lastIndex = 0
+  if (!match) return undefined
+
+  const [, day, month, year] = match
+  const yearNum = Number(year)
+  if (!Number.isFinite(yearNum) || yearNum < 1980 || yearNum > 2100) {
+    return undefined
+  }
+
+  return `${year}-${month}-${day}`
+}
+
+function sanitizeName(value: string): string {
+  return cleanLabelValue(
+    value
+      .replace(
+        /\b(?:nome\s+do\s+)?(?:credor|beneficiario|beneficiario\(a\)|exequente|requerente|autor|advogado|procurador)\b/gi,
+        ""
+      )
+      .replace(/\b(?:cpf|cnpj|oab)\b.*$/i, "")
+  )
+}
+
+function isLikelyName(value: string): boolean {
+  if (!value) return false
+  if (value.length < 5) return false
+  if (/\d{3,}/.test(value)) return false
+  if (/^\d+$/.test(value)) return false
+  return true
+}
+
+function pickTextAfterLabel(currentLine: string, nextLine?: string): string | undefined {
+  let candidate = ""
+
+  if (currentLine.includes(":")) {
+    candidate = currentLine.split(":").slice(1).join(":")
+  } else if (currentLine.includes("-")) {
+    candidate = currentLine.split("-").slice(1).join("-")
+  }
+
+  candidate = sanitizeName(candidate)
+  if (isLikelyName(candidate)) {
+    return candidate
+  }
+
+  const stripped = sanitizeName(currentLine)
+  if (isLikelyName(stripped) && stripped.length < currentLine.length) {
+    return stripped
+  }
+
+  if (nextLine) {
+    const next = sanitizeName(nextLine)
+    if (isLikelyName(next)) {
+      return next
+    }
+  }
+
+  return undefined
+}
+
+function findTribunal(content: string): string | undefined {
+  const upper = content.toUpperCase()
+
+  const tjMatch = upper.match(/\bTJ[\s-]?([A-Z]{2})\b/)
+  if (tjMatch) return `TJ${tjMatch[1]}`
+
+  const trfMatch = upper.match(/\bTRF[\s-]?(\d{1,2})\b/)
+  if (trfMatch) return `TRF${trfMatch[1]}`
+
+  const trtMatch = upper.match(/\bTRT[\s-]?(\d{1,2})\b/)
+  if (trtMatch) return `TRT${trtMatch[1]}`
+
+  if (/\bSTJ\b/.test(upper)) return "STJ"
+  if (/\bSTF\b/.test(upper)) return "STF"
+
+  return undefined
+}
+
+function findCpfCnpj(content: string): string | undefined {
+  const cnpj = content.match(/\b\d{2}\.?\d{3}\.?\d{3}\/?\d{4}-?\d{2}\b/)
+  if (cnpj) return cnpj[0]
+
+  const cpf = content.match(/\b\d{3}\.?\d{3}\.?\d{3}-?\d{2}\b/)
+  if (cpf) return cpf[0]
+
+  const labeledDigits = content.match(/\b(?:CPF|CNPJ)\D{0,15}(\d{11,14})\b/i)
+  if (labeledDigits) return labeledDigits[1]
+
+  return undefined
+}
+
+function findNatureza(content: string): string | undefined {
+  const normalized = normalizeForSearch(content)
+  if (normalized.includes("alimentar")) return "Alimentar"
+  if (normalized.includes("comum")) return "Comum"
+  return undefined
+}
+
+function findNumeroOficio(content: string): string | undefined {
+  const match = content.match(
+    /\b(?:oficio|requisitorio|requisicao)\D{0,15}(?:n(?:o|º|°)\s*)?([A-Z0-9.\-\/]{4,})/i
+  )
+  if (match) return cleanLabelValue(match[1])
+  return undefined
+}
+
+function findLineSpecificCnj(line: string): string | undefined {
+  const match = line.match(CNJ_REGEX)
+  return match?.[0]
+}
+
 export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
-  const linhas = conteudo.split(/\r?\n/).map((l) => l.trim()).filter(l => l.length > 0)
-  const resultado: DadosExtraidos = {}
+  const content = (conteudo || "").replace(/\u00A0/g, " ").replace(/\r/g, "")
+  if (!content.trim()) return {}
 
-  // Helper para limpar chaves (ex: "Autor: João" -> "João")
-  const limparChave = (linha: string, chaves: string[]) => {
-    let texto = linha
-    for (const chave of chaves) {
-      const regex = new RegExp(`${chave}\\s*[:.-]?\\s*`, 'i')
-      texto = texto.replace(regex, '')
-    }
-    return texto.trim()
+  const lines = content
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+  const normalizedLines = lines.map(normalizeForSearch)
+
+  const result: DadosExtraidos = {}
+  result.tribunal = findTribunal(content)
+  result.cpf_cnpj = findCpfCnpj(content)
+  result.natureza_ativo = findNatureza(content)
+  result.numero_oficio_requisitorio = findNumeroOficio(content)
+
+  const allCnj = Array.from(new Set(content.match(CNJ_REGEX) || []))
+  if (allCnj.length === 1) {
+    result.numero_precatorio = allCnj[0]
+    result.numero_processo = allCnj[0]
+  } else if (allCnj.length > 1) {
+    result.numero_precatorio = allCnj[0]
+    result.numero_processo = allCnj[allCnj.length - 1]
   }
 
-  const procurarValorMonetario = (texto: string): number | undefined => {
-    // Tenta pegar o último valor da linha primeiro, pois geralmente é onde está o R$
-    const matches = texto.matchAll(/R?\s?\$?\s?([\d.,]{3,})/gi)
-    let lastValue: number | undefined
+  for (let index = 0; index < lines.length; index += 1) {
+    const line = lines[index]
+    const normalizedLine = normalizedLines[index]
+    const nextLine = lines[index + 1]
 
-    for (const match of matches) {
-      let valStr = match[1]
-      // Validação básica para evitar números de processo ou datas
-      if (valStr.includes('.') && valStr.includes(',')) {
-        // Formato brasileiro padrão: 1.000,00
-        valStr = valStr.replace(/\./g, "").replace(",", ".")
-      } else if (valStr.includes(',') && !valStr.includes('.')) {
-        // Apenas vírgula: 1000,00
-        valStr = valStr.replace(",", ".")
-      } else if ((valStr.match(/\./g) || []).length > 1) {
-        // 1.000.000 (sem virgula decimal explicita, assumir inteiro)
-        valStr = valStr.replace(/\./g, "")
-      }
+    const isProcessLine =
+      normalizedLine.includes("processo originario") ||
+      normalizedLine.includes("autos originarios") ||
+      normalizedLine.includes("autos") ||
+      normalizedLine.includes("proc. origem") ||
+      normalizedLine.includes("processo")
 
-      const valor = Number(valStr)
-      if (!isNaN(valor)) {
-        lastValue = valor
-      }
-    }
-    return lastValue
-  }
-
-  // Busca Geral no Texto Completo
-  const cpfCnpjMatch = conteudo.match(/(\d{2,3}\.\d{3}\.\d{3}[/\-]\d{2,4}[-]?\d{2})/)
-  if (cpfCnpjMatch) resultado.cpf_cnpj = cpfCnpjMatch[1]
-
-  const tribunalMatch = conteudo.match(/(TJ-?[A-Z]{2}|TRF-?\d{1,2}|STJ|STF)/i)
-  if (tribunalMatch) resultado.tribunal = tribunalMatch[1].toUpperCase().replace("-", "")
-
-  for (const linha of linhas) {
-    const lower = linha.toLowerCase()
-
-    // --- Identificadores ---
-    // Prioriza "Processo Originário" ou "Autos"
-    if ((lower.includes("processo") || lower.includes("autos")) && !resultado.numero_processo) {
-      const match = linha.match(/(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/)
-      if (match) resultado.numero_processo = match[1]
+    if (!result.numero_processo && isProcessLine) {
+      const lineCnj = findLineSpecificCnj(line) || findLineSpecificCnj(nextLine || "")
+      if (lineCnj) result.numero_processo = lineCnj
     }
 
-    if ((lower.includes("precatório") || lower.includes("precatorio") || lower.includes("requisitorio")) && !resultado.numero_precatorio) {
-      const match = linha.match(/(\d{7}-\d{2}\.\d{4}\.\d\.\d{2}\.\d{4})/)
-      if (match) resultado.numero_precatorio = match[1]
-      // Fallback simples para números curtos se for ofício
-      if (!match && lower.includes("oficio")) {
-        const matchOficio = linha.match(/(\d{4,}\/\d{4})/)
-        if (matchOficio) resultado.numero_oficio_requisitorio = matchOficio[1]
+    const isPrecatorioLine =
+      normalizedLine.includes("precatorio") ||
+      normalizedLine.includes("requisitorio") ||
+      normalizedLine.includes("rpv")
+
+    if (!result.numero_precatorio && isPrecatorioLine) {
+      const lineCnj = findLineSpecificCnj(line) || findLineSpecificCnj(nextLine || "")
+      if (lineCnj) result.numero_precatorio = lineCnj
+    }
+
+    if (
+      !result.autor_credor_originario &&
+      (normalizedLine.includes("credor") ||
+        normalizedLine.includes("beneficiario") ||
+        normalizedLine.includes("exequente") ||
+        normalizedLine.includes("requerente") ||
+        normalizedLine.includes("autor")) &&
+      !normalizedLine.includes("cpf") &&
+      !normalizedLine.includes("cnpj")
+    ) {
+      const credor = pickTextAfterLabel(line, nextLine)
+      if (credor) {
+        result.autor_credor_originario = credor
       }
     }
 
-    // --- Pessoas ---
-    if ((lower.includes("beneficiário") || lower.includes("credor") || lower.includes("exequente") || lower.includes("requerente")) && !resultado.autor_credor_originario) {
-      // Evita capturar linhas que sejam apenas títulos
-      if (linha.length > 15 && !lower.includes("cpf") && !lower.includes("cnpj")) {
-        resultado.autor_credor_originario = limparChave(linha, ["beneficiário", "credor", "exequente", "requerente", "autor"])
+    if (
+      !result.advogado_acao &&
+      (normalizedLine.includes("advogado") || normalizedLine.includes("procurador"))
+    ) {
+      const advogado = pickTextAfterLabel(line, nextLine)
+      if (advogado) {
+        result.advogado_acao = advogado
       }
     }
 
-    if (lower.includes("advogado") && !resultado.advogado_acao) {
-      if (linha.length > 10) {
-        resultado.advogado_acao = limparChave(linha, ["advogado"])
+    const isValorPrincipalLine =
+      normalizedLine.includes("valor principal") ||
+      normalizedLine.includes("valor requisitado") ||
+      normalizedLine.includes("valor total requisitado") ||
+      normalizedLine.includes("valor do precatorio") ||
+      normalizedLine.includes("valor da condenacao") ||
+      normalizedLine.includes("principal liquido")
+
+    if (!result.valor_principal_original && isValorPrincipalLine) {
+      const values = extractMoneyCandidates(`${line} ${nextLine || ""}`)
+      if (values.length > 0) {
+        result.valor_principal_original = values[values.length - 1]
       }
     }
 
-    // --- Natureza ---
-    if (lower.includes("natureza") && !resultado.natureza_ativo) {
-      if (lower.includes("alimentar")) resultado.natureza_ativo = "Alimentar"
-      else if (lower.includes("comum")) resultado.natureza_ativo = "Comum"
-      else resultado.natureza_ativo = limparChave(linha, ["natureza"])
-    }
+    const isExpedicaoLine =
+      normalizedLine.includes("data de expedicao") ||
+      normalizedLine.includes("expedicao") ||
+      normalizedLine.includes("expedido em") ||
+      normalizedLine.includes("data da requisicao")
 
-    // --- Valores ---
-    if ((lower.includes("valor principal") || lower.includes("valor de face") || lower.includes("valor requisitado")) && resultado.valor_principal_original == null) {
-      const v = procurarValorMonetario(linha)
-      if (v != null) resultado.valor_principal_original = v
-    }
-
-    // Data Expedição
-    if (!resultado.data_expedicao && (lower.includes("expedição") || lower.includes("data"))) {
-      const match = linha.match(/(\d{2})\/(\d{2})\/(\d{4})/)
-      if (match) {
-        const [_, dia, mes, ano] = match
-        // Valida ano razoável
-        if (parseInt(ano) > 1980 && parseInt(ano) < 2050) {
-          resultado.data_expedicao = `${ano}-${mes}-${dia}`
-        }
-      }
+    if (!result.data_expedicao && isExpedicaoLine) {
+      result.data_expedicao = extractDateIso(line) || extractDateIso(nextLine || "")
     }
   }
 
-  return resultado
+  if (!result.valor_principal_original) {
+    const valorLines = lines.filter((line, index) => normalizedLines[index].includes("valor"))
+    const allValues = valorLines.flatMap((line) => extractMoneyCandidates(line))
+    if (allValues.length > 0) {
+      result.valor_principal_original = Math.max(...allValues)
+    }
+  }
+
+  if (!result.numero_precatorio && allCnj.length > 0) {
+    result.numero_precatorio = allCnj[0]
+  }
+
+  if (!result.numero_processo && allCnj.length > 0) {
+    result.numero_processo = allCnj[allCnj.length - 1]
+  }
+
+  return result
 }

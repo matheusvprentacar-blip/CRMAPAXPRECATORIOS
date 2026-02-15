@@ -1,198 +1,252 @@
-import { useState, useEffect } from "react";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { toast } from "sonner";
-import { createBrowserClient } from "@/lib/supabase/client";
-import { maskProcesso } from "@/lib/masks";
+import { useEffect, useState } from "react"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { toast } from "sonner"
+import { createBrowserClient } from "@/lib/supabase/client"
+import { maskProcesso } from "@/lib/masks"
 
 interface PrecatorioData {
-    credor_nome?: string;
-    valor_principal?: number;
-    numero_precatorio?: string;
-    tribunal?: string;
-    credor_cpf_cnpj?: string;
-    credor_telefone?: string;
-    numero_processo?: string;
-    natureza?: string;
-    file_url?: string;
-    raw_text?: string;
-    // add other fields as needed
+  credor_nome?: string
+  advogado_nome?: string
+  valor_principal?: number
+  numero_precatorio?: string
+  numero_oficio?: string
+  tribunal?: string
+  credor_cpf_cnpj?: string
+  credor_telefone?: string
+  numero_processo?: string
+  natureza?: string
+  data_expedicao?: string
+  file_url?: string
+  raw_text?: string
 }
 
 interface ModalCriarPrecatorioProps {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-    data?: PrecatorioData;
-    onSuccess?: () => void;
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  data?: PrecatorioData | null
+  onSuccess?: () => void
 }
 
-export function ModalCriarPrecatorio({ open, onOpenChange, data = {}, onSuccess }: ModalCriarPrecatorioProps) {
-    const [credor, setCredor] = useState(data?.credor_nome ?? "");
-    const [valor, setValor] = useState(data?.valor_principal?.toString() ?? "");
-    const [numero, setNumero] = useState(maskProcesso(data?.numero_precatorio ?? ""));
-    const [tribunal, setTribunal] = useState(data?.tribunal ?? "");
-    const [cpf, setCpf] = useState(data?.credor_cpf_cnpj ?? "");
-    const [telefone, setTelefone] = useState(data?.credor_telefone ?? "");
-    const [processo, setProcesso] = useState(maskProcesso(data?.numero_processo ?? ""));
-    const [natureza, setNatureza] = useState(data?.natureza ?? "");
-    const [saving, setSaving] = useState(false);
+export function ModalCriarPrecatorio({
+  open,
+  onOpenChange,
+  data,
+  onSuccess,
+}: ModalCriarPrecatorioProps) {
+  const safeData: PrecatorioData = data ?? {}
 
-    // Update state when data prop changes
-    useEffect(() => {
-        if (!data) return;
-        setCredor(data.credor_nome ?? "");
-        setValor(data.valor_principal ? String(data.valor_principal) : "");
-        setNumero(maskProcesso(data.numero_precatorio ?? ""));
-        setTribunal(data.tribunal ?? "");
-        setCpf(data.credor_cpf_cnpj ?? "");
-        setTelefone(data.credor_telefone ?? "");
-        setProcesso(maskProcesso(data.numero_processo ?? ""));
-        setNatureza(data.natureza ?? "");
-    }, [data]);
+  const [credor, setCredor] = useState(safeData.credor_nome ?? "")
+  const [advogado, setAdvogado] = useState(safeData.advogado_nome ?? "")
+  const [valor, setValor] = useState(safeData.valor_principal ? String(safeData.valor_principal) : "")
+  const [numero, setNumero] = useState(maskProcesso(safeData.numero_precatorio ?? ""))
+  const [numeroOficio, setNumeroOficio] = useState(safeData.numero_oficio ?? "")
+  const [tribunal, setTribunal] = useState(safeData.tribunal ?? "")
+  const [cpf, setCpf] = useState(safeData.credor_cpf_cnpj ?? "")
+  const [telefone, setTelefone] = useState(safeData.credor_telefone ?? "")
+  const [processo, setProcesso] = useState(maskProcesso(safeData.numero_processo ?? ""))
+  const [dataExpedicao, setDataExpedicao] = useState(safeData.data_expedicao ?? "")
+  const [natureza, setNatureza] = useState(safeData.natureza ?? "")
+  const [saving, setSaving] = useState(false)
 
-    const handleSave = async () => {
-        setSaving(true);
-        const supabase = createBrowserClient();
-        if (!supabase) {
-            toast.error("Erro interno: Cliente Supabase não inicializado");
-            setSaving(false);
-            return;
+  useEffect(() => {
+    const nextData: PrecatorioData = data ?? {}
+    setCredor(nextData.credor_nome ?? "")
+    setAdvogado(nextData.advogado_nome ?? "")
+    setValor(nextData.valor_principal ? String(nextData.valor_principal) : "")
+    setNumero(maskProcesso(nextData.numero_precatorio ?? ""))
+    setNumeroOficio(nextData.numero_oficio ?? "")
+    setTribunal(nextData.tribunal ?? "")
+    setCpf(nextData.credor_cpf_cnpj ?? "")
+    setTelefone(nextData.credor_telefone ?? "")
+    setProcesso(maskProcesso(nextData.numero_processo ?? ""))
+    setDataExpedicao(nextData.data_expedicao ?? "")
+    setNatureza(nextData.natureza ?? "")
+  }, [data])
+
+  const handleSave = async () => {
+    setSaving(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) {
+        throw new Error("Cliente Supabase nao inicializado")
+      }
+
+      if (!credor || !numero) {
+        throw new Error("Preencha os campos obrigatorios: Credor e Numero do Precatorio.")
+      }
+
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) {
+        throw new Error("Usuario nao autenticado")
+      }
+
+      const payload = {
+        criado_por: user.id,
+        credor_nome: credor,
+        advogado_nome: advogado || null,
+        valor_principal: Number(valor) || 0,
+        numero_precatorio: numero,
+        numero_oficio: numeroOficio || null,
+        tribunal,
+        credor_cpf_cnpj: cpf || null,
+        credor_telefone: telefone || null,
+        numero_processo: processo || null,
+        data_expedicao: dataExpedicao || null,
+        natureza: natureza || null,
+        status: "novo",
+        titulo: `Precatorio ${numero} - ${credor}`,
+        raw_text: safeData.raw_text || null,
+        file_url: safeData.file_url || null,
+      }
+
+      const { error } = await supabase.from("precatorios").insert([payload])
+      if (error) {
+        if (error.code === "23505") {
+          throw new Error("Numero de precatorio ja cadastrado")
         }
+        throw new Error(error.message)
+      }
 
-        if (!credor || !numero) {
-            toast.error("Por favor, preencha os campos obrigatórios (Credor e Número).");
-            setSaving(false);
-            return;
-        }
+      toast.success("Precatorio criado com sucesso")
+      onSuccess?.()
+      onOpenChange(false)
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro ao criar precatorio"
+      toast.error(message)
+    } finally {
+      setSaving(false)
+    }
+  }
 
-        const { data: { user } } = await supabase.auth.getUser();
-        if (!user) {
-            toast.error("Erro: Usuário não autenticado");
-            setSaving(false);
-            return;
-        }
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle>Criar Precatorio a partir da extracao OCR</DialogTitle>
+          <DialogDescription>
+            Revise os dados extraidos e o documento original antes de salvar.
+          </DialogDescription>
+        </DialogHeader>
 
-        const payload = {
-            criado_por: user.id,
-            credor_nome: credor,
-            valor_principal: Number(valor) || 0,
-            numero_precatorio: numero,
-            tribunal: tribunal,
-            credor_cpf_cnpj: cpf,
-            credor_telefone: telefone,
-            numero_processo: processo,
-            natureza: natureza,
-            status: "novo",
-            titulo: `Precatório ${numero} - ${credor}`, // Auto-generate title
-            // Store OCR metadata
-            raw_text: data?.raw_text,
-            file_url: data?.file_url
-        };
-        const { error } = await supabase.from("precatorios").insert([payload]);
-        if (error) {
-            if (error.code === '23505') {
-                toast.error("Erro: Este Número de Precatório já está cadastrado no sistema.");
-            } else {
-                toast.error("Erro ao criar precatório: " + error.message);
-            }
-        } else {
-            toast.success("Precatório criado com sucesso!");
-            onSuccess?.();
-            onOpenChange(false);
-        }
-        setSaving(false);
-    };
+        <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden min-h-0">
+          <div className="space-y-4 py-4 overflow-y-auto pr-2">
+            <div className="space-y-2">
+              <Label>Credor</Label>
+              <Input value={credor} onChange={(e) => setCredor(e.target.value)} placeholder="Nome do Credor" />
+            </div>
+            <div className="space-y-2">
+              <Label>Advogado</Label>
+              <Input
+                value={advogado}
+                onChange={(e) => setAdvogado(e.target.value)}
+                placeholder="Nome do Advogado"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>CPF/CNPJ do Credor</Label>
+              <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" />
+            </div>
+            <div className="space-y-2">
+              <Label>Telefone do Credor</Label>
+              <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
+            </div>
+            <div className="space-y-2">
+              <Label>Valor Principal</Label>
+              <Input type="number" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
+            </div>
+            <div className="space-y-2">
+              <Label>Numero do Precatorio</Label>
+              <Input
+                value={numero}
+                onChange={(e) => setNumero(maskProcesso(e.target.value))}
+                placeholder="0000000-00.0000.0.00.0000"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Numero do Processo (Originario)</Label>
+              <Input
+                value={processo}
+                onChange={(e) => setProcesso(maskProcesso(e.target.value))}
+                placeholder="Numeracao unica"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Numero do Oficio</Label>
+              <Input
+                value={numeroOficio}
+                onChange={(e) => setNumeroOficio(e.target.value)}
+                placeholder="12345/2025"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Data da Expedicao</Label>
+              <Input
+                type="date"
+                value={dataExpedicao}
+                onChange={(e) => setDataExpedicao(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Tribunal</Label>
+              <Input value={tribunal} onChange={(e) => setTribunal(e.target.value)} placeholder="TJSP" />
+            </div>
+            <div className="space-y-2">
+              <Label>Natureza</Label>
+              <Input value={natureza} onChange={(e) => setNatureza(e.target.value)} placeholder="Alimentar ou Comum" />
+            </div>
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
-                <DialogHeader>
-                    <DialogTitle>Criar Precatório a partir da Extração OCR</DialogTitle>
-                    <DialogDescription>Revise os dados extraídos e o documento original antes de salvar.</DialogDescription>
-                </DialogHeader>
+            {safeData.raw_text && (
+              <div className="mt-6 pt-4 border-t">
+                <Label className="text-xs text-muted-foreground mb-2 block">Texto extraido (debug)</Label>
+                <textarea
+                  className="w-full text-xs p-2 border rounded h-32 bg-muted text-muted-foreground"
+                  readOnly
+                  value={safeData.raw_text}
+                />
+              </div>
+            )}
+          </div>
 
-                <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden min-h-0">
-                    {/* Left Column: Form */}
-                    <div className="space-y-4 py-4 overflow-y-auto pr-2">
-                        <div className="space-y-2">
-                            <Label>Credor</Label>
-                            <Input value={credor} onChange={(e) => setCredor(e.target.value)} placeholder="Nome do Credor" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>CPF/CNPJ do Credor</Label>
-                            <Input value={cpf} onChange={(e) => setCpf(e.target.value)} placeholder="000.000.000-00" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Telefone do Credor</Label>
-                            <Input value={telefone} onChange={(e) => setTelefone(e.target.value)} placeholder="(00) 00000-0000" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Valor Principal</Label>
-                            <Input type="number" value={valor} onChange={(e) => setValor(e.target.value)} placeholder="0,00" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Número do Precatório</Label>
-                            <Input value={numero} onChange={(e) => setNumero(maskProcesso(e.target.value))} placeholder="0000000-00.0000.0.00.0000" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Número do Processo (Originário)</Label>
-                            <Input value={processo} onChange={(e) => setProcesso(maskProcesso(e.target.value))} placeholder="Numeração Única" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Tribunal</Label>
-                            <Input value={tribunal} onChange={(e) => setTribunal(e.target.value)} placeholder="TJSP" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Natureza</Label>
-                            <Input value={natureza} onChange={(e) => setNatureza(e.target.value)} placeholder="Alimentar ou Comum" />
-                        </div>
-
-                        {/* Debug Info (Optional - Can be removed later) */}
-                        {data?.raw_text && (
-                            <div className="mt-6 pt-4 border-t">
-                                <Label className="text-xs text-muted-foreground mb-2 block">Texto Extraído (Debug)</Label>
-                                <textarea
-                                    className="w-full text-xs p-2 border rounded h-32 bg-muted text-muted-foreground"
-                                    readOnly
-                                    value={data.raw_text}
-                                />
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right Column: PDF Viewer */}
-                    <div className="rounded-lg border bg-muted/50 overflow-hidden flex flex-col">
-                        <div className="bg-muted p-2 border-b text-xs font-medium text-center">
-                            Visualização do Documento
-                        </div>
-                        <div className="flex-1 relative">
-                            {data?.file_url ? (
-                                <iframe
-                                    src={data.file_url}
-                                    className="absolute inset-0 w-full h-full"
-                                    scrolling="yes"
-                                    title="Document Viewer"
-                                />
-                            ) : (
-                                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center">
-                                    Nenhum arquivo visualizável disponível.
-                                </div>
-                            )}
-                        </div>
-                    </div>
+          <div className="rounded-lg border bg-muted/50 overflow-hidden flex flex-col">
+            <div className="bg-muted p-2 border-b text-xs font-medium text-center">Visualizacao do Documento</div>
+            <div className="flex-1 relative">
+              {safeData.file_url ? (
+                <iframe
+                  src={safeData.file_url}
+                  className="absolute inset-0 w-full h-full"
+                  scrolling="yes"
+                  title="Document Viewer"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center text-muted-foreground text-sm p-4 text-center">
+                  Nenhum arquivo visualizavel disponivel.
                 </div>
+              )}
+            </div>
+          </div>
+        </div>
 
-                <DialogFooter className="gap-2 sm:gap-0 mt-4">
-                    <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
-                        Cancelar
-                    </Button>
-                    <Button onClick={handleSave} disabled={saving}>
-                        {saving ? "Salvando..." : "Salvar Precatório"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    );
+        <DialogFooter className="gap-2 sm:gap-0 mt-4">
+          <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
+            Cancelar
+          </Button>
+          <Button onClick={handleSave} disabled={saving}>
+            {saving ? "Salvando..." : "Salvar Precatorio"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }

@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState } from "react"
-import { useRouter } from "next/navigation"
 import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
@@ -14,7 +13,6 @@ import { useAuth } from "@/lib/auth/auth-context"
 
 export default function LoginPage() {
   const { signIn } = useAuth()
-  const router = useRouter()
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [loading, setLoading] = useState(false)
@@ -28,8 +26,12 @@ export default function LoginPage() {
 
     try {
       await signIn(email, password)
-    } catch (err: any) {
-      setError(err.message || "Erro ao fazer login. Verifique suas credenciais.")
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Erro ao fazer login. Verifique suas credenciais."
+      setError(message)
     } finally {
       setLoading(false)
     }
@@ -50,8 +52,8 @@ export default function LoginPage() {
               />
             </div>
           </div>
-          <CardTitle className="text-2xl">CRM APAX Precat\u00f3rios</CardTitle>
-          <CardDescription>Fa\u00e7a login para acessar o sistema</CardDescription>
+          <CardTitle className="text-2xl">CRM APAX Precatórios</CardTitle>
+          <CardDescription>Faça login para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -72,7 +74,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="\u2022\u2022\u2022\u2022\u2022\u2022\u2022\u2022"
+                placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -103,7 +105,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              N\u00e3o tem uma conta?{" "}
+              Não tem uma conta?{" "}
               <Link href="/register" className="text-primary hover:underline font-medium">
                 Criar conta
               </Link>

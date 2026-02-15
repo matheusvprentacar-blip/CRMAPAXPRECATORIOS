@@ -1,7 +1,11 @@
 /** @type {import('next').NextConfig} */
+const isProdBuild = process.env.NODE_ENV === "production";
+
 const nextConfig = {
   reactStrictMode: false,
-  output: "export",               // SSG para Tauri
+  // Em dev mantemos server features (ex.: route handlers) para OCR robusto.
+  // Em produção preserva export estático para o build Tauri.
+  output: isProdBuild ? "export" : undefined,
   images: { unoptimized: true },
 
   // 👉 Otimizações de produção (mantidas, mas simples)

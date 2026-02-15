@@ -3,6 +3,8 @@ param(
   [string]$Bump = "patch",
   [string]$Version,
   [string]$CommitMessage,
+  [string]$ReleaseNotes,
+  [string]$ReleaseNotesFile,
   [string]$Remote = "origin",
   [switch]$SkipPush
 )
@@ -51,6 +53,30 @@ if ($branch -eq "HEAD") {
 
 $currentVersion = Invoke-External -File "node" -Args @("-p", "require('./package.json').version") -CaptureOutput
 
+if (-not [string]::IsNullOrWhiteSpace($ReleaseNotes) -and -not [string]::IsNullOrWhiteSpace($ReleaseNotesFile)) {
+  throw "Use apenas uma opcao de notas: -ReleaseNotes ou -ReleaseNotesFile."
+}
+
+$resolvedReleaseNotes = $null
+if (-not [string]::IsNullOrWhiteSpace($ReleaseNotesFile)) {
+  $notesPath = $ReleaseNotesFile
+  if (-not [System.IO.Path]::IsPathRooted($notesPath)) {
+    $notesPath = Join-Path $repoRoot $notesPath
+  }
+  if (-not (Test-Path -LiteralPath $notesPath)) {
+    throw "Arquivo de notas nao encontrado: $ReleaseNotesFile"
+  }
+  $resolvedReleaseNotes = Get-Content -Raw -LiteralPath $notesPath
+} else {
+  $resolvedReleaseNotes = $ReleaseNotes
+}
+
+if ([string]::IsNullOrWhiteSpace($resolvedReleaseNotes)) {
+  throw "Release notes obrigatorias. Use -ReleaseNotes ""texto"" ou -ReleaseNotesFile ""caminho""."
+}
+
+$releaseNotesNormalized = $resolvedReleaseNotes.Trim()
+
 if ($Version) {
   if ($Version -ne $currentVersion) {
     Invoke-External -File "npm.cmd" -Args @("version", $Version, "--no-git-tag-version")
@@ -63,6 +89,19 @@ if ($Version) {
 
 $newVersion = Invoke-External -File "node" -Args @("-p", "require('./package.json').version") -CaptureOutput
 $tag = "v$newVersion"
+
+$releaseNotesDir = Join-Path $repoRoot "release-notes"
+if (-not (Test-Path -LiteralPath $releaseNotesDir)) {
+  New-Item -ItemType Directory -Path $releaseNotesDir | Out-Null
+}
+$releaseNotesVersionFile = Join-Path $releaseNotesDir "$tag.md"
+$releaseNotesFileContent = @(
+  "# $tag"
+  ""
+  $releaseNotesNormalized
+  ""
+) -join "`n"
+[System.IO.File]::WriteAllText($releaseNotesVersionFile, $releaseNotesFileContent)
 
 $tauriConfPath = Join-Path $repoRoot "src-tauri/tauri.conf.json"
 $tauriRaw = Get-Content -Raw $tauriConfPath
@@ -135,13 +174,15 @@ if ([string]::IsNullOrWhiteSpace($CommitMessage)) {
 }
 
 Invoke-External -File "git" -Args @("commit", "-m", $CommitMessage)
-Invoke-External -File "git" -Args @("tag", "-a", $tag, "-m", "release $tag")
+Invoke-External -File "git" -Args @("tag", "-a", $tag, "-m", "release $tag", "-m", $releaseNotesNormalized)
 
 if (-not $SkipPush) {
   Invoke-External -File "git" -Args @("push", $Remote, $branch)
   Invoke-External -File "git" -Args @("push", $Remote, $tag)
   Write-Host "Release enviada: branch $branch + tag $tag"
+  Write-Host "Notas da release: $releaseNotesVersionFile"
   Write-Host "A Action '.github/workflows/release.yml' vai gerar o updater."
 } else {
   Write-Host "Commit e tag criados localmente: $tag"
+  Write-Host "Notas da release: $releaseNotesVersionFile"
 }

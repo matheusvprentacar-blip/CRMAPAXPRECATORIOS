@@ -24,11 +24,12 @@ const DEFAULT_TEMPLATE = `[
   {
     "titulo": "Precatorio Exemplo",
     "credor_nome": "Nome do Credor",
+    "advogado_nome": "Nome do Advogado",
+    "natureza": "Comum",
     "numero_precatorio": "0000000-00.0000.0.00.0000",
     "numero_processo": "0000000-00.0000.0.00.0000",
     "tribunal": "TJSP",
-    "valor_principal": 1000000,
-    "file_url": "https://.../oficio.pdf"
+    "valor_principal": 1000000
   }
 ]`
 
@@ -85,8 +86,6 @@ const ALLOWED_COLUMNS = new Set([
   "data_base",
   "data_expedicao",
   "data_calculo",
-  "file_url",
-  "pdf_url",
   "status",
   "status_kanban",
   "localizacao_kanban",
@@ -117,6 +116,23 @@ const NUMERIC_FIELDS = new Set([
   "proposta_menor_valor",
   "proposta_maior_valor",
 ])
+
+function normalizeNatureza(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined
+
+  const raw = String(value).trim()
+  if (!raw) return undefined
+
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+
+  if (normalized.includes("alimentar")) return "Alimentar"
+  if (normalized.includes("comum")) return "Comum"
+
+  return raw
+}
 
 function normalizeTemplate(raw: string): TemplateItem[] {
   const parsed = JSON.parse(raw)
@@ -255,8 +271,24 @@ function sanitizePayload(item: TemplateItem, index: number, createdById?: string
     payload.tribunal = item.vara_origem
   }
 
-  if (!payload.file_url && item?.pdf_url) {
-    payload.file_url = item.pdf_url
+  if (!payload.advogado_nome && typeof item?.advogado === "string" && item.advogado.trim()) {
+    payload.advogado_nome = item.advogado.trim()
+  }
+
+  if (!payload.advogado_nome && typeof item?.advogado?.nome === "string" && item.advogado.nome.trim()) {
+    payload.advogado_nome = item.advogado.nome.trim()
+  }
+
+  const naturezaFonte =
+    payload.natureza ??
+    item?.natureza ??
+    item?.tipo_natureza ??
+    item?.natureza_precatorio ??
+    item?.tipo_precatorio ??
+    item?.comum_ou_alimentar
+  const naturezaNormalizada = normalizeNatureza(naturezaFonte)
+  if (naturezaNormalizada) {
+    payload.natureza = naturezaNormalizada
   }
 
   payload.titulo = buildTitulo({ ...item, titulo: payload.titulo }, index)
@@ -488,6 +520,11 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
 
               <div className="space-y-2">
                 <Label>Template JSON</Label>
+                <p className="text-xs text-muted-foreground">
+                  Campos recomendados: <code>credor_nome</code>, <code>advogado_nome</code>,{" "}
+                  <code>natureza</code> (Comum ou Alimentar), <code>numero_precatorio</code> e{" "}
+                  <code>valor_principal</code>. O campo <code>file_url</code> nao e aceito neste template.
+                </p>
                 <Textarea
                   value={rawJson}
                   onChange={(e) => setRawJson(e.target.value)}

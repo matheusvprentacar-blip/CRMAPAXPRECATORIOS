@@ -29,6 +29,7 @@ import {
   MessageSquare,
   DollarSign,
   FileSearch,
+  Megaphone,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -48,6 +49,7 @@ import Image from "next/image"
 import { NotificationsProvider } from "@/components/notifications/useNotifications"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { NotificationsModal } from "@/components/notifications/NotificationsModal"
+import { ComunicadosBroadcastModal } from "@/components/comunicados/comunicados-broadcast-modal"
 import { getVersion } from "@tauri-apps/api/app"
 import packageJson from "@/package.json"
 
@@ -81,6 +83,23 @@ const navigation = [
     href: "/chat",
     icon: MessageSquare,
     roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor", "juridico"],
+  },
+  {
+    name: "Comunicados",
+    href: "/comunicados",
+    icon: Megaphone,
+    roles: [
+      "admin",
+      "operador_comercial",
+      "operador_calculo",
+      "operador",
+      "gestor",
+      "juridico",
+      "gestor_certidoes",
+      "gestor_oficio",
+      "financeiro",
+      "analista",
+    ],
   },
   {
     name: "Propostas",
@@ -141,11 +160,15 @@ const navigation = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+  const DEFAULT_UI_ZOOM = 0.8
+  const UI_ZOOM_STORAGE_KEY = "ui_zoom"
+  const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_80_applied"
+
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { profile, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
-  const [uiZoom, setUiZoom] = useState(1)
+  const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
   const baseFontSizeRef = useRef<number | null>(null)
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -153,7 +176,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
   const [appVersion, setAppVersion] = useState<string>(packageJson.version)
 
-  const ZOOM_MIN = 0.85
+  const ZOOM_MIN = 0.65
   const ZOOM_MAX = 1.15
   const ZOOM_STEP = 0.05
 
@@ -189,21 +212,36 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const savedZoom = window.localStorage.getItem("ui_zoom")
-    if (!savedZoom) return
+    const savedZoom = window.localStorage.getItem(UI_ZOOM_STORAGE_KEY)
+    const migrationApplied = window.localStorage.getItem(UI_ZOOM_MIGRATION_KEY) === "true"
+
+    if (!savedZoom) {
+      window.localStorage.setItem(UI_ZOOM_STORAGE_KEY, String(DEFAULT_UI_ZOOM))
+      window.localStorage.setItem(UI_ZOOM_MIGRATION_KEY, "true")
+      setUiZoom(DEFAULT_UI_ZOOM)
+      return
+    }
+
     const parsed = Number(savedZoom)
-    if (Number.isNaN(parsed)) return
-    if (!Number.isFinite(parsed)) return
-    const sanitized = parsed < ZOOM_MIN || parsed > ZOOM_MAX ? 1 : parsed
+    const invalid = Number.isNaN(parsed) || !Number.isFinite(parsed)
+    const outOfRange = parsed < ZOOM_MIN || parsed > ZOOM_MAX
+
+    // Migra usuários do padrão antigo (100%) para o novo padrão (80%) uma vez.
+    const migratedDefault = !migrationApplied && parsed === 1
+
+    const sanitized = invalid || outOfRange || migratedDefault ? DEFAULT_UI_ZOOM : parsed
     if (sanitized !== parsed) {
-      window.localStorage.setItem("ui_zoom", String(sanitized))
+      window.localStorage.setItem(UI_ZOOM_STORAGE_KEY, String(sanitized))
+    }
+    if (!migrationApplied || migratedDefault) {
+      window.localStorage.setItem(UI_ZOOM_MIGRATION_KEY, "true")
     }
     setUiZoom(sanitized)
   }, [])
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    window.localStorage.setItem("ui_zoom", String(uiZoom))
+    window.localStorage.setItem(UI_ZOOM_STORAGE_KEY, String(uiZoom))
 
     if (!baseFontSizeRef.current) {
       const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
@@ -252,7 +290,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const zoomPercent = Math.round(uiZoom * 100)
   const handleZoomOut = () => setUiZoom((value) => clampZoom(Number((value - ZOOM_STEP).toFixed(2))))
   const handleZoomIn = () => setUiZoom((value) => clampZoom(Number((value + ZOOM_STEP).toFixed(2))))
-  const handleZoomReset = () => setUiZoom(1)
+  const handleZoomReset = () => setUiZoom(DEFAULT_UI_ZOOM)
 
 
   const profileMenu = (
@@ -302,7 +340,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </DropdownMenuItem>
         <DropdownMenuItem onClick={handleZoomReset}>
           <RotateCcw className="w-4 h-4 mr-2" />
-          Voltar para 100%
+          Voltar para {Math.round(DEFAULT_UI_ZOOM * 100)}%
         </DropdownMenuItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={() => signOut()}>
@@ -452,6 +490,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
       </div>
       <NotificationsModal />
+      <ComunicadosBroadcastModal />
       </NotificationsProvider>
     </ProtectedRoute>
   )

@@ -48,6 +48,33 @@ jobs:
       - name: Build Next.js
         run: npm run build
 
+      - name: Resolve Release Notes
+        id: release_notes
+        shell: pwsh
+        run: |
+          $tagName = $env:GITHUB_REF_NAME
+
+          if ([string]::IsNullOrWhiteSpace($tagName) -or $env:GITHUB_REF_TYPE -ne "tag") {
+            $tagName = (git describe --tags --abbrev=0)
+          }
+
+          if ([string]::IsNullOrWhiteSpace($tagName)) {
+            Write-Error "Nao foi possivel identificar a tag da release."
+            exit 1
+          }
+
+          $notes = git for-each-ref "refs/tags/$tagName" --format='%(contents)'
+          if ([string]::IsNullOrWhiteSpace($notes)) {
+            Write-Error "Tag $tagName sem notas. Use -ReleaseNotes ou -ReleaseNotesFile no release:update."
+            exit 1
+          }
+
+          $notes = $notes.Trim()
+          "tag_name=$tagName" >> $env:GITHUB_OUTPUT
+          "release_body<<EOF" >> $env:GITHUB_OUTPUT
+          $notes >> $env:GITHUB_OUTPUT
+          "EOF" >> $env:GITHUB_OUTPUT
+
       - name: Build Tauri and Create Release
         uses: tauri-apps/tauri-action@v0
         env:
@@ -55,9 +82,9 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || secrets.TAURI_SIGNING_KEY_PASSWORD }}
         with:
-          tagName: v__VERSION__
-          releaseName: "v__VERSION__"
-          releaseBody: "See the assets to download this version and install."
+          tagName: ${{ steps.release_notes.outputs.tag_name }}
+          releaseName: ${{ steps.release_notes.outputs.tag_name }}
+          releaseBody: ${{ steps.release_notes.outputs.release_body }}
           releaseDraft: false
           prerelease: false
           includeUpdaterJson: true

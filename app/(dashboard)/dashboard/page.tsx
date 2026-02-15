@@ -26,6 +26,7 @@ import { DelayBottlenecks } from "@/components/dashboard/delay-bottlenecks"
 import { PerformanceMetrics } from "@/components/dashboard/performance-metrics"
 import { OperatorDistribution } from "@/components/dashboard/operator-distribution"
 import { CriticalPrecatorios } from "@/components/dashboard/critical-precatorios"
+import { FinancialFlowSankey } from "@/components/dashboard/financial-flow-sankey"
 import { MetricCard } from "@/components/dashboard/metric-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -34,6 +35,7 @@ import { Progress } from "@/components/ui/progress"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Separator } from "@/components/ui/separator"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/utils/currency"
 import { KANBAN_COLUMNS } from "@/app/(dashboard)/kanban/columns"
 import type {
@@ -157,7 +159,6 @@ type Chart3DCardProps = {
   valueFormatter?: (value: number) => string
   emptyLabel?: string
   height?: number
-  showLegend?: boolean
 }
 const DEFAULT_KPIS: DashboardKpis = {
   periodo: { inicio: null, fim: null },
@@ -493,16 +494,50 @@ function Chart3DCard({
   rows,
   valueFormatter = formatCount,
   emptyLabel = "Sem dados disponiveis",
-  height = 420,
-  showLegend = true,
+  height = 360,
 }: Chart3DCardProps) {
-  const maxValue = rows.reduce((max, row) => Math.max(max, row.value), 0) || 1
-  const gridSteps = [1, 0.75, 0.5, 0.25]
-  const valueLabelHeight = 0
-  const barAreaHeight = Math.max(160, height - valueLabelHeight)
+  const isCurrency = valueFormatter(1).includes("R$")
+  const compactFormatter = (value: number) =>
+    isCurrency
+      ? new Intl.NumberFormat("pt-BR", {
+          style: "currency",
+          currency: "BRL",
+          notation: "compact",
+          maximumFractionDigits: 1,
+        }).format(value)
+      : new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1 }).format(value)
+
+  const chartData = rows.map((row, index) => ({
+    id: `${row.label}-${index}`,
+    name: row.label,
+    value: row.value,
+    color: `hsl(var(--chart-${(index % 5) + 1}))`,
+  }))
+
+  const chartHeight = Math.max(280, Math.min(560, rows.length * 36))
+
+  function KanbanBarTooltip({
+    active,
+    payload,
+  }: {
+    active?: boolean
+    payload?: Array<{ payload?: { name?: string; value?: number }; value?: number }>
+  }) {
+    if (!active || !payload?.length) return null
+
+    const item = payload[0]?.payload
+    const value = Number(item?.value ?? payload[0]?.value ?? 0)
+
+    return (
+      <div className="rounded-md border border-border/70 bg-background/95 p-2 text-xs shadow-lg">
+        <p className="font-medium text-foreground">{item?.name ?? "Item"}</p>
+        <p className="mt-1 font-mono tabular-nums text-muted-foreground">{valueFormatter(value)}</p>
+      </div>
+    )
+  }
 
   return (
-    <Card>
+    <Card className="overflow-hidden border-zinc-200/70 dark:border-zinc-800/70">
       <CardHeader>
         <CardTitle>{title}</CardTitle>
         {description && <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{description}</p>}
@@ -511,96 +546,26 @@ function Chart3DCard({
         {rows.length === 0 ? (
           <div className="py-8 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300">{emptyLabel}</div>
         ) : (
-          <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_220px]">
-            <div className="overflow-x-auto">
-              <div className="min-w-[360px]">
-                <div className="relative" style={{ height }}>
-                  <div
-                    className="pointer-events-none absolute left-0 right-0"
-                    style={{ top: valueLabelHeight, height: barAreaHeight }}
-                  >
-                    {gridSteps.map((step) => (
-                      <div
-                        key={step}
-                        className="absolute left-0 right-0 border-t border-dashed border-zinc-200/60 dark:border-zinc-700/60"
-                        style={{ bottom: `${step * 100}%` }}
-                      >
-                      </div>
-                    ))}
-                  </div>
-                  <div className="relative grid grid-flow-col auto-cols-[minmax(54px,1fr)] items-end gap-2 pb-3 pt-2 h-full">
-                    {rows.map((row, index) => {
-                      const slot = (index % 5) + 1
-                      const baseColor = `hsl(var(--chart-${slot}))`
-                      const sideColor = `hsl(var(--chart-${slot}) / 0.85)`
-                      const topColor = `hsl(var(--chart-${slot}) / 0.6)`
-                      const ratio = row.value / maxValue
-                      const barHeight = Math.max(6, Math.round(ratio * barAreaHeight))
-                      return (
-                        <div key={`${row.label}-${index}`} className="flex flex-col items-center gap-1 h-full">
-                          <div className="relative flex items-end" style={{ height: barAreaHeight }}>
-                            <div className="relative w-8 h-full group" title={`${row.label}: ${valueFormatter(row.value)}`}>
-                              <div
-                                className="absolute bottom-0 left-0 w-full rounded-t-md shadow-[0_16px_35px_-20px_rgba(0,0,0,0.8)]"
-                                style={{
-                                  height: `${barHeight}px`,
-                                  background: `linear-gradient(180deg, ${baseColor} 0%, ${sideColor} 100%)`,
-                                }}
-                              />
-                              <div
-                                className="absolute bottom-0 -right-2 w-2 rounded-tr-md"
-                                style={{
-                                  height: `${barHeight}px`,
-                                  background: `linear-gradient(180deg, ${sideColor} 0%, ${baseColor} 100%)`,
-                                  transform: "skewY(-12deg)",
-                                  transformOrigin: "bottom left",
-                                }}
-                              />
-                              <div
-                                className="absolute -top-2 left-0 w-full h-2 rounded-t-md"
-                                style={{
-                                  background: `linear-gradient(90deg, ${topColor} 0%, ${baseColor} 100%)`,
-                                  transform: "skewX(-12deg)",
-                                  transformOrigin: "bottom left",
-                                }}
-                              />
-                            </div>
-                          </div>
-                        </div>
-                      )
-                    })}
-                  </div>
-                </div>
-                <div className="h-px bg-gradient-to-r from-transparent via-zinc-200/70 to-transparent dark:via-zinc-700/60" />
-              </div>
-            </div>
-            {showLegend && (
-              <div className="rounded-xl border border-zinc-200/70 bg-zinc-50/40 p-3 dark:border-zinc-800/60 dark:bg-zinc-900/30">
-                <p className="text-xs font-semibold uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
-                  Legenda
-                </p>
-                <div className="mt-3 space-y-2">
-                  {rows.map((row, index) => {
-                    const slot = (index % 5) + 1
-                    const dotColor = `hsl(var(--chart-${slot}))`
-                      return (
-                        <div key={`${row.label}-${index}`} className="flex items-center justify-between gap-3 text-xs">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="h-2.5 w-2.5 rounded-full shadow-[0_0_8px_rgba(255,255,255,0.25)]"
-                            style={{ background: dotColor }}
-                          />
-                          <span className="line-clamp-1 text-zinc-600 dark:text-zinc-300">{row.label}</span>
-                        </div>
-                        <span className="font-mono tabular-nums text-zinc-500 dark:text-zinc-400">
-                          {valueFormatter(row.value)}
-                        </span>
-                      </div>
-                    )
-                  })}
-                </div>
-              </div>
-            )}
+          <div className="w-full" style={{ height: Math.max(chartHeight, height) }}>
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={chartData} layout="vertical" margin={{ top: 10, right: 64, bottom: 10, left: 10 }}>
+                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={compactFormatter} />
+                <YAxis type="category" dataKey="name" width={170} tickLine={false} axisLine={false} />
+                <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.35)" }} content={<KanbanBarTooltip />} />
+                <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+                  <LabelList
+                    dataKey="value"
+                    position="right"
+                    className="fill-muted-foreground text-[11px] font-medium"
+                    formatter={compactFormatter}
+                  />
+                  {chartData.map((entry) => (
+                    <Cell key={entry.id} fill={entry.color} />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
           </div>
         )}
       </CardContent>
@@ -1040,6 +1005,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
+      <FinancialFlowSankey
+        loading={refreshing}
+        data={{
+          saldoLiquido: kpis.resumo.total_saldo_liquido,
+          pssTotal: kpis.financeiro.pss_total,
+          irpfTotal: kpis.financeiro.irpf_total,
+          honorariosTotal: kpis.financeiro.honorarios_total,
+          adiantamentoTotal: kpis.financeiro.adiantamento_total,
+          irpfIsento: kpis.financeiro.irpf_isento,
+          irpfNaoIsento: kpis.financeiro.irpf_nao_isento,
+        }}
+      />
+
       <section className={sectionClass("summary")}>
         <div>
           <h2 className="text-lg font-semibold">Resumo geral</h2>
@@ -1122,20 +1100,6 @@ export default function DashboardPage() {
             className="border-teal-200/70 bg-teal-50/70 dark:border-teal-900/40 dark:bg-teal-950/30"
           />
         </div>
-        <Card>
-          <CardHeader>
-            <CardTitle>IRPF isento</CardTitle>
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Distribuicao de isencao</p>
-          </CardHeader>
-          <CardContent className="flex flex-wrap gap-3">
-            <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 font-mono tabular-nums">
-              Isento: {formatCount(kpis.financeiro.irpf_isento)}
-            </Badge>
-            <Badge className="bg-rose-100 text-rose-800 border border-rose-200 font-mono tabular-nums">
-              Nao isento: {formatCount(kpis.financeiro.irpf_nao_isento)}
-            </Badge>
-          </CardContent>
-        </Card>
       </section>
       <section className={sectionClass("period")}>
         <div>

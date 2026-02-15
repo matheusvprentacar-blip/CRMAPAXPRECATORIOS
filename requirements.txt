@@ -1,0 +1,12 @@
+numpy>=1.26
+opencv-python-headless>=4.10
+Pillow>=10.4
+PyMuPDF>=1.24
+pytesseract>=0.3.10
+pydantic>=2.9
+jsonschema>=4.23
+python-dateutil>=2.9
+tqdm>=4.66
+pytest>=8.3
+paddleocr>=3.4
+rapidocr-onnxruntime>=1.2

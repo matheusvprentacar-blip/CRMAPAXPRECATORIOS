@@ -37,6 +37,14 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Label } from "@/components/ui/label"
 import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
   Dialog,
   DialogContent,
   DialogDescription,
@@ -1123,18 +1131,26 @@ export default function AdminPrecatoriosPage() {
             <p className="text-muted-foreground">Gerencie seus precatórios e distribua para operadores</p>
           </div>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={() => setImportModalOpen(true)}>
-              <FileText className="h-4 w-4 mr-2" />
-              Importar (OCR)
-            </Button>
-            <Button variant="outline" onClick={() => setTemplateModalOpen(true)}>
-              <FileText className="h-4 w-4 mr-2" />
-              Template JSON
-            </Button>
-            <Button onClick={() => setUploadOficiosOpen(true)}>
-              <Plus className="h-4 w-4 mr-2" />
-              Upload de Ofícios
-            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button>
+                  <Plus className="h-4 w-4 mr-2" />
+                  Importação Admin
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>Escolha o fluxo</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem onClick={() => setImportModalOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Upload de Ofícios
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => setTemplateModalOpen(true)}>
+                  <FileText className="h-4 w-4 mr-2" />
+                  Template JSON
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </div>
 
@@ -1294,7 +1310,7 @@ export default function AdminPrecatoriosPage() {
                       {filtroTab === "todos" && "Faça upload dos ofícios requisitórios"}
                     </p>
                     {filtroTab === "todos" && (
-                      <Button onClick={() => setUploadOficiosOpen(true)}>
+                      <Button onClick={() => setImportModalOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Upload de Ofícios
                       </Button>
@@ -1470,34 +1486,6 @@ export default function AdminPrecatoriosPage() {
             </Tabs>
           </CardContent>
         </Card>
-
-        {/* Modal de Upload de Ofícios */}
-        <UploadOficiosModal
-          open={uploadOficiosOpen}
-          onOpenChange={setUploadOficiosOpen}
-          onSuccess={() => loadData()}
-        />
-
-        <ModalImportarPrecatorio
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          onSuccess={() => loadData()}
-          onExtracted={(data) => {
-            setOcrData(data);
-            setImportModalOpen(false);
-            setCreateModalOpen(true);
-          }}
-        />
-
-        <ModalCriarPrecatorio
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          data={ocrData ?? {}}
-          onSuccess={() => {
-            loadData();
-            setOcrData(null);
-          }}
-        />
 
         {/* Dialog de Distribuicao Automatica */}
         <Dialog open={autoDistribDialogOpen} onOpenChange={setAutoDistribDialogOpen}>
@@ -1890,7 +1878,7 @@ export default function AdminPrecatoriosPage() {
         <ModalCriarPrecatorio
           open={createModalOpen}
           onOpenChange={setCreateModalOpen}
-          data={ocrData as any}
+          data={ocrData ?? undefined}
           onSuccess={() => {
             setCreateModalOpen(false)
             setOcrData(null)
