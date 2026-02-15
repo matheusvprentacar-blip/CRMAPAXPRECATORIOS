@@ -3,7 +3,6 @@ import { randomUUID } from "node:crypto"
 import { extractPdfWithRobustPipeline, type OcrMode } from "@/lib/server/ocr-pipeline"
 
 export const runtime = "nodejs"
-export const dynamic = "force-dynamic"
 
 const VALID_MODES: OcrMode[] = ["auto", "fast", "premium"]
 
