@@ -7,7 +7,7 @@
 !macroend
 
 !macro NSIS_HOOK_PREUNINSTALL
-  Call RemoveMainShortcuts
+  Call un.RemoveMainShortcuts
 !macroend
 
 Function TryUninstallHKCU
@@ -121,7 +121,7 @@ Function EnsureMainShortcuts
 done_shortcuts:
 FunctionEnd
 
-Function RemoveMainShortcuts
+Function un.RemoveMainShortcuts
   Delete "$SMPROGRAMS\Apax Investimentos\CRM APAX Precatorios.lnk"
   RMDir "$SMPROGRAMS\Apax Investimentos"
   Delete "$DESKTOP\CRM APAX Precatorios.lnk"
