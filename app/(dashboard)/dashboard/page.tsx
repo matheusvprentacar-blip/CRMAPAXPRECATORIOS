@@ -26,7 +26,6 @@ import { DelayBottlenecks } from "@/components/dashboard/delay-bottlenecks"
 import { PerformanceMetrics } from "@/components/dashboard/performance-metrics"
 import { OperatorDistribution } from "@/components/dashboard/operator-distribution"
 import { CriticalPrecatorios } from "@/components/dashboard/critical-precatorios"
-import { FinancialFlowSankey } from "@/components/dashboard/financial-flow-sankey"
 import { MetricCard } from "@/components/dashboard/metric-card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -514,7 +513,7 @@ function Chart3DCard({
     color: `hsl(var(--chart-${(index % 5) + 1}))`,
   }))
 
-  const chartHeight = Math.max(280, Math.min(560, rows.length * 36))
+  const chartHeight = Math.max(320, Math.min(620, rows.length * 48))
 
   function KanbanBarTooltip({
     active,
@@ -529,9 +528,9 @@ function Chart3DCard({
     const value = Number(item?.value ?? payload[0]?.value ?? 0)
 
     return (
-      <div className="rounded-md border border-border/70 bg-background/95 p-2 text-xs shadow-lg">
-        <p className="font-medium text-foreground">{item?.name ?? "Item"}</p>
-        <p className="mt-1 font-mono tabular-nums text-muted-foreground">{valueFormatter(value)}</p>
+      <div className="rounded-lg border border-zinc-300 bg-white/95 p-3 text-sm shadow-2xl dark:border-zinc-700 dark:bg-zinc-950/95">
+        <p className="font-semibold text-foreground">{item?.name ?? "Item"}</p>
+        <p className="mt-1 font-mono text-base tabular-nums text-foreground">{valueFormatter(value)}</p>
       </div>
     )
   }
@@ -548,16 +547,29 @@ function Chart3DCard({
         ) : (
           <div className="w-full" style={{ height: Math.max(chartHeight, height) }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={chartData} layout="vertical" margin={{ top: 10, right: 64, bottom: 10, left: 10 }}>
+              <BarChart data={chartData} layout="vertical" margin={{ top: 12, right: 112, bottom: 12, left: 12 }}>
                 <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={compactFormatter} />
-                <YAxis type="category" dataKey="name" width={170} tickLine={false} axisLine={false} />
+                <XAxis
+                  type="number"
+                  tickLine={false}
+                  axisLine={false}
+                  tickFormatter={compactFormatter}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  type="category"
+                  dataKey="name"
+                  width={220}
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 13 }}
+                />
                 <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.35)" }} content={<KanbanBarTooltip />} />
                 <Bar dataKey="value" radius={[0, 8, 8, 0]}>
                   <LabelList
                     dataKey="value"
                     position="right"
-                    className="fill-muted-foreground text-[11px] font-medium"
+                    className="fill-foreground text-xs font-semibold"
                     formatter={compactFormatter}
                   />
                   {chartData.map((entry) => (
@@ -966,6 +978,15 @@ export default function DashboardPage() {
 
   const kanbanQuantidadeRows = buildRows(kpis.kanban.quantidade_por_status, formatKanbanStatus)
   const kanbanValorRows = buildRows(kpis.kanban.valor_por_status, formatKanbanStatus)
+  const financeiroConsolidadoRows: SimpleTableRow[] = [
+    { label: "Total valor principal", value: kpis.resumo.total_principal },
+    { label: "Total valor atualizado", value: kpis.resumo.total_atualizado },
+    { label: "Saldo liquido", value: kpis.resumo.total_saldo_liquido },
+    { label: "Honorarios total", value: kpis.financeiro.honorarios_total },
+    { label: "IRPF total", value: kpis.financeiro.irpf_total },
+    { label: "Adiantamento total", value: kpis.financeiro.adiantamento_total },
+    { label: "PSS total", value: kpis.financeiro.pss_total },
+  ].filter((row) => row.value > 0)
   const propostaStatusRows = buildRows(kpis.propostas.por_status, humanizeKey)
   const usuarioRoleRows = buildRows(kpis.usuarios.por_role, humanizeKey)
   const juridicoParecerRows = buildRows(kpis.juridico.parecer_por_status, humanizeKey)
@@ -1005,62 +1026,19 @@ export default function DashboardPage() {
         </div>
       </div>
 
-      <FinancialFlowSankey
-        loading={refreshing}
-        data={{
-          saldoLiquido: kpis.resumo.total_saldo_liquido,
-          pssTotal: kpis.financeiro.pss_total,
-          irpfTotal: kpis.financeiro.irpf_total,
-          honorariosTotal: kpis.financeiro.honorarios_total,
-          adiantamentoTotal: kpis.financeiro.adiantamento_total,
-          irpfIsento: kpis.financeiro.irpf_isento,
-          irpfNaoIsento: kpis.financeiro.irpf_nao_isento,
-        }}
-      />
-
-      <section className={sectionClass("summary")}>
-        <div>
-          <h2 className="text-lg font-semibold">Resumo geral</h2>
-          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Visao macro do sistema</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            title="Total precatorios"
-            value={formatCount(kpis.resumo.total_precatorios)}
-            subtitle="Todos ativos"
-            icon={Layers}
-            className="border-sky-200/70 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/30"
-          />
-          <MetricCard
-            title="Total credores"
-            value={formatCount(kpis.resumo.total_credores)}
-            subtitle="Base cadastrada"
-            icon={Users}
-            className="border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/30"
-          />
-          <MetricCard
-            title="Total propostas"
-            value={formatCount(kpis.resumo.total_propostas)}
-            subtitle="Em qualquer status"
-            icon={FileText}
-            className="border-amber-200/70 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/30"
-          />
-          <MetricCard
-            title="Mensagens nao lidas"
-            value={formatCount(kpis.chat.mensagens_nao_lidas)}
-            subtitle="Chat do sistema"
-            icon={MessageSquare}
-            variant={kpis.chat.mensagens_nao_lidas > 0 ? "warning" : "success"}
-            className="border-rose-200/70 bg-rose-50/70 dark:border-rose-900/40 dark:bg-rose-950/30"
-          />
-        </div>
-      </section>
-
       <section className={sectionClass("finance")}>
         <div>
           <h2 className="text-lg font-semibold">Financeiro</h2>
           <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Totais consolidados e tributos</p>
         </div>
+        <Chart3DCard
+          title="Consolidado financeiro"
+          description="Passe o mouse nas barras para ver os valores completos."
+          rows={financeiroConsolidadoRows}
+          valueFormatter={formatCurrency}
+          emptyLabel="Sem dados financeiros"
+          height={420}
+        />
         <FinancialOverview data={financialData} loading={refreshing} />
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
           <MetricCard
@@ -1101,6 +1079,45 @@ export default function DashboardPage() {
           />
         </div>
       </section>
+
+      <section className={sectionClass("summary")}>
+        <div>
+          <h2 className="text-lg font-semibold">Resumo geral</h2>
+          <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Visao macro do sistema</p>
+        </div>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <MetricCard
+            title="Total precatorios"
+            value={formatCount(kpis.resumo.total_precatorios)}
+            subtitle="Todos ativos"
+            icon={Layers}
+            className="border-sky-200/70 bg-sky-50/70 dark:border-sky-900/40 dark:bg-sky-950/30"
+          />
+          <MetricCard
+            title="Total credores"
+            value={formatCount(kpis.resumo.total_credores)}
+            subtitle="Base cadastrada"
+            icon={Users}
+            className="border-emerald-200/70 bg-emerald-50/70 dark:border-emerald-900/40 dark:bg-emerald-950/30"
+          />
+          <MetricCard
+            title="Total propostas"
+            value={formatCount(kpis.resumo.total_propostas)}
+            subtitle="Em qualquer status"
+            icon={FileText}
+            className="border-amber-200/70 bg-amber-50/70 dark:border-amber-900/40 dark:bg-amber-950/30"
+          />
+          <MetricCard
+            title="Mensagens nao lidas"
+            value={formatCount(kpis.chat.mensagens_nao_lidas)}
+            subtitle="Chat do sistema"
+            icon={MessageSquare}
+            variant={kpis.chat.mensagens_nao_lidas > 0 ? "warning" : "success"}
+            className="border-rose-200/70 bg-rose-50/70 dark:border-rose-900/40 dark:bg-rose-950/30"
+          />
+        </div>
+      </section>
+
       <section className={sectionClass("period")}>
         <div>
           <h2 className="text-lg font-semibold">Periodo selecionado</h2>

@@ -2,6 +2,14 @@
   Call RemoveLegacyCrmApxInstalls
 !macroend
 
+!macro NSIS_HOOK_POSTINSTALL
+  Call EnsureMainShortcuts
+!macroend
+
+!macro NSIS_HOOK_PREUNINSTALL
+  Call RemoveMainShortcuts
+!macroend
+
 Function TryUninstallHKCU
   ReadRegStr $R2 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\$R1" "DisplayName"
   StrCmp $R2 "" done_hkcu
@@ -100,4 +108,21 @@ loop_hklm_32:
   Goto loop_hklm_32
 done_hklm_32:
   SetRegView 64
+FunctionEnd
+
+Function EnsureMainShortcuts
+  StrCpy $R0 "$INSTDIR\app.exe"
+  IfFileExists "$R0" 0 done_shortcuts
+
+  CreateDirectory "$SMPROGRAMS\Apax Investimentos"
+  CreateShortCut "$SMPROGRAMS\Apax Investimentos\CRM APAX Precatorios.lnk" "$R0"
+  CreateShortCut "$DESKTOP\CRM APAX Precatorios.lnk" "$R0"
+
+done_shortcuts:
+FunctionEnd
+
+Function RemoveMainShortcuts
+  Delete "$SMPROGRAMS\Apax Investimentos\CRM APAX Precatorios.lnk"
+  RMDir "$SMPROGRAMS\Apax Investimentos"
+  Delete "$DESKTOP\CRM APAX Precatorios.lnk"
 FunctionEnd
