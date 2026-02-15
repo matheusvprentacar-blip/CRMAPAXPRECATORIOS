@@ -1,7 +1,9 @@
-import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2"
 
-export const runtime = "nodejs"
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+}
 
 type AiRequestBody = {
   title?: string
@@ -18,13 +20,19 @@ type AiResponseShape = {
 
 type Tone = "formal" | "direto" | "inspirador" | "neutro"
 
+function jsonResponse(payload: unknown, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: {
+      ...corsHeaders,
+      "Content-Type": "application/json",
+    },
+  })
+}
+
 function normalizeRoles(input: unknown): string[] {
-  if (Array.isArray(input)) {
-    return input.map((item) => String(item).trim()).filter(Boolean)
-  }
-  if (typeof input === "string" && input.trim().length > 0) {
-    return [input.trim()]
-  }
+  if (Array.isArray(input)) return input.map((item) => String(item).trim()).filter(Boolean)
+  if (typeof input === "string" && input.trim().length > 0) return [input.trim()]
   return []
 }
 
@@ -36,7 +44,7 @@ function normalizeTone(value: string | undefined): Tone {
   return "neutro"
 }
 
-function getErrorMessage(error: unknown): string {
+function toErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message
   if (typeof error === "object" && error && "message" in error) {
     const message = (error as { message?: unknown }).message
@@ -105,20 +113,34 @@ ${message}
 `.trim()
 }
 
-export async function POST(request: Request) {
-  try {
-    const supabase = await createServerSupabaseClient()
-    if (!supabase) {
-      return NextResponse.json({ error: "Supabase nao configurado no servidor." }, { status: 500 })
-    }
+Deno.serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders })
+  }
 
+  try {
+    const supabase = createClient(
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
+      {
+        auth: {
+          autoRefreshToken: false,
+          persistSession: false,
+        },
+      }
+    )
+
+    const authHeader = req.headers.get("Authorization")
+    if (!authHeader) return jsonResponse({ error: "Nao autenticado." }, 401)
+
+    const token = authHeader.replace("Bearer ", "")
     const {
       data: { user },
       error: authError,
-    } = await supabase.auth.getUser()
+    } = await supabase.auth.getUser(token)
 
     if (authError || !user) {
-      return NextResponse.json({ error: "Nao autenticado." }, { status: 401 })
+      return jsonResponse({ error: "Nao autenticado." }, 401)
     }
 
     const { data: profile, error: profileError } = await supabase
@@ -128,30 +150,36 @@ export async function POST(request: Request) {
       .single()
 
     if (profileError) {
-      return NextResponse.json({ error: "Nao foi possivel validar perfil." }, { status: 403 })
+      return jsonResponse({ error: "Nao foi possivel validar perfil." }, 403)
     }
 
     const roles = normalizeRoles(profile?.role)
     if (!roles.includes("admin")) {
-      return NextResponse.json({ error: "Apenas admin pode usar este recurso." }, { status: 403 })
+      return jsonResponse({ error: "Apenas admin pode usar este recurso." }, 403)
     }
 
-    const body = (await request.json()) as AiRequestBody
+    let body: AiRequestBody
+    try {
+      body = (await req.json()) as AiRequestBody
+    } catch {
+      return jsonResponse({ error: "Corpo da requisicao invalido." }, 400)
+    }
+
     const title = String(body?.title || "").trim()
     const message = String(body?.message || "").trim()
     const tone = normalizeTone(body?.tone)
 
     if (!message) {
-      return NextResponse.json({ error: "Mensagem e obrigatoria." }, { status: 400 })
+      return jsonResponse({ error: "Mensagem e obrigatoria." }, 400)
     }
 
     if (message.length > 12000) {
-      return NextResponse.json({ error: "Mensagem excede o limite de tamanho." }, { status: 400 })
+      return jsonResponse({ error: "Mensagem excede o limite de tamanho." }, 400)
     }
 
-    const apiKey = process.env.OPENAI_API_KEY
+    const apiKey = Deno.env.get("OPENAI_API_KEY")
     if (!apiKey) {
-      return NextResponse.json({ error: "OPENAI_API_KEY nao configurada no servidor." }, { status: 500 })
+      return jsonResponse({ error: "OPENAI_API_KEY nao configurada no Supabase Functions." }, 500)
     }
 
     const prompt = buildPrompt(title, message, tone)
@@ -182,7 +210,7 @@ export async function POST(request: Request) {
 
     if (!openAiResponse.ok) {
       const errText = await openAiResponse.text()
-      return NextResponse.json({ error: "Falha ao consultar OpenAI.", details: errText }, { status: 502 })
+      return jsonResponse({ error: "Falha ao consultar OpenAI.", details: errText.slice(0, 1500) }, 502)
     }
 
     const completion = (await openAiResponse.json()) as {
@@ -191,10 +219,7 @@ export async function POST(request: Request) {
     const content = completion?.choices?.[0]?.message?.content
 
     if (typeof content !== "string" || content.trim().length === 0) {
-      return NextResponse.json(
-        { error: "Resposta invalida da OpenAI (sem conteudo)." },
-        { status: 502 }
-      )
+      return jsonResponse({ error: "Resposta invalida da OpenAI (sem conteudo)." }, 502)
     }
 
     let parsed: Partial<AiResponseShape> = {}
@@ -224,11 +249,11 @@ export async function POST(request: Request) {
         : [],
     }
 
-    return NextResponse.json({ ok: true, data: payload })
+    return jsonResponse({ ok: true, data: payload }, 200)
   } catch (error: unknown) {
-    return NextResponse.json(
-      { error: "Erro interno ao revisar comunicado.", details: getErrorMessage(error) },
-      { status: 500 }
+    return jsonResponse(
+      { error: "Erro interno ao revisar comunicado.", details: toErrorMessage(error) },
+      500
     )
   }
-}
+})

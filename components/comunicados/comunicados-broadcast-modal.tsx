@@ -22,9 +22,33 @@ type PendingRow = ComunicadoDestinatarioRow & {
   comunicado?: ComunicadoRow
 }
 
+type AdminInterestAlertRow = {
+  id: string
+  title: string
+  body: string
+  link_url: string | null
+  entity_type: string | null
+  entity_id: string | null
+  event_type: string | null
+  created_at: string
+  read_at: string | null
+  precatorio_label?: string
+  precatorio_valor?: number | null
+}
+
 function readOptionalString(obj: Record<string, unknown>, key: string): string | null {
   const value = obj[key]
   if (typeof value === "string") return value
+  return null
+}
+
+function readOptionalNumber(obj: Record<string, unknown>, key: string): number | null {
+  const value = obj[key]
+  if (typeof value === "number" && Number.isFinite(value)) return value
+  if (typeof value === "string" && value.trim().length > 0) {
+    const parsed = Number(value)
+    if (Number.isFinite(parsed)) return parsed
+  }
   return null
 }
 
@@ -54,12 +78,7 @@ function normalizeComunicado(input: unknown): ComunicadoRow | undefined {
     anexo_url: readOptionalString(obj, "anexo_url"),
     anexo_nome: readOptionalString(obj, "anexo_nome"),
     anexo_mime: readOptionalString(obj, "anexo_mime"),
-    anexo_tamanho:
-      typeof obj.anexo_tamanho === "number"
-        ? obj.anexo_tamanho
-        : typeof obj.anexo_tamanho === "string"
-        ? Number(obj.anexo_tamanho)
-        : null,
+    anexo_tamanho: readOptionalNumber(obj, "anexo_tamanho"),
     criado_por: criadoPor,
     ativo: typeof obj.ativo === "boolean" ? obj.ativo : true,
     publicado_em: readOptionalString(obj, "publicado_em") || new Date().toISOString(),
@@ -97,6 +116,35 @@ function normalizePendingRow(input: unknown): PendingRow | null {
   }
 }
 
+function normalizeAdminAlertRow(input: unknown): AdminInterestAlertRow | null {
+  if (!input || typeof input !== "object") return null
+  const obj = input as Record<string, unknown>
+
+  const id = readOptionalString(obj, "id")
+  const title = readOptionalString(obj, "title")
+  const body = readOptionalString(obj, "body")
+  const createdAt = readOptionalString(obj, "created_at")
+
+  if (!id || !title || !body || !createdAt) return null
+
+  return {
+    id,
+    title,
+    body,
+    link_url: readOptionalString(obj, "link_url"),
+    entity_type: readOptionalString(obj, "entity_type"),
+    entity_id: readOptionalString(obj, "entity_id"),
+    event_type: readOptionalString(obj, "event_type"),
+    created_at: createdAt,
+    read_at: readOptionalString(obj, "read_at"),
+  }
+}
+
+function formatCurrency(value?: number | null) {
+  if (!value || value <= 0) return null
+  return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
+}
+
 export function ComunicadosBroadcastModal() {
   const router = useRouter()
   const { profile } = useAuth()
@@ -105,6 +153,7 @@ export function ComunicadosBroadcastModal() {
   const [loading, setLoading] = useState(true)
   const [open, setOpen] = useState(false)
   const [pending, setPending] = useState<PendingRow | null>(null)
+  const [pendingAdminAlert, setPendingAdminAlert] = useState<AdminInterestAlertRow | null>(null)
   const [saving, setSaving] = useState(false)
 
   const userId = profile?.id
@@ -114,6 +163,21 @@ export function ComunicadosBroadcastModal() {
     [pending?.comunicado?.anexo_url]
   )
 
+  const activeItem = useMemo(() => {
+    const comunicadoDate = pending?.enviado_em ? new Date(pending.enviado_em).getTime() : 0
+    const alertDate = pendingAdminAlert?.created_at ? new Date(pendingAdminAlert.created_at).getTime() : 0
+
+    if (!pending && !pendingAdminAlert) return null
+    if (!pending) return { kind: "alerta" as const, alerta: pendingAdminAlert }
+    if (!pendingAdminAlert) return { kind: "comunicado" as const, comunicado: pending }
+
+    if (alertDate >= comunicadoDate) {
+      return { kind: "alerta" as const, alerta: pendingAdminAlert }
+    }
+
+    return { kind: "comunicado" as const, comunicado: pending }
+  }, [pending, pendingAdminAlert])
+
   const fetchPending = useCallback(async () => {
     if (!supabase || !userId) {
       setLoading(false)
@@ -121,7 +185,7 @@ export function ComunicadosBroadcastModal() {
     }
 
     try {
-      const { data, error } = await supabase
+      const comunicadoPromise = supabase
         .from("comunicado_destinatarios")
         .select(
           `
@@ -159,18 +223,87 @@ export function ComunicadosBroadcastModal() {
         .order("enviado_em", { ascending: false })
         .limit(5)
 
-      if (error) {
-        console.error("Erro ao buscar comunicados pendentes:", error)
+      const alertPromise = supabase
+        .from("notifications")
+        .select("id, title, body, link_url, entity_type, entity_id, event_type, created_at, read_at")
+        .eq("user_id", userId)
+        .is("read_at", null)
+        .in("event_type", ["interesse_calculo_admin", "admin_alerta_individual_precatorio"])
+        .order("created_at", { ascending: false })
+        .limit(5)
+
+      const [{ data: comunicadoData, error: comunicadoError }, { data: alertsData, error: alertsError }] =
+        await Promise.all([comunicadoPromise, alertPromise])
+
+      if (comunicadoError) {
+        console.error("Erro ao buscar comunicados pendentes:", comunicadoError)
         setLoading(false)
         return
       }
 
-      const rows = (Array.isArray(data) ? data : [])
+      if (alertsError) {
+        console.error("Erro ao buscar alertas individuais do admin:", alertsError)
+      }
+
+      const comunicadoRows = (Array.isArray(comunicadoData) ? comunicadoData : [])
         .map(normalizePendingRow)
         .filter((row): row is PendingRow => Boolean(row))
-      const nextPending = rows.find((row) => row.comunicado?.ativo !== false) || null
+      const nextPending = comunicadoRows.find((row) => row.comunicado?.ativo !== false) || null
+
+      const normalizedAlerts = (Array.isArray(alertsData) ? alertsData : [])
+        .map(normalizeAdminAlertRow)
+        .filter((row): row is AdminInterestAlertRow => Boolean(row))
+
+      const alertPrecatorioIds = Array.from(
+        new Set(
+          normalizedAlerts
+            .map((row) => (row.entity_type === "precatorio" ? row.entity_id : null))
+            .filter((id): id is string => Boolean(id))
+        )
+      )
+
+      const alertByPrecatorioId = new Map<string, { label: string; valor: number | null }>()
+      if (alertPrecatorioIds.length > 0) {
+        const { data: precatoriosData, error: precatoriosError } = await supabase
+          .from("precatorios")
+          .select("id, titulo, numero_precatorio, credor_nome, valor_atualizado, valor_principal")
+          .in("id", alertPrecatorioIds)
+
+        if (precatoriosError) {
+          console.error("Erro ao carregar dados de precatorios para alertas:", precatoriosError)
+        } else {
+          const rows = Array.isArray(precatoriosData)
+            ? (precatoriosData as Array<Record<string, unknown>>)
+            : []
+          for (const row of rows) {
+            const precId = readOptionalString(row, "id")
+            if (!precId) continue
+            const label =
+              readOptionalString(row, "titulo") ||
+              readOptionalString(row, "numero_precatorio") ||
+              readOptionalString(row, "credor_nome") ||
+              "Credito sem identificacao"
+            const valor =
+              readOptionalNumber(row, "valor_atualizado") || readOptionalNumber(row, "valor_principal")
+            alertByPrecatorioId.set(precId, { label, valor })
+          }
+        }
+      }
+
+      const enrichedAlerts = normalizedAlerts.map((row) => {
+        const mapped = row.entity_id ? alertByPrecatorioId.get(row.entity_id) : null
+        return {
+          ...row,
+          precatorio_label: mapped?.label,
+          precatorio_valor: mapped?.valor ?? null,
+        }
+      })
+
+      const nextAdminAlert = enrichedAlerts[0] || null
+
       setPending(nextPending)
-      setOpen(Boolean(nextPending))
+      setPendingAdminAlert(nextAdminAlert)
+      setOpen(Boolean(nextPending || nextAdminAlert))
     } catch (err) {
       console.error("Erro inesperado ao buscar comunicados:", err)
     } finally {
@@ -189,7 +322,7 @@ export function ComunicadosBroadcastModal() {
 
       if (error) {
         console.error("Erro ao registrar evento de comunicado:", error)
-        toast.error("Não foi possível registrar sua ação no comunicado.")
+        toast.error("Nao foi possivel registrar sua acao no comunicado.")
         return false
       }
 
@@ -221,6 +354,35 @@ export function ComunicadosBroadcastModal() {
     void fetchPending()
   }, [fetchPending, registerEvent])
 
+  const handleMarkAlertRead = useCallback(async () => {
+    if (!supabase || !pendingAdminAlert?.id) return
+
+    setSaving(true)
+    try {
+      const nowIso = new Date().toISOString()
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read_at: nowIso })
+        .eq("id", pendingAdminAlert.id)
+
+      if (error) throw error
+
+      setOpen(false)
+      setPendingAdminAlert(null)
+      toast.success("Alerta marcado como lido.")
+      void fetchPending()
+    } catch (error) {
+      console.error("Erro ao marcar alerta como lido:", error)
+      toast.error("Nao foi possivel confirmar leitura do alerta.")
+    } finally {
+      setSaving(false)
+    }
+  }, [fetchPending, pendingAdminAlert?.id, supabase])
+
+  const handleDismissAlert = useCallback(() => {
+    setOpen(false)
+  }, [])
+
   const handleDownload = useCallback(async () => {
     if (!pending?.comunicado?.anexo_url) return
     const ok = await registerEvent("download")
@@ -233,6 +395,36 @@ export function ComunicadosBroadcastModal() {
     if (!pending?.comunicado?.id) return
     router.push(`/comunicados?id=${pending.comunicado.id}`)
   }, [pending?.comunicado?.id, router])
+
+  const openAlertTarget = useCallback(() => {
+    if (!pendingAdminAlert) return
+
+    if (pendingAdminAlert.link_url) {
+      router.push(pendingAdminAlert.link_url)
+      return
+    }
+
+    if (pendingAdminAlert.entity_type === "precatorio" && pendingAdminAlert.entity_id) {
+      router.push(`/precatorios/detalhes?id=${pendingAdminAlert.entity_id}`)
+    }
+  }, [pendingAdminAlert, router])
+
+  const handleOpenChange = useCallback(
+    (state: boolean) => {
+      if (state) {
+        setOpen(true)
+        return
+      }
+
+      if (activeItem?.kind === "comunicado") {
+        void handleDismiss()
+        return
+      }
+
+      setOpen(false)
+    },
+    [activeItem?.kind, handleDismiss]
+  )
 
   useEffect(() => {
     void fetchPending()
@@ -247,45 +439,97 @@ export function ComunicadosBroadcastModal() {
     return () => window.removeEventListener("focus", onFocus)
   }, [fetchPending])
 
-  if (!userId || loading || !pending?.comunicado) return null
+  if (!userId || loading || !activeItem) return null
+
+  const comunicado = activeItem.kind === "comunicado" ? activeItem.comunicado?.comunicado : null
+  const alerta = activeItem.kind === "alerta" ? activeItem.alerta : null
+  const canOpenAlertTarget = Boolean(
+    alerta?.link_url || (alerta?.entity_type === "precatorio" && alerta?.entity_id)
+  )
 
   return (
-    <Dialog open={open} onOpenChange={(state) => !state && void handleDismiss()}>
-      <DialogContent className="max-w-3xl p-0 overflow-hidden border border-primary/20">
-        <div className="grid md:grid-cols-[220px_1fr]">
+    <Dialog open={open} onOpenChange={handleOpenChange}>
+      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden border border-primary/20">
+        <div className="grid md:grid-cols-[220px_1fr] max-h-[90vh]">
           <div className="bg-gradient-to-b from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-zinc-900 p-6 flex items-center justify-center">
             <div className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 p-6 shadow-sm">
               <Megaphone className="w-16 h-16 text-orange-500" />
             </div>
           </div>
 
-          <div className="p-6 space-y-4">
+          <div className="p-6 space-y-4 min-h-0 flex flex-col">
             <DialogHeader className="space-y-2">
-              <Badge variant="secondary" className="w-fit">Comunicado da administração</Badge>
-              <DialogTitle className="text-2xl leading-tight">{pending.comunicado.titulo}</DialogTitle>
-              <DialogDescription className="text-base leading-relaxed whitespace-pre-line">
-                {pending.comunicado.mensagem_publicada}
-              </DialogDescription>
+              <Badge variant="secondary" className="w-fit">
+                {activeItem.kind === "comunicado"
+                  ? "Comunicado da administracao"
+                  : "Alerta direto da administracao"}
+              </Badge>
+              <DialogTitle className="text-2xl leading-tight">
+                {activeItem.kind === "comunicado" ? comunicado?.titulo : alerta?.title}
+              </DialogTitle>
+              <div className="max-h-[45vh] md:max-h-[56vh] overflow-y-auto pr-2">
+                <DialogDescription className="text-base leading-relaxed whitespace-pre-line">
+                  {activeItem.kind === "comunicado" ? comunicado?.mensagem_publicada : alerta?.body}
+                </DialogDescription>
+              </div>
+
+              {activeItem.kind === "alerta" && alerta?.entity_type === "precatorio" && (
+                <div className="rounded-lg border border-orange-200/60 bg-orange-50/60 dark:border-orange-900/60 dark:bg-orange-950/30 p-3 space-y-1">
+                  <p className="text-xs font-semibold uppercase text-orange-700 dark:text-orange-300">
+                    Credito com interesse do admin
+                  </p>
+                  <p className="text-sm font-medium text-foreground">
+                    {alerta.precatorio_label || "Credito vinculado"}
+                  </p>
+                  {formatCurrency(alerta.precatorio_valor) && (
+                    <p className="text-xs text-muted-foreground">
+                      Valor de referencia: {formatCurrency(alerta.precatorio_valor)}
+                    </p>
+                  )}
+                </div>
+              )}
             </DialogHeader>
 
-            <DialogFooter className="flex-col sm:flex-row sm:justify-between gap-2 pt-2">
-              <div className="flex flex-wrap gap-2">
-                {hasAttachment && (
+            <DialogFooter className="pt-2 mt-auto flex-col gap-2">
+              <div className="flex flex-wrap gap-2 justify-start">
+                {activeItem.kind === "comunicado" && hasAttachment && (
                   <Button variant="outline" onClick={handleDownload} disabled={saving}>
                     <Download className="w-4 h-4 mr-2" />
                     Baixar anexo
                   </Button>
                 )}
-                <Button variant="ghost" onClick={openFullPage} disabled={saving}>
-                  Ver detalhes
-                </Button>
+
+                {activeItem.kind === "comunicado" ? (
+                  <Button variant="ghost" onClick={openFullPage} disabled={saving}>
+                    Ver detalhes
+                  </Button>
+                ) : (
+                  <Button variant="ghost" onClick={openAlertTarget} disabled={saving || !canOpenAlertTarget}>
+                    Ver credito
+                  </Button>
+                )}
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                <Button variant="secondary" onClick={() => void handleDismiss()} disabled={saving}>
-                  Agora não
+              <div className="flex justify-end gap-2 flex-nowrap">
+                <Button
+                  variant="secondary"
+                  onClick={
+                    activeItem.kind === "comunicado"
+                      ? () => void handleDismiss()
+                      : handleDismissAlert
+                  }
+                  disabled={saving}
+                >
+                  Agora nao
                 </Button>
-                <Button onClick={() => void handleMarkRead()} disabled={saving}>
+                <Button
+                  onClick={
+                    activeItem.kind === "comunicado"
+                      ? () => void handleMarkRead()
+                      : () => void handleMarkAlertRead()
+                  }
+                  disabled={saving}
+                >
                   <CheckCircle2 className="w-4 h-4 mr-2" />
                   Li e entendi
                 </Button>

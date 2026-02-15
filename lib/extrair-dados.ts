@@ -1,4 +1,4 @@
-export interface DadosExtraidos {
+﻿export interface DadosExtraidos {
   numero_processo?: string
   numero_precatorio?: string
   numero_oficio_requisitorio?: string
@@ -29,8 +29,8 @@ function normalizeForSearch(value: string): string {
 
 function cleanLabelValue(raw: string): string {
   return raw
-    .replace(/^[\s:;.\-–—]+/, "")
-    .replace(/[\s:;.\-–—]+$/, "")
+    .replace(/^[\s:;.\-]+/, "")
+    .replace(/[\s:;.\-]+$/, "")
     .replace(/\s+/g, " ")
     .trim()
 }
@@ -42,8 +42,7 @@ function parseMoney(raw: string): number | undefined {
     .replace(",", ".")
 
   const parsed = Number(cleaned)
-  if (!Number.isFinite(parsed)) return undefined
-  if (parsed <= 0) return undefined
+  if (!Number.isFinite(parsed) || parsed <= 0) return undefined
   return parsed
 }
 
@@ -53,9 +52,7 @@ function extractMoneyCandidates(text: string): number[] {
 
   for (const match of matches) {
     const value = parseMoney(match[1])
-    if (value !== undefined) {
-      values.push(value)
-    }
+    if (value !== undefined) values.push(value)
   }
 
   return values
@@ -68,9 +65,7 @@ function extractDateIso(text: string): string | undefined {
 
   const [, day, month, year] = match
   const yearNum = Number(year)
-  if (!Number.isFinite(yearNum) || yearNum < 1980 || yearNum > 2100) {
-    return undefined
-  }
+  if (!Number.isFinite(yearNum) || yearNum < 1980 || yearNum > 2100) return undefined
 
   return `${year}-${month}-${day}`
 }
@@ -86,15 +81,62 @@ function sanitizeName(value: string): string {
   )
 }
 
-function isLikelyName(value: string): boolean {
-  if (!value) return false
-  if (value.length < 5) return false
-  if (/\d{3,}/.test(value)) return false
-  if (/^\d+$/.test(value)) return false
-  return true
+function sanitizeAdvogadoName(value: string): string {
+  return cleanLabelValue(
+    sanitizeName(value)
+      .replace(
+        /\b(?:devedor|ente\s+da\s+federacao|entidade\s+a\s+que\s+esta\s+vinculado|procurador(?:\s+principal)?|natureza(?:\s+do\s+credito)?|autor\s+da\s+acao|numero\s+da\s+acao|processo(?:\s+originario|\s+de\s+origem)?|data\s+de|sentenca|acordao|oficio|requisicao)\b.*$/i,
+        ""
+      )
+      .replace(/\s*-\s*[A-Z]{1,3}\s*\d{2,}.*$/i, "")
+      .replace(/\s+[A-Z]{1,3}\s*\d{2,}.*$/i, "")
+  )
 }
 
-function pickTextAfterLabel(currentLine: string, nextLine?: string): string | undefined {
+function isLikelyName(value: string): boolean {
+  if (!value) return false
+  if (value.length < 5 || value.length > 180) return false
+  if (!/\s+/.test(value)) return false
+  if (value.includes(":")) return false
+  if (/\d{3,}/.test(value)) return false
+  if (/^\d+$/.test(value)) return false
+
+  const normalized = normalizeForSearch(value)
+  const blockedTerms = [
+    "natureza",
+    "credito",
+    "alimentar",
+    "comum",
+    "devedor",
+    "estado do",
+    "federacao",
+    "processo",
+    "numero da acao",
+    "valor",
+    "oficio",
+    "requisicao",
+    "sentenca",
+    "acordao",
+    "data ",
+    "tipo de acao",
+    "judicial",
+  ]
+  return !blockedTerms.some((term) => normalized.includes(term))
+}
+
+function isLikelyAdvogadoName(value: string): boolean {
+  if (!isLikelyName(value)) return false
+  const normalized = normalizeForSearch(value)
+  const blockedTerms = ["autor da acao", "requerente", "credor", "beneficiario", "honorario"]
+  return !blockedTerms.some((term) => normalized.includes(term))
+}
+
+function pickTextAfterLabel(
+  currentLine: string,
+  nextLine: string | undefined,
+  sanitizer: (value: string) => string,
+  validator: (value: string) => boolean
+): string | undefined {
   let candidate = ""
 
   if (currentLine.includes(":")) {
@@ -103,23 +145,31 @@ function pickTextAfterLabel(currentLine: string, nextLine?: string): string | un
     candidate = currentLine.split("-").slice(1).join("-")
   }
 
-  candidate = sanitizeName(candidate)
-  if (isLikelyName(candidate)) {
-    return candidate
-  }
+  candidate = sanitizer(candidate)
+  if (validator(candidate)) return candidate
 
-  const stripped = sanitizeName(currentLine)
-  if (isLikelyName(stripped) && stripped.length < currentLine.length) {
-    return stripped
-  }
+  const stripped = sanitizer(currentLine)
+  if (validator(stripped) && stripped.length < currentLine.length) return stripped
 
   if (nextLine) {
-    const next = sanitizeName(nextLine)
-    if (isLikelyName(next)) {
-      return next
-    }
+    const next = sanitizer(nextLine)
+    if (validator(next)) return next
   }
 
+  return undefined
+}
+
+function pickExplicitLabelValue(
+  content: string,
+  patterns: RegExp[],
+  sanitizer: (value: string) => string,
+  validator: (value: string) => boolean
+): string | undefined {
+  for (const pattern of patterns) {
+    const raw = content.match(pattern)?.[1]
+    const candidate = sanitizer(raw || "")
+    if (validator(candidate)) return candidate
+  }
   return undefined
 }
 
@@ -163,7 +213,7 @@ function findNatureza(content: string): string | undefined {
 
 function findNumeroOficio(content: string): string | undefined {
   const match = content.match(
-    /\b(?:oficio|requisitorio|requisicao)\D{0,15}(?:n(?:o|º|°)\s*)?([A-Z0-9.\-\/]{4,})/i
+    /\b(?:oficio\s+requisitorio(?:\s+judicial)?|oficio|requisitorio|requisicao)\D{0,20}(?:n(?:o|º|°)\s*)?([A-Z0-9.\-\/]{4,})/i
   )
   if (match) return cleanLabelValue(match[1])
   return undefined
@@ -172,6 +222,15 @@ function findNumeroOficio(content: string): string | undefined {
 function findLineSpecificCnj(line: string): string | undefined {
   const match = line.match(CNJ_REGEX)
   return match?.[0]
+}
+
+function extractLabeledCnj(content: string, patterns: RegExp[]): string | undefined {
+  for (const pattern of patterns) {
+    const raw = content.match(pattern)?.[1]
+    const cnj = raw?.match(CNJ_REGEX)?.[0]
+    if (cnj) return cnj
+  }
+  return undefined
 }
 
 export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
@@ -190,13 +249,52 @@ export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
   result.natureza_ativo = findNatureza(content)
   result.numero_oficio_requisitorio = findNumeroOficio(content)
 
+  result.numero_processo = extractLabeledCnj(content, [
+    /\bnumero\s+da\s+acao\s*:\s*([^\n\r]+)/i,
+    /\bprocesso\s+originario\s*:\s*([^\n\r]+)/i,
+    /\boriginario\s*:\s*([^\n\r]+)/i,
+  ])
+
+  result.numero_precatorio = extractLabeledCnj(content, [
+    /\bprojudi\s*-\s*processo\s*:\s*([^\n\r]+)/i,
+    /\bprecat[oó]rio\s*:\s*([^\n\r]+)/i,
+  ])
+
   const allCnj = Array.from(new Set(content.match(CNJ_REGEX) || []))
-  if (allCnj.length === 1) {
-    result.numero_precatorio = allCnj[0]
-    result.numero_processo = allCnj[0]
-  } else if (allCnj.length > 1) {
-    result.numero_precatorio = allCnj[0]
+  if (!result.numero_processo && allCnj.length >= 1) {
     result.numero_processo = allCnj[allCnj.length - 1]
+  }
+  if (!result.numero_precatorio && allCnj.length > 1) {
+    result.numero_precatorio = allCnj[0]
+  }
+
+  if (!result.autor_credor_originario) {
+    result.autor_credor_originario = pickExplicitLabelValue(
+      content,
+      [
+        /\bautor\s+da\s+acao\s*:\s*([^\n\r]+)/i,
+        /\bnome\s+do\s+requerente\s*-\s*cpf\/cnpj\s*:\s*([^\n\r]+)/i,
+        /\brequerente\s*:\s*([^\n\r]+)/i,
+        /\bbenefici[aá]rio\s*:\s*([^\n\r]+)/i,
+        /\bcredor(?:\(a\))?\s*:\s*([^\n\r]+)/i,
+      ],
+      sanitizeName,
+      isLikelyName
+    )
+  }
+
+  if (!result.advogado_acao) {
+    const explicitAdvogado = pickExplicitLabelValue(
+      content,
+      [
+        /\badvogado\s+principal\s*:\s*([^\n\r]+)/i,
+        /\badvogado(?:\(s\))?\s*:\s*([^\n\r]+)/i,
+        /\bprocurador\s+principal\s*:\s*([^\n\r]+)/i,
+      ],
+      sanitizeAdvogadoName,
+      isLikelyAdvogadoName
+    )
+    if (explicitAdvogado) result.advogado_acao = explicitAdvogado
   }
 
   for (let index = 0; index < lines.length; index += 1) {
@@ -207,8 +305,8 @@ export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
     const isProcessLine =
       normalizedLine.includes("processo originario") ||
       normalizedLine.includes("autos originarios") ||
-      normalizedLine.includes("autos") ||
       normalizedLine.includes("proc. origem") ||
+      normalizedLine.includes("numero da acao") ||
       normalizedLine.includes("processo")
 
     if (!result.numero_processo && isProcessLine) {
@@ -217,7 +315,8 @@ export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
     }
 
     const isPrecatorioLine =
-      normalizedLine.includes("precatorio") ||
+      normalizedLine.includes("projudi - processo") ||
+      normalizedLine.includes("precat") ||
       normalizedLine.includes("requisitorio") ||
       normalizedLine.includes("rpv")
 
@@ -232,46 +331,36 @@ export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
         normalizedLine.includes("beneficiario") ||
         normalizedLine.includes("exequente") ||
         normalizedLine.includes("requerente") ||
-        normalizedLine.includes("autor")) &&
+        normalizedLine.includes("autor da acao")) &&
       !normalizedLine.includes("cpf") &&
       !normalizedLine.includes("cnpj")
     ) {
-      const credor = pickTextAfterLabel(line, nextLine)
-      if (credor) {
-        result.autor_credor_originario = credor
-      }
+      const credor = pickTextAfterLabel(line, nextLine, sanitizeName, isLikelyName)
+      if (credor) result.autor_credor_originario = credor
     }
 
-    if (
-      !result.advogado_acao &&
-      (normalizedLine.includes("advogado") || normalizedLine.includes("procurador"))
-    ) {
-      const advogado = pickTextAfterLabel(line, nextLine)
-      if (advogado) {
-        result.advogado_acao = advogado
-      }
+    if (!result.advogado_acao && (normalizedLine.includes("advogado") || normalizedLine.includes("procurador"))) {
+      const advogado = pickTextAfterLabel(line, nextLine, sanitizeAdvogadoName, isLikelyAdvogadoName)
+      if (advogado) result.advogado_acao = advogado
     }
 
     const isValorPrincipalLine =
       normalizedLine.includes("valor principal") ||
-      normalizedLine.includes("valor requisitado") ||
-      normalizedLine.includes("valor total requisitado") ||
-      normalizedLine.includes("valor do precatorio") ||
-      normalizedLine.includes("valor da condenacao") ||
-      normalizedLine.includes("principal liquido")
+      normalizedLine.includes("valor principal total") ||
+      (normalizedLine.includes("principal:") && normalizedLine.includes("credor de valor principal"))
 
     if (!result.valor_principal_original && isValorPrincipalLine) {
       const values = extractMoneyCandidates(`${line} ${nextLine || ""}`)
       if (values.length > 0) {
-        result.valor_principal_original = values[values.length - 1]
+        result.valor_principal_original = values[0]
       }
     }
 
     const isExpedicaoLine =
       normalizedLine.includes("data de expedicao") ||
-      normalizedLine.includes("expedicao") ||
       normalizedLine.includes("expedido em") ||
-      normalizedLine.includes("data da requisicao")
+      normalizedLine.includes("data da requisicao") ||
+      normalizedLine.includes("trans requisicao")
 
     if (!result.data_expedicao && isExpedicaoLine) {
       result.data_expedicao = extractDateIso(line) || extractDateIso(nextLine || "")
@@ -279,19 +368,26 @@ export function extrairDadosDeTexto(conteudo: string): DadosExtraidos {
   }
 
   if (!result.valor_principal_original) {
-    const valorLines = lines.filter((line, index) => normalizedLines[index].includes("valor"))
-    const allValues = valorLines.flatMap((line) => extractMoneyCandidates(line))
-    if (allValues.length > 0) {
-      result.valor_principal_original = Math.max(...allValues)
+    const principalLines = lines.filter((line, index) => {
+      const normalized = normalizedLines[index]
+      return (
+        normalized.includes("valor principal") ||
+        normalized.includes("valor principal total") ||
+        (normalized.includes("principal:") && normalized.includes("credor de valor principal"))
+      )
+    })
+    const values = principalLines.flatMap((line) => extractMoneyCandidates(line))
+    if (values.length > 0) {
+      result.valor_principal_original = values[0]
     }
-  }
-
-  if (!result.numero_precatorio && allCnj.length > 0) {
-    result.numero_precatorio = allCnj[0]
   }
 
   if (!result.numero_processo && allCnj.length > 0) {
     result.numero_processo = allCnj[allCnj.length - 1]
+  }
+
+  if (!result.numero_precatorio && allCnj.length > 1) {
+    result.numero_precatorio = allCnj[0]
   }
 
   return result

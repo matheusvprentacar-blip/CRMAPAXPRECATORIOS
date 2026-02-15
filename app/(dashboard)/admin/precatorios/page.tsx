@@ -646,9 +646,6 @@ export default function AdminPrecatoriosPage() {
       return
     }
 
-    const supabase = createBrowserClient()
-    if (!supabase) return
-
     try {
       setSendingInterest(prec.id)
 
@@ -658,20 +655,37 @@ export default function AdminPrecatoriosPage() {
         prec.credor_nome ||
         "Precatório"
 
-      const { error } = await supabase
-        .from("notifications")
-        .insert({
-          user_id: prec.responsavel_calculo_id,
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: prec.responsavel_calculo_id,
           title: `Admin quer prioridade no calculo - ${precatorioLabel}`,
           body: "O administrador sinalizou interesse no calculo deste precatorio. Priorize quando possivel.",
           kind: "critical",
-          link_url: `/precatorios/detalhes?id=${prec.id}`,
-          entity_type: "precatorio",
-          entity_id: prec.id,
-          event_type: "interesse_calculo_admin",
-        })
+          linkUrl: `/precatorios/detalhes?id=${prec.id}`,
+          entityType: "precatorio",
+          entityId: prec.id,
+          eventType: "interesse_calculo_admin",
+          payload: {
+            source: "admin_precatorios_lista",
+          },
+        }),
+      })
 
-      if (error) throw error
+      const raw = await response.text()
+      let payload: { ok?: boolean; error?: string; details?: string } | null = null
+      if (raw.trim().startsWith("{")) {
+        try {
+          payload = JSON.parse(raw) as { ok?: boolean; error?: string; details?: string }
+        } catch {
+          payload = null
+        }
+      }
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || payload?.details || `Falha ao enviar alerta (HTTP ${response.status}).`)
+      }
 
       toast.success("Alerta enviado ao operador de calculo.")
     } catch (error: any) {

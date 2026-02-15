@@ -25,6 +25,7 @@ build_log*.txt
 # local artifacts
 /backups
 /supabase/.temp
+/scripts/download-oficios.mjs
 
 # debug
 npm-debug.log*

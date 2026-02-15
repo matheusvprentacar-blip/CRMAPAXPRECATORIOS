@@ -6,6 +6,7 @@ import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { createOcrTraceId, logOcrTrace, serializeError } from "@/lib/utils/ocr-trace"
+import { processFileWithAI } from "@/lib/client-extractor"
 
 interface PrecatorioData {
   credor_nome?: string
@@ -60,11 +61,25 @@ function isExcelFile(file: File): boolean {
   )
 }
 
+function canCallServerApiFromBrowser(): boolean {
+  if (typeof window === "undefined") return true
+  const protocol = window.location.protocol
+  return protocol === "http:" || protocol === "https:"
+}
+
 async function extractPdfWithRobustPipeline(
   file: File,
   mode: "auto" | "fast" = "auto",
   traceId?: string
 ): Promise<RobustOcrResult> {
+  if (!canCallServerApiFromBrowser()) {
+    const error = "API OCR robusta indisponivel neste ambiente. Usando fallback local."
+    logOcrTrace(traceId || "sem-trace", "robust.unavailable_runtime", error, {
+      protocol: typeof window !== "undefined" ? window.location.protocol : "unknown",
+    }, "warn")
+    return { ok: false, error, traceId }
+  }
+
   const form = new FormData()
   form.append("file", file)
   form.append("ocrMode", mode)
@@ -76,14 +91,32 @@ async function extractPdfWithRobustPipeline(
     mode,
   })
 
-  const response = await fetch("/api/admin/precatorios/ocr-extract", {
-    method: "POST",
-    body: form,
-    headers: {
-      Accept: "application/json",
-      ...(traceId ? { "x-ocr-trace-id": traceId } : {}),
-    },
-  })
+  let response: Response
+  try {
+    response = await fetch("/api/admin/precatorios/ocr-extract", {
+      method: "POST",
+      body: form,
+      headers: {
+        Accept: "application/json",
+        ...(traceId ? { "x-ocr-trace-id": traceId } : {}),
+      },
+    })
+  } catch (error) {
+    const errorMessage =
+      error instanceof Error ? error.message : "Falha de rede ao chamar API OCR robusta."
+    logOcrTrace(
+      traceId || "sem-trace",
+      "robust.fetch_error",
+      "Falha de rede ao chamar endpoint OCR robusto",
+      serializeError(error),
+      "warn"
+    )
+    return {
+      ok: false,
+      error: `Falha ao conectar com API OCR robusta: ${errorMessage}`,
+      traceId,
+    }
+  }
 
   const rawBody = await response.text()
   const contentType = response.headers.get("content-type") || ""
@@ -96,7 +129,7 @@ async function extractPdfWithRobustPipeline(
       status: response.status,
       contentType,
       preview,
-    }, "error")
+    }, "warn")
     return { ok: false, error, traceId: responseTraceId, status: response.status }
   }
 
@@ -109,7 +142,7 @@ async function extractPdfWithRobustPipeline(
       status: response.status,
       rawLength: rawBody.length,
       rawPreview: rawBody.slice(0, 300),
-    }, "error")
+    }, "warn")
     return { ok: false, error, traceId: responseTraceId, status: response.status }
   }
 
@@ -118,7 +151,7 @@ async function extractPdfWithRobustPipeline(
     logOcrTrace(payload.traceId || responseTraceId || "sem-trace", "robust.api_error", error, {
       status: response.status,
       payload,
-    }, "error")
+    }, "warn")
     return {
       ok: false,
       error,
@@ -170,14 +203,14 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
     setFile(selectedFile)
   }
 
-  const handleProcess = async (method: "ai" | "regex" = "ai") => {
+  const handleProcess = async () => {
     if (!file) return
     const traceId = createOcrTraceId()
     logOcrTrace(traceId, "process.start", "Iniciando processamento de importacao", {
       fileName: file.name,
       fileType: file.type,
       fileSize: file.size,
-      method,
+      extractionMode: "ocr_only",
     })
 
     setUploading(true)
@@ -198,24 +231,38 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
 
     try {
       const supabase = createBrowserClient()
-      if (!supabase) throw new Error("Supabase client not initialized")
-
-      const fileExt = file.name.split(".").pop()
+      const fileExt = file.name.split(".").pop() || (isPdfFile(file) ? "pdf" : "bin")
       const fileName = `${Date.now()}.${fileExt}`
-      const { error: uploadError } = await supabase.storage.from("ocr-uploads").upload(fileName, file)
-      if (uploadError) {
-        logOcrTrace(traceId, "upload.warning", "Falha no upload para storage (seguindo com extracao)", uploadError, "warn")
+      let uploadSucceeded = false
+
+      if (!supabase) {
+        logOcrTrace(traceId, "upload.skipped", "Supabase client indisponivel. Seguindo sem upload.", {}, "warn")
       } else {
-        logOcrTrace(traceId, "upload.success", "Upload no storage concluido", { fileName })
+        try {
+          const { error: uploadError } = await supabase.storage.from("ocr-uploads").upload(fileName, file)
+          if (uploadError) {
+            logOcrTrace(traceId, "upload.warning", "Falha no upload para storage (seguindo com extracao)", uploadError, "warn")
+          } else {
+            uploadSucceeded = true
+            logOcrTrace(traceId, "upload.success", "Upload no storage concluido", { fileName })
+          }
+        } catch (error) {
+          logOcrTrace(
+            traceId,
+            "upload.fetch_error",
+            "Erro de rede no upload para storage (seguindo com extracao)",
+            serializeError(error),
+            "warn"
+          )
+        }
       }
 
       let extractedData: PrecatorioData
       if (isPdfFile(file)) {
-        const ocrMode = "auto" as const
+        const ocrMode = "premium" as const
         logOcrTrace(traceId, "extract.robust.start", "Tentando extracao robusta", {
           ocrMode,
-          requestedByButton: method,
-          note: "PDF agora usa sempre modo auto para melhor qualidade",
+          note: "Extracao sem IA, com OCR premium",
         })
         const robustResult = await extractPdfWithRobustPipeline(file, ocrMode, traceId)
         if (robustResult.ok) {
@@ -231,18 +278,16 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
           )
           toast.warning("Pipeline robusto indisponivel. Usando extracao local como fallback.")
           logOcrTrace(traceId, "extract.local.start", "Iniciando fallback local")
-          const { processFileWithAI } = await import("@/lib/client-extractor")
-          extractedData = await processFileWithAI(file, method)
+          extractedData = await processFileWithAI(file, "regex")
           logOcrTrace(traceId, "extract.local.success", "Fallback local finalizado")
         }
       } else {
         logOcrTrace(traceId, "extract.local.start", "Arquivo nao-PDF, usando extracao local")
-        const { processFileWithAI } = await import("@/lib/client-extractor")
-        extractedData = await processFileWithAI(file, method)
+        extractedData = await processFileWithAI(file, "regex")
         logOcrTrace(traceId, "extract.local.success", "Extracao local finalizada")
       }
 
-      if (!uploadError) {
+      if (supabase && uploadSucceeded) {
         const {
           data: { publicUrl },
         } = supabase.storage.from("ocr-uploads").getPublicUrl(fileName)
@@ -259,18 +304,93 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
       toast.success("Dados extraidos com sucesso!")
 
       setUploading(false)
-      onExtracted?.(extractedData)
-      onSuccess?.()
+      try {
+        onExtracted?.(extractedData)
+      } catch (callbackError) {
+        logOcrTrace(
+          traceId,
+          "callback.onExtracted.error",
+          "Callback onExtracted falhou (ignorando para nao quebrar UX)",
+          serializeError(callbackError),
+          "warn"
+        )
+      }
+      try {
+        onSuccess?.()
+      } catch (callbackError) {
+        logOcrTrace(
+          traceId,
+          "callback.onSuccess.error",
+          "Callback onSuccess falhou (ignorando para nao quebrar UX)",
+          serializeError(callbackError),
+          "warn"
+        )
+      }
 
       setStep("upload")
       setFile(null)
       setProgress(0)
     } catch (error) {
+      const message = error instanceof Error ? error.message : String(error)
+
+      if (file) {
+        logOcrTrace(
+          traceId,
+          "process.final_fallback",
+          "Erro no processamento. Tentando fallback local final (regex).",
+          serializeError(error),
+          "warn"
+        )
+        try {
+          const extractedData = await processFileWithAI(file, "regex")
+          setProgress(100)
+          toast.warning("Conexao com API indisponivel. Dados extraidos no modo local (regex).")
+          try {
+            onExtracted?.(extractedData)
+          } catch (callbackError) {
+            logOcrTrace(
+              traceId,
+              "callback.onExtracted.error",
+              "Callback onExtracted falhou no fallback final (ignorando)",
+              serializeError(callbackError),
+              "warn"
+            )
+          }
+          try {
+            onSuccess?.()
+          } catch (callbackError) {
+            logOcrTrace(
+              traceId,
+              "callback.onSuccess.error",
+              "Callback onSuccess falhou no fallback final (ignorando)",
+              serializeError(callbackError),
+              "warn"
+            )
+          }
+          setStep("upload")
+          setFile(null)
+          setUploading(false)
+          setProgress(0)
+          return
+        } catch (fallbackError) {
+          logOcrTrace(
+            traceId,
+            "process.final_fallback_error",
+            "Fallback local final falhou",
+            serializeError(fallbackError),
+            "error"
+          )
+        }
+      }
+
       const serialized = serializeError(error)
       logOcrTrace(traceId, "process.error", "Erro fatal no processamento", serialized, "error")
+      const friendlyMessage = /failed to fetch|networkerror/i.test(message)
+        ? "Falha de conexao com servicos de extracao. Tente novamente."
+        : message
       toast.error(
         "Erro ao processar arquivo: " +
-          (error instanceof Error ? error.message : "Erro desconhecido") +
+          friendlyMessage +
           ` [traceId: ${traceId}]`
       )
       setStep("upload")
@@ -382,17 +502,13 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
                 Cancelar
               </Button>
               <div className="flex gap-2">
-                <Button type="button" onClick={() => handleProcess("regex")} disabled={!file} variant="secondary" className="border">
-                  OCR (Basico)
-                </Button>
                 <Button
                   type="button"
-                  onClick={() => handleProcess("ai")}
+                  onClick={() => handleProcess()}
                   disabled={!file}
-                  className="bg-purple-600 hover:bg-purple-700 text-white flex gap-2 items-center"
+                  className="bg-orange-600 hover:bg-orange-700 text-white flex gap-2 items-center"
                 >
-                  <span className="text-xs">AI</span>
-                  OCR avancado
+                  OCR Premium
                 </Button>
               </div>
             </>

@@ -1,7 +1,7 @@
 ﻿"use client"
 /* eslint-disable */
 
-import { useEffect, useRef, useState, type ReactNode } from "react"
+import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -107,6 +107,11 @@ type Herdeiro = {
 
 type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel" | "credito_vendido"
 
+type AdminAlertRecipientOption = {
+  id: string
+  label: string
+}
+
 /* ======================================================
    SUPABASE SAFE HELPER (resolve "supabase is possibly null")
 ====================================================== */
@@ -198,6 +203,12 @@ export default function PrecatorioDetailPage() {
   const [fechamentoSaving, setFechamentoSaving] = useState(false)
   const [adminRecalcular, setAdminRecalcular] = useState(false)
   const [sendingToCalculo, setSendingToCalculo] = useState(false)
+  const [adminRecipients, setAdminRecipients] = useState<AdminAlertRecipientOption[]>([])
+  const [adminTargetUserId, setAdminTargetUserId] = useState("")
+  const [adminInterestMessage, setAdminInterestMessage] = useState("")
+  const [adminDirectAlertMessage, setAdminDirectAlertMessage] = useState("")
+  const [adminInterestSending, setAdminInterestSending] = useState(false)
+  const [adminDirectAlertSending, setAdminDirectAlertSending] = useState(false)
 
  
 
@@ -329,6 +340,11 @@ export default function PrecatorioDetailPage() {
   const triagemStatusMeta = getTriagemStatusMeta(precatorio?.interesse_status)
   const interesseObservacao = precatorio?.interesse_observacao?.trim()
   const semInteresseMotivo = precatorio?.motivo_sem_interesse?.trim()
+  const precatorioAdminLabel =
+    precatorio?.titulo ||
+    precatorio?.numero_precatorio ||
+    precatorio?.credor_nome ||
+    "Credito sem identificacao"
   const resolveStatusColumnId = (status?: string | null) => {
     if (!status) return null
     const column = KANBAN_COLUMNS.find((col) => col.id === status || col.statusIds?.includes(status))
@@ -600,6 +616,136 @@ export default function PrecatorioDetailPage() {
     })
   }, [precatorio?.pendencias_fechamento, precatorio?.juridico_liberou_fechamento, precatorio?.juridico_resultado_final])
 
+  const loadAdminRecipients = useCallback(async () => {
+    if (!isAdmin || !precatorio) {
+      setAdminRecipients([])
+      setAdminTargetUserId("")
+      return
+    }
+
+    const candidates = [
+      { id: String(precatorio?.responsavel_calculo_id || ""), roleLabel: "Operador de calculo" },
+      { id: String(precatorio?.responsavel || ""), roleLabel: "Responsavel comercial" },
+      { id: String(precatorio?.dono_usuario_id || ""), roleLabel: "Dono do credito" },
+      { id: String(precatorio?.responsavel_oficio_id || ""), roleLabel: "Responsavel de oficio" },
+      { id: String(precatorio?.responsavel_certidoes_id || ""), roleLabel: "Responsavel de certidoes" },
+      { id: String(precatorio?.responsavel_juridico_id || ""), roleLabel: "Responsavel juridico" },
+    ].filter((item) => item.id.length > 0)
+
+    const uniqueCandidates = Array.from(
+      new Map(candidates.map((item) => [item.id, item])).values()
+    )
+
+    if (uniqueCandidates.length === 0) {
+      setAdminRecipients([])
+      setAdminTargetUserId("")
+      return
+    }
+
+    try {
+      const supabase = requireSupabase()
+      const ids = uniqueCandidates.map((item) => item.id)
+      const { data: usersData, error } = await supabase
+        .from("usuarios")
+        .select("id, nome, email")
+        .in("id", ids)
+
+      if (error) throw error
+
+      const userMap = new Map(
+        (usersData || []).map((user: any) => [String(user.id), user])
+      )
+
+      const options = uniqueCandidates.map((item) => {
+        const user = userMap.get(item.id)
+        const name = String(user?.nome || "").trim()
+        const email = String(user?.email || "").trim()
+        const mainLabel = name || `Usuario ${item.id.slice(0, 8)}`
+        const detail = email ? ` (${email})` : ""
+        return {
+          id: item.id,
+          label: `${item.roleLabel}: ${mainLabel}${detail}`,
+        }
+      })
+
+      setAdminRecipients(options)
+      setAdminTargetUserId((prev) => {
+        if (options.some((item) => item.id === prev)) return prev
+        return options[0]?.id || ""
+      })
+    } catch (error) {
+      console.error("Erro ao carregar destinatarios do admin:", error)
+      const fallback = uniqueCandidates.map((item) => ({
+        id: item.id,
+        label: `${item.roleLabel}: ${item.id.slice(0, 8)}`,
+      }))
+      setAdminRecipients(fallback)
+      setAdminTargetUserId((prev) => {
+        if (fallback.some((item) => item.id === prev)) return prev
+        return fallback[0]?.id || ""
+      })
+    }
+  }, [
+    isAdmin,
+    precatorio,
+    precatorio?.dono_usuario_id,
+    precatorio?.responsavel,
+    precatorio?.responsavel_calculo_id,
+    precatorio?.responsavel_certidoes_id,
+    precatorio?.responsavel_juridico_id,
+    precatorio?.responsavel_oficio_id,
+  ])
+
+  useEffect(() => {
+    void loadAdminRecipients()
+  }, [loadAdminRecipients])
+
+  const sendAdminDirectNotification = useCallback(
+    async (params: {
+      title: string
+      body: string
+      kind: "critical" | "warn" | "info"
+      eventType: string
+    }) => {
+      if (!id) throw new Error("ID do precatorio nao encontrado.")
+      if (!adminTargetUserId) throw new Error("Selecione um destinatario.")
+
+      const response = await fetch("/api/admin/notifications", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: adminTargetUserId,
+          title: params.title,
+          body: params.body,
+          kind: params.kind,
+          eventType: params.eventType,
+          entityType: "precatorio",
+          entityId: id,
+          linkUrl: `/precatorios/detalhes?id=${id}&tab=detalhes`,
+          payload: {
+            source: "precatorio_detalhes_admin_alert",
+            actor_user_id: profile?.id || null,
+          },
+        }),
+      })
+
+      const raw = await response.text()
+      let payload: { ok?: boolean; error?: string; details?: string } | null = null
+      if (raw.trim().startsWith("{")) {
+        try {
+          payload = JSON.parse(raw) as { ok?: boolean; error?: string; details?: string }
+        } catch {
+          payload = null
+        }
+      }
+
+      if (!response.ok || !payload?.ok) {
+        throw new Error(payload?.error || payload?.details || `Falha ao enviar alerta (HTTP ${response.status}).`)
+      }
+    },
+    [adminTargetUserId, id, profile?.id]
+  )
+
   async function handleConfirmSemInteresse(motivo: string, dataRecontato: Date | undefined) {
     if (!id) return
 
@@ -731,6 +877,77 @@ export default function PrecatorioDetailPage() {
       })
     } finally {
       setTriagemSaving(false)
+    }
+  }
+
+  async function handleSignalAdminInterest() {
+    if (!isAdmin) return
+
+    setAdminInterestSending(true)
+    try {
+      const message = adminInterestMessage.trim()
+      const body = message
+        ? `${message}\n\nCredito relacionado: ${precatorioAdminLabel}`
+        : `O administrador sinalizou interesse neste credito e solicitou prioridade no andamento.\n\nCredito relacionado: ${precatorioAdminLabel}`
+
+      await sendAdminDirectNotification({
+        title: `Interesse do admin no credito - ${precatorioAdminLabel}`,
+        body,
+        kind: "critical",
+        eventType: "interesse_calculo_admin",
+      })
+
+      toast({
+        title: "Interesse enviado",
+        description: "O operador selecionado recebeu o alerta de interesse no credito.",
+      })
+      setAdminInterestMessage("")
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar interesse",
+        description: error?.message || "Nao foi possivel enviar o interesse ao operador.",
+        variant: "destructive",
+      })
+    } finally {
+      setAdminInterestSending(false)
+    }
+  }
+
+  async function handleSendAdminDirectAlert() {
+    if (!isAdmin) return
+
+    const message = adminDirectAlertMessage.trim()
+    if (!message) {
+      toast({
+        title: "Mensagem obrigatoria",
+        description: "Digite a mensagem do alerta individual antes de enviar.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setAdminDirectAlertSending(true)
+    try {
+      await sendAdminDirectNotification({
+        title: `Alerta individual do admin - ${precatorioAdminLabel}`,
+        body: `${message}\n\nCredito relacionado: ${precatorioAdminLabel}`,
+        kind: "warn",
+        eventType: "admin_alerta_individual_precatorio",
+      })
+
+      toast({
+        title: "Alerta enviado",
+        description: "O alerta individual foi enviado para o operador selecionado.",
+      })
+      setAdminDirectAlertMessage("")
+    } catch (error: any) {
+      toast({
+        title: "Erro ao enviar alerta",
+        description: error?.message || "Nao foi possivel enviar o alerta individual.",
+        variant: "destructive",
+      })
+    } finally {
+      setAdminDirectAlertSending(false)
     }
   }
 
@@ -1600,6 +1817,90 @@ export default function PrecatorioDetailPage() {
               )}
             </CardContent>
           </Card>
+
+          {isAdmin && (
+            <Card className="rounded-2xl border border-orange-300/50 bg-orange-50/40 dark:border-orange-900/60 dark:bg-orange-950/20 shadow-sm">
+              <CardHeader className="pb-3">
+                <CardTitle>
+                  <SectionTitle icon={AlertCircle} title="Interesse do Admin no Crédito" />
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="pt-0 space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Operador destinatário</Label>
+                    <Select
+                      value={adminTargetUserId || "__none__"}
+                      onValueChange={(value) =>
+                        setAdminTargetUserId(value === "__none__" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o operador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {adminRecipients.length === 0 ? (
+                          <SelectItem value="__none__">Nenhum operador vinculado</SelectItem>
+                        ) : (
+                          adminRecipients.map((recipient) => (
+                            <SelectItem key={recipient.id} value={recipient.id}>
+                              {recipient.label}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      O modal de comunicados exibira apenas alertas diretos criados pelo admin.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Crédito em foco</Label>
+                    <div className="rounded-md border border-border/60 bg-background/80 px-3 py-2 text-sm">
+                      {precatorioAdminLabel}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="admin-interest-message">Mensagem de interesse (opcional)</Label>
+                  <Textarea
+                    id="admin-interest-message"
+                    rows={3}
+                    value={adminInterestMessage}
+                    onChange={(e) => setAdminInterestMessage(e.target.value)}
+                    placeholder="Ex.: Preciso priorizar este crédito nesta semana."
+                  />
+                  <Button
+                    onClick={handleSignalAdminInterest}
+                    disabled={adminInterestSending || !adminTargetUserId}
+                  >
+                    {adminInterestSending ? "Enviando interesse..." : "Sinalizar interesse no crédito"}
+                  </Button>
+                </div>
+
+                <Separator />
+
+                <div className="space-y-2">
+                  <Label htmlFor="admin-direct-alert">Alerta individual para operador</Label>
+                  <Textarea
+                    id="admin-direct-alert"
+                    rows={3}
+                    value={adminDirectAlertMessage}
+                    onChange={(e) => setAdminDirectAlertMessage(e.target.value)}
+                    placeholder="Ex.: Verifique este crédito hoje e me atualize até 16h."
+                  />
+                  <Button
+                    variant="outline"
+                    onClick={handleSendAdminDirectAlert}
+                    disabled={adminDirectAlertSending || !adminTargetUserId}
+                  >
+                    {adminDirectAlertSending ? "Enviando alerta..." : "Enviar alerta individual"}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
           <ModalSemInteresse
             open={semInteresseModalOpen}

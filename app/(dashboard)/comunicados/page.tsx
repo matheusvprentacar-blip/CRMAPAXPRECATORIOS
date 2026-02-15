@@ -43,6 +43,42 @@ type UserComunicadoRow = ComunicadoDestinatarioRow & {
   comunicado?: ComunicadoRow
 }
 
+type AiReviewRequest = {
+  title: string
+  message: string
+  tone: string
+}
+
+function normalizeAiText(input: unknown): string {
+  if (typeof input !== "string") return ""
+  return input
+    .replace(/\r\n/g, "\n")
+    .replace(/\\r\\n/g, "\n")
+    .replace(/\\n/g, "\n")
+    .replace(/\\t/g, "\t")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim()
+}
+
+function normalizeAiDraft(input: unknown, fallbackTitle: string, fallbackMessage: string): AiDraft {
+  const obj = input && typeof input === "object" ? (input as Record<string, unknown>) : {}
+  const cleanedMessage = normalizeAiText(obj.mensagem_revisada) || normalizeAiText(fallbackMessage)
+
+  return {
+    titulo_sugerido:
+      normalizeAiText(obj.titulo_sugerido) || normalizeAiText(fallbackTitle) || "Comunicado interno",
+    mensagem_revisada: cleanedMessage,
+    versao_curta:
+      normalizeAiText(obj.versao_curta) ||
+      cleanedMessage.slice(0, 280) ||
+      normalizeAiText(fallbackMessage).slice(0, 280),
+    observacoes: Array.isArray(obj.observacoes)
+      ? obj.observacoes.map((item) => normalizeAiText(String(item))).filter(Boolean).slice(0, 4)
+      : [],
+  }
+}
+
 function normalizeRoles(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean)
   if (typeof value === "string" && value.trim().length > 0) return [value]
@@ -83,6 +119,79 @@ function getErrorMessage(error: unknown, fallback: string) {
     if (typeof message === "string" && message.trim().length > 0) return message
   }
   return fallback
+}
+
+function looksLikeHtml(contentType: string | null, bodyText: string) {
+  const contentTypeValue = String(contentType || "").toLowerCase()
+  const text = bodyText.trim().toLowerCase()
+  if (contentTypeValue.includes("text/html")) return true
+  return text.startsWith("<!doctype html") || text.startsWith("<html")
+}
+
+async function requestAiViaApi(input: AiReviewRequest): Promise<AiDraft> {
+  const response = await fetch("/api/comunicados/ai", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(input),
+  })
+
+  const contentType = response.headers.get("content-type")
+  const rawBody = await response.text()
+
+  if (looksLikeHtml(contentType, rawBody)) {
+    throw new Error("Servico local OpenAI indisponivel nesta versao do app.")
+  }
+
+  let payload: { ok?: boolean; data?: unknown; error?: string } | null = null
+  if (rawBody.trim().length > 0) {
+    try {
+      const parsed = JSON.parse(rawBody) as unknown
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error("Resposta invalida do servico OpenAI.")
+      }
+      const parsedObj = parsed as Record<string, unknown>
+      payload = {
+        ok: typeof parsedObj.ok === "boolean" ? parsedObj.ok : undefined,
+        data: parsedObj.data,
+        error: typeof parsedObj.error === "string" ? parsedObj.error : undefined,
+      }
+    } catch {
+      throw new Error("Resposta invalida do servico OpenAI (nao-JSON).")
+    }
+  }
+
+  if (!response.ok) {
+    throw new Error(payload?.error || `Falha ao revisar comunicado com IA (HTTP ${response.status}).`)
+  }
+
+  if (!payload?.ok || !payload?.data) {
+    throw new Error(payload?.error || "Falha ao revisar comunicado com IA.")
+  }
+
+  return normalizeAiDraft(payload.data, input.title, input.message)
+}
+
+async function requestAiViaSupabaseFunction(
+  supabase: ReturnType<typeof createBrowserClient>,
+  input: AiReviewRequest
+): Promise<AiDraft> {
+  if (!supabase) throw new Error("Cliente Supabase indisponivel.")
+
+  const { data, error } = await supabase.functions.invoke("comunicados-ai", {
+    body: input,
+  })
+
+  if (error) {
+    throw new Error(error.message || "Falha ao consultar OpenAI via Supabase.")
+  }
+
+  if (!data?.ok || !data?.data) {
+    throw new Error(data?.error || "Resposta invalida da funcao remota OpenAI.")
+  }
+
+  return normalizeAiDraft(data.data, input.title, input.message)
 }
 
 function readOptionalString(obj: Record<string, unknown>, key: string): string | null {
@@ -367,34 +476,50 @@ export default function ComunicadosPage() {
 
     setAiLoading(true)
     try {
-      const response = await fetch("/api/comunicados/ai", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          title: titulo,
-          message: mensagemOriginal,
-          tone: tomIA,
-        }),
-      })
-
-      const payload = await response.json()
-      if (!response.ok || !payload?.ok || !payload?.data) {
-        throw new Error(payload?.error || "Falha ao revisar comunicado com IA.")
+      const requestBody: AiReviewRequest = {
+        title: titulo,
+        message: mensagemOriginal,
+        tone: tomIA,
       }
 
-      const aiData = payload.data as AiDraft
+      let aiData: AiDraft | null = null
+      let edgeFunctionError: unknown = null
+
+      try {
+        aiData = await requestAiViaSupabaseFunction(supabase, requestBody)
+      } catch (error: unknown) {
+        edgeFunctionError = error
+      }
+
+      if (!aiData) {
+        try {
+          aiData = await requestAiViaApi(requestBody)
+        } catch (apiError: unknown) {
+          const edgeMessage = edgeFunctionError
+            ? getErrorMessage(edgeFunctionError, "Falha na funcao remota OpenAI.")
+            : ""
+          const apiMessage = getErrorMessage(apiError, "Falha na API local OpenAI.")
+          const composed = edgeMessage
+            ? `${apiMessage} Detalhe adicional: ${edgeMessage}`
+            : apiMessage
+          throw new Error(composed)
+        }
+      }
+
+      if (!aiData) {
+        throw new Error("Nao foi possivel gerar sugestao da IA.")
+      }
+
       setAiDraft(aiData)
-      toast.success("Sugestão da IA gerada com sucesso.")
+      toast.success("Sugestao da IA gerada com sucesso.")
     } catch (error: unknown) {
       toast.error("Erro ao revisar mensagem com IA.", {
-        description: getErrorMessage(error, "Verifique a configuração da OpenAI."),
+        description: getErrorMessage(error, "Verifique a configuracao da OpenAI."),
       })
     } finally {
       setAiLoading(false)
     }
-  }, [mensagemOriginal, titulo, tomIA])
+  }, [mensagemOriginal, supabase, titulo, tomIA])
 
   const uploadAttachment = useCallback(async (): Promise<{
     url: string
@@ -981,3 +1106,4 @@ export default function ComunicadosPage() {
     </div>
   )
 }
+

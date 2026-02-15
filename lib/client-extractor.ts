@@ -1,7 +1,5 @@
-import { GoogleGenerativeAI } from "@google/generative-ai"
 import * as XLSX from "xlsx"
 import { extrairDadosDeTexto } from "@/lib/extrair-dados"
-import { toast } from "sonner"
 
 const PDFJS_SCRIPT_SRC = "/pdf.min.mjs"
 const PDFJS_WORKER_SRC = "/pdf.worker.mjs"
@@ -181,21 +179,6 @@ export async function extractTextFromExcel(file: File): Promise<string> {
   return XLSX.utils.sheet_to_csv(sheet)
 }
 
-function tryParseAiJson(rawResponse: string): Record<string, unknown> {
-  const withoutMarkdownFence = rawResponse.replace(/^```json\s*/i, "").replace(/\s*```$/i, "").trim()
-  try {
-    return JSON.parse(withoutMarkdownFence)
-  } catch {
-    const start = withoutMarkdownFence.indexOf("{")
-    const end = withoutMarkdownFence.lastIndexOf("}")
-    if (start >= 0 && end > start) {
-      const chunk = withoutMarkdownFence.slice(start, end + 1)
-      return JSON.parse(chunk)
-    }
-    throw new Error("Resposta da IA nao contem JSON valido")
-  }
-}
-
 export async function processFileWithAI(
   file: File,
   method: "ai" | "regex" = "ai"
@@ -218,80 +201,13 @@ export async function processFileWithAI(
     throw new Error("Nao foi possivel extrair texto do arquivo enviado.")
   }
 
-  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_GEMINI_API_KEY
-  if (method === "regex" || !apiKey) {
-    if (method === "ai" && !apiKey) {
-      console.warn("Sem chave da IA. Usando extracao basica por regex.")
-    }
-    return mapRegexData(text)
-  }
-
-  try {
-    const genAI = new GoogleGenerativeAI(apiKey)
-    const modelsToTry = ["gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-2.0-flash-lite", "gemini-2.0-flash"]
-
-    let aiRawResponse = ""
-    let usedModel = ""
-    let lastError: unknown
-
-    for (const modelName of modelsToTry) {
-      try {
-        const model = genAI.getGenerativeModel({ model: modelName })
-        const prompt = `
-Voce e um assistente juridico especializado em precatorios.
-Analise o texto abaixo e retorne APENAS um JSON valido com:
-- credor_nome
-- advogado_nome
-- valor_principal (numero)
-- numero_precatorio
-- numero_oficio
-- tribunal
-- credor_cpf_cnpj
-- numero_processo
-- natureza (Alimentar ou Comum)
-- data_expedicao (YYYY-MM-DD se possivel)
-
-TEXTO:
-"""
-${text.substring(0, 30000)}
-"""
-`
-
-        const result = await model.generateContent(prompt)
-        const response = await result.response
-        aiRawResponse = response.text()
-        usedModel = modelName
-        break
-      } catch (error) {
-        lastError = error
-      }
-    }
-
-    if (!aiRawResponse) {
-      throw lastError || new Error("Nenhum modelo de IA retornou resultado")
-    }
-
-    const aiData = tryParseAiJson(aiRawResponse)
-    return {
-      ...aiData,
-      natureza: normalizeNatureza(aiData.natureza),
-      raw_text: `[AI:${usedModel}]\n${text.substring(0, 3000)}`,
-    } as ExtractedData
-  } catch (error: unknown) {
-    console.error("Falha na extracao por IA:", error)
-
-    const regexData = mapRegexData(text)
-    const message = error instanceof Error ? error.message : String(error)
-
-    if (message.includes("429")) {
-      regexData.raw_text = `IA indisponivel por limite temporario. Usando OCR basico.\n${regexData.raw_text || ""}`
-      toast.error("Limite temporario da IA atingido. Usando extracao basica.")
-      return regexData
-    }
-
-    regexData.raw_text = `Falha da IA: ${message}\n${regexData.raw_text || ""}`
+  // IA desativada por decisao de produto: fluxo usa apenas OCR/regex local.
+  const regexData = mapRegexData(text)
+  if (method === "ai") {
+    regexData.raw_text = regexData.raw_text || text.substring(0, 3000)
     return regexData
   }
+  return regexData
 }
 
 function mapRegexData(text: string): ExtractedData {

@@ -45,33 +45,48 @@ export function ModalCriarPrecatorio({
 }: ModalCriarPrecatorioProps) {
   const safeData: PrecatorioData = data ?? {}
 
-  const [credor, setCredor] = useState(safeData.credor_nome ?? "")
-  const [advogado, setAdvogado] = useState(safeData.advogado_nome ?? "")
-  const [valor, setValor] = useState(safeData.valor_principal ? String(safeData.valor_principal) : "")
-  const [numero, setNumero] = useState(maskProcesso(safeData.numero_precatorio ?? ""))
-  const [numeroOficio, setNumeroOficio] = useState(safeData.numero_oficio ?? "")
-  const [tribunal, setTribunal] = useState(safeData.tribunal ?? "")
-  const [cpf, setCpf] = useState(safeData.credor_cpf_cnpj ?? "")
-  const [telefone, setTelefone] = useState(safeData.credor_telefone ?? "")
-  const [processo, setProcesso] = useState(maskProcesso(safeData.numero_processo ?? ""))
-  const [dataExpedicao, setDataExpedicao] = useState(safeData.data_expedicao ?? "")
-  const [natureza, setNatureza] = useState(safeData.natureza ?? "")
+  const [credor, setCredor] = useState("")
+  const [advogado, setAdvogado] = useState("")
+  const [valor, setValor] = useState("")
+  const [numero, setNumero] = useState("")
+  const [numeroOficio, setNumeroOficio] = useState("")
+  const [tribunal, setTribunal] = useState("")
+  const [cpf, setCpf] = useState("")
+  const [telefone, setTelefone] = useState("")
+  const [processo, setProcesso] = useState("")
+  const [dataExpedicao, setDataExpedicao] = useState("")
+  const [natureza, setNatureza] = useState("")
+  const [extractAccepted, setExtractAccepted] = useState(false)
   const [saving, setSaving] = useState(false)
 
+  const hasExtractedSnapshot = Boolean(
+    safeData.credor_nome ||
+      safeData.advogado_nome ||
+      safeData.valor_principal ||
+      safeData.numero_precatorio ||
+      safeData.numero_oficio ||
+      safeData.tribunal ||
+      safeData.credor_cpf_cnpj ||
+      safeData.numero_processo ||
+      safeData.natureza ||
+      safeData.data_expedicao ||
+      safeData.raw_text
+  )
+
   useEffect(() => {
-    const nextData: PrecatorioData = data ?? {}
-    setCredor(nextData.credor_nome ?? "")
-    setAdvogado(nextData.advogado_nome ?? "")
-    setValor(nextData.valor_principal ? String(nextData.valor_principal) : "")
-    setNumero(maskProcesso(nextData.numero_precatorio ?? ""))
-    setNumeroOficio(nextData.numero_oficio ?? "")
-    setTribunal(nextData.tribunal ?? "")
-    setCpf(nextData.credor_cpf_cnpj ?? "")
-    setTelefone(nextData.credor_telefone ?? "")
-    setProcesso(maskProcesso(nextData.numero_processo ?? ""))
-    setDataExpedicao(nextData.data_expedicao ?? "")
-    setNatureza(nextData.natureza ?? "")
-  }, [data])
+    setCredor("")
+    setAdvogado("")
+    setValor("")
+    setNumero("")
+    setNumeroOficio("")
+    setTribunal("")
+    setCpf("")
+    setTelefone("")
+    setProcesso("")
+    setDataExpedicao("")
+    setNatureza("")
+    setExtractAccepted(false)
+  }, [data, open])
 
   const handleSave = async () => {
     setSaving(true)
@@ -83,6 +98,9 @@ export function ModalCriarPrecatorio({
 
       if (!credor || !numero) {
         throw new Error("Preencha os campos obrigatorios: Credor e Numero do Precatorio.")
+      }
+      if (hasExtractedSnapshot && !extractAccepted) {
+        throw new Error("Confirme a leitura dos dados OCR antes de finalizar a importacao.")
       }
 
       const {
@@ -142,6 +160,32 @@ export function ModalCriarPrecatorio({
 
         <div className="flex-1 grid grid-cols-1 md:grid-cols-2 gap-6 overflow-hidden min-h-0">
           <div className="space-y-4 py-4 overflow-y-auto pr-2">
+            {hasExtractedSnapshot && (
+              <div className="rounded-lg border p-3 bg-muted/30 space-y-2">
+                <div className="text-sm font-medium">Dados encontrados no OCR (somente leitura)</div>
+                <div className="text-xs text-muted-foreground space-y-1">
+                  <p>Credor: {safeData.credor_nome || "Nao identificado"}</p>
+                  <p>Advogado: {safeData.advogado_nome || "Nao identificado"}</p>
+                  <p>CPF/CNPJ: {safeData.credor_cpf_cnpj || "Nao identificado"}</p>
+                  <p>Valor principal: {safeData.valor_principal ?? "Nao identificado"}</p>
+                  <p>Numero do precatorio: {safeData.numero_precatorio || "Nao identificado"}</p>
+                  <p>Processo de origem: {safeData.numero_processo || "Nao identificado"}</p>
+                  <p>Numero do oficio: {safeData.numero_oficio || "Nao identificado"}</p>
+                  <p>Tribunal: {safeData.tribunal || "Nao identificado"}</p>
+                  <p>Natureza: {safeData.natureza || "Nao identificado"}</p>
+                  <p>Data de expedicao: {safeData.data_expedicao || "Nao identificado"}</p>
+                </div>
+                <label className="flex items-center gap-2 text-xs pt-2">
+                  <input
+                    type="checkbox"
+                    checked={extractAccepted}
+                    onChange={(e) => setExtractAccepted(e.target.checked)}
+                  />
+                  Confirmo que revisei os dados do OCR e vou preencher manualmente os campos abaixo.
+                </label>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label>Credor</Label>
               <Input value={credor} onChange={(e) => setCredor(e.target.value)} placeholder="Nome do Credor" />
@@ -242,7 +286,7 @@ export function ModalCriarPrecatorio({
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>
             Cancelar
           </Button>
-          <Button onClick={handleSave} disabled={saving}>
+          <Button onClick={handleSave} disabled={saving || (hasExtractedSnapshot && !extractAccepted)}>
             {saving ? "Salvando..." : "Salvar Precatorio"}
           </Button>
         </DialogFooter>
