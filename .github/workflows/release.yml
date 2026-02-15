@@ -89,3 +89,84 @@ jobs:
           prerelease: false
           includeUpdaterJson: true
           updaterJsonPreferNsis: true
+
+      - name: Ensure updater latest.json
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG_NAME: ${{ steps.release_notes.outputs.tag_name }}
+        run: |
+          $ErrorActionPreference = "Stop"
+          $repo = $env:GITHUB_REPOSITORY
+          $tagName = $env:TAG_NAME
+
+          if ([string]::IsNullOrWhiteSpace($tagName)) {
+            Write-Error "TAG_NAME ausente."
+            exit 1
+          }
+
+          $release = gh release view $tagName --repo $repo --json tagName,publishedAt,body,assets | ConvertFrom-Json
+          $assets = @($release.assets)
+
+          $exeAsset = $assets | Where-Object { $_.name -match "_x64-setup\.exe$" } | Select-Object -First 1
+          if (-not $exeAsset) {
+            Write-Error "Executavel NSIS nao encontrado para gerar latest.json."
+            exit 1
+          }
+
+          $exeSigAsset = $assets | Where-Object { $_.name -eq "$($exeAsset.name).sig" } | Select-Object -First 1
+          if (-not $exeSigAsset) {
+            Write-Error "Assinatura do executavel nao encontrada: $($exeAsset.name).sig"
+            exit 1
+          }
+
+          $msiAsset = $assets | Where-Object { $_.name -match "_x64_en-US\.msi$" } | Select-Object -First 1
+          $msiSigAsset = $null
+          if ($msiAsset) {
+            $msiSigAsset = $assets | Where-Object { $_.name -eq "$($msiAsset.name).sig" } | Select-Object -First 1
+          }
+
+          $tmpDir = Join-Path $env:RUNNER_TEMP "tauri-updater-json"
+          New-Item -ItemType Directory -Path $tmpDir -Force | Out-Null
+
+          gh release download $tagName --repo $repo --pattern $exeSigAsset.name --dir $tmpDir --clobber | Out-Null
+          $exeSig = (Get-Content -Raw (Join-Path $tmpDir $exeSigAsset.name)).Trim()
+
+          $platforms = [ordered]@{
+            "windows-x86_64" = [ordered]@{
+              signature = $exeSig
+              url = $exeAsset.url
+            }
+            "windows-x86_64-nsis" = [ordered]@{
+              signature = $exeSig
+              url = $exeAsset.url
+            }
+          }
+
+          if ($msiAsset -and $msiSigAsset) {
+            gh release download $tagName --repo $repo --pattern $msiSigAsset.name --dir $tmpDir --clobber | Out-Null
+            $msiSig = (Get-Content -Raw (Join-Path $tmpDir $msiSigAsset.name)).Trim()
+            $platforms["windows-x86_64-msi"] = [ordered]@{
+              signature = $msiSig
+              url = $msiAsset.url
+            }
+          }
+
+          $version = $release.tagName.TrimStart("v")
+          $notes = if ([string]::IsNullOrWhiteSpace($release.body)) { "See the assets to download this version and install." } else { $release.body.Trim() }
+
+          $latest = [ordered]@{
+            version = $version
+            notes = $notes
+            pub_date = ([datetime]::Parse($release.publishedAt).ToUniversalTime().ToString("yyyy-MM-ddTHH:mm:ss.fffZ"))
+            platforms = $platforms
+          }
+
+          $latestPath = Join-Path $tmpDir "latest.json"
+          [System.IO.File]::WriteAllText(
+            $latestPath,
+            ($latest | ConvertTo-Json -Depth 20),
+            [System.Text.UTF8Encoding]::new($false)
+          )
+
+          gh release upload $tagName $latestPath --repo $repo --clobber | Out-Null
