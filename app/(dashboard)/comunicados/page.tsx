@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useState } from "react"
-import { useSearchParams } from "next/navigation"
+import { useRouter, useSearchParams } from "next/navigation"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -13,15 +13,16 @@ import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import {
-  Megaphone,
-  Sparkles,
-  Send,
-  Eye,
-  Download,
-  Loader2,
-  FileText,
   ChevronDown,
   ChevronUp,
+  Download,
+  ExternalLink,
+  Eye,
+  FileText,
+  Loader2,
+  Megaphone,
+  Send,
+  Sparkles,
   Trash2,
 } from "lucide-react"
 import { toast } from "sonner"
@@ -43,10 +44,38 @@ type UserComunicadoRow = ComunicadoDestinatarioRow & {
   comunicado?: ComunicadoRow
 }
 
+type ComunicadoTargetScope = ComunicadoScope | "individual"
+
+type RecipientOption = {
+  id: string
+  nome: string
+  email: string
+  roleLabel: string
+  label: string
+}
+
+type IndividualAlertRow = {
+  id: string
+  title: string
+  body: string
+  link_url: string | null
+  entity_type: string | null
+  entity_id: string | null
+  event_type: string | null
+  created_at: string
+  read_at: string | null
+}
+
 type AiReviewRequest = {
   title: string
   message: string
   tone: string
+}
+
+type AiEnvelope = {
+  ok?: boolean
+  data?: unknown
+  error?: string
 }
 
 function normalizeAiText(input: unknown): string {
@@ -83,6 +112,26 @@ function normalizeRoles(value: unknown): string[] {
   if (Array.isArray(value)) return value.map((item) => String(item)).filter(Boolean)
   if (typeof value === "string" && value.trim().length > 0) return [value]
   return []
+}
+
+const ROLE_LABELS: Record<string, string> = {
+  admin: "Admin",
+  operador_comercial: "Operador comercial",
+  operador_calculo: "Operador de calculo",
+  operador: "Operador",
+  analista: "Analista",
+  gestor: "Gestor",
+  gestor_certidoes: "Gestor de certidoes",
+  gestor_oficio: "Gestor de oficio",
+  juridico: "Juridico",
+  financeiro: "Financeiro",
+}
+
+function formatRoleLabel(roles: string[]): string {
+  if (roles.length === 0) return "Sem cargo"
+  return roles
+    .map((role) => ROLE_LABELS[role] || role.replace(/_/g, " "))
+    .join(" / ")
 }
 
 function formatDateTime(value?: string | null) {
@@ -128,6 +177,24 @@ function looksLikeHtml(contentType: string | null, bodyText: string) {
   return text.startsWith("<!doctype html") || text.startsWith("<html")
 }
 
+function parseAiEnvelope(rawBody: string, sourceLabel: string): AiEnvelope | null {
+  if (rawBody.trim().length === 0) return null
+  try {
+    const parsed = JSON.parse(rawBody) as unknown
+    if (!parsed || typeof parsed !== "object") {
+      throw new Error(`Resposta invalida do ${sourceLabel}.`)
+    }
+    const parsedObj = parsed as Record<string, unknown>
+    return {
+      ok: typeof parsedObj.ok === "boolean" ? parsedObj.ok : undefined,
+      data: parsedObj.data,
+      error: typeof parsedObj.error === "string" ? parsedObj.error : undefined,
+    }
+  } catch {
+    throw new Error(`Resposta invalida do ${sourceLabel} (nao-JSON).`)
+  }
+}
+
 async function requestAiViaApi(input: AiReviewRequest): Promise<AiDraft> {
   const response = await fetch("/api/comunicados/ai", {
     method: "POST",
@@ -144,23 +211,7 @@ async function requestAiViaApi(input: AiReviewRequest): Promise<AiDraft> {
     throw new Error("Servico local OpenAI indisponivel nesta versao do app.")
   }
 
-  let payload: { ok?: boolean; data?: unknown; error?: string } | null = null
-  if (rawBody.trim().length > 0) {
-    try {
-      const parsed = JSON.parse(rawBody) as unknown
-      if (!parsed || typeof parsed !== "object") {
-        throw new Error("Resposta invalida do servico OpenAI.")
-      }
-      const parsedObj = parsed as Record<string, unknown>
-      payload = {
-        ok: typeof parsedObj.ok === "boolean" ? parsedObj.ok : undefined,
-        data: parsedObj.data,
-        error: typeof parsedObj.error === "string" ? parsedObj.error : undefined,
-      }
-    } catch {
-      throw new Error("Resposta invalida do servico OpenAI (nao-JSON).")
-    }
-  }
+  const payload = parseAiEnvelope(rawBody, "servico OpenAI")
 
   if (!response.ok) {
     throw new Error(payload?.error || `Falha ao revisar comunicado com IA (HTTP ${response.status}).`)
@@ -173,31 +224,128 @@ async function requestAiViaApi(input: AiReviewRequest): Promise<AiDraft> {
   return normalizeAiDraft(payload.data, input.title, input.message)
 }
 
+async function requestAiViaSupabaseHttp(
+  supabase: ReturnType<typeof createBrowserClient>,
+  input: AiReviewRequest
+): Promise<AiDraft> {
+  if (!supabase) throw new Error("Cliente Supabase indisponivel.")
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+  if (!supabaseUrl || !supabaseAnonKey) {
+    throw new Error("Configuracao do Supabase ausente para revisar comunicado com IA.")
+  }
+
+  const {
+    data: { session },
+    error: sessionError,
+  } = await supabase.auth.getSession()
+
+  if (sessionError) {
+    throw new Error(sessionError.message || "Nao foi possivel validar a sessao atual.")
+  }
+
+  if (!session?.access_token) {
+    throw new Error("Sessao expirada para chamar IA. Faca login novamente.")
+  }
+
+  const functionUrl = `${supabaseUrl.replace(/\/+$/, "")}/functions/v1/comunicados-ai`
+  const response = await fetch(functionUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      apikey: supabaseAnonKey,
+      Authorization: `Bearer ${session.access_token}`,
+    },
+    body: JSON.stringify(input),
+  })
+
+  const contentType = response.headers.get("content-type")
+  const rawBody = await response.text()
+
+  if (looksLikeHtml(contentType, rawBody)) {
+    throw new Error("Resposta invalida da funcao remota OpenAI (HTML).")
+  }
+
+  const payload = parseAiEnvelope(rawBody, "funcao remota OpenAI")
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error("Funcao remota comunicados-ai nao encontrada (HTTP 404).")
+    }
+    throw new Error(payload?.error || `Falha ao consultar OpenAI via Supabase (HTTP ${response.status}).`)
+  }
+
+  if (!payload?.ok || !payload?.data) {
+    throw new Error(payload?.error || "Resposta invalida da funcao remota OpenAI.")
+  }
+
+  return normalizeAiDraft(payload.data, input.title, input.message)
+}
+
 async function requestAiViaSupabaseFunction(
   supabase: ReturnType<typeof createBrowserClient>,
   input: AiReviewRequest
 ): Promise<AiDraft> {
   if (!supabase) throw new Error("Cliente Supabase indisponivel.")
 
-  const { data, error } = await supabase.functions.invoke("comunicados-ai", {
-    body: input,
-  })
+  try {
+    const { data, error } = await supabase.functions.invoke("comunicados-ai", {
+      body: input,
+    })
 
-  if (error) {
-    throw new Error(error.message || "Falha ao consultar OpenAI via Supabase.")
+    if (error) {
+      throw error
+    }
+
+    if (!data?.ok || !data?.data) {
+      throw new Error(data?.error || "Resposta invalida da funcao remota OpenAI.")
+    }
+
+    return normalizeAiDraft(data.data, input.title, input.message)
+  } catch (invokeError: unknown) {
+    try {
+      return await requestAiViaSupabaseHttp(supabase, input)
+    } catch (httpError: unknown) {
+      const httpMessage = getErrorMessage(httpError, "Falha ao consultar OpenAI via Supabase.")
+      const invokeMessage = getErrorMessage(invokeError, "")
+      if (!invokeMessage || invokeMessage === httpMessage) {
+        throw new Error(httpMessage)
+      }
+      throw new Error(`${httpMessage} Detalhe adicional: ${invokeMessage}`)
+    }
   }
-
-  if (!data?.ok || !data?.data) {
-    throw new Error(data?.error || "Resposta invalida da funcao remota OpenAI.")
-  }
-
-  return normalizeAiDraft(data.data, input.title, input.message)
 }
 
 function readOptionalString(obj: Record<string, unknown>, key: string): string | null {
   const value = obj[key]
   if (typeof value === "string") return value
   return null
+}
+
+function normalizeIndividualAlertRow(input: unknown): IndividualAlertRow | null {
+  if (!input || typeof input !== "object") return null
+  const obj = input as Record<string, unknown>
+
+  const id = readOptionalString(obj, "id")
+  const title = readOptionalString(obj, "title")
+  const body = readOptionalString(obj, "body")
+  const createdAt = readOptionalString(obj, "created_at")
+
+  if (!id || !title || !body || !createdAt) return null
+
+  return {
+    id,
+    title,
+    body,
+    link_url: readOptionalString(obj, "link_url"),
+    entity_type: readOptionalString(obj, "entity_type"),
+    entity_id: readOptionalString(obj, "entity_id"),
+    event_type: readOptionalString(obj, "event_type"),
+    created_at: createdAt,
+    read_at: readOptionalString(obj, "read_at"),
+  }
 }
 
 function normalizeComunicadoRow(input: unknown): ComunicadoRow | undefined {
@@ -271,6 +419,7 @@ function normalizeUserComunicadoRow(input: unknown): UserComunicadoRow | null {
 }
 
 export default function ComunicadosPage() {
+  const router = useRouter()
   const supabase = createBrowserClient()
   const { profile } = useAuth()
   const searchParams = useSearchParams()
@@ -284,11 +433,15 @@ export default function ComunicadosPage() {
   const [mensagemOriginal, setMensagemOriginal] = useState("")
   const [mensagemPublicada, setMensagemPublicada] = useState("")
   const [tomIA, setTomIA] = useState("neutro")
-  const [escopo, setEscopo] = useState<ComunicadoScope>("operadores")
+  const [escopo, setEscopo] = useState<ComunicadoTargetScope>("operadores")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [aiDraft, setAiDraft] = useState<AiDraft | null>(null)
+  const [recipientOptions, setRecipientOptions] = useState<RecipientOption[]>([])
+  const [selectedIndividualRecipientId, setSelectedIndividualRecipientId] = useState("")
+  const [loadingRecipients, setLoadingRecipients] = useState(false)
 
   const [myComunicados, setMyComunicados] = useState<UserComunicadoRow[]>([])
+  const [myIndividualAlerts, setMyIndividualAlerts] = useState<IndividualAlertRow[]>([])
   const [adminComunicados, setAdminComunicados] = useState<AdminComunicadoRow[]>([])
   const [expandedAdminRows, setExpandedAdminRows] = useState<Record<string, boolean>>({})
   const [deletingComunicadoId, setDeletingComunicadoId] = useState<string | null>(null)
@@ -298,9 +451,66 @@ export default function ComunicadosPage() {
   const userId = profile?.id
 
   const unreadCount = useMemo(
-    () => myComunicados.filter((item) => !item.visualizado_em && !item.dispensado_em).length,
-    [myComunicados]
+    () =>
+      myComunicados.filter((item) => !item.visualizado_em && !item.dispensado_em).length +
+      myIndividualAlerts.filter((item) => !item.read_at).length,
+    [myComunicados, myIndividualAlerts]
   )
+
+  const loadRecipientOptions = useCallback(async () => {
+    if (!supabase || !isAdmin) {
+      setRecipientOptions([])
+      setSelectedIndividualRecipientId("")
+      return
+    }
+
+    setLoadingRecipients(true)
+    try {
+      const { data, error } = await supabase
+        .from("usuarios")
+        .select("id, nome, email, role, ativo")
+        .or("ativo.is.null,ativo.eq.true")
+        .order("nome", { ascending: true })
+
+      if (error) throw error
+
+      const options = (Array.isArray(data) ? data : [])
+        .map((row) => {
+          const id = typeof row.id === "string" ? row.id : ""
+          if (!id) return null
+
+          const nomeRaw = typeof row.nome === "string" ? row.nome.trim() : ""
+          const emailRaw = typeof row.email === "string" ? row.email.trim() : ""
+          const nome = nomeRaw || emailRaw || `Usuario ${id.slice(0, 8)}`
+          const roleLabel = formatRoleLabel(normalizeRoles(row.role))
+          const emailSuffix = emailRaw ? ` (${emailRaw})` : ""
+
+          return {
+            id,
+            nome,
+            email: emailRaw,
+            roleLabel,
+            label: `${nome} - ${roleLabel}${emailSuffix}`,
+          } satisfies RecipientOption
+        })
+        .filter((item): item is RecipientOption => Boolean(item))
+
+      setRecipientOptions(options)
+      setSelectedIndividualRecipientId((prev) => {
+        if (prev && options.some((item) => item.id === prev)) return prev
+        return options[0]?.id || ""
+      })
+    } catch (error: unknown) {
+      console.error("Erro ao carregar usuarios para envio individual:", error)
+      toast.error("Nao foi possivel carregar usuarios para envio individual.", {
+        description: getErrorMessage(error, "Tente novamente em instantes."),
+      })
+      setRecipientOptions([])
+      setSelectedIndividualRecipientId("")
+    } finally {
+      setLoadingRecipients(false)
+    }
+  }, [isAdmin, supabase])
 
   const loadData = useCallback(async () => {
     if (!supabase || !userId) {
@@ -383,18 +593,34 @@ export default function ComunicadosPage() {
             .order("publicado_em", { ascending: false })
         : Promise.resolve({ data: [] as AdminComunicadoRow[], error: null })
 
-      const [{ data: userRows, error: userError }, { data: adminRows, error: adminError }] =
-        await Promise.all([userPromise, adminPromise])
+      const alertsPromise = supabase
+        .from("notifications")
+        .select("id, title, body, link_url, entity_type, entity_id, event_type, created_at, read_at")
+        .eq("user_id", userId)
+        .in("event_type", ["interesse_calculo_admin", "admin_alerta_individual_precatorio"])
+        .order("created_at", { ascending: false })
+
+      const [
+        { data: userRows, error: userError },
+        { data: adminRows, error: adminError },
+        { data: alertRows, error: alertsError },
+      ] = await Promise.all([userPromise, adminPromise, alertsPromise])
 
       if (userError) throw userError
       if (adminError) throw adminError
+      if (alertsError) throw alertsError
 
       const filteredUserRows = (Array.isArray(userRows) ? userRows : [])
         .map(normalizeUserComunicadoRow)
         .filter((item): item is UserComunicadoRow => Boolean(item))
         .filter((item) => item.comunicado?.ativo !== false)
 
+      const normalizedAlertRows = (Array.isArray(alertRows) ? alertRows : [])
+        .map(normalizeIndividualAlertRow)
+        .filter((item): item is IndividualAlertRow => Boolean(item))
+
       setMyComunicados(filteredUserRows)
+      setMyIndividualAlerts(normalizedAlertRows)
       setAdminComunicados((adminRows || []) as AdminComunicadoRow[])
     } catch (error: unknown) {
       console.error("Erro ao carregar comunicados:", error)
@@ -450,6 +676,42 @@ export default function ComunicadosPage() {
       void loadData()
     },
     [loadData, supabase]
+  )
+
+  const markIndividualAlertRead = useCallback(
+    async (alertId: string) => {
+      if (!supabase) return
+
+      const nowIso = new Date().toISOString()
+      const { error } = await supabase
+        .from("notifications")
+        .update({ read_at: nowIso })
+        .eq("id", alertId)
+
+      if (error) {
+        toast.error("Nao foi possivel confirmar leitura do alerta individual.")
+        return
+      }
+
+      setMyIndividualAlerts((prev) =>
+        prev.map((item) => (item.id === alertId ? { ...item, read_at: item.read_at || nowIso } : item))
+      )
+    },
+    [supabase]
+  )
+
+  const openIndividualAlertTarget = useCallback(
+    (alert: IndividualAlertRow) => {
+      if (alert.link_url) {
+        router.push(alert.link_url)
+        return
+      }
+
+      if (alert.entity_type === "precatorio" && alert.entity_id) {
+        router.push(`/precatorios/detalhes?id=${alert.entity_id}`)
+      }
+    },
+    [router]
   )
 
   const downloadAttachment = useCallback(
@@ -563,6 +825,11 @@ export default function ComunicadosPage() {
       return
     }
 
+    if (escopo === "individual" && !selectedIndividualRecipientId) {
+      toast.error("Selecione o usuario para envio individual.")
+      return
+    }
+
     const title = titulo.trim()
     const original = mensagemOriginal.trim()
     const published = (mensagemPublicada.trim() || mensagemOriginal.trim()).trim()
@@ -582,6 +849,7 @@ export default function ComunicadosPage() {
 
     setPublishing(true)
     try {
+      const publishScope: ComunicadoScope = escopo === "individual" ? "equipe" : escopo
       let attachment: Awaited<ReturnType<typeof uploadAttachment>> = null
       if (selectedFile) {
         attachment = await uploadAttachment()
@@ -592,7 +860,7 @@ export default function ComunicadosPage() {
         p_mensagem_original: original,
         p_mensagem_publicada: published,
         p_estilo_ia: aiDraft ? tomIA : null,
-        p_escopo: escopo,
+        p_escopo: publishScope,
         p_anexo_url: attachment?.url || null,
         p_anexo_nome: attachment?.name || null,
         p_anexo_mime: attachment?.mime || null,
@@ -601,7 +869,31 @@ export default function ComunicadosPage() {
 
       if (error) throw error
 
-      toast.success("Comunicado publicado com sucesso.")
+      if (escopo === "individual") {
+        const comunicadoId = typeof data === "string" ? data : ""
+        if (!comunicadoId) {
+          throw new Error("Nao foi possivel identificar o comunicado publicado para envio individual.")
+        }
+
+        const { error: trimRecipientsError } = await supabase
+          .from("comunicado_destinatarios")
+          .delete()
+          .eq("comunicado_id", comunicadoId)
+          .neq("usuario_id", selectedIndividualRecipientId)
+
+        if (trimRecipientsError) throw trimRecipientsError
+      }
+
+      const selectedRecipient =
+        escopo === "individual"
+          ? recipientOptions.find((item) => item.id === selectedIndividualRecipientId) || null
+          : null
+
+      if (selectedRecipient) {
+        toast.success(`Comunicado enviado para ${selectedRecipient.nome} (${selectedRecipient.roleLabel}).`)
+      } else {
+        toast.success("Comunicado publicado com sucesso.")
+      }
 
       setTitulo("")
       setMensagemOriginal("")
@@ -630,6 +922,8 @@ export default function ComunicadosPage() {
     loadData,
     mensagemOriginal,
     mensagemPublicada,
+    recipientOptions,
+    selectedIndividualRecipientId,
     selectedFile,
     supabase,
     titulo,
@@ -678,6 +972,10 @@ export default function ComunicadosPage() {
     void loadData()
   }, [loadData])
 
+  useEffect(() => {
+    void loadRecipientOptions()
+  }, [loadRecipientOptions])
+
   const highlightedCardClass = (id?: string) =>
     id && highlightedId && id === highlightedId
       ? "border-primary ring-1 ring-primary/40"
@@ -696,7 +994,7 @@ export default function ComunicadosPage() {
           <Badge variant={unreadCount > 0 ? "default" : "secondary"}>
             {unreadCount} pendente(s)
           </Badge>
-          <Badge variant="outline">{myComunicados.length} recebido(s)</Badge>
+          <Badge variant="outline">{myComunicados.length + myIndividualAlerts.length} recebido(s)</Badge>
         </div>
       </div>
 
@@ -708,7 +1006,7 @@ export default function ComunicadosPage() {
               Novo comunicado para a equipe
             </CardTitle>
             <CardDescription>
-              Crie o comunicado, refine com IA e publique para operadores ou equipe inteira.
+              Crie o comunicado, refine com IA e publique para operadores, equipe inteira ou individual.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
@@ -727,7 +1025,7 @@ export default function ComunicadosPage() {
                   <Label>Escopo</Label>
                   <Select
                     value={escopo}
-                    onValueChange={(value) => setEscopo(value as ComunicadoScope)}
+                    onValueChange={(value) => setEscopo(value as ComunicadoTargetScope)}
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Selecione o público" />
@@ -735,6 +1033,7 @@ export default function ComunicadosPage() {
                     <SelectContent>
                       <SelectItem value="operadores">Somente operadores</SelectItem>
                       <SelectItem value="equipe">Equipe inteira</SelectItem>
+                      <SelectItem value="individual">Individual</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -754,6 +1053,36 @@ export default function ComunicadosPage() {
                 </div>
               </div>
             </div>
+
+            {escopo === "individual" && (
+              <div className="space-y-2">
+                <Label>Destinatario individual (nome e cargo)</Label>
+                <Select
+                  value={selectedIndividualRecipientId || "__none__"}
+                  onValueChange={(value) =>
+                    setSelectedIndividualRecipientId(value === "__none__" ? "" : value)
+                  }
+                  disabled={loadingRecipients || recipientOptions.length === 0}
+                >
+                  <SelectTrigger>
+                    <SelectValue
+                      placeholder={loadingRecipients ? "Carregando usuarios..." : "Selecione o usuario"}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {recipientOptions.length === 0 ? (
+                      <SelectItem value="__none__">Nenhum usuario ativo encontrado</SelectItem>
+                    ) : (
+                      recipientOptions.map((recipient) => (
+                        <SelectItem key={recipient.id} value={recipient.id}>
+                          {recipient.label}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="mensagem-original">Mensagem original</Label>
@@ -815,7 +1144,14 @@ export default function ComunicadosPage() {
                 )}
               </Button>
 
-              <Button onClick={() => void handlePublish()} disabled={publishing || aiLoading}>
+              <Button
+                onClick={() => void handlePublish()}
+                disabled={
+                  publishing ||
+                  aiLoading ||
+                  (escopo === "individual" && !selectedIndividualRecipientId)
+                }
+              >
                 {publishing ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
@@ -887,11 +1223,11 @@ export default function ComunicadosPage() {
         <CardHeader>
           <CardTitle>Meus comunicados</CardTitle>
           <CardDescription>
-            Leia os avisos publicados pela administração e confirme visualização.
+            Leia os avisos da administração, incluindo comunicados gerais e envios individuais.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
-          {!loading && myComunicados.length === 0 && (
+          {!loading && myComunicados.length === 0 && myIndividualAlerts.length === 0 && (
             <p className="text-sm text-muted-foreground">Nenhum comunicado recebido até o momento.</p>
           )}
 
@@ -950,6 +1286,56 @@ export default function ComunicadosPage() {
                         onClick={() => void dismissComunicado(row.comunicado_id)}
                       >
                         Agora não
+                      </Button>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+
+          {myIndividualAlerts.map((alert) => {
+            const isUnread = !alert.read_at
+            const canOpenTarget = Boolean(
+              alert.link_url || (alert.entity_type === "precatorio" && alert.entity_id)
+            )
+
+            return (
+              <Card key={alert.id}>
+                <CardContent className="p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <h3 className="font-semibold">{alert.title}</h3>
+                        <Badge variant="outline">Alerta individual</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground">
+                        Recebido em {formatDateTime(alert.created_at)}
+                      </p>
+                    </div>
+                    <div className="flex gap-2">
+                      {isUnread ? <Badge>Não lido</Badge> : <Badge variant="secondary">Lido</Badge>}
+                    </div>
+                  </div>
+
+                  <p className="text-sm whitespace-pre-line">{alert.body}</p>
+
+                  <div className="flex flex-wrap gap-2">
+                    {isUnread && (
+                      <Button size="sm" onClick={() => void markIndividualAlertRead(alert.id)}>
+                        <Eye className="w-4 h-4 mr-2" />
+                        Confirmar leitura
+                      </Button>
+                    )}
+
+                    {canOpenTarget && (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => openIndividualAlertTarget(alert)}
+                      >
+                        <ExternalLink className="w-4 h-4 mr-2" />
+                        Abrir referência
                       </Button>
                     )}
                   </div>
@@ -1106,4 +1492,3 @@ export default function ComunicadosPage() {
     </div>
   )
 }
-

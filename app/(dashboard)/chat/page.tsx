@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { downloadFileAsArrayBuffer, getFileDownloadUrl, uploadFile } from "@/lib/utils/file-upload"
 import { useAuth } from "@/lib/auth/auth-context"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Avatar, AvatarGroup, AvatarIcon } from "@heroui/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -771,17 +771,20 @@ export default function ChatPage() {
                     >
                       <div className="flex items-center gap-3">
                         <div className="relative shrink-0">
-                          <Avatar className="w-11 h-11">
-                            <AvatarImage src={user.foto_url || "/placeholder.svg"} />
-                            <AvatarFallback
-                              className={cn(
+                          <Avatar
+                            className="w-11 h-11 text-sm"
+                            src={user.foto_url || undefined}
+                            name={user.nome || undefined}
+                            showFallback
+                            icon={<AvatarIcon />}
+                            classNames={{
+                              fallback: cn(
                                 "text-white font-semibold bg-gradient-to-br",
                                 getAvatarGradient(user.id)
-                              )}
-                            >
-                              {user.nome?.slice(0, 2)?.toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
+                              ),
+                              icon: "text-white/90",
+                            }}
+                          />
 
                           <span
                             className={cn(
@@ -855,21 +858,51 @@ export default function ChatPage() {
                     <ArrowLeft className="h-5 w-5" />
                   </Button>
 
-                  <Avatar className="w-10 h-10">
-                    <AvatarImage src={selectedUser.foto_url || "/placeholder.svg"} />
-                    <AvatarFallback
-                      className={cn(
+                  <Avatar
+                    className="w-10 h-10 text-sm"
+                    src={selectedUser.foto_url || undefined}
+                    name={selectedUser.nome || undefined}
+                    showFallback
+                    icon={<AvatarIcon />}
+                    classNames={{
+                      fallback: cn(
                         "text-white font-semibold bg-gradient-to-br",
                         getAvatarGradient(selectedUser.id)
-                      )}
-                    >
-                      {selectedUser.nome?.slice(0, 2)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
+                      ),
+                      icon: "text-white/90",
+                    }}
+                  />
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <h3 className="text-sm font-semibold truncate">{selectedUser.nome}</h3>
+                      <AvatarGroup className="hidden sm:flex">
+                        <Avatar
+                          className="w-7 h-7 text-[10px]"
+                          src={profile?.foto_url || undefined}
+                          name={profile?.nome || undefined}
+                          showFallback
+                          icon={<AvatarIcon />}
+                          classNames={{
+                            fallback: "bg-primary text-primary-foreground font-semibold",
+                            icon: "text-primary-foreground",
+                          }}
+                        />
+                        <Avatar
+                          className="w-7 h-7 text-[10px]"
+                          src={selectedUser.foto_url || undefined}
+                          name={selectedUser.nome || undefined}
+                          showFallback
+                          icon={<AvatarIcon />}
+                          classNames={{
+                            fallback: cn(
+                              "text-white font-semibold bg-gradient-to-br",
+                              getAvatarGradient(selectedUser.id)
+                            ),
+                            icon: "text-white/90",
+                          }}
+                        />
+                      </AvatarGroup>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
                       {selectedUser.email || "Usuário interno"} •{" "}
@@ -998,17 +1031,20 @@ export default function ChatPage() {
                         {/* Avatar for other user (Messenger style shows it sometimes) */}
                         {!isMine && (
                           <div className={cn("w-8 shrink-0", nextSame ? "opacity-0" : "opacity-100")}>
-                            <Avatar className="w-8 h-8">
-                              <AvatarImage src={selectedUser?.foto_url || "/placeholder.svg"} />
-                              <AvatarFallback
-                                className={cn(
+                            <Avatar
+                              className="w-8 h-8 text-[10px]"
+                              src={selectedUser?.foto_url || undefined}
+                              name={selectedUser?.nome || undefined}
+                              showFallback
+                              icon={<AvatarIcon />}
+                              classNames={{
+                                fallback: cn(
                                   "text-white text-[10px] font-semibold bg-gradient-to-br",
                                   getAvatarGradient(selectedUser?.id || "")
-                                )}
-                              >
-                                {selectedUser?.nome?.slice(0, 2)?.toUpperCase()}
-                              </AvatarFallback>
-                            </Avatar>
+                                ),
+                                icon: "text-white/90",
+                              }}
+                            />
                           </div>
                         )}
 

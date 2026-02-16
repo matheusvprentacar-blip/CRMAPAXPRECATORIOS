@@ -1,0 +1,1448 @@
+﻿[
+    {
+        "icon":  "Activity",
+        "files":  [
+                      "components/dashboard/complexity-overview.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "AlertCircle",
+        "files":  [
+                      "app/(dashboard)/admin/financeiro/page.tsx",
+                      "app/(dashboard)/auditoria-irpf/page.tsx",
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/juridico/analise/analise-juridica-client.tsx",
+                      "app/(dashboard)/juridico/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/calculo/modal-atraso.tsx",
+                      "components/dashboard/performance-metrics.tsx",
+                      "components/hr/financial-kpi-cards.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/pdf-viewer.tsx",
+                      "components/pdf-viewer-modal.tsx",
+                      "components/precatorios/checklist-documentos.tsx",
+                      "components/precatorios/upload-documento-modal.tsx",
+                      "components/steps/step-irpf.tsx",
+                      "components/ui/complexity-badge.tsx",
+                      "components/ui/impact-badge.tsx",
+                      "components/ui/sla-indicator.tsx"
+                  ],
+        "filesCount":  26,
+        "importCount":  26
+    },
+    {
+        "icon":  "AlertTriangle",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "components/dashboard/critical-precatorios.tsx",
+                      "components/dashboard/delay-bottlenecks.tsx",
+                      "components/notifications/NotificationItem.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/ui/complexity-badge.tsx",
+                      "components/ui/delay-type-badge.tsx",
+                      "components/ui/sla-indicator.tsx"
+                  ],
+        "filesCount":  10,
+        "importCount":  10
+    },
+    {
+        "icon":  "ArrowDown",
+        "files":  [
+                      "app/(dashboard)/admin/financeiro/page.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "components/dashboard/metric-card.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "ArrowLeft",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/detalhes/page.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/juridico/analise/analise-juridica-client.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/ui/calc/StepFooter.tsx"
+                  ],
+        "filesCount":  7,
+        "importCount":  7
+    },
+    {
+        "icon":  "ArrowRight",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "components/kanban/triagem-actions.tsx",
+                      "components/steps/step-upload.tsx",
+                      "components/ui/calc/StepFooter.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "ArrowRightLeft",
+        "files":  [
+                      "components/precatorios/timeline-event.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ArrowUp",
+        "files":  [
+                      "app/(dashboard)/admin/financeiro/page.tsx",
+                      "components/dashboard/metric-card.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "BadgePercent",
+        "files":  [
+                      "components/steps/step-honorarios.tsx",
+                      "components/steps/step-propostas.tsx",
+                      "components/steps/step-pss.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Banknote",
+        "files":  [
+                      "components/steps/step-atualizacao-monetaria.tsx",
+                      "components/steps/step-dados-basicos.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Bell",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/notificacoes/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "components/notifications/NotificationBell.tsx",
+                      "components/notifications/NotificationItem.tsx"
+                  ],
+        "filesCount":  7,
+        "importCount":  7
+    },
+    {
+        "icon":  "Briefcase",
+        "files":  [
+                      "app/(dashboard)/juridico/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "Building2",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Calculator",
+        "files":  [
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/calculadora-juros-mora.tsx",
+                      "components/calculadora-salarios-minimos.tsx",
+                      "components/calculator-form.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/finance/monthly-closing-tab.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/precatorios/modal-calculo-manual.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/steps/step-irpf.tsx",
+                      "components/steps/step-pss.tsx"
+                  ],
+        "filesCount":  17,
+        "importCount":  17
+    },
+    {
+        "icon":  "Calendar",
+        "files":  [
+                      "app/(dashboard)/admin/financeiro/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/calculation-history.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "CalendarClock",
+        "files":  [
+                      "app/(dashboard)/analise-processual/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/juridico/page.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "CalendarDays",
+        "files":  [
+                      "components/steps/step-atualizacao-monetaria.tsx",
+                      "components/steps/step-dados-basicos.tsx",
+                      "components/steps/step-indices.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "CalendarIcon",
+        "files":  [
+                      "components/hr/leaves-tab.tsx",
+                      "components/kanban/modal-sem-interesse.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Camera",
+        "files":  [
+                      "components/perfil/upload-foto.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Check",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "components/calculador-precatorios.tsx",
+                      "components/precatorios/documento-card.tsx",
+                      "components/ui/checkbox.tsx",
+                      "components/ui/dropdown-menu.tsx",
+                      "components/ui/select.tsx"
+                  ],
+        "filesCount":  6,
+        "importCount":  6
+    },
+    {
+        "icon":  "CheckCircle",
+        "files":  [
+                      "components/finance/monthly-closing-tab.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/ui/complexity-badge.tsx",
+                      "components/ui/sla-indicator.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "CheckCircle2",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/auditoria-irpf/page.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "app/test-connection/page.tsx",
+                      "components/comunicados/comunicados-broadcast-modal.tsx",
+                      "components/dashboard/performance-metrics.tsx",
+                      "components/import/import-json-modal.tsx",
+                      "components/kanban/aba-fechamento.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/kanban/triagem-actions.tsx",
+                      "components/precatorios/checklist-documentos.tsx",
+                      "components/settings/global-update-notifier.tsx",
+                      "components/settings/update-checker.tsx",
+                      "components/steps/step-irpf.tsx"
+                  ],
+        "filesCount":  27,
+        "importCount":  27
+    },
+    {
+        "icon":  "CheckSquare",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/precatorios/documentos-section.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "ChevronDown",
+        "files":  [
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "components/ui/select.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "ChevronLeft",
+        "files":  [
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "components/ui/calendar.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "ChevronRight",
+        "files":  [
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "components/ui/calendar.tsx",
+                      "components/ui/dropdown-menu.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "ChevronsRight",
+        "files":  [
+                      "components/precatorios/documentos-viewer.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ChevronUp",
+        "files":  [
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "components/ui/select.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Circle",
+        "files":  [
+                      "components/precatorios/checklist-documentos.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/ui/dropdown-menu.tsx",
+                      "components/ui/sla-indicator.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "CircleSlash",
+        "files":  [
+                      "components/steps/step-pss.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ClipboardList",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Clock",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/dashboard/critical-precatorios.tsx",
+                      "components/dashboard/performance-metrics.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/ui/delay-type-badge.tsx",
+                      "components/ui/sla-indicator.tsx"
+                  ],
+        "filesCount":  17,
+        "importCount":  17
+    },
+    {
+        "icon":  "DollarSign",
+        "files":  [
+                      "app/(dashboard)/admin/financeiro/page.tsx",
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/calculation-history.tsx",
+                      "components/finance/monthly-closing-tab.tsx",
+                      "components/hr/financial-kpi-cards.tsx",
+                      "components/hr/financial-tab.tsx",
+                      "components/kanban/aba-fechamento.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx"
+                  ],
+        "filesCount":  12,
+        "importCount":  12
+    },
+    {
+        "icon":  "Download",
+        "files":  [
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "components/calculation-history.tsx",
+                      "components/comunicados/comunicados-broadcast-modal.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/import/import-json-modal.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx",
+                      "components/kanban/historico-calculos.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/pdf-viewer.tsx",
+                      "components/precatorios/documento-card.tsx",
+                      "components/precatorios/template-proposta.tsx",
+                      "components/steps/step-resumo.tsx"
+                  ],
+        "filesCount":  14,
+        "importCount":  14
+    },
+    {
+        "icon":  "Edit",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/kanban/aba-proposta.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Edit2",
+        "files":  [
+                      "components/precatorios/documento-card.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ExternalLink",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "components/dashboard/critical-precatorios.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/pdf-viewer.tsx",
+                      "components/pdf-viewer-modal.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "Eye",
+        "files":  [
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/calculador-precatorios.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/precatorios/documentos-viewer.tsx"
+                  ],
+        "filesCount":  9,
+        "importCount":  9
+    },
+    {
+        "icon":  "File",
+        "files":  [
+                      "components/precatorios/documento-card.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "FileCheck",
+        "files":  [
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx"
+                  ],
+        "filesCount":  6,
+        "importCount":  6
+    },
+    {
+        "icon":  "FileJson",
+        "files":  [
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "components/import/import-json-modal.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "FileSearch",
+        "files":  [
+                      "app/(dashboard)/analise-processual/page.tsx",
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "FileSpreadsheet",
+        "files":  [
+                      "components/import/upload-excel-button.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "FileText",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/analise-processual/page.tsx",
+                      "app/(dashboard)/calcular/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/juridico/analise/analise-juridica-client.tsx",
+                      "app/(dashboard)/juridico/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/admin/modal-importar-precatorio.tsx",
+                      "components/admin/modal-template-precatorio.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx",
+                      "components/kanban/historico-calculos.tsx",
+                      "components/kanban/item-checklist-dialog.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/pdf-upload-button.tsx",
+                      "components/precatorios/documento-card.tsx",
+                      "components/precatorios/documentos-section.tsx",
+                      "components/precatorios/timeline-event.tsx",
+                      "components/precatorios/upload-documento-modal.tsx"
+                  ],
+        "filesCount":  37,
+        "importCount":  37
+    },
+    {
+        "icon":  "FileType",
+        "files":  [
+                      "components/kanban/oficio-viewer.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "FileUp",
+        "files":  [
+                      "components/upload-extractor.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "FileX",
+        "files":  [
+                      "components/ui/delay-type-badge.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Filter",
+        "files":  [
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/precatorios/advanced-filters.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "Gauge",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Gavel",
+        "files":  [
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "GripHorizontal",
+        "files":  [
+                      "components/ui/floating-window.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "HelpCircle",
+        "files":  [
+                      "components/ui/delay-type-badge.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "History",
+        "files":  [
+                      "components/kanban/modal-detalhes-kanban.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Image",
+        "files":  [
+                      "app/(dashboard)/configuracoes/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ImageIcon",
+        "files":  [
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Info",
+        "files":  [
+                      "components/calculator-form.tsx",
+                      "components/steps/step-atualizacao-monetaria.tsx",
+                      "components/steps/step-honorarios.tsx",
+                      "components/steps/step-propostas.tsx",
+                      "components/steps/step-resumo.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "Kanban",
+        "files":  [
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Landmark",
+        "files":  [
+                      "components/steps/step-resumo.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Layers",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "components/dashboard/complexity-overview.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "LayoutDashboard",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "LayoutGrid",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "List",
+        "files":  [
+                      "components/precatorios/documentos-section.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ListChecks",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "components/precatorios/timeline-event.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Loader2",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/admin/usuarios/detalhes/page.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/auditoria-irpf/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/configuracoes/page.tsx",
+                      "app/(dashboard)/notificacoes/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "app/test-connection/page.tsx",
+                      "components/admin/modal-importar-precatorio.tsx",
+                      "components/admin/modal-template-precatorio.tsx",
+                      "components/admin/upload-oficios-modal.tsx",
+                      "components/dashboard/financial-flow-sankey.tsx",
+                      "components/extracao/botao-processar.tsx",
+                      "components/finance/cash-flow-chart.tsx",
+                      "components/finance/edit-transaction-modal.tsx",
+                      "components/finance/expenses-charts.tsx",
+                      "components/finance/monthly-closing-tab.tsx",
+                      "components/finance/new-transaction-modal.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/hr/financial-tab.tsx",
+                      "components/hr/global-transactions-table.tsx",
+                      "components/hr/leaves-tab.tsx",
+                      "components/hr/profile-tab.tsx",
+                      "components/import/import-json-modal.tsx",
+                      "components/import/upload-excel-button.tsx",
+                      "components/kanban/aba-fechamento.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/form-exportar-calculo.tsx",
+                      "components/kanban/form-interesse.tsx",
+                      "components/kanban/form-parecer-juridico.tsx",
+                      "components/kanban/form-solicitar-juridico.tsx",
+                      "components/kanban/historico-calculos.tsx",
+                      "components/kanban/item-checklist-dialog.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/kanban/modal-sem-interesse.tsx",
+                      "components/kanban/proposal-config-modal.tsx",
+                      "components/kanban/triagem-actions.tsx",
+                      "components/pdf-upload-button.tsx",
+                      "components/pdf-viewer-modal.tsx",
+                      "components/precatorios/modal-calculo-manual.tsx",
+                      "components/precatorios/timeline.tsx",
+                      "components/settings/global-update-notifier.tsx",
+                      "components/settings/update-checker.tsx",
+                      "components/upload-extractor.tsx"
+                  ],
+        "filesCount":  51,
+        "importCount":  51
+    },
+    {
+        "icon":  "Lock",
+        "files":  [
+                      "app/(dashboard)/kanban/page.tsx",
+                      "components/kanban/aba-fechamento.tsx",
+                      "components/steps/step-propostas.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "LockOpen",
+        "files":  [
+                      "app/(dashboard)/kanban/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "LogOut",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Mail",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "MapPin",
+        "files":  [
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx"
+                  ],
+        "filesCount":  5,
+        "importCount":  5
+    },
+    {
+        "icon":  "Maximize2",
+        "files":  [
+                      "components/ui/floating-window.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Megaphone",
+        "files":  [
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "components/comunicados/comunicados-broadcast-modal.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Menu",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "MessageSquare",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "components/precatorios/timeline-event.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Minimize2",
+        "files":  [
+                      "components/ui/floating-window.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Minus",
+        "files":  [
+                      "components/dashboard/metric-card.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Moon",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "MoreHorizontal",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "components/ui/delay-type-badge.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "MoreVertical",
+        "files":  [
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Palette",
+        "files":  [
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Paperclip",
+        "files":  [
+                      "app/(dashboard)/chat/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Pencil",
+        "files":  [
+                      "components/hr/global-transactions-table.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Percent",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx",
+                      "components/steps/step-dados-basicos.tsx",
+                      "components/steps/step-indices.tsx"
+                  ],
+        "filesCount":  6,
+        "importCount":  6
+    },
+    {
+        "icon":  "Phone",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "PlayCircle",
+        "files":  [
+                      "components/precatorios/timeline-event.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Plus",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "components/finance/new-transaction-modal.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/hr/financial-tab.tsx",
+                      "components/hr/leaves-tab.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx"
+                  ],
+        "filesCount":  14,
+        "importCount":  14
+    },
+    {
+        "icon":  "Printer",
+        "files":  [
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/precatorios/template-proposta.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "RefreshCcw",
+        "files":  [
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/precatorios/documentos-viewer.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "RefreshCw",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/dashboard/page-new.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "RotateCcw",
+        "files":  [
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "components/calculador-precatorios.tsx",
+                      "components/kanban/proposal-config-modal.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "RotateCw",
+        "files":  [
+                      "components/settings/update-checker.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Save",
+        "files":  [
+                      "app/(dashboard)/configuracoes/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/hr/profile-tab.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/kanban/form-exportar-calculo.tsx",
+                      "components/kanban/form-interesse.tsx",
+                      "components/kanban/item-checklist-dialog.tsx",
+                      "components/kanban/proposal-config-modal.tsx"
+                  ],
+        "filesCount":  12,
+        "importCount":  12
+    },
+    {
+        "icon":  "Scale",
+        "files":  [
+                      "app/(auth)/register/page.tsx",
+                      "app/(dashboard)/juridico/analise/analise-juridica-client.tsx",
+                      "app/(dashboard)/juridico/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/calculo/modal-enviar-juridico.tsx",
+                      "components/kanban/aba-proposta.tsx",
+                      "components/kanban/modal-detalhes-kanban.tsx",
+                      "components/steps/step-propostas.tsx"
+                  ],
+        "filesCount":  11,
+        "importCount":  11
+    },
+    {
+        "icon":  "Scroll",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Search",
+        "files":  [
+                      "app/(dashboard)/acesso-controlado/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/analise-processual/page.tsx",
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/hr/global-transactions-table.tsx",
+                      "components/precatorios/search-bar.tsx"
+                  ],
+        "filesCount":  16,
+        "importCount":  16
+    },
+    {
+        "icon":  "Send",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "components/kanban/form-parecer-juridico.tsx",
+                      "components/kanban/form-solicitar-juridico.tsx",
+                      "components/kanban/oficio-viewer.tsx"
+                  ],
+        "filesCount":  9,
+        "importCount":  9
+    },
+    {
+        "icon":  "Settings",
+        "files":  [
+                      "app/(dashboard)/layout.tsx",
+                      "components/kanban/aba-proposta.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Shield",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "ShieldAlert",
+        "files":  [
+                      "components/notifications/NotificationItem.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "ShieldCheck",
+        "files":  [
+                      "app/(dashboard)/acesso-controlado/page.tsx",
+                      "components/steps/step-pss.tsx",
+                      "components/steps/step-resumo.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "Shuffle",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Sparkles",
+        "files":  [
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "components/extracao/botao-processar.tsx",
+                      "components/steps/step-atualizacao-monetaria.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "Star",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/calculo/page.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Sun",
+        "files":  [
+                      "app/(dashboard)/layout.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Table",
+        "files":  [
+                      "components/steps/step-indices.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Trash2",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/comunicados/page.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "components/calculation-history.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/hr/financial-tab.tsx",
+                      "components/hr/global-transactions-table.tsx",
+                      "components/hr/leaves-tab.tsx",
+                      "components/kanban/checklist-certidoes.tsx",
+                      "components/kanban/checklist-documentos.tsx",
+                      "components/kanban/item-checklist-dialog.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/precatorios/documento-card.tsx"
+                  ],
+        "filesCount":  20,
+        "importCount":  20
+    },
+    {
+        "icon":  "TrendingDown",
+        "files":  [
+                      "components/dashboard/complexity-overview.tsx",
+                      "components/steps/step-resumo.tsx",
+                      "components/ui/impact-badge.tsx"
+                  ],
+        "filesCount":  3,
+        "importCount":  3
+    },
+    {
+        "icon":  "TrendingUp",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "components/calculation-history.tsx",
+                      "components/dashboard/complexity-overview.tsx",
+                      "components/dashboard/financial-overview.tsx",
+                      "components/hr/financial-kpi-cards.tsx",
+                      "components/precatorios/resumo-calculo-detalhado.tsx",
+                      "components/steps/step-indices.tsx",
+                      "components/ui/impact-badge.tsx"
+                  ],
+        "filesCount":  12,
+        "importCount":  12
+    },
+    {
+        "icon":  "Trophy",
+        "files":  [
+                      "components/steps/step-resumo.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Upload",
+        "files":  [
+                      "app/(dashboard)/configuracoes/page.tsx",
+                      "components/admin/modal-importar-precatorio.tsx",
+                      "components/admin/modal-template-precatorio.tsx",
+                      "components/admin/upload-oficios-modal.tsx",
+                      "components/hr/documents-tab.tsx",
+                      "components/import/import-json-modal.tsx",
+                      "components/import/upload-excel-button.tsx",
+                      "components/kanban/form-exportar-calculo.tsx",
+                      "components/kanban/item-checklist-dialog.tsx",
+                      "components/kanban/oficio-viewer.tsx",
+                      "components/pdf-upload-button.tsx",
+                      "components/perfil/upload-foto.tsx",
+                      "components/precatorios/documentos-section.tsx",
+                      "components/precatorios/modal-calculo-manual.tsx",
+                      "components/precatorios/upload-documento-modal.tsx",
+                      "components/settings/global-update-notifier.tsx",
+                      "components/settings/update-checker.tsx"
+                  ],
+        "filesCount":  17,
+        "importCount":  17
+    },
+    {
+        "icon":  "User",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-final-com-upload.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/admin/precatorios/page-new.tsx",
+                      "app/(dashboard)/analise-processual/page.tsx",
+                      "app/(dashboard)/calculo/page.tsx",
+                      "app/(dashboard)/calculo-operador/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/gestao-certidoes/page.tsx",
+                      "app/(dashboard)/gestao-oficios/page.tsx",
+                      "app/(dashboard)/juridico/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/meus-precatorios/page.tsx",
+                      "app/(dashboard)/perfil/page.tsx",
+                      "app/(dashboard)/perfil/page-new.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "app/(dashboard)/propostas/page.tsx",
+                      "components/calculo/card-precatorio-calculo.tsx",
+                      "components/dashboard/critical-precatorios.tsx",
+                      "components/kanban/aba-proposta.tsx"
+                  ],
+        "filesCount":  23,
+        "importCount":  23
+    },
+    {
+        "icon":  "UserCheck",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "UserCog",
+        "files":  [
+                      "components/calculo/card-precatorio-calculo.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "UserPlus",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx"
+                  ],
+        "filesCount":  1,
+        "importCount":  1
+    },
+    {
+        "icon":  "Users",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "components/dashboard/operator-distribution.tsx",
+                      "components/steps/step-propostas.tsx",
+                      "components/ui/delay-type-badge.tsx"
+                  ],
+        "filesCount":  8,
+        "importCount":  8
+    },
+    {
+        "icon":  "UserX",
+        "files":  [
+                      "app/(dashboard)/admin/usuarios/page.tsx",
+                      "components/ui/delay-type-badge.tsx"
+                  ],
+        "filesCount":  2,
+        "importCount":  2
+    },
+    {
+        "icon":  "Wallet",
+        "files":  [
+                      "app/(dashboard)/dashboard/page.tsx",
+                      "app/(dashboard)/precatorios/novo/page.tsx",
+                      "components/dashboard/financial-overview.tsx",
+                      "components/hr/financial-kpi-cards.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    },
+    {
+        "icon":  "X",
+        "files":  [
+                      "app/(dashboard)/admin/precatorios/page.tsx",
+                      "app/(dashboard)/admin/precatorios/page-improved.tsx",
+                      "app/(dashboard)/chat/page.tsx",
+                      "app/(dashboard)/clientes/page.tsx",
+                      "app/(dashboard)/configuracoes/page.tsx",
+                      "app/(dashboard)/kanban/page.tsx",
+                      "app/(dashboard)/layout.tsx",
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/(dashboard)/precatorios/page.tsx",
+                      "app/(dashboard)/precatorios/visualizar/page.tsx",
+                      "components/admin/upload-oficios-modal.tsx",
+                      "components/perfil/upload-foto.tsx",
+                      "components/precatorios/advanced-filters.tsx",
+                      "components/precatorios/documento-card.tsx",
+                      "components/precatorios/filter-badge.tsx",
+                      "components/precatorios/search-bar.tsx",
+                      "components/precatorios/upload-documento-modal.tsx",
+                      "components/ui/dialog.tsx",
+                      "components/ui/floating-window.tsx",
+                      "components/ui/sheet.tsx"
+                  ],
+        "filesCount":  20,
+        "importCount":  20
+    },
+    {
+        "icon":  "XCircle",
+        "files":  [
+                      "app/(dashboard)/precatorios/detalhes/page.tsx",
+                      "app/test-connection/page.tsx",
+                      "components/import/import-json-modal.tsx",
+                      "components/kanban/triagem-actions.tsx"
+                  ],
+        "filesCount":  4,
+        "importCount":  4
+    }
+]

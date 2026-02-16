@@ -6,7 +6,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
-import { Switch } from "@/components/ui/switch"
+import { Description, Label as FieldsetLabel } from "@/components/fieldset"
+import { Switch, SwitchField } from "@/components/switch"
 import { BadgePercent, Calculator, CircleSlash, ShieldCheck } from "lucide-react"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 
@@ -133,28 +134,32 @@ export function StepPSS({ dados, setDados, onCompletar, voltar, resultadosEtapas
           </div>
 
           <div className="flex items-center gap-4 rounded-full border border-border/60 bg-background/70 px-3 py-2 shadow-sm">
-            <div className="flex items-center gap-2 px-2">
+            <SwitchField className="border-0 bg-transparent px-2 py-0 shadow-none [&>[data-slot='description']]:hidden [&>[data-slot='switch']]:row-span-1">
+              <FieldsetLabel htmlFor="isento-pss" className="text-sm font-medium cursor-pointer">Isento</FieldsetLabel>
+              <Description>Define se o crédito é isento de PSS.</Description>
               <Switch
                 id="isento-pss"
+                name="isento_pss"
                 checked={isento}
                 onCheckedChange={(checked) => setIsento(!!checked)}
                 className="border border-border/60 shadow-sm data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:bg-background"
               />
-              <Label htmlFor="isento-pss" className="text-sm font-medium cursor-pointer">Isento</Label>
-            </div>
+            </SwitchField>
 
             {!isento && (
               <>
                 <div className="h-4 w-px bg-border/60" />
-                <div className="flex items-center gap-2 px-2">
+                <SwitchField className="border-0 bg-transparent px-2 py-0 shadow-none [&>[data-slot='description']]:hidden [&>[data-slot='switch']]:row-span-1">
+                  <FieldsetLabel htmlFor="manual-mode-pss" className="text-sm font-medium cursor-pointer">Modo manual</FieldsetLabel>
+                  <Description>Permite definir o valor total de PSS manualmente.</Description>
                   <Switch
                     id="manual-mode-pss"
+                    name="manual_mode_pss"
                     checked={isManual}
                     onCheckedChange={(checked) => setIsManual(!!checked)}
                     className="border border-border/60 shadow-sm data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:bg-background"
                   />
-                  <Label htmlFor="manual-mode-pss" className="text-sm font-medium cursor-pointer">Modo manual</Label>
-                </div>
+                </SwitchField>
               </>
             )}
           </div>

@@ -13,11 +13,10 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Checkbox } from "@/components/ui/checkbox"
-import { Switch } from "@/components/ui/switch"
-import { ScrollArea } from "@/components/ui/scroll-area"
+import { Switch } from "@/components/switch"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Save, RotateCcw, GripVertical } from "lucide-react"
+import { Loader2, Save, RotateCcw } from "lucide-react"
 
 // Tipos da configuração
 export interface ProposalItemConfig {
@@ -160,6 +159,7 @@ export function ProposalConfigModal({
                         <div className="flex items-center gap-2">
                             <span className={`text-xs ${totalMode === 'internal' ? 'font-bold' : 'text-muted-foreground'}`}>Oficial (Interno)</span>
                             <Switch
+                                name="proposal_total_mode"
                                 checked={totalMode === 'sum_visible'}
                                 onCheckedChange={(c) => setTotalMode(c ? 'sum_visible' : 'internal')}
                             />
@@ -215,10 +215,11 @@ export function ProposalConfigModal({
                                         </div>
                                         <div className="flex justify-center">
                                             <Switch
+                                                name={`show_value_${item.key}`}
                                                 checked={item.showValue}
                                                 onCheckedChange={(c) => handleItemChange(index, { showValue: !!c })}
                                                 disabled={!item.visible}
-                                                className="scale-75 data-[state=checked]:bg-green-600"
+                                                className="scale-75"
                                             />
                                         </div>
                                     </div>

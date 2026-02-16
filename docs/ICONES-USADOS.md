@@ -1,0 +1,179 @@
+﻿# Inventario de icones usados
+
+- Biblioteca principal: `lucide-react`
+- Total de icones unicos (Lucide): 118
+
+## Lista completa (ordem alfabetica)
+- Activity
+- AlertCircle
+- AlertTriangle
+- ArrowDown
+- ArrowLeft
+- ArrowRight
+- ArrowRightLeft
+- ArrowUp
+- BadgePercent
+- Banknote
+- Bell
+- Briefcase
+- Building2
+- Calculator
+- Calendar
+- CalendarClock
+- CalendarDays
+- CalendarIcon
+- Camera
+- Check
+- CheckCircle
+- CheckCircle2
+- CheckSquare
+- ChevronDown
+- ChevronLeft
+- ChevronRight
+- ChevronsRight
+- ChevronUp
+- Circle
+- CircleSlash
+- ClipboardList
+- Clock
+- DollarSign
+- Download
+- Edit
+- Edit2
+- ExternalLink
+- Eye
+- File
+- FileCheck
+- FileJson
+- FileSearch
+- FileSpreadsheet
+- FileText
+- FileType
+- FileUp
+- FileX
+- Filter
+- Gauge
+- Gavel
+- GripHorizontal
+- HelpCircle
+- History
+- Image
+- ImageIcon
+- Info
+- Kanban
+- Landmark
+- Layers
+- LayoutDashboard
+- LayoutGrid
+- List
+- ListChecks
+- Loader2
+- Lock
+- LockOpen
+- LogOut
+- Mail
+- MapPin
+- Maximize2
+- Megaphone
+- Menu
+- MessageSquare
+- Minimize2
+- Minus
+- Moon
+- MoreHorizontal
+- MoreVertical
+- Palette
+- Paperclip
+- Pencil
+- Percent
+- Phone
+- PlayCircle
+- Plus
+- Printer
+- RefreshCcw
+- RefreshCw
+- RotateCcw
+- RotateCw
+- Save
+- Scale
+- Scroll
+- Search
+- Send
+- Settings
+- Shield
+- ShieldAlert
+- ShieldCheck
+- Shuffle
+- Sparkles
+- Star
+- Sun
+- Table
+- Trash2
+- TrendingDown
+- TrendingUp
+- Trophy
+- Upload
+- User
+- UserCheck
+- UserCog
+- UserPlus
+- Users
+- UserX
+- Wallet
+- X
+- XCircle
+
+## Top 20 por quantidade de imports
+- Loader2: 51
+- FileText: 37
+- CheckCircle2: 27
+- AlertCircle: 26
+- User: 23
+- Trash2: 20
+- X: 20
+- Calculator: 17
+- Clock: 17
+- Upload: 17
+- Search: 16
+- Download: 14
+- Plus: 14
+- DollarSign: 12
+- Save: 12
+- TrendingUp: 12
+- Scale: 11
+- AlertTriangle: 10
+- Eye: 9
+- Send: 9
+
+## Outros icones/componentes de avatar
+- `@heroui/react`: `Avatar`, `AvatarGroup`, `AvatarIcon`
+- Referencias:
+  - app/(dashboard)/chat/page.tsx:7:import { Avatar, AvatarGroup, AvatarIcon } from "@heroui/react"
+  - app/(dashboard)/chat/page.tsx:774:                          <Avatar
+  - app/(dashboard)/chat/page.tsx:779:                            icon={<AvatarIcon />}
+  - app/(dashboard)/chat/page.tsx:861:                  <Avatar
+  - app/(dashboard)/chat/page.tsx:866:                    icon={<AvatarIcon />}
+  - app/(dashboard)/chat/page.tsx:879:                      <AvatarGroup className="hidden sm:flex">
+  - app/(dashboard)/chat/page.tsx:880:                        <Avatar
+  - app/(dashboard)/chat/page.tsx:885:                          icon={<AvatarIcon />}
+  - app/(dashboard)/chat/page.tsx:891:                        <Avatar
+  - app/(dashboard)/chat/page.tsx:896:                          icon={<AvatarIcon />}
+  - app/(dashboard)/chat/page.tsx:905:                      </AvatarGroup>
+  - app/(dashboard)/chat/page.tsx:1031:                        {/* Avatar for other user (Messenger style shows it sometimes) */}
+  - app/(dashboard)/chat/page.tsx:1034:                            <Avatar
+  - app/(dashboard)/chat/page.tsx:1039:                              icon={<AvatarIcon />}
+  - app/(dashboard)/admin/usuarios/page.tsx:8:import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+  - app/(dashboard)/admin/usuarios/page.tsx:672:                              <Avatar>
+  - app/(dashboard)/admin/usuarios/page.tsx:675:                              </Avatar>
+  - app/(dashboard)/layout.tsx:33:import { Avatar, AvatarIcon, Slider } from "@heroui/react"
+  - app/(dashboard)/layout.tsx:304:          <Avatar
+  - app/(dashboard)/layout.tsx:309:            icon={<AvatarIcon />}
+  - components/ui/avatar.tsx:8:const Avatar = React.forwardRef<
+  - components/ui/avatar.tsx:21:Avatar.displayName = AvatarPrimitive.Root.displayName
+  - components/ui/avatar.tsx:50:export { Avatar, AvatarImage, AvatarFallback }
+  - components/perfil/upload-foto.tsx:4:import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+  - components/perfil/upload-foto.tsx:112:        <Avatar className="w-32 h-32 border-4 border-background shadow-lg">
+  - components/perfil/upload-foto.tsx:117:        </Avatar>
+
+## Icone custom (SVG inline)
+- app/(dashboard)/layout.tsx:137:    icon: (props: any) => (

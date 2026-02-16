@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { StepDadosBasicos } from "./steps/step-dados-basicos"
 import { StepIndices } from "./steps/step-indices"
 import { StepAtualizacaoMonetaria } from "./steps/step-atualizacao-monetaria"
@@ -27,6 +28,8 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
+import { MOTION } from "@/lib/motion"
+import { StepContainer } from "@/components/motion/StepContainer"
 
 const STORAGE_KEY = "calculadora_precatorios_progress"
 const PENDING_UPDATE_KEY = "calculadora_precatorios_pending_update"
@@ -76,6 +79,7 @@ interface CalculadoraPrecatoriosProps {
 }
 
 const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatoriosProps) => {
+  const reduceMotion = useReducedMotion()
   const [etapaAtual, setEtapaAtual] = useState(0)
   const [dados, setDados] = useState<any>({})
   const [etapasCompletadas, setEtapasCompletadas] = useState<number[]>([])
@@ -760,9 +764,15 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
             </div>
           </div>
           <div className="mt-3 h-2.5 rounded-full bg-muted/60">
-            <div
+            <motion.div
               className="h-full rounded-full bg-gradient-to-r from-primary via-[hsl(var(--chart-2))] to-emerald-500 transition-all"
-              style={{ width: `${progressoPercentual}%` }}
+              initial={false}
+              animate={{ width: `${progressoPercentual}%` }}
+              transition={
+                reduceMotion
+                  ? { duration: 0 }
+                  : { duration: MOTION.dur.ui, ease: MOTION.ease }
+              }
             />
           </div>
         </div>
@@ -834,34 +844,42 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       </Card>
 
       <div className={`grid gap-6 ${showPdfSide ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]" : ""}`}>
-        <div
-          className="min-w-0 animate-in fade-in-50 group"
-          data-pdf={showPdfSide ? "open" : "closed"}
-        >
+        <div className="min-w-0 group" data-pdf={showPdfSide ? "open" : "closed"}>
           {StepComponent && (
-            <StepComponent
-              dados={dados}
-              setDados={setDados}
-              onCompletar={(resultado: any) => handleCompletarEtapa(etapaAtual, resultado)}
-              resultadosEtapas={resultadosEtapas}
-              voltar={voltar}
-              precatorioId={precatorioId}
-              saving={saving}
-              onFinalizar={finalizarCalculo}
-              canFinalizar={canFinalizar}
-            />
+            <StepContainer stepKey={`etapa-${etapaAtual}`}>
+              <StepComponent
+                dados={dados}
+                setDados={setDados}
+                onCompletar={(resultado: any) => handleCompletarEtapa(etapaAtual, resultado)}
+                resultadosEtapas={resultadosEtapas}
+                voltar={voltar}
+                precatorioId={precatorioId}
+                saving={saving}
+                onFinalizar={finalizarCalculo}
+                canFinalizar={canFinalizar}
+              />
+            </StepContainer>
           )}
         </div>
-        {showPdfSide && (
-          <div className="h-[calc(100vh-12rem)] rounded-2xl border border-border/60 bg-card/80 backdrop-blur overflow-hidden shadow-sm xl:sticky xl:top-28 transition-all duration-300 animate-in fade-in slide-in-from-right-10">
-            <DocumentosViewer
-              precatorioId={precatorioId}
-              onClose={() => setShowPdfSide(false)}
-              fallbackDocs={fallbackDocs}
-              className="h-full"
-            />
-          </div>
-        )}
+        <AnimatePresence initial={false}>
+          {showPdfSide && (
+            <motion.div
+              key="viewer-panel"
+              initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 14 }}
+              transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+              className="h-[calc(100vh-12rem)] rounded-2xl border border-border/60 bg-card/80 backdrop-blur overflow-hidden shadow-sm xl:sticky xl:top-28"
+            >
+              <DocumentosViewer
+                precatorioId={precatorioId}
+                onClose={() => setShowPdfSide(false)}
+                fallbackDocs={fallbackDocs}
+                className="h-full"
+              />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
         <AlertDialogContent className="bg-background text-foreground border border-border shadow-xl">

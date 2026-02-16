@@ -7,6 +7,7 @@ import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { getSupabase } from "@/lib/supabase/client"
+import { AnimatePresence, motion } from "framer-motion"
 import {
   LayoutDashboard,
   FileText,
@@ -20,8 +21,6 @@ import {
   Scale,
   Moon,
   Sun,
-  ZoomIn,
-  ZoomOut,
   RotateCcw,
   User,
   FileCheck,
@@ -31,8 +30,8 @@ import {
   FileSearch,
   Megaphone,
 } from "lucide-react"
+import { Avatar, AvatarIcon, Slider } from "@heroui/react"
 import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -169,6 +168,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { profile, signOut } = useAuth()
   const { theme, setTheme } = useTheme()
   const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
+  const [uiZoomPreview, setUiZoomPreview] = useState(DEFAULT_UI_ZOOM)
   const baseFontSizeRef = useRef<number | null>(null)
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -178,7 +178,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const ZOOM_MIN = 0.65
   const ZOOM_MAX = 1.15
-  const ZOOM_STEP = 0.05
 
   const clampZoom = (value: number) => Math.min(ZOOM_MAX, Math.max(ZOOM_MIN, value))
 
@@ -219,6 +218,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.localStorage.setItem(UI_ZOOM_STORAGE_KEY, String(DEFAULT_UI_ZOOM))
       window.localStorage.setItem(UI_ZOOM_MIGRATION_KEY, "true")
       setUiZoom(DEFAULT_UI_ZOOM)
+      setUiZoomPreview(DEFAULT_UI_ZOOM)
       return
     }
 
@@ -237,6 +237,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       window.localStorage.setItem(UI_ZOOM_MIGRATION_KEY, "true")
     }
     setUiZoom(sanitized)
+    setUiZoomPreview(sanitized)
   }, [])
 
   useEffect(() => {
@@ -244,18 +245,29 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.localStorage.setItem(UI_ZOOM_STORAGE_KEY, String(uiZoom))
 
     if (!baseFontSizeRef.current) {
-      const rootSize = Number.parseFloat(getComputedStyle(document.documentElement).fontSize)
-      const normalizedRoot =
-        Number.isNaN(rootSize) || rootSize < 12 || rootSize > 20
-          ? 16
-          : rootSize
-      baseFontSizeRef.current = normalizedRoot
+      const root = document.documentElement
+      const datasetBase = Number(root.dataset.uiZoomBaseFontSize ?? "")
+
+      if (Number.isFinite(datasetBase) && datasetBase >= 12 && datasetBase <= 20) {
+        baseFontSizeRef.current = datasetBase
+      } else {
+        const rootSize = Number.parseFloat(getComputedStyle(root).fontSize)
+        const derivedBase = rootSize / Math.max(uiZoom, 0.01)
+        const normalizedBase =
+          Number.isNaN(derivedBase) || !Number.isFinite(derivedBase) || derivedBase < 12 || derivedBase > 20
+            ? 16
+            : derivedBase
+        baseFontSizeRef.current = normalizedBase
+        root.dataset.uiZoomBaseFontSize = String(normalizedBase)
+      }
     }
 
     const base = baseFontSizeRef.current ?? 16
-    document.documentElement.style.fontSize = `${base * uiZoom}px`
+    document.documentElement.dataset.uiZoomBaseFontSize = String(base)
+    document.documentElement.style.fontSize = `${(base * uiZoom).toFixed(2)}px`
     document.documentElement.style.zoom = ""
     document.body.style.zoom = ""
+    window.dispatchEvent(new CustomEvent("ui-zoom:changed", { detail: uiZoom }))
   }, [uiZoom])
 
   async function loadConfig() {
@@ -278,29 +290,39 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
   }
 
-  const getInitials = (nome: string) => {
-    return nome
-      .split(" ")
-      .map((n) => n[0])
-      .join("")
-      .toUpperCase()
-      .slice(0, 2)
+  const zoomPercent = Math.round(uiZoomPreview * 100)
+  const zoomAppliedPercent = Math.round(uiZoom * 100)
+  const handleZoomReset = () => {
+    setUiZoom(DEFAULT_UI_ZOOM)
+    setUiZoomPreview(DEFAULT_UI_ZOOM)
   }
-
-  const zoomPercent = Math.round(uiZoom * 100)
-  const handleZoomOut = () => setUiZoom((value) => clampZoom(Number((value - ZOOM_STEP).toFixed(2))))
-  const handleZoomIn = () => setUiZoom((value) => clampZoom(Number((value + ZOOM_STEP).toFixed(2))))
-  const handleZoomReset = () => setUiZoom(DEFAULT_UI_ZOOM)
+  const handleZoomPreviewChange = (value: number | number[]) => {
+    const next = Array.isArray(value) ? value[0] : value
+    setUiZoomPreview(clampZoom(Number(next.toFixed(2))))
+  }
+  const handleZoomCommit = (value: number | number[]) => {
+    const next = Array.isArray(value) ? value[0] : value
+    const zoom = clampZoom(Number(next.toFixed(2)))
+    setUiZoom(zoom)
+    setUiZoomPreview(zoom)
+  }
 
 
   const profileMenu = (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button variant="ghost" className="gap-2 hover:bg-muted/60">
-          <Avatar className="w-8 h-8">
-            <AvatarImage src={profile?.foto_url || "/placeholder.svg"} />
-            <AvatarFallback>{profile?.nome ? getInitials(profile.nome) : "U"}</AvatarFallback>
-          </Avatar>
+          <Avatar
+            className="w-8 h-8 text-xs"
+            src={profile?.foto_url || undefined}
+            name={profile?.nome || undefined}
+            showFallback
+            icon={<AvatarIcon />}
+            classNames={{
+              fallback: "bg-primary text-primary-foreground font-semibold",
+              icon: "text-primary-foreground",
+            }}
+          />
           <span className="text-sm hidden sm:inline">{profile?.nome}</span>
         </Button>
       </DropdownMenuTrigger>
@@ -327,17 +349,34 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           </Link>
         </DropdownMenuItem>
         <DropdownMenuSeparator />
-        <DropdownMenuLabel className="text-xs text-muted-foreground">
-          Zoom da interface ({zoomPercent}%)
-        </DropdownMenuLabel>
-        <DropdownMenuItem onClick={handleZoomOut} disabled={uiZoom <= ZOOM_MIN}>
-          <ZoomOut className="w-4 h-4 mr-2" />
-          Diminuir
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={handleZoomIn} disabled={uiZoom >= ZOOM_MAX}>
-          <ZoomIn className="w-4 h-4 mr-2" />
-          Aumentar
-        </DropdownMenuItem>
+        <div className="px-3 py-2 space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Zoom da interface</span>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={zoomPercent}
+                initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.92 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="font-mono text-foreground tabular-nums"
+              >
+                {zoomPercent}%
+              </motion.span>
+            </AnimatePresence>
+          </div>
+          <Slider
+            className="max-w-[220px]"
+            value={uiZoomPreview}
+            minValue={ZOOM_MIN}
+            maxValue={ZOOM_MAX}
+            step={0.01}
+            onChange={handleZoomPreviewChange}
+            onChangeEnd={handleZoomCommit}
+            aria-label="Zoom da interface"
+          />
+          <p className="text-[11px] text-muted-foreground">Solte o mouse para aplicar ({zoomAppliedPercent}% atual)</p>
+        </div>
         <DropdownMenuItem onClick={handleZoomReset}>
           <RotateCcw className="w-4 h-4 mr-2" />
           Voltar para {Math.round(DEFAULT_UI_ZOOM * 100)}%

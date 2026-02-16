@@ -1,18 +1,20 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { Progress } from "@/components/ui/progress"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, FileText, Plus, Pencil, Eye, Trash2, ImageIcon, Download } from "lucide-react"
+import { FileText, Plus, Pencil, Eye, Trash2, ImageIcon, Download } from "lucide-react"
 import { ItemChecklistDialog } from "./item-checklist-dialog"
 import { getFileDownloadUrl, downloadFileAsArrayBuffer } from "@/lib/utils/file-upload"
 import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
 import JSZip from "jszip"
-import { saveAs } from "file-saver"
 import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
+import { MOTION } from "@/lib/motion"
+import { MotionListItem } from "@/components/motion/MotionListItem"
+import { MotionCard } from "@/components/motion/MotionCard"
 
 interface ChecklistDocumentosProps {
   precatorioId: string
@@ -87,6 +89,7 @@ const getFileExt = (name: string) => {
 }
 
 export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }: ChecklistDocumentosProps) {
+  const reduceMotion = useReducedMotion()
   const { openPDF } = usePDFViewer()
   const [items, setItems] = useState<Item[]>([])
   const [previewUrls, setPreviewUrls] = useState<Record<string, string>>({})
@@ -479,8 +482,28 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
 
   if (loading) {
     return (
-      <div className="flex justify-center py-8">
-        <Loader2 className="h-6 w-6 animate-spin" />
+      <div className="space-y-4">
+        <motion.div
+          initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ duration: reduceMotion ? 0 : 0.18, ease: "easeOut" }}
+          className="h-8 rounded-xl bg-muted/50 animate-pulse"
+        />
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+          {[1, 2, 3].map((index) => (
+            <motion.div
+              key={index}
+              initial={reduceMotion ? { opacity: 1 } : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{
+                duration: reduceMotion ? 0 : MOTION.dur.ui,
+                ease: MOTION.ease,
+                delay: reduceMotion ? 0 : index * 0.05,
+              }}
+              className="h-36 rounded-xl bg-muted/40 animate-pulse"
+            />
+          ))}
+        </div>
       </div>
     )
   }
@@ -501,7 +524,18 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
               </p>
               <p className="text-sm font-semibold text-primary">{percentual}%</p>
             </div>
-            <Progress value={percentual} className="h-2" />
+            <div className="h-2 overflow-hidden rounded-full bg-muted/50">
+              <motion.div
+                initial={false}
+                animate={{ width: `${percentual}%` }}
+                transition={
+                  reduceMotion
+                    ? { duration: 0 }
+                    : { duration: MOTION.dur.ui, ease: MOTION.ease }
+                }
+                className="h-full bg-primary"
+              />
+            </div>
           </div>
 
           <Button onClick={handleDownloadAll} variant="default" className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white shrink-0">
@@ -513,9 +547,11 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
 
       {/* Mini visualizadores */}
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <AnimatePresence initial={false}>
         {/* Item Especial: Oficio (PDF Original) */}
         {pdfUrl && (
-          <div className="rounded-xl border border-border/50 bg-muted/40 p-3 shadow-sm">
+          <MotionListItem key="oficio-original">
+            <MotionCard className="rounded-xl border border-border/50 bg-muted/40 p-3 shadow-sm">
             <div className="flex items-start justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold">Oficio Requisitorio (Original)</p>
@@ -546,14 +582,13 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
                 Baixar
               </Button>
             </div>
-          </div>
+            </MotionCard>
+          </MotionListItem>
         )}
 
         {items.map((item) => (
-          <div
-            key={item.id}
-            className="group rounded-xl border border-border/50 bg-background/60 p-3 shadow-sm transition-colors hover:border-border"
-          >
+          <MotionListItem key={item.id}>
+            <MotionCard className="group rounded-xl border border-border/50 bg-background/60 p-3 shadow-sm transition-colors hover:border-border">
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="truncate text-sm font-semibold">{item.nome_item}</p>
@@ -661,8 +696,10 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
                 )}
               </div>
             </div>
-          </div>
+            </MotionCard>
+          </MotionListItem>
         ))}
+        </AnimatePresence>
 
         {items.length === 0 && !pdfUrl && (
           <div className="col-span-full rounded-xl border border-dashed border-border/60 p-8 text-center text-muted-foreground">

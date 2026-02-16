@@ -10,7 +10,8 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
+import { Description, Label as FieldsetLabel } from "@/components/fieldset"
+import { Switch, SwitchField } from "@/components/switch"
 import { Separator } from "@/components/ui/separator"
 import {
   User,
@@ -508,20 +509,19 @@ export default function PerfilPage() {
             <CardDescription>Personalize sua experiência no sistema</CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="flex items-center justify-between">
-              <div className="space-y-0.5">
-                <Label htmlFor="notificacoes" className="flex items-center gap-2">
-                  <Bell className="h-4 w-4" />
-                  Notificações por Email
-                </Label>
-                <p className="text-sm text-muted-foreground">Receber atualizações e alertas por email</p>
-              </div>
+            <SwitchField className="border-border/60 bg-background/50">
+              <FieldsetLabel htmlFor="notificacoes" className="flex items-center gap-2">
+                <Bell className="h-4 w-4" />
+                Notificações por Email
+              </FieldsetLabel>
+              <Description>Receber atualizações e alertas por email</Description>
               <Switch
                 id="notificacoes"
+                name="notificacoes_email"
                 checked={notificacoesEmail}
                 onCheckedChange={setNotificacoesEmail}
               />
-            </div>
+            </SwitchField>
 
             <Separator />
 

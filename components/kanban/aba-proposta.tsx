@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Description, Label as FieldsetLabel } from "@/components/fieldset"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
-import { Switch } from "@/components/ui/switch"
+import { Switch, SwitchField } from "@/components/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Loader2, Printer, CheckCircle2, Percent, Save, Edit, User, Scale } from "lucide-react"
@@ -1021,19 +1022,18 @@ export function AbaProposta({
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 rounded-xl border border-emerald-200/60 dark:border-emerald-900/50 bg-white/70 dark:bg-zinc-900/40 px-4 py-3">
-                        <div className="space-y-1">
-                            <Label className="text-sm font-semibold">Credor aceitou a proposta?</Label>
-                            <p className="text-xs text-muted-foreground">
-                                Necessário para avançar para a etapa de certidões.
-                            </p>
-                        </div>
+                    <SwitchField className="border-emerald-200/60 bg-white/70 dark:border-emerald-900/50 dark:bg-zinc-900/40">
+                        <FieldsetLabel className="text-sm font-semibold">Credor aceitou a proposta?</FieldsetLabel>
+                        <Description className="text-xs text-muted-foreground">
+                            Necessário para avançar para a etapa de certidões.
+                        </Description>
                         <Switch
+                            name="proposta_aceita"
                             checked={propostaAceita}
                             onCheckedChange={setPropostaAceita}
                             disabled={!canEditAceite}
                         />
-                    </div>
+                    </SwitchField>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="space-y-2">

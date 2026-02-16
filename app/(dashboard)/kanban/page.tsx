@@ -5,6 +5,7 @@
 import { useEffect, useMemo, useState, useRef, useCallback, memo, type RefObject } from "react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -31,6 +32,7 @@ import { KANBAN_COLUMNS } from "./columns"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "lucide-react"
+import { MOTION } from "@/lib/motion"
 
 // Colunas do Kanban com Gates
 const COLUNAS = KANBAN_COLUMNS
@@ -132,7 +134,7 @@ interface PrecatorioCard {
   responsavel_perfil?: { nome: string } | null
 }
 
-const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HTMLDivElement>) => {
+const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HTMLDivElement | null>) => {
   useEffect(() => {
     if (!isDragging) return
     const container = containerRef.current
@@ -206,7 +208,7 @@ const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HT
 }
 
 // Listener nativo de wheel (passive:false) — ESSENCIAL em desktop/webview
-const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement>) => {
+const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement | null>) => {
   useEffect(() => {
     const container = containerRef.current
     if (!container) return
@@ -490,6 +492,7 @@ const KanbanColumn = memo(function KanbanColumn({
   onOpenCalculo,
 }: KanbanColumnProps) {
   const c = coluna.color
+  const reduceMotion = useReducedMotion()
 
   return (
     <div
@@ -524,36 +527,53 @@ const KanbanColumn = memo(function KanbanColumn({
                 data-kanban-scroll
                 className={`space-y-3 p-3 h-full min-h-[120px] ${isDragging ? "overflow-y-hidden" : "overflow-y-auto"} overscroll-contain rounded-b-2xl bg-zinc-100/40 dark:bg-zinc-900/40`}
               >
-                {precatorios.map((precatorio, index) => {
-                  const podeCalculos = podeAcessarCalculos(precatorio)
-                  const isAtualizado = updatedPrecatorios.has(precatorio.id)
+                <AnimatePresence initial={false}>
+                  {precatorios.map((precatorio, index) => {
+                    const podeCalculos = podeAcessarCalculos(precatorio)
+                    const isAtualizado = updatedPrecatorios.has(precatorio.id)
 
-                  return (
-                    <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
-                      {(provided, snapshot) => (
-                        <div
-                          ref={provided.innerRef}
-                          {...provided.draggableProps}
-                          {...provided.dragHandleProps}
-                          style={{
-                            ...provided.draggableProps.style,
-                            opacity: snapshot.isDragging ? 0.9 : 1,
-                          }}
-                        >
-                          <KanbanCardItem
-                            precatorio={precatorio}
-                            colunaId={coluna.id}
-                            isAtualizado={isAtualizado}
-                            podeCalculos={podeCalculos}
-                            isDragging={snapshot.isDragging}
-                            onOpenDetails={onOpenDetails}
-                            onOpenCalculo={onOpenCalculo}
-                          />
-                        </div>
-                      )}
-                    </Draggable>
-                  )
-                })}
+                    return (
+                      <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
+                        {(provided, snapshot) => {
+                          const draggableProps = provided.draggableProps as any
+                          const dragHandleProps = (provided.dragHandleProps ?? {}) as any
+                          const dragStyle = provided.draggableProps.style
+
+                          return (
+                            <motion.div
+                              ref={provided.innerRef}
+                              {...draggableProps}
+                              {...dragHandleProps}
+                              layout={!snapshot.isDragging && !reduceMotion}
+                              initial={reduceMotion ? { opacity: 1 } : MOTION.item.initial}
+                              animate={reduceMotion ? { opacity: 1 } : MOTION.item.animate}
+                              exit={reduceMotion ? { opacity: 1 } : MOTION.item.exit}
+                              transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+                              whileHover={snapshot.isDragging || reduceMotion ? undefined : { y: -2 }}
+                              whileTap={snapshot.isDragging || reduceMotion ? undefined : { scale: 0.99 }}
+                              style={{
+                                ...dragStyle,
+                                opacity: snapshot.isDragging ? 0.95 : 1,
+                                // Evita conflito de transform entre motion layout e dnd.
+                                transform: dragStyle?.transform,
+                              }}
+                            >
+                              <KanbanCardItem
+                                precatorio={precatorio}
+                                colunaId={coluna.id}
+                                isAtualizado={isAtualizado}
+                                podeCalculos={podeCalculos}
+                                isDragging={snapshot.isDragging}
+                                onOpenDetails={onOpenDetails}
+                                onOpenCalculo={onOpenCalculo}
+                              />
+                            </motion.div>
+                          )
+                        }}
+                      </Draggable>
+                    )
+                  })}
+                </AnimatePresence>
                 {provided.placeholder}
                 {precatorios.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-10 opacity-60">

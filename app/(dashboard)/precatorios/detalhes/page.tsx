@@ -3,6 +3,7 @@
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -64,6 +65,8 @@ import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
 import { buscarCEP, formatarCEP } from "@/lib/utils/cep"
 import { KANBAN_COLUMNS } from "../../kanban/columns"
+import { MOTION } from "@/lib/motion"
+import { DetailSection } from "@/components/motion/DetailSection"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const hasValue = (v: any): boolean => v !== null && v !== undefined
@@ -190,6 +193,7 @@ export default function PrecatorioDetailPage() {
   const [showPdfModal, setShowPdfModal] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState("detalhes")
+  const reduceMotion = useReducedMotion()
   const [triagemStatusSelection, setTriagemStatusSelection] = useState<string>("")
   const [triagemDestinoReprovacao, setTriagemDestinoReprovacao] = useState<TriagemDestinoReprovacao>("none")
   const [triagemSaving, setTriagemSaving] = useState(false)
@@ -206,9 +210,7 @@ export default function PrecatorioDetailPage() {
   const [adminRecipients, setAdminRecipients] = useState<AdminAlertRecipientOption[]>([])
   const [adminTargetUserId, setAdminTargetUserId] = useState("")
   const [adminInterestMessage, setAdminInterestMessage] = useState("")
-  const [adminDirectAlertMessage, setAdminDirectAlertMessage] = useState("")
   const [adminInterestSending, setAdminInterestSending] = useState(false)
-  const [adminDirectAlertSending, setAdminDirectAlertSending] = useState(false)
 
  
 
@@ -217,6 +219,9 @@ export default function PrecatorioDetailPage() {
   const isOperadorCalculo = roles.includes("operador_calculo")
   const canEdit = roles.some((role) =>
     ["admin", "operador_comercial", "operador_calculo", "gestor", "gestor_oficio", "gestor_certidoes"].includes(role)
+  )
+  const canEditValoresPrincipais = roles.some((role) =>
+    ["admin", "operador_comercial", "gestor"].includes(role)
   )
   const canManageOficio = roles.some((role) =>
     [
@@ -913,44 +918,6 @@ export default function PrecatorioDetailPage() {
     }
   }
 
-  async function handleSendAdminDirectAlert() {
-    if (!isAdmin) return
-
-    const message = adminDirectAlertMessage.trim()
-    if (!message) {
-      toast({
-        title: "Mensagem obrigatoria",
-        description: "Digite a mensagem do alerta individual antes de enviar.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    setAdminDirectAlertSending(true)
-    try {
-      await sendAdminDirectNotification({
-        title: `Alerta individual do admin - ${precatorioAdminLabel}`,
-        body: `${message}\n\nCredito relacionado: ${precatorioAdminLabel}`,
-        kind: "warn",
-        eventType: "admin_alerta_individual_precatorio",
-      })
-
-      toast({
-        title: "Alerta enviado",
-        description: "O alerta individual foi enviado para o operador selecionado.",
-      })
-      setAdminDirectAlertMessage("")
-    } catch (error: any) {
-      toast({
-        title: "Erro ao enviar alerta",
-        description: error?.message || "Nao foi possivel enviar o alerta individual.",
-        variant: "destructive",
-      })
-    } finally {
-      setAdminDirectAlertSending(false)
-    }
-  }
-
   async function handleSaveEdit() {
     if (!precatorio || !id) return
 
@@ -1017,6 +984,11 @@ export default function PrecatorioDetailPage() {
         analise_itcmd_valor: toNumberOrNull(editData.analise_itcmd_valor),
         analise_itcmd_percentual: toNumberOrNull(editData.analise_itcmd_percentual),
         updated_at: new Date().toISOString(),
+      }
+
+      if (canEditValoresPrincipais) {
+        updateData.valor_principal = toNumberOrNull(editData.valor_principal)
+        updateData.valor_atualizado = toNumberOrNull(editData.valor_atualizado)
       }
 
       if (userRole && userRole.includes("admin") && editData.tribunal) {
@@ -1474,6 +1446,49 @@ export default function PrecatorioDetailPage() {
     }
   }
 
+  const handleDeleteHerdeiro = async (herdeiroId: string, herdeiroNome?: string | null) => {
+    const nomeLabel = (herdeiroNome || "este herdeiro").trim()
+    const confirmed = window.confirm(`Tem certeza que deseja excluir ${nomeLabel}? Esta ação não pode ser desfeita.`)
+    if (!confirmed) return
+
+    setHerdeiroSaving(true)
+    try {
+      const supabase = requireSupabase()
+      const { error } = await supabase
+        .from("precatorio_herdeiros")
+        .delete()
+        .eq("id", herdeiroId)
+
+      if (error) throw error
+
+      setHerdeiros((prev) => prev.filter((h) => h.id !== herdeiroId))
+      setSelectedHerdeiro((prev) => (prev?.id === herdeiroId ? null : prev))
+      setHerdeiroEdit((prev) => (prev?.id === herdeiroId ? null : prev))
+      setHerdeiroEditMode(false)
+      setHerdeiroModalOpen(false)
+
+      toast({
+        title: "Herdeiro excluído",
+        description: "O herdeiro foi removido com sucesso.",
+      })
+    } catch (err: any) {
+      toast({
+        title: "Erro ao excluir herdeiro",
+        description: err?.message || "Não foi possível excluir o herdeiro.",
+        variant: "destructive",
+      })
+    } finally {
+      setHerdeiroSaving(false)
+    }
+  }
+
+  const dashboardCardClass =
+    "rounded-2xl border border-zinc-200/70 bg-white/70 backdrop-blur-xl shadow-sm dark:border-zinc-800/70 dark:bg-zinc-950/40"
+  const dashboardTabsListClass =
+    "h-auto w-full gap-1 rounded-2xl border border-zinc-200/70 bg-white/70 p-1 backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-800/70 dark:bg-zinc-950/40"
+  const dashboardTabsTriggerClass =
+    "rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 transition-all hover:text-zinc-900 data-[state=active]:bg-zinc-100/80 data-[state=active]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=active]:bg-zinc-900/70 dark:data-[state=active]:text-white"
+
   if (!id) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-4rem)] space-y-2 px-4">
@@ -1513,9 +1528,18 @@ export default function PrecatorioDetailPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl p-6 space-y-6">
+    <div className="relative min-h-[calc(100vh-4rem)]">
+      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-black" />
+      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/20 via-sky-200/10 to-emerald-200/10 blur-3xl dark:from-primary/15 dark:via-sky-400/5 dark:to-emerald-400/5" />
+
+      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
       {/* Header */}
-      <div className="rounded-2xl border border-border/60 bg-background/80 backdrop-blur px-4 py-4 lg:sticky lg:top-4 z-20">
+      <motion.div
+        initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
+        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+        transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+        className="rounded-2xl border border-zinc-200/70 bg-white/70 px-4 py-4 shadow-sm backdrop-blur-xl lg:sticky lg:top-4 z-20 dark:border-zinc-800/70 dark:bg-zinc-950/40"
+      >
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
             <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-1 -ml-2">
@@ -1576,30 +1600,30 @@ export default function PrecatorioDetailPage() {
             )}
           </div>
         </div>
-      </div>
+      </motion.div>
 
       {/* Tabs Layout Consolidado */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="border-b mb-6">
+        <div className="mb-6 border-b border-zinc-200/70 dark:border-zinc-800/70">
           <div className="relative">
-            <TabsList className="bg-transparent h-auto w-full p-0 gap-6 flex-nowrap overflow-x-auto pb-1 pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            <TabsList className={dashboardTabsListClass}>
             <TabsTrigger
               value="detalhes"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-primary transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <FileText className="h-4 w-4 mr-2" />
               Geral
             </TabsTrigger>
             <TabsTrigger
               value="documentos"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <CheckSquare className="h-4 w-4 mr-2" />
               Documentos
             </TabsTrigger>
             <TabsTrigger
               value="oficio"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-cyan-500 rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-cyan-600 transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <FileText className="h-4 w-4 mr-2" />
               Ofício
@@ -1607,14 +1631,14 @@ export default function PrecatorioDetailPage() {
             </TabsTrigger>
             <TabsTrigger
               value="certidoes"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <CheckSquare className="h-4 w-4 mr-2" />
               Certidões
             </TabsTrigger>
             <TabsTrigger
               value="juridico"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <Scale className="h-4 w-4 mr-2" />
               Jurídico
@@ -1622,7 +1646,7 @@ export default function PrecatorioDetailPage() {
             {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
               <TabsTrigger
                 value="fechamento"
-                className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+                className={dashboardTabsTriggerClass}
               >
                 <Gavel className="h-4 w-4 mr-2" />
                 Fechamento
@@ -1630,21 +1654,21 @@ export default function PrecatorioDetailPage() {
             )}
             <TabsTrigger
               value="calculo"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <Calculator className="h-4 w-4 mr-2" />
               Cálculo
             </TabsTrigger>
             <TabsTrigger
               value="propostas"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <Percent className="h-4 w-4 mr-2" />
               Propostas
             </TabsTrigger>
             <TabsTrigger
               value="timeline"
-              className="data-[state=active]:bg-transparent data-[state=active]:shadow-none data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none pb-3 px-1 text-muted-foreground data-[state=active]:text-foreground transition-all hover:text-foreground"
+              className={dashboardTabsTriggerClass}
             >
               <Clock className="h-4 w-4 mr-2" />
               Timeline
@@ -1655,11 +1679,19 @@ export default function PrecatorioDetailPage() {
           </div>
         </div>
 
+        <AnimatePresence mode="wait" initial={false}>
+        <motion.div
+          key={activeTab}
+          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+          exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+          transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+        >
         {/* Tab: Detalhes */}
           <TabsContent value="detalhes" className="space-y-6">
 
             {/* Barra de Status */}
-            <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/60 bg-zinc-50/80 dark:bg-zinc-900/50 p-4">
+            <DetailSection className="border-zinc-200/70 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
             <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div className="min-w-0">
                 <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Status do crédito</p>
@@ -1738,88 +1770,10 @@ export default function PrecatorioDetailPage() {
                 Dica: role lateralmente para ver todas as etapas.
               </p>
             </div>
-          </div>
-
-          {/* Triagem de Interesse */}
-          <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
-            <CardHeader className="pb-3">
-              <CardTitle>
-                <SectionTitle icon={Users} title="Triagem de Interesse" />
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0 space-y-3">
-              <div className="flex flex-wrap items-center gap-3">
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${triagemStatusMeta.badgeClass}`}
-                >
-                  <span className={`h-2.5 w-2.5 rounded-full ${triagemStatusMeta.dotClass}`} />
-                  {triagemStatusMeta.label}
-                </span>
-                {semInteresseMotivo && (
-                  <p className="text-xs text-muted-foreground">{`Motivo: ${semInteresseMotivo}`}</p>
-                )}
-                {precatorio?.data_recontato && (
-                  <p className="text-xs text-muted-foreground">
-                    {`Recontato: ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`}
-                  </p>
-                )}
-              </div>
-              <div className="flex flex-wrap items-end gap-4">
-                <div className="flex flex-col gap-1 text-xs">
-                  <span className="font-semibold">Atualizar interesse</span>
-                  <Select
-                    value={triagemStatusSelection || "SEM_CONTATO"}
-                    onValueChange={(value) => setTriagemStatusSelection(value)}
-                  >
-                    <SelectTrigger className="min-w-[200px]">
-                      <SelectValue placeholder="Escolha o status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRIAGEM_STATUS_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="flex flex-col gap-1 text-xs">
-                  <span className="font-semibold">Encaminhar para</span>
-                  <Select
-                    value={triagemDestinoReprovacao}
-                    onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
-                  >
-                    <SelectTrigger className="min-w-[220px]">
-                      <SelectValue placeholder="Escolha o destino" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {TRIAGEM_DESTINO_OPTIONS.map((option) => (
-                        <SelectItem key={option.value} value={option.value}>
-                          {option.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <Button
-                  size="sm"
-                  onClick={handleSaveTriagemStatus}
-                  disabled={triagemSaving || !triagemStatusSelection}
-                >
-                  {triagemSaving ? "Salvando..." : "Salvar"}
-                </Button>
-              </div>
-              {interesseObservacao && (
-                <div className="space-y-1">
-                  <p className="text-xs font-medium text-muted-foreground">Observação da triagem</p>
-                  <p className="text-sm leading-relaxed text-foreground">{interesseObservacao}</p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+          </DetailSection>
 
           {isAdmin && (
-            <Card className="rounded-2xl border border-orange-300/50 bg-orange-50/40 dark:border-orange-900/60 dark:bg-orange-950/20 shadow-sm">
+            <Card className={`${dashboardCardClass} border-orange-300/50 bg-orange-50/40 dark:border-orange-900/60 dark:bg-orange-950/20`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={AlertCircle} title="Interesse do Admin no Crédito" />
@@ -1851,12 +1805,12 @@ export default function PrecatorioDetailPage() {
                       </SelectContent>
                     </Select>
                     <p className="text-xs text-muted-foreground">
-                      O modal de comunicados exibira apenas alertas diretos criados pelo admin.
+                      Alertas individuais devem ser enviados na aba Comunicados, usando o escopo Individual.
                     </p>
                   </div>
                   <div className="space-y-2">
                     <Label>Crédito em foco</Label>
-                    <div className="rounded-md border border-border/60 bg-background/80 px-3 py-2 text-sm">
+                    <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
                       {precatorioAdminLabel}
                     </div>
                   </div>
@@ -1879,25 +1833,6 @@ export default function PrecatorioDetailPage() {
                   </Button>
                 </div>
 
-                <Separator />
-
-                <div className="space-y-2">
-                  <Label htmlFor="admin-direct-alert">Alerta individual para operador</Label>
-                  <Textarea
-                    id="admin-direct-alert"
-                    rows={3}
-                    value={adminDirectAlertMessage}
-                    onChange={(e) => setAdminDirectAlertMessage(e.target.value)}
-                    placeholder="Ex.: Verifique este crédito hoje e me atualize até 16h."
-                  />
-                  <Button
-                    variant="outline"
-                    onClick={handleSendAdminDirectAlert}
-                    disabled={adminDirectAlertSending || !adminTargetUserId}
-                  >
-                    {adminDirectAlertSending ? "Enviando alerta..." : "Enviar alerta individual"}
-                  </Button>
-                </div>
               </CardContent>
             </Card>
           )}
@@ -1916,9 +1851,9 @@ export default function PrecatorioDetailPage() {
           <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
 
             {/* COLUNA 1: Dados Principais */}
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
               {/* Identificação */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-1`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={FileText} title="Identificação" />
@@ -1987,7 +1922,7 @@ export default function PrecatorioDetailPage() {
               </CardContent>
             </Card>
 
-            <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+            <Card className={`${dashboardCardClass} order-3`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={FileText} title="Gestão de Análise" />
@@ -2390,7 +2325,7 @@ export default function PrecatorioDetailPage() {
             </Card>
 
             {/* Vara de Origem e Devedor */}
-            <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+            <Card className={`${dashboardCardClass} order-4`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={Gavel} title="Vara de Origem e Devedor" />
@@ -2448,24 +2383,61 @@ export default function PrecatorioDetailPage() {
 
             {/* COLUNA 2: Financeiro e Datas */}
               {/* Valores */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+            <Card className={`${dashboardCardClass} order-2`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={DollarSign} title="Valores" />
                 </CardTitle>
               </CardHeader>
                 <CardContent className="pt-0">
+                  {isEditing && canEditValoresPrincipais && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                      <div className="space-y-2">
+                        <Label>Valor Principal (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editData.valor_principal ?? ""}
+                          onChange={(e) => setEditData({ ...editData, valor_principal: e.target.value })}
+                          placeholder="0,00"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Valor Atualizado (R$)</Label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          value={editData.valor_atualizado ?? ""}
+                          onChange={(e) => setEditData({ ...editData, valor_atualizado: e.target.value })}
+                          placeholder="0,00"
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Valor Principal</label>
                       <p className="text-lg font-semibold text-foreground">
-                        {hasValue(precatorio.valor_principal) ? formatCurrency(precatorio.valor_principal) : "—"}
+                        {(() => {
+                          const valorPrincipal = isEditing ? editData.valor_principal : precatorio.valor_principal
+                          return hasValue(valorPrincipal) && valorPrincipal !== ""
+                            ? formatCurrency(Number(valorPrincipal))
+                            : "—"
+                        })()}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Valor Atualizado</label>
                       <p className="text-2xl font-bold text-foreground">
-                        {hasValue(precatorio.valor_atualizado) ? formatCurrency(precatorio.valor_atualizado) : "—"}
+                        {(() => {
+                          const valorAtualizado = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
+                          return hasValue(valorAtualizado) && valorAtualizado !== ""
+                            ? formatCurrency(Number(valorAtualizado))
+                            : "—"
+                        })()}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -2525,7 +2497,7 @@ export default function PrecatorioDetailPage() {
               </Card>
 
               {/* Datas */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-5`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={Calendar} title="Datas Importantes" />
@@ -2564,9 +2536,87 @@ export default function PrecatorioDetailPage() {
             </div>
 
             {/* COLUNA 3: Partes e Observações */}
-            <div className="space-y-6">
+            <div className="flex flex-col gap-6">
+              {/* Triagem de Interesse */}
+              <Card className={`${dashboardCardClass} order-1`}>
+                <CardHeader className="pb-3">
+                  <CardTitle>
+                    <SectionTitle icon={Users} title="Triagem de Interesse" />
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0 space-y-3">
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span
+                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${triagemStatusMeta.badgeClass}`}
+                    >
+                      <span className={`h-2.5 w-2.5 rounded-full ${triagemStatusMeta.dotClass}`} />
+                      {triagemStatusMeta.label}
+                    </span>
+                    {semInteresseMotivo && (
+                      <p className="text-xs text-muted-foreground">{`Motivo: ${semInteresseMotivo}`}</p>
+                    )}
+                    {precatorio?.data_recontato && (
+                      <p className="text-xs text-muted-foreground">
+                        {`Recontato: ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex flex-wrap items-end gap-4">
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="font-semibold">Atualizar interesse</span>
+                      <Select
+                        value={triagemStatusSelection || "SEM_CONTATO"}
+                        onValueChange={(value) => setTriagemStatusSelection(value)}
+                      >
+                        <SelectTrigger className="min-w-[200px]">
+                          <SelectValue placeholder="Escolha o status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRIAGEM_STATUS_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <div className="flex flex-col gap-1 text-xs">
+                      <span className="font-semibold">Encaminhar para</span>
+                      <Select
+                        value={triagemDestinoReprovacao}
+                        onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
+                      >
+                        <SelectTrigger className="min-w-[220px]">
+                          <SelectValue placeholder="Escolha o destino" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {TRIAGEM_DESTINO_OPTIONS.map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Button
+                      size="sm"
+                      onClick={handleSaveTriagemStatus}
+                      disabled={triagemSaving || !triagemStatusSelection}
+                    >
+                      {triagemSaving ? "Salvando..." : "Salvar"}
+                    </Button>
+                  </div>
+                  {interesseObservacao && (
+                    <div className="space-y-1">
+                      <p className="text-xs font-medium text-muted-foreground">Observação da triagem</p>
+                      <p className="text-sm leading-relaxed text-foreground">{interesseObservacao}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
               {/* Dados Bancários */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-4`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={DollarSign} title="Dados Bancários" />
@@ -2697,7 +2747,7 @@ export default function PrecatorioDetailPage() {
               </Card>
 
               {/* Credor e Advogado - Compactados ou em Abas? Vou deixar em cards um abaixo do outro por enquanto */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-2`}>
               <CardHeader className="pb-3">
                 <CardTitle>
                   <SectionTitle icon={User} title="Partes (Credor/Adv)" />
@@ -2748,7 +2798,7 @@ export default function PrecatorioDetailPage() {
               </Card>
 
 
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-3`}>
                 <CardHeader className="pb-3">
                   <CardTitle className="flex items-center gap-2">
                     <SectionTitle icon={Users} title="Herdeiros" />
@@ -2970,6 +3020,18 @@ export default function PrecatorioDetailPage() {
                       </div>
 
                       <div className="flex justify-end gap-2 pt-2">
+                        <Button
+                          variant="destructive"
+                          onClick={() =>
+                            void handleDeleteHerdeiro(
+                              selectedHerdeiro.id,
+                              selectedHerdeiro.nome_completo
+                            )
+                          }
+                          disabled={herdeiroSaving}
+                        >
+                          {herdeiroSaving ? "Excluindo..." : "Excluir herdeiro"}
+                        </Button>
                         {herdeiroEditMode ? (
                           <>
                             <Button
@@ -2998,7 +3060,7 @@ export default function PrecatorioDetailPage() {
               </Dialog>
 
               {/* Observações */}
-              <Card className="rounded-2xl border border-border/60 bg-card/80 shadow-sm">
+              <Card className={`${dashboardCardClass} order-5`}>
                 <CardHeader className="pb-3">
                   <CardTitle>
                     <SectionTitle title="Observações" />
@@ -3051,7 +3113,7 @@ export default function PrecatorioDetailPage() {
         <TabsContent value="juridico" className="mt-0 space-y-6">
           <div className="max-w-4xl">
             {precatorio.status_kanban === "proposta_aceita" && (
-              <Card className="mb-4 border-emerald-200 bg-emerald-50/70">
+              <Card className={`${dashboardCardClass} mb-4 border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/25`}>
                 <CardContent className="py-4 flex items-start gap-3 text-emerald-900">
                   <CheckCircle2 className="h-5 w-5 mt-0.5" />
                   <div>
@@ -3064,7 +3126,7 @@ export default function PrecatorioDetailPage() {
               </Card>
             )}
             {precatorio.status_kanban === "proposta_aceita" ? (
-              <Card>
+              <Card className={`${dashboardCardClass} order-5`}>
                 <CardHeader>
                   <CardTitle className="text-base flex items-center gap-2">
                     <Gavel className="h-5 w-5" />
@@ -3158,7 +3220,7 @@ export default function PrecatorioDetailPage() {
                   onUpdate={loadPrecatorio}
                 />
               ) : (
-                <Card>
+                <Card className={dashboardCardClass}>
                   <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
                     <Scale className="h-12 w-12 mb-4 opacity-50" />
                     <p className="font-medium">Precatório em Jurídico</p>
@@ -3169,7 +3231,7 @@ export default function PrecatorioDetailPage() {
             ) : (
               <div className="space-y-4">
                 {hasFechamentoParecer && (
-                  <Card>
+                  <Card className={dashboardCardClass}>
                     <CardHeader>
                       <CardTitle className="text-base flex items-center gap-2">
                         <Gavel className="h-5 w-5" />
@@ -3191,7 +3253,7 @@ export default function PrecatorioDetailPage() {
                 )}
 
                 {precatorio.juridico_parecer_status && (
-                  <Card>
+                  <Card className={dashboardCardClass}>
                     <CardHeader>
                       <CardTitle className="text-base flex items-center gap-2">
                         <Scale className="h-5 w-5" />
@@ -3209,7 +3271,7 @@ export default function PrecatorioDetailPage() {
 
                 {!precatorio.juridico_parecer_status && !precatorio.pendencias_fechamento && (
                   (userRole?.includes('juridico') && !userRole?.includes('admin')) ? (
-                    <Card>
+                    <Card className={dashboardCardClass}>
                       <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
                         <CheckSquare className="h-12 w-12 mb-4 opacity-50" />
                         <p className="font-medium">Sem pendências jurídicas</p>
@@ -3311,7 +3373,7 @@ export default function PrecatorioDetailPage() {
 
         {/* Tab: Timeline */}
         <TabsContent value="timeline" className="mt-0">
-          <Card>
+          <Card className={dashboardCardClass}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Clock className="h-5 w-5" />
@@ -3323,10 +3385,12 @@ export default function PrecatorioDetailPage() {
             </CardContent>
           </Card>
         </TabsContent>
-      </Tabs >
+        </motion.div>
+        </AnimatePresence>
+      </Tabs>
 
       {/* Modal de PDF */}
-      < PdfViewerModal
+      <PdfViewerModal
         open={showPdfModal}
         onOpenChange={setShowPdfModal}
         pdfUrl={precatorio?.pdf_url}
@@ -3334,6 +3398,8 @@ export default function PrecatorioDetailPage() {
         precatorioId={id}
         canCalculate={userRole ? !userRole.includes("operador_comercial") : false}
       />
-    </div >
+      </div>
+    </div>
   )
 }
+

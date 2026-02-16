@@ -5,7 +5,8 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
-import { Switch } from "@/components/ui/switch"
+import { Description, Label as FieldsetLabel } from "@/components/fieldset"
+import { Switch, SwitchField } from "@/components/switch"
 import { BadgePercent, Info } from "lucide-react"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { useEffect, useState } from "react"
@@ -178,17 +179,19 @@ export function StepHonorarios({ dados, setDados, onCompletar, voltar, resultado
             <CardTitle className="calc-title">Honorários e Adiantamentos</CardTitle>
             <CardDescription className="calc-subtitle">Configure percentuais e valores sobre a base líquida.</CardDescription>
           </div>
-          <div className="flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-2 shadow-sm">
+          <SwitchField className="rounded-full border-border/60 bg-background/70 px-3 py-2 shadow-sm [&>[data-slot='description']]:hidden [&>[data-slot='switch']]:row-span-1">
+            <FieldsetLabel htmlFor="manual-mode-honorarios" className="text-sm font-medium cursor-pointer">
+              Modo Manual
+            </FieldsetLabel>
+            <Description>Alterna o preenchimento manual dos valores.</Description>
             <Switch
               id="manual-mode-honorarios"
+              name="manual_mode_honorarios"
               checked={isManual}
               onCheckedChange={handleManualToggle}
               className="border border-border/60 shadow-sm data-[state=checked]:bg-primary data-[state=unchecked]:bg-muted [&>span]:bg-background"
             />
-            <Label htmlFor="manual-mode-honorarios" className="text-sm font-medium cursor-pointer">
-              Modo Manual
-            </Label>
-          </div>
+          </SwitchField>
         </div>
       </CardHeader>
       <CardContent>
