@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const isProdBuild = process.env.NODE_ENV === "production";
-
 const nextConfig = {
   reactStrictMode: false,
   // Em dev mantemos server features (ex.: route handlers) para OCR robusto.
@@ -12,10 +11,15 @@ const nextConfig = {
   poweredByHeader: false,         // Remove cabeçalho X-Powered-By
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  turbopack: {
+    resolveAlias: {
+      canvas: "./lib/shims/empty.js",
+    },
+  },
 
   // Fix for PDF.js in Next.js 15
   webpack: (config) => {
-    config.resolve.alias.canvas = false;
+    config.resolve.alias.canvas = "./lib/shims/empty.js";
     return config;
   },
 };

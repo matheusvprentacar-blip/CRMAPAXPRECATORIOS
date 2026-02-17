@@ -32,6 +32,7 @@ import type {
   ComunicadoScope,
   ComunicadoRow,
 } from "@/lib/types/comunicados"
+import { COMUNICADOS_ALERT_EVENT_TYPES } from "@/lib/types/comunicados"
 
 type AiDraft = {
   titulo_sugerido: string
@@ -151,6 +152,11 @@ function formatBytes(value?: number | null) {
     idx += 1
   }
   return `${size.toFixed(size >= 10 || idx === 0 ? 0 : 1)} ${units[idx]}`
+}
+
+function getIndividualAlertLabel(eventType?: string | null) {
+  if (eventType === "agenda_alerta") return "Alerta da agenda"
+  return "Alerta individual"
 }
 
 function sanitizeFileName(fileName: string) {
@@ -597,7 +603,7 @@ export default function ComunicadosPage() {
         .from("notifications")
         .select("id, title, body, link_url, entity_type, entity_id, event_type, created_at, read_at")
         .eq("user_id", userId)
-        .in("event_type", ["interesse_calculo_admin", "admin_alerta_individual_precatorio"])
+        .in("event_type", [...COMUNICADOS_ALERT_EVENT_TYPES])
         .order("created_at", { ascending: false })
 
       const [
@@ -1307,7 +1313,7 @@ export default function ComunicadosPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <h3 className="font-semibold">{alert.title}</h3>
-                        <Badge variant="outline">Alerta individual</Badge>
+                        <Badge variant="outline">{getIndividualAlertLabel(alert.event_type)}</Badge>
                       </div>
                       <p className="text-xs text-muted-foreground">
                         Recebido em {formatDateTime(alert.created_at)}

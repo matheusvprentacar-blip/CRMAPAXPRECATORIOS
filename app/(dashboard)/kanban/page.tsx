@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Bell, Lock, LockOpen, CheckCircle2, Clock, Kanban, FileText, User, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
+import { Bell, Lock, LockOpen, Kanban, User, AlertCircle, ChevronLeft, ChevronRight } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "@/components/ui/use-toast"
@@ -28,11 +28,24 @@ import { Textarea } from "@/components/ui/textarea"
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
 import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
+import ShinyText from "@/components/ui/shiny-text"
 import { KANBAN_COLUMNS } from "./columns"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "lucide-react"
 import { MOTION } from "@/lib/motion"
+
+const KANBAN_SHINY_PROPS = {
+  speed: 2,
+  delay: 0,
+  color: "var(--route-shiny-base, #b5b5b5)",
+  shineColor: "var(--route-shiny-shine, #ffffff)",
+  spread: 120,
+  direction: "left" as const,
+  yoyo: false,
+  pauseOnHover: false,
+  disabled: false,
+}
 
 // Colunas do Kanban com Gates
 const COLUNAS = KANBAN_COLUMNS
@@ -304,6 +317,14 @@ const KanbanCardItem = memo(function KanbanCardItem({
   onOpenCalculo,
 }: KanbanCardItemProps) {
   const numeroPrecatorio = precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : null
+  const temValor = Boolean(
+    (precatorio.valor_atualizado && precatorio.valor_atualizado > 0) ||
+      (precatorio.valor_principal && precatorio.valor_principal > 0),
+  )
+  const valorExibido =
+    (precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? precatorio.valor_atualizado : precatorio.valor_principal) ??
+    0
+  const nomeResponsavel = precatorio.responsavel_perfil?.nome?.split(" ")[0] || "Sem responsável"
 
   return (
     <Card
@@ -315,10 +336,10 @@ const KanbanCardItem = memo(function KanbanCardItem({
         }`}
     >
       <CardContent className="p-3">
-        <div className="space-y-2">
+        <div className="space-y-3 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h4
-              className="font-semibold text-sm flex-1 leading-snug text-foreground line-clamp-2 group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
+              className="min-w-0 flex-1 font-semibold text-sm leading-snug text-foreground line-clamp-2 break-words group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
               onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
             >
               {precatorio.titulo || numeroPrecatorio || "Sem título"}
@@ -333,15 +354,24 @@ const KanbanCardItem = memo(function KanbanCardItem({
             )}
           </div>
 
-          {numeroPrecatorio && (
-            <div className="text-[11px] font-medium text-muted-foreground">
-              Precatório: <span className="text-foreground/90">{numeroPrecatorio}</span>
+          <div className="space-y-1.5">
+            {numeroPrecatorio && (
+              <div className="flex min-w-0 items-center gap-1.5 text-[11px]">
+                <span className="text-muted-foreground shrink-0">Precatório:</span>
+                <span className="font-medium text-foreground/90 truncate" title={numeroPrecatorio}>
+                  {numeroPrecatorio}
+                </span>
+              </div>
+            )}
+            <div className="flex min-w-0 items-center gap-1.5 text-xs text-muted-foreground">
+              <User className="h-3 w-3 shrink-0" />
+              <p className="min-w-0 truncate" title={precatorio.credor_nome || undefined}>
+                {precatorio.credor_nome || "Credor não informado"}
+              </p>
             </div>
-          )}
+          </div>
 
-          <p className="text-xs text-muted-foreground line-clamp-1">{precatorio.credor_nome}</p>
-
-          <div className="flex flex-wrap gap-1.5 pt-1">
+          <div className="flex flex-wrap items-center gap-1.5 pt-1 min-h-6">
             {colunaId === "encerrados" && (
               <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
                 {ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
@@ -365,19 +395,6 @@ const KanbanCardItem = memo(function KanbanCardItem({
                 Cálculo desatualizado
               </Badge>
             )}
-            {precatorio.interesse_status && (
-              <Badge
-                variant={precatorio.interesse_status === "TEM_INTERESSE" ? "default" : "secondary"}
-                className="text-[10px] h-5 px-1.5"
-              >
-                {precatorio.interesse_status === "TEM_INTERESSE" ? (
-                  <CheckCircle2 className="h-2.5 w-2.5 mr-1" />
-                ) : (
-                  <Clock className="h-2.5 w-2.5 mr-1" />
-                )}
-                {precatorio.interesse_status === "TEM_INTERESSE" ? "Interesse" : "Análise"}
-              </Badge>
-            )}
 
             {precatorio.calculo_ultima_versao > 0 && (
               <Badge variant="secondary" className="text-[10px] h-5 px-1.5">
@@ -385,22 +402,6 @@ const KanbanCardItem = memo(function KanbanCardItem({
               </Badge>
             )}
 
-            {precatorio.file_url && (
-              <a
-                href={precatorio.file_url}
-                target="_blank"
-                rel="noopener noreferrer"
-                onClick={(e) => e.stopPropagation()}
-              >
-                <Badge
-                  variant="outline"
-                  className="text-[10px] h-5 px-1.5 gap-1 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer border-blue-200 text-blue-700 dark:text-blue-400"
-                >
-                  <FileText className="h-2.5 w-2.5" />
-                  Ofício
-                </Badge>
-              </a>
-            )}
 
             {precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status && (
               <Badge
@@ -419,50 +420,43 @@ const KanbanCardItem = memo(function KanbanCardItem({
             )}
           </div>
 
-          {((precatorio.valor_atualizado && precatorio.valor_atualizado > 0) || (precatorio.valor_principal && precatorio.valor_principal > 0)) && (
-            <div className="flex items-center justify-between pt-2 border-t border-border/50">
-              <span className="text-[10px] text-muted-foreground">
+          {temValor && (
+            <div className="grid grid-cols-[auto_1fr] items-center gap-x-3 rounded-lg border border-border/60 bg-zinc-100/60 dark:bg-zinc-800/20 px-2.5 py-2">
+              <span className="text-[10px] uppercase tracking-wide text-muted-foreground leading-none font-medium">
                 {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
               </span>
-              <span className="text-xs font-bold text-foreground">
-                {formatBR((precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? precatorio.valor_atualizado : precatorio.valor_principal) ?? 0)}
+              <span className="min-w-0 text-right text-sm font-semibold text-foreground tabular-nums whitespace-nowrap leading-none">
+                {formatBR(valorExibido)}
               </span>
             </div>
           )}
 
-          <div className="pt-2 flex items-center justify-between gap-2">
-            {precatorio.responsavel_perfil?.nome && (
+          <div className="pt-1 flex items-center justify-between gap-2 min-w-0">
+            <div
+              className="min-w-0 flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md max-w-[58%]"
+              title={`Responsável: ${precatorio.responsavel_perfil?.nome || "Não definido"}`}
+            >
+              <User className="h-3 w-3 shrink-0" />
+              <span className="truncate">{nomeResponsavel}</span>
+            </div>
+
+            {podeCalculos ? (
               <div
-                className="flex items-center gap-1.5 text-[10px] text-muted-foreground bg-zinc-100 dark:bg-zinc-800/50 px-2 py-1 rounded-md max-w-[55%] truncate shrink-0"
-                title={`Responsável: ${precatorio.responsavel_perfil.nome}`}
+                className="h-7 shrink-0 px-2.5 rounded-md border border-emerald-300/40 bg-emerald-500/10 text-[10px] text-emerald-700 dark:text-emerald-300 inline-flex items-center"
+                title="Acesso ao cálculo liberado"
               >
-                <User className="h-3 w-3 shrink-0" />
-                <span className="truncate">{precatorio.responsavel_perfil.nome.split(" ")[0]}</span>
+                <LockOpen className="h-3 w-3 mr-1.5" />
+                Cálculo liberado
+              </div>
+            ) : (
+              <div
+                className="h-7 shrink-0 px-2.5 rounded-md border border-border/60 bg-muted/40 text-[10px] text-muted-foreground inline-flex items-center"
+                title="Cálculo bloqueado até cumprir os requisitos"
+              >
+                <Lock className="h-3 w-3 mr-1.5" />
+                Bloqueado
               </div>
             )}
-
-            <Button
-              variant={podeCalculos ? "secondary" : "ghost"}
-              size="sm"
-              className={`flex-1 text-[10px] h-7 ${!podeCalculos ? "opacity-50" : "hover:bg-orange-50 hover:text-orange-600 dark:hover:bg-orange-900/20 dark:hover:text-orange-400"}`}
-              disabled={!podeCalculos}
-              onClick={(e) => {
-                e.stopPropagation()
-                if (podeCalculos) onOpenCalculo(precatorio.id)
-              }}
-            >
-              {podeCalculos ? (
-                <>
-                  <LockOpen className="h-3 w-3 mr-1.5" />
-                  Cálculo
-                </>
-              ) : (
-                <>
-                  <Lock className="h-3 w-3 mr-1.5" />
-                  Bloqueado
-                </>
-              )}
-            </Button>
           </div>
         </div>
       </CardContent>
@@ -496,7 +490,7 @@ const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div
-      className={`flex-shrink-0 min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col ${
+      className={`flex-shrink-0 min-w-[320px] w-[320px] h-full flex flex-col ${
         isDragging ? "" : "snap-start"
       }`}
     >
@@ -1372,7 +1366,7 @@ export default function KanbanPageNewGates() {
             {COLUNAS.slice(0, 4).map((coluna) => (
               <div
                 key={coluna.id}
-                className="min-w-[340px] w-[340px] lg:min-w-[360px] lg:w-[360px] h-full flex flex-col"
+                className="min-w-[320px] w-[320px] h-full flex flex-col"
               >
                 <div className="h-full rounded-2xl border border-border/60 bg-muted/30 animate-pulse" />
               </div>
@@ -1389,8 +1383,8 @@ export default function KanbanPageNewGates() {
       <div className="flex flex-col space-y-4 border-b pb-6">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold tracking-tight bg-gradient-to-r from-orange-500 to-orange-600 bg-clip-text text-transparent w-fit">
-              Kanban Workflow
+            <h1 className="text-3xl font-bold tracking-tight w-fit">
+              <ShinyText text="Kanban Workflow" className="align-middle" {...KANBAN_SHINY_PROPS} />
             </h1>
             <p className="text-muted-foreground mt-1">Fluxo controlado com gates de validação automática</p>
             <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
@@ -1469,7 +1463,7 @@ export default function KanbanPageNewGates() {
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
-              className={`flex w-full gap-4 overflow-x-auto overflow-y-hidden pb-2 h-full px-1 overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent ${
+              className={`flex w-full gap-3 overflow-x-auto overflow-y-hidden pb-2 h-full px-1 overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent ${
                 isDragging ? "snap-none" : "snap-x snap-proximity"
               }`}
               style={{
@@ -1500,7 +1494,7 @@ export default function KanbanPageNewGates() {
             {canScrollLeft && (
               <button
                 type="button"
-                onClick={() => scrollContainerRef.current?.scrollBy({ left: -360, behavior: "smooth" })}
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: -320, behavior: "smooth" })}
                 className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full border border-border/60 bg-background/80 backdrop-blur shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition"
                 aria-label="Scroll para a esquerda"
               >
@@ -1510,7 +1504,7 @@ export default function KanbanPageNewGates() {
             {canScrollRight && (
               <button
                 type="button"
-                onClick={() => scrollContainerRef.current?.scrollBy({ left: 360, behavior: "smooth" })}
+                onClick={() => scrollContainerRef.current?.scrollBy({ left: 320, behavior: "smooth" })}
                 className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-9 w-9 rounded-full border border-border/60 bg-background/80 backdrop-blur shadow-sm flex items-center justify-center text-muted-foreground hover:text-foreground transition"
                 aria-label="Scroll para a direita"
               >

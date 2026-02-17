@@ -1,12 +1,9 @@
 "use client"
 
 import type React from "react"
-
-import { useAuth, type UserRole } from "./auth-context"
-import { useRouter } from "next/navigation"
 import { useEffect } from "react"
-
-
+import { useRouter } from "next/navigation"
+import { useAuth, type UserRole } from "./auth-context"
 
 interface RoleGuardProps {
   children: React.ReactNode
@@ -20,9 +17,8 @@ export function RoleGuard({ children, allowedRoles, fallbackPath = "/dashboard" 
 
   useEffect(() => {
     if (!loading && profile) {
-      // Verificar se o usuário tem alguma das roles permitidas
       const hasPermission = Array.isArray(profile.role)
-        ? allowedRoles.some(role => profile.role.includes(role))
+        ? allowedRoles.some((role) => profile.role.includes(role))
         : allowedRoles.includes(profile.role as any)
 
       if (!hasPermission) {
@@ -33,21 +29,19 @@ export function RoleGuard({ children, allowedRoles, fallbackPath = "/dashboard" 
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-2 text-sm text-muted-foreground">Verificando permissões...</p>
+      <div className="px-4 py-3">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-primary/15">
+          <div className="h-full w-full animate-pulse bg-primary/70" />
         </div>
       </div>
     )
   }
 
-  // Verificação de renderização
-  const hasPermission = profile && (
-    Array.isArray(profile.role)
-      ? allowedRoles.some(role => profile.role.includes(role))
-      : allowedRoles.includes(profile.role as any)
-  )
+  const hasPermission =
+    profile &&
+    (Array.isArray(profile.role)
+      ? allowedRoles.some((role) => profile.role.includes(role))
+      : allowedRoles.includes(profile.role as any))
 
   if (!hasPermission) {
     return null
@@ -55,3 +49,4 @@ export function RoleGuard({ children, allowedRoles, fallbackPath = "/dashboard" 
 
   return <>{children}</>
 }
+

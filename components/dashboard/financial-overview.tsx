@@ -32,7 +32,7 @@ export function FinancialOverview({ data, loading }: FinancialOverviewProps) {
                     {loading ? (
                         <div className="h-7 w-32 bg-muted animate-pulse rounded" />
                     ) : (
-                        <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
+                        <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary">
                             {formatCurrency(data.totalPrincipal)}
                         </div>
                     )}

@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { FileSearch, Search, User, FileText, CalendarClock } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
+import ShinyText from "@/components/ui/shiny-text"
 
 interface PrecatorioAnalise {
   id: string
@@ -172,6 +173,41 @@ export default function AnaliseProcessualPage() {
     )
   }, [precatorios, searchTerm])
 
+  const analisesRegistradas = useMemo(() => {
+    return filteredPrecatorios.filter((p) => {
+      return (
+        p.analise_penhora !== null ||
+        p.analise_cessao !== null ||
+        p.analise_viavel !== null ||
+        p.analise_itcmd !== null ||
+        (p.analise_herdeiros !== null && p.analise_herdeiros !== undefined && String(p.analise_herdeiros).trim() !== "") ||
+        (p.analise_observacoes !== null && p.analise_observacoes !== undefined && String(p.analise_observacoes).trim() !== "")
+      )
+    }).length
+  }, [filteredPrecatorios])
+
+  const pendentesAnalise = Math.max(0, filteredPrecatorios.length - analisesRegistradas)
+
+  const comDadosIncompletos = useMemo(() => {
+    return filteredPrecatorios.filter((p) => {
+      const semProcesso = !p.numero_processo || p.numero_processo.toUpperCase() === "N/A"
+      const semCredor = !p.credor_nome || p.credor_nome.trim() === ""
+      return semProcesso || semCredor
+    }).length
+  }, [filteredPrecatorios])
+
+  const shinyProps = {
+    speed: 2,
+    delay: 0,
+    color: "var(--route-shiny-base, #b5b5b5)",
+    shineColor: "var(--route-shiny-shine, #ffffff)",
+    spread: 120,
+    direction: "left" as const,
+    yoyo: false,
+    pauseOnHover: false,
+    disabled: false,
+  }
+
   const booleanSelectValue = (value: boolean | null | undefined) => {
     if (value === true) return "true"
     if (value === false) return "false"
@@ -278,28 +314,79 @@ export default function AnaliseProcessualPage() {
 
   return (
     <div className="space-y-6 container mx-auto p-6 max-w-7xl">
-      <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-        <div className="space-y-1">
-          <h1 className="text-3xl font-bold tracking-tight">Análise Processual</h1>
-          <p className="text-muted-foreground">
-            Precatórios aguardando análise pré-cálculo.
-          </p>
-        </div>
-        <Badge variant="secondary" className="text-lg px-4 py-1 w-fit">
-          {filteredPrecatorios.length} na fila
-        </Badge>
-      </div>
+      <Card className="overflow-hidden border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.06] shadow-sm">
+        <CardContent className="space-y-6 p-6 md:p-7">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+            <div className="space-y-1">
+              <h1 className="text-3xl font-bold tracking-tight">
+                <ShinyText text={"An\u00e1lise Processual"} className="align-middle" {...shinyProps} />
+              </h1>
+              <p className="text-muted-foreground">
+                Triagem jurídica antes do cálculo com foco em pendências e viabilidade.
+              </p>
+            </div>
+            <Badge variant="outline" className="w-fit rounded-full border-amber-500/40 px-3 py-1 text-sm text-amber-300">
+              <ShinyText text={`${filteredPrecatorios.length} na fila ativa`} {...shinyProps} />
+            </Badge>
+          </div>
 
-      <Card className="border-none shadow-md bg-card/50 backdrop-blur-sm">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total em análise</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <ShinyText text={`${filteredPrecatorios.length}`} {...shinyProps} />
+              </p>
+            </div>
+            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] p-4">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-300/80">Análises registradas</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-300">
+                <ShinyText text={`${analisesRegistradas}`} {...shinyProps} />
+              </p>
+            </div>
+            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] p-4">
+              <p className="text-[11px] uppercase tracking-wide text-amber-300/80">Pendentes de preenchimento</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-300">
+                <ShinyText text={`${pendentesAnalise}`} {...shinyProps} />
+              </p>
+            </div>
+            <div className="rounded-xl border border-border/70 bg-background/70 p-4">
+              <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Dados incompletos</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums">
+                <ShinyText text={`${comDadosIncompletos}`} {...shinyProps} />
+              </p>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card className="border border-border/70 bg-card/70 shadow-sm">
         <CardContent className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Buscar por credor, processo, precatório ou tribunal..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 h-10"
-            />
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Buscar por credor, processo, precatório ou tribunal..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="h-11 rounded-xl pl-10"
+              />
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
+                <ShinyText text={`${filteredPrecatorios.length} resultados`} {...shinyProps} />
+              </Badge>
+              {searchTerm.trim() && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="h-9 rounded-full px-3 text-xs"
+                  onClick={() => setSearchTerm("")}
+                >
+                  Limpar busca
+                </Button>
+              )}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -334,59 +421,74 @@ export default function AnaliseProcessualPage() {
         </Card>
       )}
 
+      {!error && filteredPrecatorios.length > 0 && (
+        <div className="hidden md:grid md:grid-cols-[64px_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,1fr)_minmax(240px,1fr)] items-center gap-6 px-6 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+          <span>#</span>
+          <span>Credor</span>
+          <span>Processo</span>
+          <span>Data</span>
+          <span>Status e ação</span>
+        </div>
+      )}
+
       <div className="grid gap-4">
         {filteredPrecatorios.map((p, index) => (
           <Card
             key={p.id}
-            className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-amber-500/50 group relative overflow-hidden"
+            className="group relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-r from-background to-amber-500/[0.04] shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg cursor-pointer"
             onClick={() => handleAbrir(p.id)}
           >
-            <div className="absolute inset-0 bg-amber-500/0 group-hover:bg-amber-500/5 transition-colors" />
-            <CardContent className="p-6 flex items-center justify-between relative z-10">
-              <div className="flex items-start gap-6 flex-1">
-                <div className="flex flex-col items-center justify-center min-w-[3rem]">
-                  <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-amber-500/40 transition-colors">
+            <div className="absolute inset-0 bg-amber-500/[0.01] group-hover:bg-amber-500/[0.05] transition-colors" />
+            <CardContent className="relative z-10 p-5 md:p-6">
+              <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[64px_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,1fr)_minmax(240px,1fr)] md:gap-6">
+                <div className="flex items-start md:justify-center">
+                  <span className="text-4xl font-black leading-none text-muted-foreground/20 group-hover:text-amber-500/40 transition-colors">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-                  <div className="space-y-1">
-                    <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                      <User className="w-3 h-3" /> Credor
-                    </label>
-                    <p className="font-medium truncate" title={p.credor_nome || undefined}>
-                      {p.credor_nome || "Não informado"}
-                    </p>
-                    <p className="text-xs text-muted-foreground font-mono">
-                      {p.credor_cpf_cnpj || "CPF/CNPJ n/d"}
-                    </p>
-                  </div>
+                <div className="min-w-0 space-y-1">
+                  <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
+                    <User className="w-3 h-3" /> Credor
+                  </label>
+                  <p className="font-medium truncate" title={p.credor_nome || undefined}>
+                    {p.credor_nome || "Não informado"}
+                  </p>
+                  <p className="text-xs text-muted-foreground font-mono truncate" title={p.credor_cpf_cnpj || undefined}>
+                    {p.credor_cpf_cnpj || "CPF/CNPJ n/d"}
+                  </p>
+                </div>
 
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                       <FileText className="w-3 h-3" /> Processo
                     </label>
-                    <p className="font-medium text-sm font-mono">{p.numero_processo || "N/A"}</p>
-                    <p className="text-xs text-muted-foreground">{p.numero_precatorio || "Precatório N/A"}</p>
+                    <p className="font-medium text-sm font-mono truncate" title={p.numero_processo || undefined}>
+                      {p.numero_processo || "N/A"}
+                    </p>
+                    <p className="text-xs text-muted-foreground truncate" title={p.numero_precatorio || undefined}>
+                      {p.numero_precatorio || "Precatório N/A"}
+                    </p>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                       <CalendarClock className="w-3 h-3" /> Data
                     </label>
                     <p className="font-medium text-sm">
                       {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "—"}
                     </p>
-                    <p className="text-xs text-muted-foreground">{p.tribunal || "Tribunal n/d"}</p>
+                    <p className="text-xs text-muted-foreground truncate" title={p.tribunal || undefined}>
+                      {p.tribunal || "Tribunal n/d"}
+                    </p>
                   </div>
 
-                  <div className="space-y-1">
+                  <div className="min-w-0 space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Status</label>
                     <Badge variant="outline" className="w-fit border-amber-500/30 text-amber-300">
                       Análise processual
                     </Badge>
-                    <p className="text-xs text-muted-foreground truncate">
+                    <p className="text-xs text-muted-foreground truncate" title={p.titulo || undefined}>
                       {p.titulo || "Sem título"}
                     </p>
                     {analysisFieldsAvailable ? (
@@ -394,7 +496,7 @@ export default function AnaliseProcessualPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="mt-2 h-8 rounded-full border-amber-500/40 text-amber-300 hover:bg-amber-500/10"
+                        className="mt-2 h-8 rounded-full border-amber-500/40 px-4 text-amber-300 hover:bg-amber-500/10 font-medium"
                         onClick={(e) => {
                           e.stopPropagation()
                           openAnaliseModal(p)
@@ -408,7 +510,6 @@ export default function AnaliseProcessualPage() {
                       </p>
                     )}
                   </div>
-                </div>
               </div>
             </CardContent>
           </Card>

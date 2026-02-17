@@ -7,14 +7,15 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star, RefreshCcw } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
-import { SLAIndicator } from "@/components/ui/sla-indicator"
 import { ModalAtraso } from "@/components/calculo/modal-atraso"
 import { ModalEnviarJuridico } from "@/components/calculo/modal-enviar-juridico"
 import { ModalCalculoManual } from "@/components/precatorios/modal-calculo-manual"
 import { toast } from "sonner"
 import { cn } from "@/lib/utils"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 
 interface PrecatorioCalculo {
   id: string
@@ -49,6 +50,7 @@ interface PrecatorioCalculo {
 
 export default function FilaCalculoPage() {
   const router = useRouter()
+  const reduceMotion = useReducedMotion()
   const [filaCalculo, setFilaCalculo] = useState<PrecatorioCalculo[]>([])
   const [searchTerm, setSearchTerm] = useState("")
   const [loading, setLoading] = useState(true)
@@ -368,17 +370,78 @@ export default function FilaCalculoPage() {
     }
   }
 
+  const getSlaVisual = (slaStatus?: PrecatorioCalculo["sla_status"] | null) => {
+    switch (slaStatus) {
+      case "concluido":
+        return {
+          label: "Concluído",
+          progress: 100,
+          barClass: "bg-blue-500",
+          textClass: "text-blue-600 dark:text-blue-400",
+        }
+      case "atrasado":
+        return {
+          label: "Atrasado",
+          progress: 100,
+          barClass: "bg-red-500",
+          textClass: "text-red-600 dark:text-red-400",
+        }
+      case "atencao":
+        return {
+          label: "Atenção",
+          progress: 85,
+          barClass: "bg-amber-500",
+          textClass: "text-amber-600 dark:text-amber-400",
+        }
+      case "no_prazo":
+        return {
+          label: "No Prazo",
+          progress: 55,
+          barClass: "bg-emerald-500",
+          textClass: "text-emerald-600 dark:text-emerald-400",
+        }
+      default:
+        return {
+          label: "Não Iniciado",
+          progress: 12,
+          barClass: "bg-slate-400",
+          textClass: "text-slate-600 dark:text-slate-300",
+        }
+    }
+  }
+
   return (
-    <div className="container mx-auto max-w-[100vw] p-6 space-y-8">
+    <motion.div
+      className="container mx-auto max-w-[100vw] p-6 space-y-8"
+      initial={reduceMotion ? false : { opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.24, ease: "easeOut" }}
+    >
       {/* Cabeçalho */}
-      <div className="flex items-center justify-between">
+      <motion.div
+        className="flex items-center justify-between"
+        initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.22, ease: "easeOut", delay: reduceMotion ? 0 : 0.04 }}
+      >
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Fila de Cálculo</h1>
           <p className="text-muted-foreground">Gestão de precatórios para cálculo</p>
         </div>
         <div className="flex items-center gap-2">
           <Calculator className="h-5 w-5 text-primary" />
-          <span className="text-2xl font-bold">{filteredFila.length}</span>
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.span
+              key={`${activeTab}-${filteredFila.length}`}
+              className="text-2xl font-bold"
+              initial={reduceMotion ? false : { opacity: 0, scale: 0.92, y: 4 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={reduceMotion ? undefined : { opacity: 0, scale: 1.04, y: -4 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
+              {filteredFila.length}
+            </motion.span>
+          </AnimatePresence>
           <span className="text-sm text-muted-foreground">
             {activeTab === "aguardando"
               ? "na fila"
@@ -391,9 +454,14 @@ export default function FilaCalculoPage() {
                     : "concluídos"}
           </span>
         </div>
-      </div>
+      </motion.div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <motion.div
+          initial={reduceMotion ? false : { opacity: 0, y: 4 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.18, ease: "easeOut", delay: reduceMotion ? 0 : 0.02 }}
+        >
         <TabsList className="grid w-full max-w-4xl grid-cols-5">
           <TabsTrigger value="aguardando">Aguardando Cálculo</TabsTrigger>
           <TabsTrigger value="iniciado">Cálculo Iniciado</TabsTrigger>
@@ -403,10 +471,24 @@ export default function FilaCalculoPage() {
           <TabsTrigger value="juridico">Jurídico</TabsTrigger>
           <TabsTrigger value="concluidos">Cálculos Concluídos</TabsTrigger>
         </TabsList>
+        </motion.div>
 
-        <div className="mt-6 space-y-6">
+        <AnimatePresence mode="wait" initial={false}>
+          <motion.div
+            key={activeTab}
+            className="mt-6 space-y-6"
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: -6 }}
+            transition={{ duration: 0.2, ease: "easeOut" }}
+          >
           {/* Barra de Busca */}
-          <div className="relative">
+          <motion.div
+            className="relative"
+            initial={reduceMotion ? false : { opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.18, ease: "easeOut", delay: reduceMotion ? 0 : 0.03 }}
+          >
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Buscar por título, número do precatório ou credor..."
@@ -414,15 +496,30 @@ export default function FilaCalculoPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               className="pl-10"
             />
-          </div>
+          </motion.div>
 
           {loading ? (
-            <div className="flex items-center justify-center h-48">
+            <motion.div
+              className="flex items-center justify-center h-48"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.18, ease: "easeOut" }}
+            >
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-            </div>
+            </motion.div>
           ) : (
-            <div className="space-y-4">
+            <motion.div
+              className="space-y-4"
+              initial={reduceMotion ? false : { opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+            >
               {filteredFila.length === 0 ? (
+                <motion.div
+                  initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.2, ease: "easeOut" }}
+                >
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <Calculator className="h-16 w-16 text-muted-foreground mb-4" />
@@ -444,8 +541,9 @@ export default function FilaCalculoPage() {
                     </p>
                   </CardContent>
                 </Card>
+                </motion.div>
               ) : (
-                <>
+                <AnimatePresence initial={false} mode="popLayout">
                   {filteredFila.map((precatorio, index) => {
                     const statusAtual = precatorio.localizacao_kanban || precatorio.status || null
                     const isJuridico = statusAtual === "juridico"
@@ -453,8 +551,20 @@ export default function FilaCalculoPage() {
                     const isConcluido = statusAtual === "calculo_concluido" || statusAtual === "calculado"
                     const isCalculado = isConcluido || precatorio.calculo_externo
                     return (
+                      <motion.div
+                        key={`${activeTab}-${precatorio.id}`}
+                        layout
+                        initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.99 }}
+                        animate={{ opacity: 1, y: 0, scale: 1 }}
+                        exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
+                        transition={{
+                          duration: reduceMotion ? 0 : 0.2,
+                          ease: "easeOut",
+                          delay: reduceMotion ? 0 : Math.min(index * 0.02, 0.14),
+                        }}
+                        whileHover={reduceMotion ? undefined : { y: -2 }}
+                      >
                       <Card
-                        key={precatorio.id}
                         onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         className={cn(
                           "hover:shadow-md transition-shadow cursor-pointer border-l-4 group relative overflow-hidden",
@@ -538,11 +648,22 @@ export default function FilaCalculoPage() {
                                     <Clock className="w-3 h-3" /> SLA & Responsável
                                   </label>
                                   <div className="flex flex-col gap-1">
-                                    <SLAIndicator
-                                      status={precatorio.sla_status || 'nao_iniciado'}
-                                      slaHoras={precatorio.sla_horas || 48}
-                                      dataEntrada={precatorio.data_entrada_calculo || undefined}
-                                    />
+                                    {(() => {
+                                      const sla = getSlaVisual(precatorio.sla_status)
+                                      return (
+                                        <div className="space-y-1.5">
+                                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70">
+                                            <div
+                                              className={cn("h-full rounded-full transition-all duration-300", sla.barClass)}
+                                              style={{ width: `${sla.progress}%` }}
+                                            />
+                                          </div>
+                                          <span className={cn("block text-xs font-semibold leading-none", sla.textClass)}>
+                                            {sla.label}
+                                          </span>
+                                        </div>
+                                      )
+                                    })()}
                                     <span className="text-xs text-muted-foreground truncate" title={precatorio.responsavel_calculo_nome || precatorio.criador_nome || "Ninguém"}>
                                       Resp: {precatorio.responsavel_calculo_nome || precatorio.criador_nome || "Não atribuído"}
                                     </span>
@@ -553,18 +674,18 @@ export default function FilaCalculoPage() {
                           </div>
 
                           {/* Linha de Ações (Botões) */}
-                          <div className="flex items-center justify-end gap-3 pt-2 border-t border-border/50 flex-wrap">
+                          <div className="flex flex-col gap-3 pt-2 border-t border-border/50 md:flex-row md:items-center md:justify-between">
                             {(activeTab === "aguardando" || activeTab === "iniciado") && !isJuridico && !precatorio.motivo_atraso_calculo && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleReportarAtraso(precatorio); }}
-                                className="text-xs font-medium text-red-600 hover:text-red-700 hover:underline px-2 py-1 flex items-center gap-1"
+                                className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
                               >
                                 <AlertCircle className="w-3 h-3" /> Reportar Atraso
                               </button>
                             )}
 
                             {activeTab === "atrasados" && precatorio.motivo_atraso_calculo && (
-                              <div className="flex items-center gap-2 text-red-600 bg-red-50 px-3 py-1 rounded-full text-xs">
+                              <div className="inline-flex min-h-8 items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
                                 <AlertCircle className="w-3 h-3" />
                                 <span>Em Atraso: {precatorio.motivo_atraso_calculo}</span>
                                 <button
@@ -577,7 +698,7 @@ export default function FilaCalculoPage() {
                             {!isJuridico && activeTab !== "juridico" && activeTab !== "concluidos" && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); setPrecatorioSelecionado(precatorio); setModalJuridicoOpen(true); }}
-                                className="text-xs font-medium text-purple-600 hover:text-purple-700 hover:underline px-2 py-1 flex items-center gap-1"
+                                className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50 hover:text-purple-700"
                               >
                                 <Gavel className="w-3 h-3" /> Jurídico
                               </button>
@@ -586,24 +707,40 @@ export default function FilaCalculoPage() {
                             {isJuridico && (
                               <button
                                 onClick={(e) => { e.stopPropagation(); handleRetornarJuridico(precatorio.id); }}
-                                className="text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-3 py-1 rounded-md"
+                                className="inline-flex h-8 items-center rounded-md bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
                               >
                                 Retornar do Jurídico
                               </button>
                             )}
 
-                            <div className="flex items-center gap-2">
+                            <div className="ml-auto flex flex-wrap items-center gap-2 md:justify-end">
                               {!isConcluido && !isJuridico && (
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleCalcular(precatorio.id)
                                   }}
-                                  className="bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold py-1.5 px-4 rounded-md shadow-sm transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95"
                                   title={isEmCalculo ? "Abrir cálculo" : "Iniciar cálculo"}
                                 >
                                   <Calculator className="w-3 h-3" /> {isEmCalculo ? "Abrir cálculo" : "Iniciar cálculo"}
                                 </button>
+                              )}
+
+                              {isConcluido && !isJuridico && (
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleCalcular(precatorio.id)
+                                  }}
+                                  className="recalc-shine-border h-8 rounded-md border-primary/40 bg-background/70 px-3 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+                                  title="Realizar cálculo novamente"
+                                >
+                                  <RefreshCcw className="w-3 h-3" />
+                                  Recalcular
+                                </Button>
                               )}
 
                               {isEmCalculo && (
@@ -612,7 +749,7 @@ export default function FilaCalculoPage() {
                                     e.stopPropagation()
                                     handleFinalizarCalculo(precatorio.id)
                                   }}
-                                  className="bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold py-1.5 px-4 rounded-md shadow-sm transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-emerald-700 active:scale-95"
                                   title="Finalizar cálculo"
                                 >
                                   <Calculator className="w-3 h-3" /> Finalizar
@@ -626,7 +763,7 @@ export default function FilaCalculoPage() {
                                     setPrecatorioParaManual(precatorio);
                                     setModalManualOpen(true);
                                   }}
-                                  className="bg-orange-500 hover:bg-orange-600 text-white text-xs font-bold py-1.5 px-4 rounded-md shadow-sm transition-transform hover:scale-105 active:scale-95 flex items-center gap-2"
+                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-orange-600 active:scale-95"
                                   title="Inserir valores calculados externamente"
                                 >
                                   <DollarSign className="w-3 h-3" /> Inserir Manual
@@ -637,13 +774,15 @@ export default function FilaCalculoPage() {
 
                         </CardContent>
                       </Card>
+                      </motion.div>
                     )
                   })}
-                </>
+                </AnimatePresence>
               )}
-            </div>
+            </motion.div>
           )}
-        </div>
+          </motion.div>
+        </AnimatePresence>
       </Tabs>
 
       {precatorioSelecionado && (
@@ -686,6 +825,6 @@ export default function FilaCalculoPage() {
           }}
         />
       )}
-    </div>
+    </motion.div>
   )
 }

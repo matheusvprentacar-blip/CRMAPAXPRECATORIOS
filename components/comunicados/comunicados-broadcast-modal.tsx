@@ -15,7 +15,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge"
-import type { ComunicadoDestinatarioRow, ComunicadoRow } from "@/lib/types/comunicados"
+import { COMUNICADOS_ALERT_EVENT_TYPES, type ComunicadoDestinatarioRow, type ComunicadoRow } from "@/lib/types/comunicados"
 import { toast } from "sonner"
 
 type PendingRow = ComunicadoDestinatarioRow & {
@@ -228,7 +228,7 @@ export function ComunicadosBroadcastModal() {
         .select("id, title, body, link_url, entity_type, entity_id, event_type, created_at, read_at")
         .eq("user_id", userId)
         .is("read_at", null)
-        .in("event_type", ["interesse_calculo_admin", "admin_alerta_individual_precatorio"])
+        .in("event_type", [...COMUNICADOS_ALERT_EVENT_TYPES])
         .order("created_at", { ascending: false })
         .limit(5)
 
@@ -462,7 +462,9 @@ export function ComunicadosBroadcastModal() {
               <Badge variant="secondary" className="w-fit">
                 {activeItem.kind === "comunicado"
                   ? "Comunicado da administracao"
-                  : "Alerta direto da administracao"}
+                  : alerta?.event_type === "agenda_alerta"
+                    ? "Alerta da agenda"
+                    : "Alerta direto da administracao"}
               </Badge>
               <DialogTitle className="text-2xl leading-tight">
                 {activeItem.kind === "comunicado" ? comunicado?.titulo : alerta?.title}

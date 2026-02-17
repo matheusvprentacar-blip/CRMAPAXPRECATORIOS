@@ -18,10 +18,9 @@ export function ProtectedRoute({ children }: { children: React.ReactNode }) {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-center">
-          <div className="h-8 w-8 animate-spin rounded-full border-4 border-primary border-t-transparent" />
-          <p className="mt-2 text-sm text-muted-foreground">Carregando...</p>
+      <div className="px-4 py-3">
+        <div className="h-1 w-full overflow-hidden rounded-full bg-primary/15">
+          <div className="h-full w-full animate-pulse bg-primary/70" />
         </div>
       </div>
     )

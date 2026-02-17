@@ -10,6 +10,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { format } from "date-fns"
 import { ptBR } from "date-fns/locale"
+import ShinyText from "@/components/ui/shiny-text"
 
 interface PrecatOficio {
     id: string
@@ -33,6 +34,18 @@ export default function GestaoOficiosPage() {
     const [loading, setLoading] = useState(true)
     const [error, setError] = useState<string | null>(null)
 
+    const shinyProps = {
+        speed: 2,
+        delay: 0,
+        color: "var(--route-shiny-base, #b5b5b5)",
+        shineColor: "var(--route-shiny-shine, #ffffff)",
+        spread: 120,
+        direction: "left" as const,
+        yoyo: false,
+        pauseOnHover: false,
+        disabled: false,
+    }
+
     useEffect(() => {
         const carregarDados = async () => {
             const supabase = createBrowserClient()
@@ -48,12 +61,12 @@ export default function GestaoOficiosPage() {
                 } = await supabase.auth.getUser()
 
                 if (!currentUser) {
-                    setError("Usuário não autenticado.")
+                    setError("UsuÃ¡rio nÃ£o autenticado.")
                     setLoading(false)
                     return
                 }
 
-                // Busca precatórios aguardando ofício (sem file_url) ou atribuídos ao gestor de ofícios
+                // Busca precatÃ³rios aguardando ofÃ­cio (sem file_url) ou atribuÃ­dos ao gestor de ofÃ­cios
                 const { data, error: fetchError } = await supabase
                     .from("precatorios")
                     .select(
@@ -72,28 +85,28 @@ export default function GestaoOficiosPage() {
             usuarios!responsavel(nome)
           `
                     )
-                    // Filtro: aguardando ofício e ainda sem arquivo anexado
+                    // Filtro: aguardando ofÃ­cio e ainda sem arquivo anexado
                     .or(`status_kanban.eq.aguardando_oficio,responsavel_oficio_id.eq.${currentUser.id}`)
                     .is("file_url", null)
                     .order("created_at", { ascending: true }) // FIFO: Mais antigos primeiro
 
                 if (fetchError) {
-                    console.error("[Ofícios] Erro ao carregar fila:", fetchError)
-                    setError("Erro ao carregar fila de ofícios.")
+                    console.error("[OfÃ­cios] Erro ao carregar fila:", fetchError)
+                    setError("Erro ao carregar fila de ofÃ­cios.")
                     setLoading(false)
                     return
                 }
 
-                // Mapear para structure plana se necessário
+                // Mapear para structure plana se necessÃ¡rio
                 const formatted = (data || []).map((p: any) => ({
                     ...p,
-                    responsavel_nome: p.usuarios?.nome || "Sem responsável"
+                    responsavel_nome: p.usuarios?.nome || "Sem responsÃ¡vel"
                 }))
 
                 setPrecatorios(formatted)
                 setLoading(false)
             } catch (err) {
-                console.error("[Ofícios] Erro inesperado:", err)
+                console.error("[OfÃ­cios] Erro inesperado:", err)
                 setError("Ocorreu um erro inesperado.")
                 setLoading(false)
             }
@@ -118,12 +131,14 @@ export default function GestaoOficiosPage() {
         <div className="space-y-6 container mx-auto p-6 max-w-7xl">
             <div className="flex items-center justify-between">
                 <div>
-                    <h1 className="text-3xl font-bold tracking-tight">Gestão de Ofícios</h1>
-                    <p className="text-muted-foreground">Fila de processos aguardando inclusão de Ofício Requisitório</p>
+                    <h1 className="text-3xl font-bold tracking-tight">
+                        <ShinyText text={"Gest\u00e3o de Of\u00edcios"} className="align-middle" {...shinyProps} />
+                    </h1>
+                    <p className="text-muted-foreground">Fila de processos aguardando inclusÃ£o de OfÃ­cio RequisitÃ³rio</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-lg px-4 py-1">
-                        {precatorios.length} na fila
+                        <ShinyText text={`${precatorios.length} na fila`} {...shinyProps} />
                     </Badge>
                 </div>
             </div>
@@ -138,49 +153,62 @@ export default function GestaoOficiosPage() {
             {!loading && precatorios.length === 0 && (
                 <Card className="p-8 text-center text-muted-foreground bg-muted/50 border-dashed">
                     <FileCheck className="mx-auto h-12 w-12 opacity-50 mb-4" />
-                    <p className="text-lg font-medium">Nenhum precatório nesta fila</p>
-                    <p className="text-sm">Processos aguardando ofício aparecerão aqui.</p>
+                    <p className="text-lg font-medium">Nenhum precatÃ³rio nesta fila</p>
+                    <p className="text-sm">Processos aguardando ofÃ­cio aparecerÃ£o aqui.</p>
                 </Card>
+            )}
+
+            {!loading && precatorios.length > 0 && (
+                <div className="hidden md:grid md:grid-cols-[64px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.15fr)_auto] items-center gap-6 px-6 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
+                    <span>#</span>
+                    <span>Credor</span>
+                    <span>ResidÃªncia</span>
+                    <span>Processo</span>
+                    <span>ResponsÃ¡vel</span>
+                    <span>Status</span>
+                </div>
             )}
 
             <div className="grid gap-4">
                 {precatorios.map((p, index) => (
                     <Card
                         key={p.id}
-                        className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-cyan-500/40 group relative overflow-hidden"
+                        className="group relative overflow-hidden rounded-2xl border border-border/70 border-l-4 border-l-cyan-500/40 bg-gradient-to-r from-background to-cyan-500/[0.03] shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg cursor-pointer"
                         onClick={() => handleAbrir(p.id)}
                     >
                         {/* Efeito de hover suave */}
                         <div className="absolute inset-0 bg-primary/0 group-hover:bg-primary/5 transition-colors" />
 
-                        <CardContent className="p-6 flex items-center justify-between relative z-10">
-                            <div className="flex items-start gap-6 flex-1">
-                                {/* Índice da Fila */}
+                        <CardContent className="relative z-10 flex items-start justify-between gap-6 p-5 md:p-6">
+                            <div className="flex min-w-0 flex-1 items-start gap-6">
+                                {/* Ãndice da Fila */}
                                 <div className="flex flex-col items-center justify-center min-w-[3rem]">
                                     <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary/40 transition-colors">
                                         {String(index + 1).padStart(2, '0')}
                                     </span>
                                 </div>
 
-                                {/* Informações Principais */}
-                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
+                                {/* InformaÃ§Ãµes Principais */}
+                                <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.15fr)] md:gap-6">
 
                                     {/* Coluna 1: Credor */}
-                                    <div className="space-y-1">
+                                    <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                                             <User className="w-3 h-3" /> Credor
                                         </label>
-                                        <p className="font-medium truncate" title={p.credor_nome}>{p.credor_nome || "Não informado"}</p>
-                                        <p className="text-sm text-muted-foreground font-mono">{p.credor_cpf_cnpj || "CPF não inf."}</p>
+                                        <p className="font-medium truncate" title={p.credor_nome || undefined}>{p.credor_nome || "NÃ£o informado"}</p>
+                                        <p className="text-sm text-muted-foreground font-mono truncate" title={p.credor_cpf_cnpj || undefined}>
+                                            {p.credor_cpf_cnpj || "CPF nÃ£o inf."}
+                                        </p>
                                     </div>
 
-                                    {/* Coluna 2: Localização */}
-                                    <div className="space-y-1">
+                                    {/* Coluna 2: LocalizaÃ§Ã£o */}
+                                    <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                            <MapPin className="w-3 h-3" /> Residência
+                                            <MapPin className="w-3 h-3" /> ResidÃªncia
                                         </label>
                                         <div className="flex items-center gap-2">
-                                            <span className="font-medium">
+                                            <span className="font-medium truncate" title={p.credor_cidade || undefined}>
                                                 {p.credor_cidade ? `${p.credor_cidade}` : "Cidade n/d"}
                                             </span>
                                             {p.credor_uf && <Badge variant="outline" className="text-[10px] h-5">{p.credor_uf}</Badge>}
@@ -188,21 +216,25 @@ export default function GestaoOficiosPage() {
                                     </div>
 
                                     {/* Coluna 3: Processo */}
-                                    <div className="space-y-1">
+                                    <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                                             <FileText className="w-3 h-3" /> Processo
                                         </label>
-                                        <p className="font-medium text-sm font-mono">{p.numero_processo || "N/A"}</p>
-                                        <p className="text-xs text-muted-foreground">{p.numero_precatorio || "Prec. N/A"}</p>
+                                        <p className="font-medium text-sm font-mono truncate" title={p.numero_processo || undefined}>
+                                            {p.numero_processo || "N/A"}
+                                        </p>
+                                        <p className="text-xs text-muted-foreground truncate" title={p.numero_precatorio || undefined}>
+                                            {p.numero_precatorio || "Prec. N/A"}
+                                        </p>
                                     </div>
 
-                                    {/* Coluna 4: Responsável e Data */}
-                                    <div className="space-y-1">
+                                    {/* Coluna 4: ResponsÃ¡vel e Data */}
+                                    <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                            <CalendarClock className="w-3 h-3" /> Responsável
+                                            <CalendarClock className="w-3 h-3" /> ResponsÃ¡vel
                                         </label>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-primary">
+                                            <span className="text-sm font-medium text-primary truncate" title={p.responsavel_nome || undefined}>
                                                 {p.responsavel_nome}
                                             </span>
                                             <span className="text-xs text-muted-foreground" title={new Date(p.created_at).toLocaleString()}>
@@ -213,16 +245,17 @@ export default function GestaoOficiosPage() {
                                 </div>
                             </div>
 
-                            {/* Indicator if file exists (Optional check) */}
-                            {p.file_url ? (
-                                <Badge className="absolute top-4 right-4 bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
-                                    <FileCheck className="w-3 h-3 mr-1" /> Ofício Anexado
-                                </Badge>
-                            ) : (
-                                <Badge variant={"outline"} className="absolute top-4 right-4 text-orange-700 bg-orange-50 border-orange-200">
-                                    Pendente
-                                </Badge>
-                            )}
+                            <div className="shrink-0 md:pt-1">
+                                {p.file_url ? (
+                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+                                        <FileCheck className="w-3 h-3 mr-1" /> OfÃ­cio Anexado
+                                    </Badge>
+                                ) : (
+                                    <Badge variant={"outline"} className="text-orange-700 bg-orange-50 border-orange-200">
+                                        Pendente
+                                    </Badge>
+                                )}
+                            </div>
 
                         </CardContent>
                     </Card>
@@ -231,3 +264,4 @@ export default function GestaoOficiosPage() {
         </div>
     )
 }
+

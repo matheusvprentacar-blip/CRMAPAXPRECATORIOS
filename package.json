@@ -1,10 +1,14 @@
 {
     "name": "Blackbox AI clone",
-    "version": "1.6.25",
+    "version": "1.6.26",
     "private": true,
     "scripts": {
-        "dev": "next dev",
+        "dev": "next dev --turbo",
+        "dev:webpack": "next dev",
+        "dev:clean": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev --turbo",
+        "dev:clean:webpack": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
         "dev:turbo": "next dev --turbo",
+        "dev:turbo:clean": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev --turbo",
         "build": "next build",
         "start": "next start",
         "lint": "next lint",
@@ -19,6 +23,7 @@
     "dependencies": {
         "@google/generative-ai": "^0.24.1",
         "@hello-pangea/dnd": "^18.0.1",
+        "@heroicons/react": "^2.2.0",
         "@heroui/react": "^2.8.9",
         "@radix-ui/react-alert-dialog": "^1.1.15",
         "@radix-ui/react-avatar": "^1.1.11",
@@ -42,8 +47,8 @@
         "@tauri-apps/plugin-updater": "^2.9.0",
         "@types/file-saver": "^2.0.7",
         "@vercel/analytics": "latest",
-        "class-variance-authority": "^0.7.0",
-        "clsx": "^2.1.0",
+        "class-variance-authority": "^0.7.1",
+        "clsx": "^2.1.1",
         "date-fns": "^4.1.0",
         "dotenv": "^17.2.3",
         "file-saver": "^2.0.5",
@@ -61,7 +66,8 @@
         "react-dom": "^19.2.3",
         "recharts": "^3.7.0",
         "sonner": "latest",
-        "tailwind-merge": "^2.3.0",
+        "tailwind-merge": "^2.6.1",
+        "tailwindcss-animate": "^1.0.7",
         "xlsx": "^0.18.5"
     },
     "devDependencies": {

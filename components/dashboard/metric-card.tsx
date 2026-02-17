@@ -67,7 +67,7 @@ export function MetricCard({
       </CardHeader>
       <CardContent>
         <div className="space-y-1">
-          <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-zinc-900 dark:text-zinc-50">
+          <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary">
             {value}
           </div>
           {subtitle && <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{subtitle}</p>}

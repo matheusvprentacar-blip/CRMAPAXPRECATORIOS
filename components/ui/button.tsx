@@ -1,5 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
+import { Button as HeroButton } from "@heroui/react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -34,19 +35,57 @@ const buttonVariants = cva(
 )
 
 export interface ButtonProps
-  extends React.ButtonHTMLAttributes<HTMLButtonElement>,
+  extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color">,
   VariantProps<typeof buttonVariants> {
   asChild?: boolean
 }
 
+function getHeroVariant(
+  variant: ButtonProps["variant"]
+): "solid" | "bordered" | "ghost" | "flat" | "light" {
+  if (variant === "outline") return "bordered"
+  if (variant === "ghost") return "ghost"
+  if (variant === "secondary") return "flat"
+  if (variant === "link") return "light"
+  return "solid"
+}
+
+function getHeroColor(
+  variant: ButtonProps["variant"]
+): "default" | "primary" | "danger" {
+  if (variant === "destructive") return "danger"
+  if (variant === "default" || variant === "link") return "primary"
+  return "default"
+}
+
+function getHeroSize(size: ButtonProps["size"]): "sm" | "md" | "lg" {
+  if (size === "sm") return "sm"
+  if (size === "lg") return "lg"
+  return "md"
+}
+
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
   ({ className, variant, size, asChild = false, ...props }, ref) => {
-    const Comp = asChild ? Slot : "button"
+    const resolvedClassName = cn(buttonVariants({ variant, size, className }))
+
+    if (asChild) {
+      return <Slot className={resolvedClassName} ref={ref} {...props} />
+    }
+
+    const heroProps = props as Omit<
+      React.ComponentProps<typeof HeroButton>,
+      "variant" | "size" | "color" | "className" | "isIconOnly"
+    >
+
     return (
-      <Comp
-        className={cn(buttonVariants({ variant, size, className }))}
+      <HeroButton
         ref={ref}
-        {...props}
+        variant={getHeroVariant(variant)}
+        color={getHeroColor(variant)}
+        size={getHeroSize(size)}
+        isIconOnly={size === "icon"}
+        className={resolvedClassName}
+        {...heroProps}
       />
     )
   }

@@ -29,6 +29,7 @@ import {
   DollarSign,
   FileSearch,
   Megaphone,
+  CalendarDays,
 } from "lucide-react"
 import { Avatar, AvatarIcon, Slider } from "@heroui/react"
 import { Button } from "@/components/ui/button"
@@ -87,6 +88,23 @@ const navigation = [
     name: "Comunicados",
     href: "/comunicados",
     icon: Megaphone,
+    roles: [
+      "admin",
+      "operador_comercial",
+      "operador_calculo",
+      "operador",
+      "gestor",
+      "juridico",
+      "gestor_certidoes",
+      "gestor_oficio",
+      "financeiro",
+      "analista",
+    ],
+  },
+  {
+    name: "Agenda",
+    href: "/agenda",
+    icon: CalendarDays,
     roles: [
       "admin",
       "operador_comercial",

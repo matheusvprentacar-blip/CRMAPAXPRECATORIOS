@@ -1,5 +1,11 @@
 export type ComunicadoScope = "operadores" | "equipe"
 
+export const COMUNICADOS_ALERT_EVENT_TYPES = [
+  "interesse_calculo_admin",
+  "admin_alerta_individual_precatorio",
+  "agenda_alerta",
+] as const
+
 export interface ComunicadoRow {
   id: string
   titulo: string

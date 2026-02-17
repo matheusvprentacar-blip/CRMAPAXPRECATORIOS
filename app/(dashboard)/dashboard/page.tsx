@@ -156,6 +156,12 @@ type DashboardKpis = {
   }
 }
 
+type PropostaCompilada = {
+  totalMaior: number
+  maiorProposta: number
+  quantidadeComProposta: number
+}
+
 type SimpleTableRow = {
   label: string
   value: number
@@ -245,6 +251,11 @@ const DEFAULT_PERFORMANCE: PerformanceMetricsType = {
 const DEFAULT_BOTTLENECKS: BottleneckItem[] = []
 const DEFAULT_OPERATORS: OperatorMetrics[] = []
 const DEFAULT_CRITICAL: CriticalPrecatorio[] = []
+const DEFAULT_PROPOSTA_COMPILADA: PropostaCompilada = {
+  totalMaior: 0,
+  maiorProposta: 0,
+  quantidadeComProposta: 0,
+}
 const CHART_PALETTE = ["#0EA5E9", "#22C55E", "#F59E0B", "#EF4444", "#6366F1", "#14B8A6", "#A855F7"]
 
 const PERIOD_OPTIONS: Array<{ value: PeriodKey; label: string; days: number | null }> = [
@@ -372,6 +383,7 @@ const formatHours = (hours: number) => {
   return `${hours.toFixed(1)}h`
 }
 const formatDateShort = (value: Date) => value.toLocaleDateString("pt-BR")
+const formatCurrencyNoBreak = (value: number) => formatCurrency(value).replace(/\s/g, "\u00A0")
 
 // ---- UI helpers (novo) ----
 function GlassCard(props: any) {
@@ -567,7 +579,9 @@ function DashboardMetricTile({
 
         <div className="mt-4 space-y-1">
           <div className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{title}</div>
-          <div className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white/90">{value}</div>
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.05rem,2.1vw,1.8rem)] font-bold tracking-tight text-primary">
+            {value}
+          </div>
           {subtitle ? <div className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</div> : null}
         </div>
       </CardBody>
@@ -579,6 +593,7 @@ export default function DashboardPage() {
   const { profile } = useAuth()
   const [kpis, setKpis] = useState<DashboardKpis>(DEFAULT_KPIS)
   const [metrics, setMetrics] = useState<DashboardMetrics | null>(null)
+  const [propostaCompilada, setPropostaCompilada] = useState<PropostaCompilada>(DEFAULT_PROPOSTA_COMPILADA)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [period, setPeriod] = useState<PeriodKey>("30d")
@@ -650,6 +665,28 @@ export default function DashboardPage() {
   const applyRoleFilter = (query: any) => {
     if (!roleFilter) return query
     return query.or(roleFilter)
+  }
+
+  async function fetchPropostaCompiladaData(supabase: any): Promise<PropostaCompilada> {
+    let query = supabase
+      .from("precatorios")
+      .select("proposta_maior_valor")
+      .is("deleted_at", null)
+
+    query = applyRoleFilter(query)
+
+    const { data, error } = await query
+    if (error) throw error
+
+    return (data || []).reduce<PropostaCompilada>((acc, item: any) => {
+      const valor = toNumber(item?.proposta_maior_valor)
+      if (valor <= 0) return acc
+
+      acc.totalMaior += valor
+      acc.quantidadeComProposta += 1
+      if (valor > acc.maiorProposta) acc.maiorProposta = valor
+      return acc
+    }, { ...DEFAULT_PROPOSTA_COMPILADA })
   }
 
   async function fetchComplexityData(supabase: any): Promise<ComplexityMetrics> {
@@ -879,16 +916,18 @@ export default function DashboardPage() {
     try {
       const range = getPeriodRange(period)
 
-      const [kpisData, complexity, bottlenecks, performance, operators, critical] = await Promise.all([
+      const [kpisData, complexity, bottlenecks, performance, operators, critical, propostaCompiladaData] = await Promise.all([
         fetchKpis(supabase, range),
         safeFetch("complexidade", () => fetchComplexityData(supabase), DEFAULT_COMPLEXITY),
         safeFetch("gargalos", () => fetchBottlenecksData(supabase), DEFAULT_BOTTLENECKS),
         safeFetch("performance", () => fetchPerformanceData(supabase), DEFAULT_PERFORMANCE),
         safeFetch("operadores", () => fetchOperatorsData(supabase, profile.id, roles), DEFAULT_OPERATORS),
         safeFetch("críticos", () => fetchCriticalData(supabase), DEFAULT_CRITICAL),
+        safeFetch("propostas compiladas", () => fetchPropostaCompiladaData(supabase), DEFAULT_PROPOSTA_COMPILADA),
       ])
 
       setKpis(kpisData)
+      setPropostaCompilada(propostaCompiladaData)
       setMetrics({
         complexity,
         bottlenecks,
@@ -1029,6 +1068,15 @@ export default function DashboardPage() {
               variant="bordered"
               size="sm"
               className="w-[240px]"
+              classNames={{
+                trigger:
+                  "border-zinc-200/80 bg-white/95 text-zinc-900 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-100",
+                value: "text-zinc-900 dark:text-zinc-100",
+                popoverContent:
+                  "z-[120] rounded-xl border border-zinc-200/90 bg-white text-zinc-900 shadow-2xl backdrop-blur-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100",
+                listboxWrapper: "bg-transparent",
+                listbox: "bg-transparent",
+              }}
               startContent={<Clock className="h-4 w-4 text-zinc-500" />}
             >
               {PERIOD_OPTIONS.map((option) => (
@@ -1077,7 +1125,7 @@ export default function DashboardPage() {
                     subtitle={`Período: ${periodRange.label}`}
                     icon={Layers}
                     badgeLabel={`+${formatCount(kpis.periodo_kpis.novos_precatorios)}`}
-                    badgeTone="success"
+                    badgeTone="primary"
                   />
                   <DashboardMetricTile
                     title="Credores"
@@ -1085,15 +1133,15 @@ export default function DashboardPage() {
                     subtitle="Base cadastrada"
                     icon={Users}
                     badgeLabel={`${formatCount(kpis.usuarios.ativos_total)} usuários`}
-                    badgeTone="default"
+                    badgeTone="primary"
                   />
                   <DashboardMetricTile
-                    title="Propostas"
-                    value={formatCount(kpis.resumo.total_propostas)}
-                    subtitle={`Ticket médio ${formatCurrency(kpis.propostas.ticket_medio)}`}
+                    title="Propostas (maior proposta)"
+                    value={formatCurrencyNoBreak(propostaCompilada.totalMaior)}
+                    subtitle={`Maior proposta ${formatCurrencyNoBreak(propostaCompilada.maiorProposta)}`}
                     icon={FileText}
-                    badgeLabel={`${formatPercent(kpis.propostas.desconto_medio, 1)} desc.`}
-                    badgeTone="warning"
+                    badgeLabel={`${formatCount(propostaCompilada.quantidadeComProposta)} com proposta`}
+                    badgeTone="primary"
                   />
                   <DashboardMetricTile
                     title="Mensagens não lidas"
@@ -1101,7 +1149,7 @@ export default function DashboardPage() {
                     subtitle={`${formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} no período`}
                     icon={MessageSquare}
                     badgeLabel={kpis.chat.mensagens_nao_lidas > 0 ? "Ação necessária" : "OK"}
-                    badgeTone={kpis.chat.mensagens_nao_lidas > 0 ? "danger" : "success"}
+                    badgeTone="primary"
                   />
                 </div>
               </div>
@@ -1118,14 +1166,14 @@ export default function DashboardPage() {
                           Resultado médio entre documentos, certidões e SLA.
                         </div>
                       </div>
-                      <ToneChip tone="success">{monthlyTargetPercent}%</ToneChip>
+                      <ToneChip tone="primary">{monthlyTargetPercent}%</ToneChip>
                     </div>
 
                     <div className="mt-6 space-y-5">
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
                           <span>Documentos recebidos</span>
-                          <span className="font-mono tabular-nums">{docsPercent.toFixed(0)}%</span>
+                          <span className="font-mono tabular-nums text-primary">{docsPercent.toFixed(0)}%</span>
                         </div>
                         <Progress value={docsPercent} size="sm" className="w-full" />
                       </div>
@@ -1133,7 +1181,7 @@ export default function DashboardPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
                           <span>Certidões recebidas</span>
-                          <span className="font-mono tabular-nums">{certPercent.toFixed(0)}%</span>
+                          <span className="font-mono tabular-nums text-primary">{certPercent.toFixed(0)}%</span>
                         </div>
                         <Progress value={certPercent} size="sm" className="w-full" />
                       </div>
@@ -1141,7 +1189,7 @@ export default function DashboardPage() {
                       <div className="space-y-2">
                         <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
                           <span>SLA saudável</span>
-                          <span className="font-mono tabular-nums">{slaHealthyPercent.toFixed(0)}%</span>
+                          <span className="font-mono tabular-nums text-primary">{slaHealthyPercent.toFixed(0)}%</span>
                         </div>
                         <Progress value={slaHealthyPercent} size="sm" className="w-full" />
                       </div>
@@ -1149,22 +1197,25 @@ export default function DashboardPage() {
 
                     <Divider className="my-6" />
 
-                    <div className="grid grid-cols-3 gap-3 text-center">
-                      <div className="rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
+                    <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
+                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Saldo líquido</div>
-                        <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-white/90">
-                          {formatCurrency(kpis.resumo.total_saldo_liquido)}
+                        <div
+                          className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(0.74rem,1.1vw,0.92rem)] font-semibold leading-tight text-primary tabular-nums tracking-tight"
+                          title={formatCurrency(kpis.resumo.total_saldo_liquido)}
+                        >
+                          {formatCurrencyNoBreak(kpis.resumo.total_saldo_liquido)}
                         </div>
                       </div>
-                      <div className="rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
+                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Vencidas</div>
-                        <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-white/90">
+                        <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
                           {formatCount(kpis.documentos_certidoes.certidoes_vencidas)}
                         </div>
                       </div>
-                      <div className="rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
+                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400">SLA atrasado</div>
-                        <div className="mt-1 text-sm font-semibold text-zinc-900 dark:text-white/90">
+                        <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
                           {formatCount(kpis.sla.atrasado)}
                         </div>
                       </div>

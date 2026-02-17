@@ -1,20 +1,53 @@
 "use client"
 
 import type React from "react"
-import { useEffect, useState } from "react"
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { usePathname } from "next/navigation"
-import { MOTION } from "@/lib/motion"
+import { useEffect } from "react"
+import { HeroUIProvider } from "@heroui/react"
+import { usePathname, useRouter } from "next/navigation"
 
-const ROUTE_LINE_DURATION_MS = 650
-const ROUTE_LINE_DURATION_REDUCED_MS = 140
 const UI_ZOOM_STORAGE_KEY = "ui_zoom"
 const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_80_applied"
 const DEFAULT_UI_ZOOM = 0.8
 const UI_ZOOM_MIN = 0.65
 const UI_ZOOM_MAX = 1.15
 
+type RouteShinyPalette = {
+  base: string
+  shine: string
+  accent: string
+  spread: string
+}
+
+const ROUTE_SHINY_PALETTES: RouteShinyPalette[] = [
+  { base: "#d5b58f", shine: "#fff6e9", accent: "#ff8a00", spread: "116deg" },
+  { base: "#a8bdd8", shine: "#f2f8ff", accent: "#3b82f6", spread: "120deg" },
+  { base: "#a6ccb8", shine: "#f2fff8", accent: "#22c55e", spread: "124deg" },
+  { base: "#c2b2dd", shine: "#f8f2ff", accent: "#a855f7", spread: "118deg" },
+  { base: "#d8aec0", shine: "#fff2f7", accent: "#ec4899", spread: "122deg" },
+  { base: "#9ccfcb", shine: "#effffd", accent: "#14b8a6", spread: "126deg" },
+]
+
 const clampZoom = (value: number) => Math.min(UI_ZOOM_MAX, Math.max(UI_ZOOM_MIN, value))
+
+const hashRoute = (value: string) => {
+  let hash = 0
+  for (let index = 0; index < value.length; index += 1) {
+    hash = (hash << 5) - hash + value.charCodeAt(index)
+    hash |= 0
+  }
+  return Math.abs(hash)
+}
+
+const applyRouteShinyPalette = (pathname: string) => {
+  if (typeof window === "undefined") return
+  const root = document.documentElement
+  const palette = ROUTE_SHINY_PALETTES[hashRoute(pathname || "/") % ROUTE_SHINY_PALETTES.length]
+
+  root.style.setProperty("--route-shiny-base", palette.base)
+  root.style.setProperty("--route-shiny-shine", palette.shine)
+  root.style.setProperty("--route-shiny-accent", palette.accent)
+  root.style.setProperty("--route-shiny-spread", palette.spread)
+}
 
 const readSanitizedZoom = () => {
   if (typeof window === "undefined") return DEFAULT_UI_ZOOM
@@ -68,24 +101,11 @@ const applyUiZoom = (zoom: number) => {
 
 export function Providers({ children }: { children: React.ReactNode }) {
   const pathname = usePathname()
-  const reduce = useReducedMotion()
-  const [showRouteLine, setShowRouteLine] = useState(false)
-  const [lineCycle, setLineCycle] = useState(0)
-
-  useEffect(() => {
-    setShowRouteLine(true)
-    setLineCycle((prev) => prev + 1)
-
-    const timeout = window.setTimeout(
-      () => setShowRouteLine(false),
-      reduce ? ROUTE_LINE_DURATION_REDUCED_MS : ROUTE_LINE_DURATION_MS
-    )
-
-    return () => window.clearTimeout(timeout)
-  }, [pathname, reduce])
+  const router = useRouter()
 
   useEffect(() => {
     applyUiZoom(readSanitizedZoom())
+    applyRouteShinyPalette(pathname)
   }, [pathname])
 
   useEffect(() => {
@@ -99,46 +119,8 @@ export function Providers({ children }: { children: React.ReactNode }) {
   }, [])
 
   return (
-    <div className="relative">
-      <AnimatePresence mode="wait" initial={false}>
-        <motion.div
-          key={pathname}
-          initial={reduce ? { opacity: 1 } : MOTION.page.initial}
-          animate={reduce ? { opacity: 1 } : MOTION.page.animate}
-          exit={reduce ? { opacity: 1 } : MOTION.page.exit}
-          transition={{ duration: MOTION.dur.page, ease: MOTION.ease }}
-        >
-          {children}
-        </motion.div>
-      </AnimatePresence>
-
-      <AnimatePresence initial={false}>
-        {showRouteLine ? (
-          <motion.div
-            key={`route-line-${lineCycle}`}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: reduce ? 0.08 : 0.2 }}
-            className="pointer-events-none fixed inset-x-0 top-0 z-[90] h-[2px] overflow-hidden"
-          >
-            {reduce ? (
-              <div className="h-full w-full bg-primary/55" />
-            ) : (
-              <motion.div
-                className="h-full w-1/3 rounded-r-full bg-gradient-to-r from-transparent via-primary to-orange-400"
-                initial={{ x: "-35%" }}
-                animate={{ x: ["-35%", "135%"] }}
-                transition={{
-                  duration: 0.9,
-                  repeat: Number.POSITIVE_INFINITY,
-                  ease: "easeInOut",
-                }}
-              />
-            )}
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
-    </div>
+    <HeroUIProvider navigate={(path) => router.push(path.toString())}>
+      {children}
+    </HeroUIProvider>
   )
 }

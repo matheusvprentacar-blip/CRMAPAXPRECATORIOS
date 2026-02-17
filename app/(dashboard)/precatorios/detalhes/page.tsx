@@ -4,6 +4,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { Chip, ScrollShadow } from "@heroui/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -28,7 +29,6 @@ import {
   CheckCircle2,
   Clock,
   XCircle,
-  Check,
   Edit,
   Save,
   X,
@@ -206,11 +206,11 @@ export default function PrecatorioDetailPage() {
   })
   const [fechamentoSaving, setFechamentoSaving] = useState(false)
   const [adminRecalcular, setAdminRecalcular] = useState(false)
-  const [sendingToCalculo, setSendingToCalculo] = useState(false)
   const [adminRecipients, setAdminRecipients] = useState<AdminAlertRecipientOption[]>([])
   const [adminTargetUserId, setAdminTargetUserId] = useState("")
   const [adminInterestMessage, setAdminInterestMessage] = useState("")
   const [adminInterestSending, setAdminInterestSending] = useState(false)
+  const [adminInterestModalOpen, setAdminInterestModalOpen] = useState(false)
 
  
 
@@ -907,6 +907,7 @@ export default function PrecatorioDetailPage() {
         description: "O operador selecionado recebeu o alerta de interesse no credito.",
       })
       setAdminInterestMessage("")
+      setAdminInterestModalOpen(false)
     } catch (error: any) {
       toast({
         title: "Erro ao enviar interesse",
@@ -1123,99 +1124,6 @@ export default function PrecatorioDetailPage() {
   // Let's assume linear flow is safe, but maybe skip 'reprovado' if it's next in array (it's last, so it might be safe if the flow leads there, but typically one doesn't "advance" to rejected without a decision).
   // Checking array: ... 'fechado' -> 'encerrados' -> 'reprovado'.
   // Moving to 'encerrados' might be okay. Moving to 'reprovado' is usually a decision.
-  const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex].id : precatorio?.status_kanban
-  const requiresAnalisePermission =
-    currentColumnId === "analise_processual_inicial" && nextColumn?.id === "pronto_calculo"
-  const canAdvanceByRole = !requiresAnalisePermission || roles.some((role) =>
-    ["admin", "juridico", "analista", "analista_processual"].includes(role)
-  )
-  const canAdvance = !!nextColumn && nextColumn.id !== "reprovado" && canAdvanceByRole
-
-  const handleAdvanceStage = async () => {
-    if (!precatorio || !nextColumn) return
-    if (!canAdvanceByRole) {
-      toast({
-        title: "Ação não permitida",
-        description: "Somente jurídico, admin ou analista processual podem enviar para cálculo.",
-        variant: "destructive",
-      })
-      return
-    }
-
-    // Optional: Add confirmation?
-    // User: "para que o operador clique... e possa movimentar"
-    // Let's just do it.
-
-    setLoading(true) // Reusing loading state or create a specific one? 
-    // Using global loading might hide everything. Let's make a local state if needed, or just toast.
-    const toastId = toast({ title: "Movimentando...", description: `Avançando para ${nextColumn.titulo}` })
-
-    try {
-      const supabase = requireSupabase()
-
-      const { error } = await supabase
-        .from("precatorios")
-        .update({
-          status_kanban: nextColumn.id,
-          localizacao_kanban: nextColumn.id, // Usually synced
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", id)
-
-      if (error) {
-        console.error("Supabase Update Error:", JSON.stringify(error, null, 2))
-        throw error
-      }
-
-      await loadPrecatorio()
-      toast({ title: "Sucesso", description: `Movido para ${nextColumn.titulo}` })
-
-    } catch (err: any) {
-      console.error("Erro ao avançar - Detalhes:", JSON.stringify(err, null, 2))
-      console.error("Tentativa de mover para:", nextColumn)
-      toast({
-        title: "Erro",
-        description: err?.message || "Falha ao mover etapa. Verifique o console.",
-        variant: "destructive"
-      })
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const handleEnviarFilaCalculo = async () => {
-    if (!precatorio || !id) return
-    try {
-      setSendingToCalculo(true)
-      const supabase = requireSupabase()
-      const { error } = await supabase
-        .from("precatorios")
-        .update({
-          status: "pronto_calculo",
-          status_kanban: "pronto_calculo",
-          localizacao_kanban: "fila_calculo",
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", id)
-
-      if (error) throw error
-
-      toast({
-        title: "Enviado para fila de cálculo",
-        description: "O precatório voltou para a fila aguardando novo cálculo.",
-      })
-      await loadPrecatorio()
-    } catch (err: any) {
-      console.error("[Calculo] Erro ao enviar para fila:", err)
-      toast({
-        title: "Erro ao enviar",
-        description: err?.message || "Não foi possível enviar para a fila de cálculo.",
-        variant: "destructive",
-      })
-    } finally {
-      setSendingToCalculo(false)
-    }
-  }
 
   const handleCepChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const rawValue = e.target.value
@@ -1564,6 +1472,17 @@ export default function PrecatorioDetailPage() {
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
+            {isAdmin && !isEditing && (
+              <Button
+                onClick={() => setAdminInterestModalOpen(true)}
+                variant="outline"
+                size="sm"
+                className="h-10 rounded-xl px-4"
+              >
+                <AlertCircle className="h-4 w-4 mr-2" />
+                Sinalizar interesse
+              </Button>
+            )}
             {canEdit && !isEditing && (
               <Button
                 onClick={() => setIsEditing(true)}
@@ -1601,6 +1520,84 @@ export default function PrecatorioDetailPage() {
           </div>
         </div>
       </motion.div>
+
+      {isAdmin && (
+        <Dialog open={adminInterestModalOpen} onOpenChange={setAdminInterestModalOpen}>
+          <DialogContent className="sm:max-w-2xl">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                Interesse do Admin no Crédito
+              </DialogTitle>
+            </DialogHeader>
+
+            <div className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Operador destinatário</Label>
+                  <Select
+                    value={adminTargetUserId || "__none__"}
+                    onValueChange={(value) =>
+                      setAdminTargetUserId(value === "__none__" ? "" : value)
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Selecione o operador" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {adminRecipients.length === 0 ? (
+                        <SelectItem value="__none__">Nenhum operador vinculado</SelectItem>
+                      ) : (
+                        adminRecipients.map((recipient) => (
+                          <SelectItem key={recipient.id} value={recipient.id}>
+                            {recipient.label}
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">
+                    Alertas individuais devem ser enviados na aba Comunicados, usando o escopo Individual.
+                  </p>
+                </div>
+                <div className="space-y-2">
+                  <Label>Crédito em foco</Label>
+                  <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
+                    {precatorioAdminLabel}
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="admin-interest-message">Mensagem de interesse (opcional)</Label>
+                <Textarea
+                  id="admin-interest-message"
+                  rows={4}
+                  value={adminInterestMessage}
+                  onChange={(e) => setAdminInterestMessage(e.target.value)}
+                  placeholder="Ex.: Preciso priorizar este crédito nesta semana."
+                />
+              </div>
+
+              <div className="flex items-center justify-end gap-2">
+                <Button
+                  variant="ghost"
+                  onClick={() => setAdminInterestModalOpen(false)}
+                  disabled={adminInterestSending}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleSignalAdminInterest}
+                  disabled={adminInterestSending || !adminTargetUserId}
+                >
+                  {adminInterestSending ? "Enviando interesse..." : "Sinalizar interesse no crédito"}
+                </Button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
 
       {/* Tabs Layout Consolidado */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
@@ -1691,151 +1688,93 @@ export default function PrecatorioDetailPage() {
           <TabsContent value="detalhes" className="space-y-6">
 
             {/* Barra de Status */}
-            <DetailSection className="border-zinc-200/70 bg-white/70 p-4 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <div className="min-w-0">
-                <p className="text-xs font-medium text-zinc-500 dark:text-zinc-400">Status do crédito</p>
+            <DetailSection className="border-zinc-200/70 bg-white/70 p-5 md:p-6 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <div className="min-w-0">
+                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                    Status do crédito
+                  </p>
 
-                <div className="mt-1 flex flex-wrap items-baseline gap-x-3 gap-y-1">
-                  <p className="text-sm text-muted-foreground">Atual:</p>
-                  <p className="text-base font-semibold text-foreground truncate">{statusAtualLabel}</p>
-
-                  {nextColumn ? (
-                    <>
-                      <span className="hidden sm:inline text-muted-foreground">•</span>
-                      <p className="text-sm text-muted-foreground">Próxima:</p>
-                      <p className="text-sm font-medium text-foreground/90 truncate">{nextColumn.titulo}</p>
-                    </>
-                  ) : null}
-                </div>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  className="h-10 rounded-xl px-4"
-                  onClick={handleAdvanceStage}
-                  disabled={!canAdvance}
-                  title={
-                    !canAdvanceByRole && requiresAnalisePermission
-                      ? "Somente jurídico, admin ou analista processual podem enviar para cálculo."
-                      : nextColumn
-                        ? `Avançar para ${nextColumn.titulo}`
-                        : "Sem próxima etapa"
-                  }
-                >
-                  Avançar{nextColumn ? ` para: ${nextColumn.titulo}` : ""} <ArrowRight className="h-4 w-4" />
-                </Button>
-
-                <Button
-                  size="sm"
-                  variant="secondary"
-                  className="h-10 rounded-xl px-4"
-                  onClick={() => {
-                    setActiveTab("timeline")
-                    syncTabToUrl("timeline")
-                  }}
-                >
-                  Ver timeline
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-4">
-              <div className="flex gap-2 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                {KANBAN_COLUMNS.map((col, index) => {
-                  const hasCurrent = currentColumnIndex >= 0
-                  const isCurrent = hasCurrent && index === currentColumnIndex
-                  const isDone = hasCurrent && index < currentColumnIndex
-                  const isNext = hasCurrent && index === currentColumnIndex + 1
-                  const base = "shrink-0 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition"
-                  const styles = isCurrent
-                    ? "border-primary/40 bg-primary/10 text-foreground shadow-[0_0_0_3px_rgba(59,130,246,0.12)] dark:shadow-[0_0_0_3px_rgba(59,130,246,0.25)]"
-                    : isDone
-                    ? "border-border bg-muted text-muted-foreground"
-                    : isNext
-                    ? "border-primary/25 bg-background text-foreground"
-                    : "border-border bg-background text-muted-foreground opacity-70"
-
-                  return (
-                    <div key={col.id} className={`${base} ${styles}`}>
-                      {isDone ? <Check className="h-4 w-4" /> : null}
-                      <span className="whitespace-nowrap">{col.titulo}</span>
-                    </div>
-                  )
-                })}
-              </div>
-
-              <p className="mt-1 text-xs text-muted-foreground">
-                Dica: role lateralmente para ver todas as etapas.
-              </p>
-            </div>
-          </DetailSection>
-
-          {isAdmin && (
-            <Card className={`${dashboardCardClass} border-orange-300/50 bg-orange-50/40 dark:border-orange-900/60 dark:bg-orange-950/20`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={AlertCircle} title="Interesse do Admin no Crédito" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-4">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label>Operador destinatário</Label>
-                    <Select
-                      value={adminTargetUserId || "__none__"}
-                      onValueChange={(value) =>
-                        setAdminTargetUserId(value === "__none__" ? "" : value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Selecione o operador" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {adminRecipients.length === 0 ? (
-                          <SelectItem value="__none__">Nenhum operador vinculado</SelectItem>
-                        ) : (
-                          adminRecipients.map((recipient) => (
-                            <SelectItem key={recipient.id} value={recipient.id}>
-                              {recipient.label}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    <p className="text-xs text-muted-foreground">
-                      Alertas individuais devem ser enviados na aba Comunicados, usando o escopo Individual.
-                    </p>
-                  </div>
-                  <div className="space-y-2">
-                    <Label>Crédito em foco</Label>
-                    <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
-                      {precatorioAdminLabel}
-                    </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                    <Chip size="md" color="primary" variant="flat" radius="full" className="font-semibold">
+                      Atual: {statusAtualLabel}
+                    </Chip>
+                    {nextColumn ? (
+                      <Chip size="md" color="warning" variant="flat" radius="full">
+                        Próxima: {nextColumn.titulo}
+                      </Chip>
+                    ) : (
+                      <Chip size="md" variant="flat" radius="full">
+                        Fluxo finalizado
+                      </Chip>
+                    )}
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="admin-interest-message">Mensagem de interesse (opcional)</Label>
-                  <Textarea
-                    id="admin-interest-message"
-                    rows={3}
-                    value={adminInterestMessage}
-                    onChange={(e) => setAdminInterestMessage(e.target.value)}
-                    placeholder="Ex.: Preciso priorizar este crédito nesta semana."
-                  />
+                <div className="flex flex-wrap items-center gap-2">
                   <Button
-                    onClick={handleSignalAdminInterest}
-                    disabled={adminInterestSending || !adminTargetUserId}
+                    size="sm"
+                    variant="secondary"
+                    className="h-10 rounded-xl px-4"
+                    onClick={() => {
+                      setActiveTab("timeline")
+                      syncTabToUrl("timeline")
+                    }}
                   >
-                    {adminInterestSending ? "Enviando interesse..." : "Sinalizar interesse no crédito"}
+                    Ver timeline
                   </Button>
                 </div>
+              </div>
 
-              </CardContent>
-            </Card>
-          )}
+              <div className="mt-4 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-3 dark:border-zinc-800/70 dark:bg-zinc-900/40">
+                <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
+                  <div className="flex min-w-max items-center gap-2.5 pr-2">
+                    {KANBAN_COLUMNS.map((col, index) => {
+                      const hasCurrent = currentColumnIndex >= 0
+                      const isCurrent = hasCurrent && index === currentColumnIndex
+                      const isDone = hasCurrent && index < currentColumnIndex
+                      const isNext = hasCurrent && index === currentColumnIndex + 1
+
+                      let chipVariant: "solid" | "flat" | "bordered" = "bordered"
+                      let chipColor: "default" | "primary" | "secondary" | "success" | "warning" | "danger" = "default"
+                      let chipStartContent: ReactNode = null
+
+                      if (isCurrent) {
+                        chipVariant = "solid"
+                        chipColor = "primary"
+                        chipStartContent = <span className="h-2 w-2 rounded-full bg-primary-foreground/80" />
+                      } else if (isDone) {
+                        chipVariant = "flat"
+                        chipColor = "success"
+                        chipStartContent = <CheckCircle2 className="h-3.5 w-3.5" />
+                      } else if (isNext) {
+                        chipVariant = "flat"
+                        chipColor = "warning"
+                        chipStartContent = <ArrowRight className="h-3.5 w-3.5" />
+                      }
+
+                      return (
+                        <Chip
+                          key={col.id}
+                          size="lg"
+                          radius="full"
+                          variant={chipVariant}
+                          color={chipColor}
+                          startContent={chipStartContent}
+                          className={`whitespace-nowrap ${isCurrent ? "font-semibold" : "font-medium"} min-h-10`}
+                        >
+                          {col.titulo}
+                        </Chip>
+                      )
+                    })}
+                  </div>
+                </ScrollShadow>
+
+                <p className="px-1 pt-2 text-xs text-muted-foreground">
+                  Dica: role lateralmente para ver todas as etapas.
+                </p>
+              </div>
+            </DetailSection>
 
           <ModalSemInteresse
             open={semInteresseModalOpen}
@@ -3300,15 +3239,6 @@ export default function PrecatorioDetailPage() {
                   Detalhamento do Cálculo
                 </h3>
                 <div className="flex items-center gap-2">
-                  <Button
-                    variant="outline"
-                    className="h-9 rounded-xl px-4"
-                    onClick={handleEnviarFilaCalculo}
-                    disabled={sendingToCalculo}
-                  >
-                    <ArrowRight className="h-4 w-4 mr-2" />
-                    Enviar para fila
-                  </Button>
                   <Button
                     variant="secondary"
                     className="h-9 rounded-xl px-4"

@@ -82,8 +82,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (session?.user) {
           const role = session.user.app_metadata?.role
           if (role) localStorage.removeItem("SHOW_REAUTH")
-          loadProfile(session.user.id)
+          setLoading(false)
+          void loadProfile(session.user.id)
         } else {
+          setProfile(null)
           setLoading(false)
         }
       })
@@ -101,7 +103,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (session?.user) {
         const role = session.user.app_metadata?.role
         if (role) localStorage.removeItem("SHOW_REAUTH")
-        loadProfile(session.user.id)
+        setLoading(false)
+        void loadProfile(session.user.id)
       } else {
         setProfile(null)
         setLoading(false)
@@ -120,7 +123,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      console.log("🔄 [Auth] Carregando perfil para:", userId)
       const { data, error } = await supabase
         .from("usuarios")
         .select("id, nome, email, role, foto_url, telefone") // Selecionar campos explícitos
@@ -128,16 +130,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         .single()
 
       if (error) {
-        console.error("❌ [Auth] Erro Supabase ao buscar perfil:", error)
         throw error
       }
 
       if (!data) {
-        console.error("❌ [Auth] Perfil não encontrado (data is null)")
         throw new Error("Perfil não encontrado")
       }
-
-      console.log("✅ [Auth] Perfil carregado com sucesso. Role:", data.role)
 
       // Garantir que role seja array
       const roleArray = Array.isArray(data.role) ? data.role : [data.role].filter(Boolean)
@@ -155,8 +153,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (user?.app_metadata?.role) {
         console.warn("⚠️ Usando role do metadata como fallback")
       }
-    } finally {
-      setLoading(false)
     }
   }
 

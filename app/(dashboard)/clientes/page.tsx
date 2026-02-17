@@ -1,15 +1,39 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Search, User, MapPin, Phone, Mail, FileText, ChevronRight, Calculator, Clock, Filter, X } from "lucide-react"
+import {
+  Accordion,
+  AccordionItem,
+  Button,
+  Card,
+  CardBody,
+  CardHeader,
+  Checkbox,
+  Chip,
+  Divider,
+  Dropdown,
+  DropdownItem,
+  DropdownMenu,
+  DropdownTrigger,
+  Input,
+  Modal,
+  ModalBody,
+  ModalContent,
+  ModalFooter,
+  ModalHeader,
+  Skeleton,
+  Spinner,
+  Tab,
+  Table,
+  TableBody,
+  TableCell,
+  TableColumn,
+  TableHeader,
+  TableRow,
+  Tabs,
+  Tooltip,
+} from "@heroui/react"
+import { Search, User, MapPin, Phone, Mail, FileText, ChevronRight, Clock, Filter, X, MoreVertical, RefreshCw, Users, Edit3 } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import { CredorView, Precatorio } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
@@ -179,7 +203,7 @@ const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[]
     chips.push({
       key: "carteira",
       label: "Carteira",
-      value: `${filters.carteiraMin !== undefined ? `R$ ${filters.carteiraMin.toLocaleString("pt-BR")}` : "..."} até ${
+      value: `${filters.carteiraMin !== undefined ? `R$ ${filters.carteiraMin.toLocaleString("pt-BR")}` : "..."} atÃ© ${
         filters.carteiraMax !== undefined ? `R$ ${filters.carteiraMax.toLocaleString("pt-BR")}` : "..."
       }`,
     })
@@ -188,16 +212,16 @@ const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[]
   if (filters.qtdMin !== undefined || filters.qtdMax !== undefined) {
     chips.push({
       key: "qtd",
-      label: "Qtd. Precatórios",
-      value: `${filters.qtdMin ?? "..."} até ${filters.qtdMax ?? "..."}`,
+      label: "Qtd. PrecatÃ³rios",
+      value: `${filters.qtdMin ?? "..."} atÃ© ${filters.qtdMax ?? "..."}`,
     })
   }
 
   if (filters.ultimaMovInicio || filters.ultimaMovFim) {
     chips.push({
       key: "ultimaMov",
-      label: "Última mov.",
-      value: `${filters.ultimaMovInicio ? new Date(`${filters.ultimaMovInicio}T00:00:00`).toLocaleDateString("pt-BR") : "..."} até ${
+      label: "Ãšltima mov.",
+      value: `${filters.ultimaMovInicio ? new Date(`${filters.ultimaMovInicio}T00:00:00`).toLocaleDateString("pt-BR") : "..."} atÃ© ${
         filters.ultimaMovFim ? new Date(`${filters.ultimaMovFim}T00:00:00`).toLocaleDateString("pt-BR") : "..."
       }`,
     })
@@ -212,6 +236,56 @@ const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[]
   }
 
   return chips
+}
+
+const firstMeaningfulValue = (
+  values: Array<string | null | undefined>,
+  validate?: (value: string) => boolean
+) => {
+  for (const raw of values) {
+    const value = (raw || "").trim()
+    if (!value) continue
+    if (validate && !validate(value)) continue
+    return value
+  }
+  return undefined
+}
+
+const extractCredorDataFromPrecatorios = (items: Precatorio[]): Partial<CredorResumo> => ({
+  credor_nome: firstMeaningfulValue(items.map((item) => item.credor_nome), (value) => !/^credor sem nome$/i.test(value)),
+  credor_cpf_cnpj: firstMeaningfulValue(
+    items.map((item) => item.credor_cpf_cnpj),
+    (value) => !value.startsWith("SEM_CPF")
+  ),
+  telefone: firstMeaningfulValue(items.map((item) => item.credor_telefone)),
+  email: firstMeaningfulValue(items.map((item) => item.credor_email)),
+  cidade: firstMeaningfulValue(items.map((item) => item.credor_cidade)),
+  uf: firstMeaningfulValue(items.map((item) => (item.credor_uf || "").toUpperCase())),
+})
+
+const CREDOR_IMPORT_FIELDS = ["credor_nome", "credor_cpf_cnpj", "telefone", "email", "cidade", "uf"] as const
+
+const mergeCredorFormWithImportedData = (
+  current: Partial<CredorResumo>,
+  imported: Partial<CredorResumo>,
+  overwrite: boolean
+) => {
+  const next: Partial<CredorResumo> = { ...current }
+  let updatedCount = 0
+
+  for (const field of CREDOR_IMPORT_FIELDS) {
+    const importedValue = ((imported[field] as string | null | undefined) || "").trim()
+    if (!importedValue) continue
+
+    const currentValue = ((next[field] as string | null | undefined) || "").trim()
+    if (!overwrite && currentValue) continue
+    if (currentValue === importedValue) continue
+
+    ;(next as Record<string, string | undefined>)[field] = importedValue
+    updatedCount += 1
+  }
+
+  return { next, updatedCount }
 }
 
 export default function ClientsPage() {
@@ -237,9 +311,29 @@ export default function ClientsPage() {
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCredor, setEditingCredor] = useState(false)
   const [savingCredor, setSavingCredor] = useState(false)
+  const [detailsTab, setDetailsTab] = useState("resumo")
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [adminFilters, setAdminFilters] = useState<ClientesAdminFilters>({})
   const [adminFiltersDraft, setAdminFiltersDraft] = useState<ClientesAdminFilters>({})
+
+  const makeCredorForm = (credor: CredorResumo | null): Partial<CredorResumo> => ({
+    credor_nome: credor?.credor_nome || "",
+    credor_cpf_cnpj: credor?.credor_cpf_cnpj || "",
+    telefone: credor?.telefone || "",
+    email: credor?.email || "",
+    cidade: credor?.cidade || "",
+    uf: credor?.uf || "",
+  })
+
+  const startCredorEditing = () => {
+    setEditingCredor(true)
+    setDetailsTab("dados")
+  }
+
+  const cancelCredorEditing = () => {
+    setEditingCredor(false)
+    setCredorForm(makeCredorForm(selectedCredor))
+  }
 
   useEffect(() => {
     if (!isAdmin) {
@@ -354,15 +448,9 @@ export default function ClientsPage() {
 
   async function openCredorDetails(credor: CredorResumo) {
     setSelectedCredor(credor)
-    setCredorForm({
-      credor_nome: credor.credor_nome,
-      credor_cpf_cnpj: credor.credor_cpf_cnpj,
-      telefone: credor.telefone,
-      email: credor.email,
-      cidade: credor.cidade,
-      uf: credor.uf,
-    })
+    setCredorForm(makeCredorForm(credor))
     setEditingCredor(false)
+    setDetailsTab("resumo")
     setModalOpen(true)
     setLoadingDetails(true)
 
@@ -388,12 +476,41 @@ export default function ClientsPage() {
       const { data, error } = await query
       if (error) throw error
 
-      setCredorPrecatorios(data || [])
+      const fetchedPrecatorios = (data || []) as Precatorio[]
+      setCredorPrecatorios(fetchedPrecatorios)
+
+      if (fetchedPrecatorios.length > 0) {
+        const importedData = extractCredorDataFromPrecatorios(fetchedPrecatorios)
+        setCredorForm((prev) => mergeCredorFormWithImportedData(prev, importedData, false).next)
+      }
     } catch (error) {
       console.error("Erro ao carregar detalhes:", error)
     } finally {
       setLoadingDetails(false)
     }
+  }
+
+  const importCredorDataFromPrecatorios = (overwrite = true) => {
+    if (loadingDetails) {
+      toast.info("Aguarde o carregamento dos processos para importar dados.")
+      return
+    }
+
+    if (credorPrecatorios.length === 0) {
+      toast.info("Nenhum precatorio vinculado para importar dados.")
+      return
+    }
+
+    const importedData = extractCredorDataFromPrecatorios(credorPrecatorios)
+    const { next, updatedCount } = mergeCredorFormWithImportedData(credorForm, importedData, overwrite)
+
+    if (updatedCount === 0) {
+      toast.info("Nao ha novos dados para importar.")
+      return
+    }
+
+    setCredorForm(next)
+    toast.success(`Dados importados com sucesso (${updatedCount} campo(s)).`)
   }
 
   async function handleSaveCredor() {
@@ -419,9 +536,12 @@ export default function ClientsPage() {
       const supabase = getSupabase()
       if (!supabase) return
 
+      const relatedIds = credorPrecatorios.map((item) => item.id).filter(Boolean)
       let query = supabase.from("precatorios").update(payload)
 
-      if (selectedCredor.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")) {
+      if (relatedIds.length > 0) {
+        query = query.in("id", relatedIds)
+      } else if (selectedCredor.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")) {
         query = query.eq("credor_cpf_cnpj", selectedCredor.credor_cpf_cnpj)
       } else {
         query = query.eq("credor_nome", selectedCredor.credor_nome)
@@ -599,677 +719,934 @@ export default function ClientsPage() {
     }
   }
 
+  const clientesComContato = useMemo(
+    () => credores.filter((credor) => Boolean((credor.telefone || "").trim() || (credor.email || "").trim())).length,
+    [credores]
+  )
+
+  const clientesSemContato = Math.max(credores.length - clientesComContato, 0)
+
+  const clientesComStatus = useMemo(() => credores.filter((credor) => Boolean(credor.ultimo_status)).length, [credores])
+
+  const carteiraMedia = credores.length > 0 ? resumo.totalCarteira / credores.length : 0
+
+  const ultimaAtualizacaoLabel = resumo.ultimaAtualizacao
+    ? new Date(resumo.ultimaAtualizacao).toLocaleDateString("pt-BR")
+    : "Sem movimentacao recente"
+
   return (
-    <div className="w-full max-w-[100vw] px-4 lg:px-6 py-6 space-y-8">
-      <div className="flex flex-col gap-5">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Gestão de Clientes</h1>
-          <p className="text-muted-foreground">Base consolidada de credores e histórico de processos.</p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div className="flex items-center gap-3 bg-orange-50 border border-orange-100 px-4 py-3 rounded-xl dark:bg-zinc-900/70 dark:border-zinc-800/60">
-            <User className="h-5 w-5 text-orange-600 dark:text-orange-400" />
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-orange-600 dark:text-orange-400 uppercase">Total de Clientes</span>
-              <span className="text-xl font-bold text-orange-700 dark:text-orange-300">{credores.length}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 bg-blue-50 border border-blue-100 px-4 py-3 rounded-xl dark:bg-zinc-900/70 dark:border-zinc-800/60">
-            <FileText className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-blue-600 dark:text-blue-400 uppercase">Total de Precatórios</span>
-              <span className="text-xl font-bold text-blue-700 dark:text-blue-300">{resumo.totalPrecatorios}</span>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3 bg-emerald-50 border border-emerald-100 px-4 py-3 rounded-xl dark:bg-zinc-900/70 dark:border-zinc-800/60">
-            <Calculator className="h-5 w-5 text-emerald-600 dark:text-emerald-400" />
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 uppercase">Carteira Atualizada</span>
-              <span className="text-xl font-bold text-emerald-700 dark:text-emerald-300">
-                R$ {formatCurrency(resumo.totalCarteira)}
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <Card className="border border-zinc-200/70 dark:border-zinc-800/60 bg-white/90 dark:bg-zinc-900/70 overflow-hidden">
-        <CardHeader className="pb-3">
-          <div className="flex flex-col md:flex-row md:items-center gap-3">
-            <div className="w-full md:max-w-2xl flex items-center gap-2">
-              <div className="relative w-full md:max-w-md">
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Buscar por nome, CPF/CNPJ, cidade ou status..."
-                  className="pl-9 w-full bg-white/80 dark:bg-zinc-900/70"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-
-              {isAdmin && (
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="whitespace-nowrap"
-                  onClick={() => setAdvancedFiltersOpen(true)}
-                >
-                  <Filter className="h-4 w-4 mr-2" />
-                  {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avançados"}
-                </Button>
-              )}
-            </div>
-
-            <div className="text-xs text-muted-foreground md:ml-auto">
-              {resumo.ultimaAtualizacao ? (
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Última atualização: {new Date(resumo.ultimaAtualizacao).toLocaleDateString("pt-BR")}
-                </span>
-              ) : (
-                <span className="inline-flex items-center gap-1">
-                  <Clock className="h-3.5 w-3.5" />
-                  Última atualização: —
-                </span>
-              )}
-            </div>
-          </div>
-
-          {isAdmin && adminFilterChips.length > 0 && (
-            <div className="flex items-center gap-2 flex-wrap pt-2">
-              <span className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                Filtros:
-              </span>
-              {adminFilterChips.map((chip) => (
-                <Badge key={chip.key} variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1">
-                  <span className="font-semibold">{chip.label}:</span>
-                  <span>{chip.value}</span>
-                  <button
-                    type="button"
-                    className="ml-1 hover:text-destructive transition-colors"
-                    onClick={() => removeAdminFilter(chip.key)}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-              <Button type="button" variant="ghost" size="sm" className="h-7 text-xs" onClick={clearAdminFilters}>
-                Limpar
-              </Button>
-            </div>
-          )}
-        </CardHeader>
-
-        <CardContent className="p-0">
-          {loading ? (
-            <div className="flex items-center justify-center p-10">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
-            </div>
-          ) : (
-            <div className="border-t border-zinc-200/60 dark:border-zinc-800/60">
-              {/* ✅ aqui está o “fix” principal: scroll horizontal para não cortar colunas */}
-              <div className="w-full overflow-x-auto">
-                <Table className="min-w-[980px]">
-                  <TableHeader className="sticky top-0 z-10 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-                    <TableRow className="border-b border-zinc-200/60 dark:border-zinc-800/60">
-                      <TableHead className="whitespace-nowrap">Credor</TableHead>
-                      <TableHead className="whitespace-nowrap">Status atual</TableHead>
-                      <TableHead className="hidden md:table-cell whitespace-nowrap">Contatos</TableHead>
-                      <TableHead className="hidden lg:table-cell whitespace-nowrap">Última mov.</TableHead>
-                      <TableHead className="text-center whitespace-nowrap">Qtd. Precatórios</TableHead>
-                      <TableHead className="text-right whitespace-nowrap">Carteira atualizada</TableHead>
-                      <TableHead className="w-[70px]" />
-                    </TableRow>
-                  </TableHeader>
-
-                  <TableBody>
-                    {filteredCredores.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={7} className="text-center py-10 text-muted-foreground">
-                          Nenhum cliente encontrado.
-                        </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCredores.map((credor) => (
-                        <TableRow
-                          key={credor.id_unico}
-                          className="cursor-pointer hover:bg-muted/40 dark:hover:bg-zinc-800/30 transition-colors"
-                          onClick={() => openCredorDetails(credor)}
-                        >
-                          <TableCell className="py-4">
-                            <div className="flex flex-col gap-0.5 max-w-[420px]">
-                              <span className="font-medium truncate">{credor.credor_nome}</span>
-                              <span className="text-xs text-muted-foreground truncate">
-                                {credor.credor_cpf_cnpj && !credor.credor_cpf_cnpj.startsWith("SEM_CPF")
-                                  ? credor.credor_cpf_cnpj
-                                  : "CPF não informado"}
-                              </span>
-                              {credor.cidade && (
-                                <span className="text-[11px] text-muted-foreground inline-flex items-center gap-1 truncate">
-                                  <MapPin className="h-3 w-3" /> {credor.cidade}/{credor.uf}
-                                </span>
-                              )}
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <Badge variant="outline" className={`whitespace-nowrap ${statusClass(credor.ultimo_status)}`}>
-                              {formatStatus(credor.ultimo_status)}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="hidden md:table-cell">
-                            <div className="flex flex-col gap-1 min-w-[220px]">
-                              {credor.telefone ? (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Phone className="h-3 w-3" /> <span className="truncate">{credor.telefone}</span>
-                                </div>
-                              ) : null}
-                              {credor.email ? (
-                                <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                                  <Mail className="h-3 w-3" /> <span className="truncate">{credor.email}</span>
-                                </div>
-                              ) : null}
-                              {!credor.telefone && !credor.email ? <span className="text-muted-foreground">-</span> : null}
-                            </div>
-                          </TableCell>
-
-                          <TableCell className="hidden lg:table-cell">
-                            {credor.ultimo_precatorio_data ? (
-                              <div className="flex items-center gap-1 text-xs text-muted-foreground whitespace-nowrap">
-                                <Clock className="h-3 w-3" />
-                                {new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground">-</span>
-                            )}
-                          </TableCell>
-
-                          <TableCell className="text-center">
-                            <Badge variant="secondary" className="font-mono whitespace-nowrap">
-                              {credor.total_precatorios}
-                            </Badge>
-                          </TableCell>
-
-                          <TableCell className="text-right">
-                            <div className="min-w-[220px]">
-                              <div className="font-semibold text-emerald-600 whitespace-nowrap">
-                                {credor.valor_total_atualizado ? `R$ ${formatCurrency(credor.valor_total_atualizado)}` : "R$ 0,00"}
-                              </div>
-                              {credor.ultimo_precatorio_valor ? (
-                                <div className="text-[11px] text-muted-foreground whitespace-nowrap">
-                                  Último: R$ {formatCurrency(credor.ultimo_precatorio_valor)}
-                                </div>
-                              ) : null}
-                            </div>
-                          </TableCell>
-
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={(e) => {
-                                e.stopPropagation()
-                                openCredorDetails(credor)
-                              }}
-                              aria-label="Abrir detalhes do cliente"
-                            >
-                              <ChevronRight className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-
-              {/* dica visual de scroll (só aparece quando precisa) */}
-              <div className="px-4 py-2 text-[11px] text-muted-foreground border-t border-zinc-200/60 dark:border-zinc-800/60">
-                Dica: se a tabela ficar maior que a tela, role horizontalmente para ver todas as colunas.
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {isAdmin && (
-        <Dialog open={advancedFiltersOpen} onOpenChange={setAdvancedFiltersOpen}>
-          <DialogContent className="max-w-2xl">
-            <DialogHeader>
-              <DialogTitle>Filtros avançados de clientes</DialogTitle>
-              <DialogDescription>Disponível somente para administrador.</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-6 py-2">
+    <div className="w-full max-w-[100vw] px-4 py-6 lg:px-6">
+      <div className="space-y-6">
+        <Card shadow="sm" className="border border-default-200/80 bg-content1/95">
+          <CardBody className="gap-5 p-5 lg:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2">
-                <Label className="text-sm font-semibold">Status atual</Label>
-                {statusOptions.length === 0 ? (
-                  <p className="text-xs text-muted-foreground">Sem status disponíveis.</p>
-                ) : (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-44 overflow-y-auto pr-1">
-                    {statusOptions.map((status) => (
-                      <label
-                        key={status}
-                        className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50"
-                      >
-                        <Checkbox
-                          checked={adminFiltersDraft.status?.includes(status) || false}
-                          onCheckedChange={() => toggleDraftStatus(status)}
-                        />
-                        <span>{formatStatus(status)}</span>
-                      </label>
-                    ))}
-                  </div>
-                )}
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Cidade</Label>
-                  <Input
-                    value={adminFiltersDraft.cidade || ""}
-                    onChange={(e) =>
-                      setAdminFiltersDraft((prev) => ({
-                        ...prev,
-                        cidade: e.target.value || undefined,
-                      }))
-                    }
-                    placeholder="Ex: Curitiba"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>UF</Label>
-                  <Input
-                    value={adminFiltersDraft.uf || ""}
-                    onChange={(e) =>
-                      setAdminFiltersDraft((prev) => ({
-                        ...prev,
-                        uf: e.target.value.toUpperCase() || undefined,
-                      }))
-                    }
-                    placeholder="Ex: PR"
-                    maxLength={2}
-                  />
-                  {ufOptions.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {ufOptions.map((uf) => {
-                        const isSelected = adminFiltersDraft.uf === uf
-                        return (
-                          <button
-                            key={uf}
-                            type="button"
-                            className={`rounded border px-2 py-0.5 text-xs transition ${
-                              isSelected
-                                ? "border-primary/40 bg-primary/10 text-foreground"
-                                : "border-border/60 hover:bg-muted/50"
-                            }`}
-                            onClick={() =>
-                              setAdminFiltersDraft((prev) => ({
-                                ...prev,
-                                uf: prev.uf === uf ? undefined : uf,
-                              }))
-                            }
-                          >
-                            {uf}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  )}
+                <h1 className="text-3xl font-bold tracking-tight text-foreground">Clientes</h1>
+                <p className="text-sm text-foreground/70">Gerencie clientes, contatos e historico de processos.</p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Chip variant="flat" color="primary" startContent={<Users className="h-4 w-4" />}>
+                    {credores.length} clientes
+                  </Chip>
+                  <Chip variant="flat" color="default" startContent={<FileText className="h-4 w-4" />}>
+                    {resumo.totalPrecatorios} precatorios
+                  </Chip>
+                  <Chip variant="flat" color="success" startContent={<Clock className="h-4 w-4" />}>
+                    Atualizado em {ultimaAtualizacaoLabel}
+                  </Chip>
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Carteira mínima</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={adminFiltersDraft.carteiraMin ?? ""}
-                    onChange={(e) => updateDraftNumberFilter("carteiraMin", e.target.value)}
-                    placeholder="0,00"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Carteira máxima</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={adminFiltersDraft.carteiraMax ?? ""}
-                    onChange={(e) => updateDraftNumberFilter("carteiraMax", e.target.value)}
-                    placeholder="9999999,99"
-                  />
-                </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Tooltip content="Limpar busca atual">
+                  <Button
+                    variant="flat"
+                    color="default"
+                    startContent={<X className="h-4 w-4" />}
+                    isDisabled={!searchTerm}
+                    onPress={() => setSearchTerm("")}
+                  >
+                    Limpar busca
+                  </Button>
+                </Tooltip>
+                <Tooltip content="Recarregar lista de clientes">
+                  <Button
+                    color="primary"
+                    variant="solid"
+                    startContent={<RefreshCw className="h-4 w-4" />}
+                    isLoading={loading}
+                    onPress={() => loadCredores()}
+                  >
+                    Atualizar
+                  </Button>
+                </Tooltip>
+                {isAdmin ? (
+                  <Button
+                    variant="bordered"
+                    color="default"
+                    startContent={<Filter className="h-4 w-4" />}
+                    onPress={() => setAdvancedFiltersOpen(true)}
+                  >
+                    {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avancados"}
+                  </Button>
+                ) : null}
               </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Qtd. mínima de precatórios</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={adminFiltersDraft.qtdMin ?? ""}
-                    onChange={(e) => updateDraftNumberFilter("qtdMin", e.target.value)}
-                    placeholder="0"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Qtd. máxima de precatórios</Label>
-                  <Input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={adminFiltersDraft.qtdMax ?? ""}
-                    onChange={(e) => updateDraftNumberFilter("qtdMax", e.target.value)}
-                    placeholder="999"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div className="space-y-2">
-                  <Label>Última movimentação (de)</Label>
-                  <Input
-                    type="date"
-                    value={adminFiltersDraft.ultimaMovInicio || ""}
-                    onChange={(e) =>
-                      setAdminFiltersDraft((prev) => ({
-                        ...prev,
-                        ultimaMovInicio: e.target.value || undefined,
-                      }))
-                    }
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label>Última movimentação (até)</Label>
-                  <Input
-                    type="date"
-                    value={adminFiltersDraft.ultimaMovFim || ""}
-                    onChange={(e) =>
-                      setAdminFiltersDraft((prev) => ({
-                        ...prev,
-                        ultimaMovFim: e.target.value || undefined,
-                      }))
-                    }
-                  />
-                </div>
-              </div>
-
-              <label className="flex items-center gap-2 rounded-md border border-border/60 px-3 py-2 text-sm cursor-pointer hover:bg-muted/50">
-                <Checkbox
-                  checked={adminFiltersDraft.apenasComContato || false}
-                  onCheckedChange={(checked) =>
-                    setAdminFiltersDraft((prev) => ({
-                      ...prev,
-                      apenasComContato: checked ? true : undefined,
-                    }))
-                  }
-                />
-                <span>Mostrar somente clientes com contato (telefone ou e-mail)</span>
-              </label>
             </div>
 
-            <DialogFooter className="gap-2">
-              <Button type="button" variant="outline" onClick={clearAdminFilters}>
-                Limpar filtros
-              </Button>
-              <Button type="button" onClick={applyAdminFilters}>
-                Aplicar filtros
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Modal de Detalhes */}
-      <Dialog
-        open={modalOpen}
-        onOpenChange={(open) => {
-          setModalOpen(open)
-          if (!open) setEditingCredor(false)
-        }}
-      >
-        <DialogContent className="max-w-3xl max-h-[85vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{selectedCredor?.credor_nome}</DialogTitle>
-            <DialogDescription>
-              CPF/CNPJ:{" "}
-              {selectedCredor?.credor_cpf_cnpj && !selectedCredor?.credor_cpf_cnpj.startsWith("SEM_CPF")
-                ? selectedCredor.credor_cpf_cnpj
-                : "Não informado"}
-            </DialogDescription>
-
-            <div className="flex items-center gap-2 pt-2">
-              {!editingCredor ? (
-                <Button variant="outline" size="sm" onClick={() => setEditingCredor(true)}>
-                  Editar dados
-                </Button>
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              {loading ? (
+                Array.from({ length: 4 }).map((_, idx) => (
+                  <Card key={`kpi-skeleton-${idx}`} shadow="none" className="border border-default-200/70 bg-content2/60">
+                    <CardBody className="space-y-3 p-4">
+                      <Skeleton className="h-3 w-24 rounded-md" />
+                      <Skeleton className="h-8 w-32 rounded-md" />
+                      <Skeleton className="h-3 w-20 rounded-md" />
+                    </CardBody>
+                  </Card>
+                ))
               ) : (
                 <>
-                  <Button variant="ghost" size="sm" onClick={() => setEditingCredor(false)} disabled={savingCredor}>
-                    Cancelar
-                  </Button>
-                  <Button size="sm" onClick={handleSaveCredor} disabled={savingCredor}>
-                    {savingCredor ? "Salvando..." : "Salvar"}
-                  </Button>
+                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
+                    <CardBody className="space-y-1 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total de clientes</div>
+                      <div className="text-3xl font-semibold tabular-nums text-foreground">{credores.length}</div>
+                      <div className="text-xs text-foreground/60">Base consolidada</div>
+                    </CardBody>
+                  </Card>
+                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
+                    <CardBody className="space-y-1 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</div>
+                      <div className="text-3xl font-semibold tabular-nums text-success">R$ {formatCurrency(resumo.totalCarteira)}</div>
+                      <div className="text-xs text-foreground/60">Media de R$ {formatCurrency(carteiraMedia)} por cliente</div>
+                    </CardBody>
+                  </Card>
+                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
+                    <CardBody className="space-y-1 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Clientes com contato</div>
+                      <div className="text-3xl font-semibold tabular-nums text-foreground">{clientesComContato}</div>
+                      <div className="text-xs text-foreground/60">{clientesSemContato} sem telefone/e-mail</div>
+                    </CardBody>
+                  </Card>
+                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
+                    <CardBody className="space-y-1 p-4">
+                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Clientes com status</div>
+                      <div className="text-3xl font-semibold tabular-nums text-foreground">{clientesComStatus}</div>
+                      <div className="text-xs text-foreground/60">{statusOptions.length} status distintos</div>
+                    </CardBody>
+                  </Card>
                 </>
               )}
             </div>
-          </DialogHeader>
+          </CardBody>
+        </Card>
 
-          <div className="space-y-6 py-4">
-            <Card>
-              <CardHeader className="p-4 pb-2">
-                <CardDescription>Dados do cliente</CardDescription>
-                <CardTitle className="text-lg">Informações gerais</CardTitle>
-              </CardHeader>
+        <Card shadow="sm" className="border border-default-200/80 bg-content1/95">
+          <CardBody className="space-y-4 p-4 lg:p-5">
+            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="w-full xl:max-w-2xl">
+                <Input
+                  aria-label="Buscar clientes"
+                  placeholder="Buscar por nome, CPF/CNPJ, cidade, status, email ou telefone..."
+                  value={searchTerm}
+                  onValueChange={setSearchTerm}
+                  isClearable
+                  onClear={() => setSearchTerm("")}
+                  startContent={<Search className="h-4 w-4 text-foreground/50" />}
+                  classNames={{
+                    inputWrapper: "border border-default-200/80 bg-content2/60 shadow-sm",
+                  }}
+                />
+              </div>
 
-              <CardContent className="p-4 pt-0">
-                {editingCredor ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="md:col-span-2">
-                      <Label>Nome</Label>
-                      <Input
-                        value={credorForm.credor_nome || ""}
-                        onChange={(e) => setCredorForm({ ...credorForm, credor_nome: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>CPF/CNPJ</Label>
-                      <Input
-                        value={credorForm.credor_cpf_cnpj || ""}
-                        onChange={(e) => setCredorForm({ ...credorForm, credor_cpf_cnpj: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Telefone</Label>
-                      <Input
-                        value={credorForm.telefone || ""}
-                        onChange={(e) => setCredorForm({ ...credorForm, telefone: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Email</Label>
-                      <Input
-                        value={credorForm.email || ""}
-                        onChange={(e) => setCredorForm({ ...credorForm, email: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>Cidade</Label>
-                      <Input
-                        value={credorForm.cidade || ""}
-                        onChange={(e) => setCredorForm({ ...credorForm, cidade: e.target.value })}
-                      />
-                    </div>
-                    <div>
-                      <Label>UF</Label>
-                      <Input value={credorForm.uf || ""} onChange={(e) => setCredorForm({ ...credorForm, uf: e.target.value })} />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                    <div>
-                      <p className="text-xs text-muted-foreground">Nome</p>
-                      <p className="font-medium">{selectedCredor?.credor_nome || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">CPF/CNPJ</p>
-                      <p className="font-medium">
-                        {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
-                          ? selectedCredor.credor_cpf_cnpj
-                          : "Não informado"}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Telefone</p>
-                      <p className="font-medium">{selectedCredor?.telefone || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                      <p className="font-medium">{selectedCredor?.email || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">Cidade</p>
-                      <p className="font-medium">{selectedCredor?.cidade || "—"}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs text-muted-foreground">UF</p>
-                      <p className="font-medium">{selectedCredor?.uf || "—"}</p>
-                    </div>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardDescription>Total Processos</CardDescription>
-                  <CardTitle className="text-2xl">{selectedCredor?.total_precatorios}</CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardDescription>Carteira Atualizada</CardDescription>
-                  <CardTitle className="text-2xl text-emerald-600">
-                    {(selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal)
-                      ? `R$ ${(selectedCredor!.valor_total_atualizado || selectedCredor!.valor_total_principal).toLocaleString("pt-BR", {
-                          notation: "compact",
-                        })}`
-                      : "R$ 0"}
-                  </CardTitle>
-                </CardHeader>
-              </Card>
-              <Card>
-                <CardHeader className="p-4 pb-2">
-                  <CardDescription>Último status</CardDescription>
-                  <CardTitle className="text-lg">
-                    <Badge variant="outline" className={statusClass(selectedCredor?.ultimo_status)}>
-                      {formatStatus(selectedCredor?.ultimo_status)}
-                    </Badge>
-                  </CardTitle>
-                  <CardDescription className="text-xs text-muted-foreground mt-2">
-                    {selectedCredor?.ultimo_precatorio_data
-                      ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
-                      : "Sem movimentação"}
-                  </CardDescription>
-                </CardHeader>
-              </Card>
+              <div className="flex flex-wrap items-center gap-2">
+                <Chip variant="flat" color="default">
+                  {filteredCredores.length} exibidos
+                </Chip>
+                <Chip variant="flat" color="default">
+                  {resumo.totalPrecatorios} processos
+                </Chip>
+                {isAdmin ? (
+                  <Button
+                    variant="bordered"
+                    color="default"
+                    startContent={<Filter className="h-4 w-4" />}
+                    onPress={() => setAdvancedFiltersOpen(true)}
+                  >
+                    Filtros avancados
+                  </Button>
+                ) : null}
+              </div>
             </div>
 
-            <div className="space-y-3">
-              <h3 className="font-semibold flex items-center gap-2">
-                <FileText className="h-4 w-4" /> Histórico de Processos
-              </h3>
+            {isAdmin && adminFilterChips.length > 0 ? (
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Filtros ativos:</span>
+                {adminFilterChips.map((chip) => (
+                  <Chip
+                    key={chip.key}
+                    variant="flat"
+                    color="primary"
+                    className="max-w-full"
+                    onClose={() => removeAdminFilter(chip.key)}
+                  >
+                    <span className="font-semibold">{chip.label}: </span>
+                    {chip.value}
+                  </Chip>
+                ))}
+                <Button size="sm" variant="light" color="default" onPress={clearAdminFilters}>
+                  Limpar tudo
+                </Button>
+              </div>
+            ) : null}
 
-              {loadingDetails ? (
-                <div className="space-y-4">
-                  {[1, 2].map((i) => (
-                    <div key={i} className="h-32 bg-muted animate-pulse rounded-lg" />
-                  ))}
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {credorPrecatorios.map((precatorio, index) => (
-                    <Card
-                      key={precatorio.id}
-                      className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-orange-500/40 group relative overflow-hidden"
-                      onClick={() => {
-                        setModalOpen(false)
-                        router.push(`/precatorios/detalhes?id=${precatorio.id}`)
-                      }}
-                    >
-                      <div className="absolute inset-0 bg-orange-500/0 group-hover:bg-orange-500/5 transition-colors" />
+            <Divider />
 
-                      <CardContent className="p-5 relative z-10 space-y-4">
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-start gap-4 flex-1">
-                            <div className="flex flex-col items-center justify-center min-w-[2.5rem]">
-                              <span className="text-3xl font-black text-muted-foreground/20 group-hover:text-orange-500/40 transition-colors">
-                                {String(index + 1).padStart(2, "0")}
-                              </span>
-                            </div>
-
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                    <FileText className="w-3 h-3" /> Processo
-                                  </span>
-                                  <Badge
-                                    variant={precatorio.status === "concluido" ? "default" : "outline"}
-                                    className="text-[10px] h-4 px-1 rounded-sm"
-                                  >
-                                    {(precatorio.status || "N/I").replace("_", " ")}
-                                  </Badge>
-                                </div>
-                                <p className="font-medium text-sm font-mono truncate" title={precatorio.numero_processo || ""}>
-                                  {precatorio.numero_processo || "N/A"}
-                                </p>
-                                <p className="text-xs text-muted-foreground truncate">{precatorio.numero_precatorio || "Prec. N/A"}</p>
-                              </div>
-
-                              <div className="space-y-1">
-                                <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                  <Calculator className="w-3 h-3" /> Valor
-                                </label>
-                                <span className="font-bold text-lg text-emerald-600">
-                                  {precatorio.valor_atualizado || precatorio.valor_principal
-                                    ? `R$ ${(precatorio.valor_atualizado || precatorio.valor_principal).toLocaleString("pt-BR", {
-                                        minimumFractionDigits: 2,
-                                      })}`
-                                    : "R$ 0,00"}
-                                </span>
-                              </div>
-
-                              <div className="md:col-span-2 flex items-center justify-between pt-2 border-t border-border/50 mt-1">
-                                <div className="text-xs text-muted-foreground">
-                                  Criado em: {new Date(precatorio.created_at).toLocaleDateString()}
-                                </div>
-                                <div className="text-xs font-medium text-orange-600 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                  Ver detalhes <ChevronRight className="w-3 h-3" />
-                                </div>
-                              </div>
-                            </div>
+            <div className="w-full overflow-x-auto [scrollbar-gutter:stable]">
+              <Table
+                aria-label="Tabela de clientes"
+                removeWrapper
+                isHeaderSticky
+                onRowAction={(key) => {
+                  const credor = filteredCredores.find((item) => item.id_unico === String(key))
+                  if (credor) openCredorDetails(credor)
+                }}
+                classNames={{
+                  table: "w-full min-w-[760px] lg:min-w-0 table-fixed",
+                  th: "bg-default-100/70 text-foreground/70 text-xs uppercase tracking-wide",
+                  td: "align-top py-3",
+                }}
+              >
+                <TableHeader>
+                  <TableColumn className="w-[34%]">Credor</TableColumn>
+                  <TableColumn className="w-[14%]">Status</TableColumn>
+                  <TableColumn className="hidden 2xl:table-cell w-[16%]">Contatos</TableColumn>
+                  <TableColumn className="hidden xl:table-cell w-[12%]">Ultima movimentacao</TableColumn>
+                  <TableColumn className="hidden lg:table-cell w-[10%] text-center">Qtd. processos</TableColumn>
+                  <TableColumn className="w-[18%] text-right">Carteira atualizada</TableColumn>
+                  <TableColumn className="w-[6%] text-right">Acoes</TableColumn>
+                </TableHeader>
+                <TableBody
+                  isLoading={loading}
+                  loadingContent={<Spinner color="primary" label="Carregando clientes..." />}
+                  emptyContent={
+                    <div className="py-8 text-center">
+                      <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
+                      <p className="mt-1 text-xs text-foreground/60">Ajuste a busca ou remova filtros para visualizar resultados.</p>
+                    </div>
+                  }
+                >
+                  {filteredCredores.map((credor) => (
+                    <TableRow key={credor.id_unico} className="cursor-pointer">
+                      <TableCell>
+                        <div className="max-w-full space-y-1">
+                          <Tooltip content={credor.credor_nome}>
+                            <p className="truncate text-sm font-semibold text-foreground">{credor.credor_nome}</p>
+                          </Tooltip>
+                          <p className="truncate text-xs text-foreground/60">
+                            {credor.credor_cpf_cnpj && !credor.credor_cpf_cnpj.startsWith("SEM_CPF")
+                              ? credor.credor_cpf_cnpj
+                              : "CPF/CNPJ nao informado"}
+                          </p>
+                          {credor.cidade ? (
+                            <p className="inline-flex max-w-full items-center gap-1 truncate text-xs text-foreground/60">
+                              <MapPin className="h-3 w-3" />
+                              {credor.cidade}/{credor.uf || "--"}
+                            </p>
+                          ) : null}
+                          <div className="flex flex-col gap-0.5 xl:hidden">
+                            {credor.ultimo_precatorio_data ? (
+                              <p className="inline-flex items-center gap-1 text-xs text-foreground/60">
+                                <Clock className="h-3 w-3" />
+                                {new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")}
+                              </p>
+                            ) : null}
+                            {credor.telefone || credor.email ? (
+                              <p className="truncate text-xs text-foreground/60">
+                                {[credor.telefone, credor.email].filter(Boolean).join(" | ")}
+                              </p>
+                            ) : null}
                           </div>
                         </div>
-                      </CardContent>
-                    </Card>
+                      </TableCell>
+                      <TableCell>
+                        <Chip size="sm" variant="flat" className={`border ${statusClass(credor.ultimo_status)}`}>
+                          {formatStatus(credor.ultimo_status)}
+                        </Chip>
+                      </TableCell>
+                      <TableCell className="hidden 2xl:table-cell">
+                        <div className="min-w-[210px] space-y-1">
+                          {credor.telefone ? (
+                            <p className="flex items-center gap-1 text-xs text-foreground/70">
+                              <Phone className="h-3 w-3" />
+                              <span className="truncate">{credor.telefone}</span>
+                            </p>
+                          ) : null}
+                          {credor.email ? (
+                            <p className="flex items-center gap-1 text-xs text-foreground/70">
+                              <Mail className="h-3 w-3" />
+                              <span className="truncate">{credor.email}</span>
+                            </p>
+                          ) : null}
+                          {!credor.telefone && !credor.email ? <span className="text-xs text-foreground/60">Sem contato</span> : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden xl:table-cell">
+                        {credor.ultimo_precatorio_data ? (
+                          <p className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-foreground/70">
+                            <Clock className="h-3 w-3" />
+                            {new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")}
+                          </p>
+                        ) : (
+                          <span className="text-xs text-foreground/60">Sem movimentacao</span>
+                        )}
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell text-center">
+                        <Chip size="sm" variant="flat" color="default" className="font-mono tabular-nums">
+                          {credor.total_precatorios}
+                        </Chip>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="space-y-1">
+                          <p className="truncate font-semibold tabular-nums text-success">
+                            {credor.valor_total_atualizado ? `R$ ${formatCurrency(credor.valor_total_atualizado)}` : "R$ 0,00"}
+                          </p>
+                          {credor.ultimo_precatorio_valor ? (
+                            <p className="truncate text-[11px] text-foreground/60">Ultimo: R$ {formatCurrency(credor.ultimo_precatorio_valor)}</p>
+                          ) : null}
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div
+                          className="flex justify-end"
+                          onClick={(event) => event.stopPropagation()}
+                          onMouseDown={(event) => event.stopPropagation()}
+                        >
+                          <Dropdown placement="bottom-end">
+                            <DropdownTrigger>
+                              <Button isIconOnly size="sm" variant="light" aria-label={`Acoes de ${credor.credor_nome}`}>
+                                <MoreVertical className="h-4 w-4" />
+                              </Button>
+                            </DropdownTrigger>
+                            <DropdownMenu aria-label={`Acoes para ${credor.credor_nome}`}>
+                              <DropdownItem
+                                key="detalhes"
+                                startContent={<ChevronRight className="h-4 w-4" />}
+                                onPress={() => openCredorDetails(credor)}
+                              >
+                                Ver detalhes
+                              </DropdownItem>
+                            </DropdownMenu>
+                          </Dropdown>
+                        </div>
+                      </TableCell>
+                    </TableRow>
                   ))}
-                </div>
-              )}
+                </TableBody>
+              </Table>
             </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+          </CardBody>
+        </Card>
+      </div>
+      {isAdmin ? (
+        <Modal
+          isOpen={advancedFiltersOpen}
+          onOpenChange={setAdvancedFiltersOpen}
+          size="3xl"
+          scrollBehavior="inside"
+          backdrop="opaque"
+          classNames={{
+            wrapper: "z-[120]",
+            backdrop: "bg-black/45",
+            base: "border border-default-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl",
+          }}
+        >
+          <ModalContent className="bg-white dark:bg-zinc-950">
+            <>
+              <ModalHeader className="flex flex-col gap-1">
+                <h2 className="text-xl font-semibold tracking-tight">Filtros avancados de clientes</h2>
+                <p className="text-sm text-foreground/70">Refine a lista por status, periodo, faixa de carteira e contato.</p>
+              </ModalHeader>
+              <ModalBody className="pb-1">
+                <Accordion selectionMode="multiple" defaultExpandedKeys={["status", "periodo", "financeiro", "outros"]}>
+                  <AccordionItem key="status" aria-label="Status e segmento" title="Status e segmento">
+                    <div className="space-y-4 pb-1">
+                      <div className="space-y-2">
+                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Status atual</p>
+                        {statusOptions.length === 0 ? (
+                          <p className="text-sm text-foreground/60">Sem status disponiveis.</p>
+                        ) : (
+                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            {statusOptions.map((status) => (
+                              <Checkbox
+                                key={status}
+                                isSelected={adminFiltersDraft.status?.includes(status) || false}
+                                onValueChange={() => toggleDraftStatus(status)}
+                                size="sm"
+                              >
+                                {formatStatus(status)}
+                              </Checkbox>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input
+                          label="Cidade"
+                          labelPlacement="outside"
+                          placeholder="Ex.: Curitiba"
+                          value={adminFiltersDraft.cidade || ""}
+                          onValueChange={(value) =>
+                            setAdminFiltersDraft((prev) => ({
+                              ...prev,
+                              cidade: value || undefined,
+                            }))
+                          }
+                        />
+                        <Input
+                          label="UF"
+                          labelPlacement="outside"
+                          placeholder="Ex.: PR"
+                          maxLength={2}
+                          value={adminFiltersDraft.uf || ""}
+                          onValueChange={(value) =>
+                            setAdminFiltersDraft((prev) => ({
+                              ...prev,
+                              uf: value.toUpperCase() || undefined,
+                            }))
+                          }
+                        />
+                      </div>
+                      {ufOptions.length > 0 ? (
+                        <div className="flex flex-wrap gap-2">
+                          {ufOptions.map((uf) => {
+                            const isSelected = adminFiltersDraft.uf === uf
+                            return (
+                              <Button
+                                key={uf}
+                                size="sm"
+                                variant={isSelected ? "flat" : "bordered"}
+                                color={isSelected ? "primary" : "default"}
+                                onPress={() =>
+                                  setAdminFiltersDraft((prev) => ({
+                                    ...prev,
+                                    uf: prev.uf === uf ? undefined : uf,
+                                  }))
+                                }
+                              >
+                                {uf}
+                              </Button>
+                            )
+                          })}
+                        </div>
+                      ) : null}
+                    </div>
+                  </AccordionItem>
+
+                  <AccordionItem key="periodo" aria-label="Periodo e datas" title="Periodo e datas">
+                    <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
+                      <Input
+                        type="date"
+                        label="Ultima movimentacao (de)"
+                        labelPlacement="outside"
+                        value={adminFiltersDraft.ultimaMovInicio || ""}
+                        onChange={(event) =>
+                          setAdminFiltersDraft((prev) => ({
+                            ...prev,
+                            ultimaMovInicio: event.target.value || undefined,
+                          }))
+                        }
+                      />
+                      <Input
+                        type="date"
+                        label="Ultima movimentacao (ate)"
+                        labelPlacement="outside"
+                        value={adminFiltersDraft.ultimaMovFim || ""}
+                        onChange={(event) =>
+                          setAdminFiltersDraft((prev) => ({
+                            ...prev,
+                            ultimaMovFim: event.target.value || undefined,
+                          }))
+                        }
+                      />
+                    </div>
+                  </AccordionItem>
+
+                  <AccordionItem key="financeiro" aria-label="Financeiro" title="Financeiro">
+                    <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        label="Carteira minima"
+                        labelPlacement="outside"
+                        placeholder="0,00"
+                        value={adminFiltersDraft.carteiraMin?.toString() ?? ""}
+                        onValueChange={(value) => updateDraftNumberFilter("carteiraMin", value)}
+                      />
+                      <Input
+                        type="number"
+                        min="0"
+                        step="0.01"
+                        label="Carteira maxima"
+                        labelPlacement="outside"
+                        placeholder="9999999,99"
+                        value={adminFiltersDraft.carteiraMax?.toString() ?? ""}
+                        onValueChange={(value) => updateDraftNumberFilter("carteiraMax", value)}
+                      />
+                    </div>
+                  </AccordionItem>
+
+                  <AccordionItem key="outros" aria-label="Outros filtros" title="Outros">
+                    <div className="space-y-3 pb-1">
+                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          label="Qtd. minima de precatorios"
+                          labelPlacement="outside"
+                          placeholder="0"
+                          value={adminFiltersDraft.qtdMin?.toString() ?? ""}
+                          onValueChange={(value) => updateDraftNumberFilter("qtdMin", value)}
+                        />
+                        <Input
+                          type="number"
+                          min="0"
+                          step="1"
+                          label="Qtd. maxima de precatorios"
+                          labelPlacement="outside"
+                          placeholder="999"
+                          value={adminFiltersDraft.qtdMax?.toString() ?? ""}
+                          onValueChange={(value) => updateDraftNumberFilter("qtdMax", value)}
+                        />
+                      </div>
+                      <Checkbox
+                        isSelected={adminFiltersDraft.apenasComContato || false}
+                        onValueChange={(checked) =>
+                          setAdminFiltersDraft((prev) => ({
+                            ...prev,
+                            apenasComContato: checked ? true : undefined,
+                          }))
+                        }
+                      >
+                        Mostrar somente clientes com telefone ou e-mail
+                      </Checkbox>
+                    </div>
+                  </AccordionItem>
+                </Accordion>
+              </ModalBody>
+              <ModalFooter>
+                <Button variant="light" color="default" onPress={clearAdminFilters}>
+                  Limpar
+                </Button>
+                <Button color="primary" onPress={applyAdminFilters}>
+                  Aplicar filtros
+                </Button>
+              </ModalFooter>
+            </>
+          </ModalContent>
+        </Modal>
+      ) : null}
+
+      <Modal
+        isOpen={modalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (!open) {
+            setEditingCredor(false)
+            setDetailsTab("resumo")
+            setCredorForm(makeCredorForm(selectedCredor))
+          }
+        }}
+        size="5xl"
+        scrollBehavior="inside"
+        backdrop="opaque"
+        classNames={{
+          wrapper: "z-[120]",
+          backdrop: "bg-black/45",
+          base: "border border-default-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-950 shadow-2xl",
+        }}
+      >
+        <ModalContent className="bg-white dark:bg-zinc-950">
+          <>
+            <ModalHeader className="border-b border-default-200/70 pb-4">
+              <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+                <div className="flex items-start gap-3">
+                  <div className="rounded-full bg-primary/10 p-2.5 text-primary">
+                    <User className="h-6 w-6" />
+                  </div>
+                  <div className="space-y-2">
+                    <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                      {selectedCredor?.credor_nome || "Cliente"}
+                    </h2>
+                    <p className="text-sm text-foreground/70">
+                      {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
+                        ? selectedCredor.credor_cpf_cnpj
+                        : "CPF/CNPJ nao informado"}
+                    </p>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Chip size="sm" variant="flat" color="primary">
+                        {selectedCredor?.total_precatorios || 0} processos
+                      </Chip>
+                      <Chip size="sm" variant="flat" className={`border ${statusClass(selectedCredor?.ultimo_status)}`}>
+                        {formatStatus(selectedCredor?.ultimo_status)}
+                      </Chip>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 self-end lg:self-start">
+                  {!editingCredor ? (
+                    <Button color="primary" variant="flat" startContent={<Edit3 className="h-4 w-4" />} onPress={startCredorEditing}>
+                      Editar dados
+                    </Button>
+                  ) : (
+                    <>
+                      <Button variant="light" color="default" isDisabled={savingCredor} onPress={cancelCredorEditing}>
+                        Cancelar
+                      </Button>
+                      <Button color="primary" isLoading={savingCredor} onPress={handleSaveCredor}>
+                        {savingCredor ? "Salvando..." : "Salvar alteracoes"}
+                      </Button>
+                    </>
+                  )}
+                  <Dropdown placement="bottom-end">
+                    <DropdownTrigger>
+                      <Button isIconOnly variant="light" aria-label="Mais acoes">
+                        <MoreVertical className="h-5 w-5" />
+                      </Button>
+                    </DropdownTrigger>
+                    <DropdownMenu aria-label="Acoes do cliente">
+                      <DropdownItem key="editar" onPress={editingCredor ? cancelCredorEditing : startCredorEditing}>
+                        {editingCredor ? "Cancelar edicao" : "Editar dados"}
+                      </DropdownItem>
+                      <DropdownItem key="fechar" onPress={() => setModalOpen(false)}>
+                        Fechar
+                      </DropdownItem>
+                    </DropdownMenu>
+                  </Dropdown>
+                </div>
+              </div>
+            </ModalHeader>
+
+            <ModalBody className="py-4">
+              <Tabs
+                aria-label="Detalhes do cliente"
+                variant="underlined"
+                selectedKey={detailsTab}
+                onSelectionChange={(key) => setDetailsTab(String(key))}
+                classNames={{ panel: "px-0 pb-0" }}
+              >
+                <Tab key="resumo" title="Resumo">
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                      <Card shadow="none" className="border border-default-200/70">
+                        <CardBody className="space-y-1 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total processos</p>
+                          <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
+                        </CardBody>
+                      </Card>
+                      <Card shadow="none" className="border border-default-200/70">
+                        <CardBody className="space-y-1 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
+                          <p className="text-2xl font-semibold tabular-nums text-success">
+                            {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
+                              ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
+                              : "R$ 0,00"}
+                          </p>
+                        </CardBody>
+                      </Card>
+                      <Card shadow="none" className="border border-default-200/70">
+                        <CardBody className="space-y-1 p-4">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Ultimo status</p>
+                          <Chip size="sm" variant="flat" className={`w-fit border ${statusClass(selectedCredor?.ultimo_status)}`}>
+                            {formatStatus(selectedCredor?.ultimo_status)}
+                          </Chip>
+                          <p className="text-xs text-foreground/60">
+                            {selectedCredor?.ultimo_precatorio_data
+                              ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
+                              : "Sem movimentacao"}
+                          </p>
+                        </CardBody>
+                      </Card>
+                    </div>
+
+                    <Card shadow="none" className="border border-default-200/70">
+                      <CardHeader className="pb-2">
+                        <h3 className="text-base font-semibold tracking-tight">Contato e localizacao</h3>
+                      </CardHeader>
+                      <CardBody className="grid grid-cols-1 gap-3 pt-0 text-sm md:grid-cols-2">
+                        <div>
+                          <p className="text-xs text-foreground/60">Telefone</p>
+                          <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-foreground/60">Email</p>
+                          <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-foreground/60">Cidade</p>
+                          <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs text-foreground/60">UF</p>
+                          <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
+                        </div>
+                      </CardBody>
+                    </Card>
+                  </div>
+                </Tab>
+
+                <Tab key="dados" title="Dados">
+                  <div className="space-y-4">
+                    {editingCredor && (
+                      <Card shadow="none" className="border border-primary/20 bg-primary/5">
+                        <CardBody className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                          <div>
+                            <p className="text-sm font-medium text-foreground">Modo de edicao ativo</p>
+                            <p className="text-xs text-foreground/70">
+                              Altere os campos abaixo ou importe os dados existentes dos precatorios vinculados.
+                            </p>
+                          </div>
+                          <Button
+                            size="sm"
+                            variant="flat"
+                            color="primary"
+                            onPress={() => importCredorDataFromPrecatorios(true)}
+                            isDisabled={loadingDetails || credorPrecatorios.length === 0}
+                          >
+                            Importar do precatorio
+                          </Button>
+                        </CardBody>
+                      </Card>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
+                      <Card shadow="none" className="border border-default-200/70">
+                        <CardHeader className="pb-2">
+                          <h3 className="text-base font-semibold tracking-tight">Dados cadastrais</h3>
+                        </CardHeader>
+                        <CardBody className="space-y-4 pt-0">
+                          {editingCredor ? (
+                            <>
+                              <Input
+                                label="Nome"
+                                labelPlacement="outside"
+                                value={credorForm.credor_nome || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, credor_nome: value })}
+                              />
+                              <Input
+                                label="CPF/CNPJ"
+                                labelPlacement="outside"
+                                value={credorForm.credor_cpf_cnpj || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, credor_cpf_cnpj: value })}
+                              />
+                            </>
+                          ) : (
+                            <div className="space-y-3 text-sm">
+                              <div>
+                                <p className="text-xs text-foreground/60">Nome</p>
+                                <p className="font-medium">{selectedCredor?.credor_nome || "-"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-foreground/60">CPF/CNPJ</p>
+                                <p className="font-medium">
+                                  {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
+                                    ? selectedCredor.credor_cpf_cnpj
+                                    : "Nao informado"}
+                                </p>
+                              </div>
+                            </div>
+                          )}
+                        </CardBody>
+                      </Card>
+
+                      <Card shadow="none" className="border border-default-200/70">
+                        <CardHeader className="pb-2">
+                          <h3 className="text-base font-semibold tracking-tight">Contato e localizacao</h3>
+                        </CardHeader>
+                        <CardBody className="space-y-4 pt-0">
+                          {editingCredor ? (
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                              <Input
+                                label="Telefone"
+                                labelPlacement="outside"
+                                value={credorForm.telefone || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, telefone: value })}
+                              />
+                              <Input
+                                label="Email"
+                                labelPlacement="outside"
+                                value={credorForm.email || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, email: value })}
+                              />
+                              <Input
+                                label="Cidade"
+                                labelPlacement="outside"
+                                value={credorForm.cidade || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, cidade: value })}
+                              />
+                              <Input
+                                label="UF"
+                                labelPlacement="outside"
+                                value={credorForm.uf || ""}
+                                onValueChange={(value) => setCredorForm({ ...credorForm, uf: value })}
+                              />
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
+                              <div>
+                                <p className="text-xs text-foreground/60">Telefone</p>
+                                <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-foreground/60">Email</p>
+                                <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-foreground/60">Cidade</p>
+                                <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
+                              </div>
+                              <div>
+                                <p className="text-xs text-foreground/60">UF</p>
+                                <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
+                              </div>
+                            </div>
+                          )}
+                        </CardBody>
+                      </Card>
+                    </div>
+                  </div>
+                </Tab>
+                <Tab key="processos" title="Processos">
+                  <Card shadow="none" className="border border-default-200/70">
+                    <CardHeader className="pb-2">
+                      <h3 className="text-base font-semibold tracking-tight">Historico de processos vinculados</h3>
+                    </CardHeader>
+                    <CardBody className="pt-0">
+                      <Table
+                        aria-label="Tabela de processos do cliente"
+                        removeWrapper
+                        isHeaderSticky
+                        onRowAction={(key) => {
+                          setModalOpen(false)
+                          router.push(`/precatorios/detalhes?id=${String(key)}`)
+                        }}
+                        classNames={{
+                          table: "min-w-[900px]",
+                          th: "bg-default-100/70 text-xs uppercase tracking-wide text-foreground/70",
+                        }}
+                      >
+                        <TableHeader>
+                          <TableColumn>Processo</TableColumn>
+                          <TableColumn>Precatório</TableColumn>
+                          <TableColumn>Status</TableColumn>
+                          <TableColumn>Valor</TableColumn>
+                          <TableColumn className="text-right">Criado em</TableColumn>
+                        </TableHeader>
+                        <TableBody
+                          isLoading={loadingDetails}
+                          loadingContent={<Spinner color="primary" label="Carregando processos..." />}
+                          emptyContent="Nenhum processo encontrado para este cliente."
+                        >
+                          {credorPrecatorios.map((precatorio) => (
+                            <TableRow key={precatorio.id} className="cursor-pointer">
+                              <TableCell>
+                                <div className="max-w-[280px] truncate font-mono text-sm">{precatorio.numero_processo || "N/A"}</div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="max-w-[260px] truncate text-sm">{precatorio.numero_precatorio || "N/A"}</div>
+                              </TableCell>
+                              <TableCell>
+                                <Chip size="sm" variant="flat" className={`border ${statusClass(precatorio.status || null)}`}>
+                                  {(precatorio.status || "N/I").replaceAll("_", " ")}
+                                </Chip>
+                              </TableCell>
+                              <TableCell>
+                                <span className="font-semibold tabular-nums text-success">
+                                  {precatorio.valor_atualizado || precatorio.valor_principal
+                                    ? `R$ ${formatCurrency(precatorio.valor_atualizado || precatorio.valor_principal)}`
+                                    : "R$ 0,00"}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right text-xs text-foreground/70">
+                                {new Date(precatorio.created_at).toLocaleDateString("pt-BR")}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardBody>
+                  </Card>
+                </Tab>
+
+                <Tab key="historico" title="Historico">
+                  <Card shadow="none" className="border border-default-200/70">
+                    <CardHeader className="pb-2">
+                      <h3 className="text-base font-semibold tracking-tight">Linha do tempo de atualizacoes</h3>
+                    </CardHeader>
+                    <CardBody className="space-y-3 pt-0">
+                      {loadingDetails ? (
+                        <div className="space-y-2">
+                          <Skeleton className="h-14 w-full rounded-lg" />
+                          <Skeleton className="h-14 w-full rounded-lg" />
+                          <Skeleton className="h-14 w-full rounded-lg" />
+                        </div>
+                      ) : credorPrecatorios.length === 0 ? (
+                        <p className="text-sm text-foreground/70">Sem movimentacoes registradas para este cliente.</p>
+                      ) : (
+                        credorPrecatorios.slice(0, 8).map((precatorio) => (
+                          <div
+                            key={`timeline-${precatorio.id}`}
+                            className="rounded-lg border border-default-200/70 bg-content2/50 px-4 py-3"
+                          >
+                            <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
+                              <p className="font-mono text-xs text-foreground/80">{precatorio.numero_processo || "Processo N/A"}</p>
+                              <p className="text-xs text-foreground/60">
+                                Atualizado em{" "}
+                                {precatorio.updated_at
+                                  ? new Date(precatorio.updated_at).toLocaleDateString("pt-BR")
+                                  : new Date(precatorio.created_at).toLocaleDateString("pt-BR")}
+                              </p>
+                            </div>
+                            <p className="mt-1 text-sm text-foreground/75">
+                              Status: {(precatorio.status || "N/I").replaceAll("_", " ")}
+                            </p>
+                          </div>
+                        ))
+                      )}
+                    </CardBody>
+                  </Card>
+                </Tab>
+              </Tabs>
+            </ModalBody>
+
+            <ModalFooter className="border-t border-default-200/70">
+              <Button
+                variant="light"
+                color="default"
+                onPress={() => {
+                  setModalOpen(false)
+                  setEditingCredor(false)
+                  setDetailsTab("resumo")
+                }}
+              >
+                Fechar
+              </Button>
+              {editingCredor && (
+                <>
+                  <Button variant="light" color="default" isDisabled={savingCredor} onPress={cancelCredorEditing}>
+                    Cancelar
+                  </Button>
+                  <Button color="primary" isLoading={savingCredor} onPress={handleSaveCredor}>
+                    {savingCredor ? "Salvando..." : "Salvar alteracoes"}
+                  </Button>
+                </>
+              )}
+            </ModalFooter>
+          </>
+        </ModalContent>
+      </Modal>
     </div>
   )
 }
