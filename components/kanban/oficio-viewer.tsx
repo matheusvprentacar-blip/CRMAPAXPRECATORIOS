@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -72,6 +72,8 @@ export function OficioViewer({
   const [loadingDocs, setLoadingDocs] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [refreshKey, setRefreshKey] = useState(0)
+  const replaceInputRef = useRef<HTMLInputElement | null>(null)
+  const attachInputRef = useRef<HTMLInputElement | null>(null)
   const { openPDF } = usePDFViewer()
   const { profile } = useAuth()
   const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
@@ -255,11 +257,22 @@ export function OficioViewer({
     window.open(doc.viewUrl, "_blank", "noopener,noreferrer")
   }
 
+  const openReplacePicker = () => {
+    if (uploading) return
+    replaceInputRef.current?.click()
+  }
+
+  const openAttachPicker = () => {
+    if (uploading) return
+    attachInputRef.current?.click()
+  }
+
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
 
-    if (file.type !== "application/pdf") {
+    const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf")
+    if (!isPdf) {
       toast.error("Por favor, envie apenas arquivos PDF.")
       return
     }
@@ -465,17 +478,18 @@ export function OficioViewer({
                   </Button>
                   {!readonly && (
                     <>
-                      <div className="relative">
+                      <div>
                         <input
+                          ref={replaceInputRef}
                           type="file"
-                          accept=".pdf"
-                          className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                          accept=".pdf,application/pdf"
+                          className="hidden"
                           onChange={handleFileUpload}
                           disabled={uploading}
                         />
-                        <Button variant="secondary" size="sm" disabled={uploading}>
+                        <Button variant="secondary" size="sm" disabled={uploading} onClick={openReplacePicker}>
                           <Upload className="h-4 w-4 mr-2" />
-                          Substituir
+                          {uploading ? "Enviando..." : "Anexar/Substituir Ofício"}
                         </Button>
                       </div>
                       <Button
@@ -493,21 +507,27 @@ export function OficioViewer({
               ) : (
                 <div className="mt-3">
                   {!readonly ? (
-                    <div className="relative inline-flex">
+                    <div className="inline-flex">
                       <input
+                        ref={attachInputRef}
                         type="file"
-                        accept=".pdf"
-                        className="absolute inset-0 h-full w-full cursor-pointer opacity-0"
+                        accept=".pdf,application/pdf"
+                        className="hidden"
                         onChange={handleFileUpload}
                         disabled={uploading}
                       />
-                      <Button size="sm" disabled={uploading} className="bg-cyan-600 hover:bg-cyan-700">
-                        {uploading ? "Enviando..." : "Selecionar PDF do ofício"}
+                      <Button
+                        size="sm"
+                        disabled={uploading}
+                        className="bg-cyan-600 hover:bg-cyan-700"
+                        onClick={openAttachPicker}
+                      >
+                        {uploading ? "Enviando..." : "Anexar Ofício Requisitório (PDF)"}
                       </Button>
                     </div>
                   ) : (
                     <div className="text-xs text-muted-foreground bg-muted/40 px-3 py-2 rounded-lg border border-border/60">
-                      Aguardando inclusão pelo responsável.
+                      Sem permissão para anexar Ofício neste precatório.
                     </div>
                   )}
                 </div>

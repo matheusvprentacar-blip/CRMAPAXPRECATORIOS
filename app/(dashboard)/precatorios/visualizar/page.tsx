@@ -51,6 +51,46 @@ import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-
 import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
 
+function normalizeRoles(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean)
+        }
+      } catch {
+        // fallback below
+      }
+    }
+
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/^"+|"+$/g, "").trim())
+        .filter(Boolean)
+    }
+
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    return [trimmed]
+  }
+
+  return []
+}
 
 function PrecatorioDetailContent() {
   const searchParams = useSearchParams()
@@ -65,20 +105,19 @@ function PrecatorioDetailContent() {
   const [saving, setSaving] = useState<boolean>(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<any>({})
-  const [userRole, setUserRole] = useState<string[] | null>(null)
+  const [userRole, setUserRole] = useState<string[]>([])
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
-  const canManageOficio =
-    userRole?.some((role) =>
-      [
-        "admin",
-        "operador_comercial",
-        "operador_calculo",
-        "operador",
-        "gestor",
-        "gestor_oficio",
-        "gestor_certidoes",
-      ].includes(role),
-    ) ?? false
+  const canManageOficio = userRole.some((role) =>
+    [
+      "admin",
+      "operador_comercial",
+      "operador_calculo",
+      "operador",
+      "gestor",
+      "gestor_oficio",
+      "gestor_certidoes",
+    ].includes(role),
+  )
 
   async function loadPrecatorio() {
     if (!id) return
@@ -90,14 +129,17 @@ function PrecatorioDetailContent() {
       const { data: { user } } = await supabase.auth.getUser()
       if (user) {
         setCurrentUserId(user.id)
+        const metadataRoles = normalizeRoles(user.app_metadata?.role)
         const { data: userData } = await supabase
           .from("usuarios")
           .select("role")
           .eq("id", user.id)
           .single()
-        setUserRole(userData?.role || null)
+        const dbRoles = normalizeRoles(userData?.role)
+        setUserRole(dbRoles.length ? dbRoles : metadataRoles)
       } else {
         setCurrentUserId(null)
+        setUserRole([])
       }
 
       const { data, error } = await supabase

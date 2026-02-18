@@ -73,6 +73,47 @@ import { DetailSection } from "@/components/motion/DetailSection"
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const hasValue = (v: any): boolean => v !== null && v !== undefined
 
+function normalizeRoles(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value.map((item) => String(item).trim()).filter(Boolean)
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed.map((item) => String(item).trim()).filter(Boolean)
+        }
+      } catch {
+        // fallback below
+      }
+    }
+
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/^"+|"+$/g, "").trim())
+        .filter(Boolean)
+    }
+
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    return [trimmed]
+  }
+
+  return []
+}
+
 const SectionTitle = ({ icon: Icon, title }: { icon?: LucideIcon; title: string }) => (
   <div className="flex items-center gap-2.5">
     {Icon ? (
@@ -142,7 +183,7 @@ function requireSupabase(): SupabaseClientType {
 export default function PrecatorioDetailPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
-  const { profile } = useAuth()
+  const { profile, user } = useAuth()
 
   const id = searchParams.get("id") || ""
   const tabParam = searchParams.get("tab")
@@ -195,7 +236,7 @@ export default function PrecatorioDetailPage() {
   const [saving, setSaving] = useState(false)
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const [editData, setEditData] = useState<any>({})
-  const [userRole, setUserRole] = useState<string[] | null>(null)
+  const [userRole, setUserRole] = useState<string[]>([])
   const [showPdfModal, setShowPdfModal] = useState(false)
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState("detalhes")
@@ -221,7 +262,7 @@ export default function PrecatorioDetailPage() {
 
  
 
-  const roles = Array.isArray(userRole) ? userRole : userRole ? [userRole] : []
+  const roles = userRole
   const isAdmin = roles.includes("admin")
   const isOperadorCalculo = roles.includes("operador_calculo")
   const canEdit = roles.some((role) =>
@@ -562,7 +603,9 @@ export default function PrecatorioDetailPage() {
       }
       setHerdeirosLoading(false)
       // define userRole a partir do profile (evita ficar null)
-      setUserRole(profile?.role ?? null)
+      const profileRoles = normalizeRoles(profile?.role)
+      const metadataRoles = normalizeRoles(user?.app_metadata?.role)
+      setUserRole(profileRoles.length ? profileRoles : metadataRoles)
 
       setNotFound(false)
       setError(null)
@@ -626,8 +669,10 @@ export default function PrecatorioDetailPage() {
 
   useEffect(() => {
     // mantém userRole sincronizado com profile (caso o profile carregue depois)
-    setUserRole(profile?.role ?? null)
-  }, [profile])
+    const profileRoles = normalizeRoles(profile?.role)
+    const metadataRoles = normalizeRoles(user?.app_metadata?.role)
+    setUserRole(profileRoles.length ? profileRoles : metadataRoles)
+  }, [profile, user])
 
   useEffect(() => {
     if (!precatorio) return
