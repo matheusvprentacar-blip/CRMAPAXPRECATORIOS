@@ -61,12 +61,12 @@ export default function GestaoOficiosPage() {
                 } = await supabase.auth.getUser()
 
                 if (!currentUser) {
-                    setError("UsuÃ¡rio nÃ£o autenticado.")
+                    setError("Usu\u00e1rio n\u00e3o autenticado.")
                     setLoading(false)
                     return
                 }
 
-                // Busca precatÃ³rios aguardando ofÃ­cio (sem file_url) ou atribuÃ­dos ao gestor de ofÃ­cios
+                // Busca precatórios aguardando ofício (sem file_url) ou atribuídos ao gestor de ofícios
                 const { data, error: fetchError } = await supabase
                     .from("precatorios")
                     .select(
@@ -85,28 +85,28 @@ export default function GestaoOficiosPage() {
             usuarios!responsavel(nome)
           `
                     )
-                    // Filtro: aguardando ofÃ­cio e ainda sem arquivo anexado
+                    // Filtro: aguardando ofício e ainda sem arquivo anexado
                     .or(`status_kanban.eq.aguardando_oficio,responsavel_oficio_id.eq.${currentUser.id}`)
                     .is("file_url", null)
                     .order("created_at", { ascending: true }) // FIFO: Mais antigos primeiro
 
                 if (fetchError) {
-                    console.error("[OfÃ­cios] Erro ao carregar fila:", fetchError)
-                    setError("Erro ao carregar fila de ofÃ­cios.")
+                    console.error("[Ofícios] Erro ao carregar fila:", fetchError)
+                    setError("Erro ao carregar fila de ofícios.")
                     setLoading(false)
                     return
                 }
 
-                // Mapear para structure plana se necessÃ¡rio
+                // Mapear para estrutura plana, se necessário
                 const formatted = (data || []).map((p: any) => ({
                     ...p,
-                    responsavel_nome: p.usuarios?.nome || "Sem responsÃ¡vel"
+                    responsavel_nome: p.usuarios?.nome || "Sem responsável"
                 }))
 
                 setPrecatorios(formatted)
                 setLoading(false)
             } catch (err) {
-                console.error("[OfÃ­cios] Erro inesperado:", err)
+                console.error("[Ofícios] Erro inesperado:", err)
                 setError("Ocorreu um erro inesperado.")
                 setLoading(false)
             }
@@ -134,7 +134,7 @@ export default function GestaoOficiosPage() {
                     <h1 className="text-3xl font-bold tracking-tight">
                         <ShinyText text={"Gest\u00e3o de Of\u00edcios"} className="align-middle" {...shinyProps} />
                     </h1>
-                    <p className="text-muted-foreground">Fila de processos aguardando inclusÃ£o de OfÃ­cio RequisitÃ³rio</p>
+                    <p className="text-muted-foreground">Fila de processos aguardando inclusão de Ofício Requisitório</p>
                 </div>
                 <div className="flex items-center gap-2">
                     <Badge variant="secondary" className="text-lg px-4 py-1">
@@ -153,8 +153,8 @@ export default function GestaoOficiosPage() {
             {!loading && precatorios.length === 0 && (
                 <Card className="p-8 text-center text-muted-foreground bg-muted/50 border-dashed">
                     <FileCheck className="mx-auto h-12 w-12 opacity-50 mb-4" />
-                    <p className="text-lg font-medium">Nenhum precatÃ³rio nesta fila</p>
-                    <p className="text-sm">Processos aguardando ofÃ­cio aparecerÃ£o aqui.</p>
+                    <p className="text-lg font-medium">Nenhum precatório nesta fila</p>
+                    <p className="text-sm">Processos aguardando ofício aparecerão aqui.</p>
                 </Card>
             )}
 
@@ -162,9 +162,9 @@ export default function GestaoOficiosPage() {
                 <div className="hidden md:grid md:grid-cols-[64px_minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.15fr)_auto] items-center gap-6 px-6 text-[11px] font-semibold uppercase tracking-wide text-muted-foreground/80">
                     <span>#</span>
                     <span>Credor</span>
-                    <span>ResidÃªncia</span>
+                    <span>Residência</span>
                     <span>Processo</span>
-                    <span>ResponsÃ¡vel</span>
+                    <span>Responsável</span>
                     <span>Status</span>
                 </div>
             )}
@@ -181,14 +181,14 @@ export default function GestaoOficiosPage() {
 
                         <CardContent className="relative z-10 flex items-start justify-between gap-6 p-5 md:p-6">
                             <div className="flex min-w-0 flex-1 items-start gap-6">
-                                {/* Ãndice da Fila */}
+                                {/* Índice da Fila */}
                                 <div className="flex flex-col items-center justify-center min-w-[3rem]">
                                     <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary/40 transition-colors">
                                         {String(index + 1).padStart(2, '0')}
                                     </span>
                                 </div>
 
-                                {/* InformaÃ§Ãµes Principais */}
+                                {/* Informações Principais */}
                                 <div className="grid w-full grid-cols-1 gap-5 md:grid-cols-[minmax(0,1.35fr)_minmax(0,1fr)_minmax(0,1.3fr)_minmax(0,1.15fr)] md:gap-6">
 
                                     {/* Coluna 1: Credor */}
@@ -196,16 +196,16 @@ export default function GestaoOficiosPage() {
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                                             <User className="w-3 h-3" /> Credor
                                         </label>
-                                        <p className="font-medium truncate" title={p.credor_nome || undefined}>{p.credor_nome || "NÃ£o informado"}</p>
+                                        <p className="font-medium truncate" title={p.credor_nome || undefined}>{p.credor_nome || "Não informado"}</p>
                                         <p className="text-sm text-muted-foreground font-mono truncate" title={p.credor_cpf_cnpj || undefined}>
-                                            {p.credor_cpf_cnpj || "CPF nÃ£o inf."}
+                                            {p.credor_cpf_cnpj || "CPF não inf."}
                                         </p>
                                     </div>
 
-                                    {/* Coluna 2: LocalizaÃ§Ã£o */}
+                                    {/* Coluna 2: Localização */}
                                     <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                            <MapPin className="w-3 h-3" /> ResidÃªncia
+                                            <MapPin className="w-3 h-3" /> Residência
                                         </label>
                                         <div className="flex items-center gap-2">
                                             <span className="font-medium truncate" title={p.credor_cidade || undefined}>
@@ -228,10 +228,10 @@ export default function GestaoOficiosPage() {
                                         </p>
                                     </div>
 
-                                    {/* Coluna 4: ResponsÃ¡vel e Data */}
+                                    {/* Coluna 4: Responsável e Data */}
                                     <div className="min-w-0 space-y-1">
                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                            <CalendarClock className="w-3 h-3" /> ResponsÃ¡vel
+                                            <CalendarClock className="w-3 h-3" /> Responsável
                                         </label>
                                         <div className="flex flex-col">
                                             <span className="text-sm font-medium text-primary truncate" title={p.responsavel_nome || undefined}>
@@ -248,7 +248,7 @@ export default function GestaoOficiosPage() {
                             <div className="shrink-0 md:pt-1">
                                 {p.file_url ? (
                                     <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
-                                        <FileCheck className="w-3 h-3 mr-1" /> OfÃ­cio Anexado
+                                        <FileCheck className="w-3 h-3 mr-1" /> Ofício Anexado
                                     </Badge>
                                 ) : (
                                     <Badge variant={"outline"} className="text-orange-700 bg-orange-50 border-orange-200">

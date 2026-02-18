@@ -14,7 +14,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea"
 import { FileSearch, Search, User, FileText, CalendarClock } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
-import ShinyText from "@/components/ui/shiny-text"
 
 interface PrecatorioAnalise {
   id: string
@@ -196,18 +195,6 @@ export default function AnaliseProcessualPage() {
     }).length
   }, [filteredPrecatorios])
 
-  const shinyProps = {
-    speed: 2,
-    delay: 0,
-    color: "var(--route-shiny-base, #b5b5b5)",
-    shineColor: "var(--route-shiny-shine, #ffffff)",
-    spread: 120,
-    direction: "left" as const,
-    yoyo: false,
-    pauseOnHover: false,
-    disabled: false,
-  }
-
   const booleanSelectValue = (value: boolean | null | undefined) => {
     if (value === true) return "true"
     if (value === false) return "false"
@@ -314,46 +301,39 @@ export default function AnaliseProcessualPage() {
 
   return (
     <div className="space-y-6 container mx-auto p-6 max-w-7xl">
-      <Card className="overflow-hidden border border-amber-500/20 bg-gradient-to-br from-card via-card to-amber-500/[0.06] shadow-sm">
+      <Card className="overflow-hidden border border-border/80 bg-card shadow-sm">
         <CardContent className="space-y-6 p-6 md:p-7">
           <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="space-y-1">
-              <h1 className="text-3xl font-bold tracking-tight">
-                <ShinyText text={"An\u00e1lise Processual"} className="align-middle" {...shinyProps} />
-              </h1>
+              <h1 className="text-3xl font-bold tracking-tight text-foreground">Análise Processual</h1>
               <p className="text-muted-foreground">
                 Triagem jurídica antes do cálculo com foco em pendências e viabilidade.
               </p>
             </div>
-            <Badge variant="outline" className="w-fit rounded-full border-amber-500/40 px-3 py-1 text-sm text-amber-300">
-              <ShinyText text={`${filteredPrecatorios.length} na fila ativa`} {...shinyProps} />
+            <Badge
+              variant="outline"
+              className="w-fit rounded-full border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-200"
+            >
+              {filteredPrecatorios.length} na fila ativa
             </Badge>
           </div>
 
           <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <div className="rounded-xl border border-border/70 bg-background/70 p-4">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total em análise</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                <ShinyText text={`${filteredPrecatorios.length}`} {...shinyProps} />
-              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{filteredPrecatorios.length}</p>
             </div>
-            <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/[0.08] p-4">
-              <p className="text-[11px] uppercase tracking-wide text-emerald-300/80">Análises registradas</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-300">
-                <ShinyText text={`${analisesRegistradas}`} {...shinyProps} />
-              </p>
+            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/[0.08]">
+              <p className="text-[11px] uppercase tracking-wide text-emerald-700/90 dark:text-emerald-300/90">Análises registradas</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{analisesRegistradas}</p>
             </div>
-            <div className="rounded-xl border border-amber-500/25 bg-amber-500/[0.08] p-4">
-              <p className="text-[11px] uppercase tracking-wide text-amber-300/80">Pendentes de preenchimento</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-300">
-                <ShinyText text={`${pendentesAnalise}`} {...shinyProps} />
-              </p>
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/25 dark:bg-amber-500/[0.08]">
+              <p className="text-[11px] uppercase tracking-wide text-amber-700/90 dark:text-amber-300/90">Pendentes de preenchimento</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">{pendentesAnalise}</p>
             </div>
             <div className="rounded-xl border border-border/70 bg-background/70 p-4">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Dados incompletos</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums">
-                <ShinyText text={`${comDadosIncompletos}`} {...shinyProps} />
-              </p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{comDadosIncompletos}</p>
             </div>
           </div>
         </CardContent>
@@ -374,7 +354,7 @@ export default function AnaliseProcessualPage() {
 
             <div className="flex items-center gap-2">
               <Badge variant="secondary" className="rounded-full px-3 py-1 text-xs">
-                <ShinyText text={`${filteredPrecatorios.length} resultados`} {...shinyProps} />
+                {filteredPrecatorios.length} resultados
               </Badge>
               {searchTerm.trim() && (
                 <Button
@@ -435,14 +415,13 @@ export default function AnaliseProcessualPage() {
         {filteredPrecatorios.map((p, index) => (
           <Card
             key={p.id}
-            className="group relative overflow-hidden rounded-2xl border border-border/70 bg-gradient-to-r from-background to-amber-500/[0.04] shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg cursor-pointer"
+            className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg hover:border-amber-300/40 dark:hover:border-amber-500/30 hover:bg-amber-50/30 dark:hover:bg-amber-950/[0.12] cursor-pointer"
             onClick={() => handleAbrir(p.id)}
           >
-            <div className="absolute inset-0 bg-amber-500/[0.01] group-hover:bg-amber-500/[0.05] transition-colors" />
             <CardContent className="relative z-10 p-5 md:p-6">
               <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[64px_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,1fr)_minmax(240px,1fr)] md:gap-6">
                 <div className="flex items-start md:justify-center">
-                  <span className="text-4xl font-black leading-none text-muted-foreground/20 group-hover:text-amber-500/40 transition-colors">
+                  <span className="text-4xl font-black leading-none text-foreground/15 group-hover:text-amber-500/50 transition-colors">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -485,7 +464,10 @@ export default function AnaliseProcessualPage() {
 
                   <div className="min-w-0 space-y-1">
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Status</label>
-                    <Badge variant="outline" className="w-fit border-amber-500/30 text-amber-300">
+                    <Badge
+                      variant="outline"
+                      className="w-fit border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/35 dark:bg-amber-950/30 dark:text-amber-200"
+                    >
                       Análise processual
                     </Badge>
                     <p className="text-xs text-muted-foreground truncate" title={p.titulo || undefined}>
@@ -496,7 +478,7 @@ export default function AnaliseProcessualPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="mt-2 h-8 rounded-full border-amber-500/40 px-4 text-amber-300 hover:bg-amber-500/10 font-medium"
+                        className="mt-2 h-8 rounded-full border-amber-300 px-4 text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-950/30 font-medium"
                         onClick={(e) => {
                           e.stopPropagation()
                           openAnaliseModal(p)

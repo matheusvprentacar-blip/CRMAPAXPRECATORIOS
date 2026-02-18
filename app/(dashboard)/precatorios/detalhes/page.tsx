@@ -6,6 +6,7 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { Chip, ScrollShadow } from "@heroui/react"
 import { Button } from "@/components/ui/button"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -72,9 +73,13 @@ import { DetailSection } from "@/components/motion/DetailSection"
 const hasValue = (v: any): boolean => v !== null && v !== undefined
 
 const SectionTitle = ({ icon: Icon, title }: { icon?: LucideIcon; title: string }) => (
-  <div className="flex items-center gap-2">
-    {Icon ? <Icon className="h-5 w-5 text-muted-foreground" /> : null}
-    <span>{title}</span>
+  <div className="flex items-center gap-2.5">
+    {Icon ? (
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-inner dark:border-primary/30 dark:from-primary/30 dark:to-primary/10">
+        <Icon className="h-4.5 w-4.5" />
+      </span>
+    ) : null}
+    <span className="text-[1.65rem] font-semibold tracking-tight">{title}</span>
   </div>
 )
 
@@ -88,7 +93,7 @@ const InfoRow = ({
   valueClassName?: string
 }) => (
   <div className="space-y-1">
-    <p className="text-sm font-medium text-muted-foreground">{label}</p>
+    <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
     <p className={valueClassName}>{value}</p>
   </div>
 )
@@ -211,6 +216,7 @@ export default function PrecatorioDetailPage() {
   const [adminInterestMessage, setAdminInterestMessage] = useState("")
   const [adminInterestSending, setAdminInterestSending] = useState(false)
   const [adminInterestModalOpen, setAdminInterestModalOpen] = useState(false)
+  const [advancingStage, setAdvancingStage] = useState(false)
 
  
 
@@ -220,8 +226,11 @@ export default function PrecatorioDetailPage() {
   const canEdit = roles.some((role) =>
     ["admin", "operador_comercial", "operador_calculo", "gestor", "gestor_oficio", "gestor_certidoes"].includes(role)
   )
-  const canEditValoresPrincipais = roles.some((role) =>
-    ["admin", "operador_comercial", "gestor"].includes(role)
+  const canEditValorPrincipal = roles.some((role) =>
+    ["admin", "operador_comercial", "operador", "gestor"].includes(role)
+  )
+  const canEditValorAtualizado = roles.some((role) =>
+    ["admin", "gestor"].includes(role)
   )
   const canManageOficio = roles.some((role) =>
     [
@@ -369,6 +378,13 @@ export default function PrecatorioDetailPage() {
     params.set("id", id)
     params.set("tab", tab)
     router.replace(`/precatorios/detalhes?${params.toString()}`)
+  }
+  const openAgendaForPrecatorio = () => {
+    if (!id) return
+    const agendaParams = new URLSearchParams()
+    agendaParams.set("novo", "1")
+    agendaParams.set("precatorioId", id)
+    router.push(`/agenda?${agendaParams.toString()}`)
   }
   useEffect(() => {
     if (!id) return
@@ -987,8 +1003,10 @@ export default function PrecatorioDetailPage() {
         updated_at: new Date().toISOString(),
       }
 
-      if (canEditValoresPrincipais) {
+      if (canEditValorPrincipal) {
         updateData.valor_principal = toNumberOrNull(editData.valor_principal)
+      }
+      if (canEditValorAtualizado) {
         updateData.valor_atualizado = toNumberOrNull(editData.valor_atualizado)
       }
 
@@ -1115,9 +1133,75 @@ export default function PrecatorioDetailPage() {
     col.id === precatorio?.status_kanban || col.statusIds?.includes(precatorio?.status_kanban)
   )
 
+  const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex]?.id ?? null : null
   const nextColumn = currentColumnIndex >= 0 && currentColumnIndex < KANBAN_COLUMNS.length - 1
     ? KANBAN_COLUMNS[currentColumnIndex + 1]
     : null
+
+  const canAdvanceToNextColumn =
+    canEdit &&
+    !isEditing &&
+    Boolean(nextColumn) &&
+    currentColumnId !== "juridico" &&
+    currentColumnId !== "proposta_aceita" &&
+    nextColumn?.id !== "reprovado"
+
+  async function handleAdvanceToNextStage() {
+    if (!id || !nextColumn || !canEdit) return
+    if (currentColumnId === "juridico" || currentColumnId === "proposta_aceita") {
+      toast({
+        title: "Etapa bloqueada",
+        description: "Finalize o parecer jurídico antes de avançar para a próxima fase.",
+        variant: "destructive",
+      })
+      return
+    }
+    if (nextColumn.id === "reprovado") {
+      toast({
+        title: "Fluxo inválido",
+        description: "Use a ação de reprovação para enviar o crédito para não elegível.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setAdvancingStage(true)
+    try {
+      const supabase = requireSupabase()
+      const nextColumnId = nextColumn.id
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const updatePayload: any = {
+        status_kanban: nextColumnId,
+        localizacao_kanban: nextColumnId,
+        updated_at: new Date().toISOString(),
+      }
+
+      if (nextColumnId === "certidoes" && !precatorio?.status_certidoes) {
+        updatePayload.status_certidoes = "nao_iniciado"
+      }
+
+      const { error } = await supabase
+        .from("precatorios")
+        .update(updatePayload)
+        .eq("id", id)
+
+      if (error) throw error
+
+      toast({
+        title: "Etapa atualizada",
+        description: `Crédito enviado para ${nextColumn.titulo}.`,
+      })
+      await loadPrecatorio()
+    } catch (err: any) {
+      toast({
+        title: "Erro ao avançar etapa",
+        description: err?.message || "Não foi possível enviar para a próxima fase.",
+        variant: "destructive",
+      })
+    } finally {
+      setAdvancingStage(false)
+    }
+  }
 
   // Prevent auto-advancing to "Reprovado" or "Encerrados" unless explicit? 
   // User said "sempre que a etapa for concluida". 
@@ -1312,45 +1396,45 @@ export default function PrecatorioDetailPage() {
   const getStatusIcon = (status: string | undefined) => {
     switch (status) {
       case "novo":
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-3.5 w-3.5 shrink-0" />
       case "em_andamento":
-        return <AlertCircle className="h-4 w-4" />
+        return <AlertCircle className="h-3.5 w-3.5 shrink-0" />
       case "concluido":
-        return <CheckCircle2 className="h-4 w-4" />
+        return <CheckCircle2 className="h-3.5 w-3.5 shrink-0" />
       case "cancelado":
-        return <XCircle className="h-4 w-4" />
+        return <XCircle className="h-3.5 w-3.5 shrink-0" />
       default:
-        return <Clock className="h-4 w-4" />
+        return <Clock className="h-3.5 w-3.5 shrink-0" />
     }
   }
 
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case "novo":
-        return "bg-blue-100 text-blue-800"
+        return "border border-blue-300/70 bg-blue-100/90 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/20 dark:text-blue-100"
       case "em_andamento":
-        return "bg-yellow-100 text-yellow-800"
+        return "border border-amber-300/70 bg-amber-100/90 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100"
       case "concluido":
-        return "bg-green-100 text-green-800"
+        return "border border-emerald-300/70 bg-emerald-100/90 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
       case "cancelado":
-        return "bg-red-100 text-red-800"
+        return "border border-red-300/70 bg-red-100/90 text-red-900 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-100"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "border border-zinc-300/70 bg-zinc-100/90 text-zinc-900 dark:border-zinc-600/50 dark:bg-zinc-800/70 dark:text-zinc-100"
     }
   }
 
   const getPrioridadeColor = (prioridade: string | undefined) => {
     switch (prioridade) {
       case "urgente":
-        return "bg-red-100 text-red-800"
+        return "border border-red-300/70 bg-red-100/85 text-red-900 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-100"
       case "alta":
-        return "bg-orange-100 text-orange-800"
+        return "border border-orange-300/70 bg-orange-100/85 text-orange-900 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-100"
       case "media":
-        return "bg-yellow-100 text-yellow-800"
+        return "border border-amber-300/70 bg-amber-100/85 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100"
       case "baixa":
-        return "bg-green-100 text-green-800"
+        return "border border-emerald-300/70 bg-emerald-100/85 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
       default:
-        return "bg-gray-100 text-gray-800"
+        return "border border-zinc-300/70 bg-zinc-100/85 text-zinc-900 dark:border-zinc-600/50 dark:bg-zinc-800/70 dark:text-zinc-100"
     }
   }
 
@@ -1391,11 +1475,11 @@ export default function PrecatorioDetailPage() {
   }
 
   const dashboardCardClass =
-    "rounded-2xl border border-zinc-200/70 bg-white/70 backdrop-blur-xl shadow-sm dark:border-zinc-800/70 dark:bg-zinc-950/40"
+    "group relative overflow-hidden rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
   const dashboardTabsListClass =
-    "h-auto w-full gap-1 rounded-2xl border border-zinc-200/70 bg-white/70 p-1 backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-800/70 dark:bg-zinc-950/40"
+    "h-auto w-full gap-1.5 rounded-2xl border border-zinc-200/70 bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-800/70 dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
   const dashboardTabsTriggerClass =
-    "rounded-xl px-3 py-2 text-sm font-medium text-zinc-600 transition-all hover:text-zinc-900 data-[state=active]:bg-zinc-100/80 data-[state=active]:text-zinc-900 dark:text-zinc-300 dark:hover:text-white dark:data-[state=active]:bg-zinc-900/70 dark:data-[state=active]:text-white"
+    "rounded-xl px-3.5 py-2 text-sm font-medium text-zinc-600 transition-all duration-300 hover:bg-zinc-100/80 hover:text-zinc-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900/60 dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
 
   if (!id) {
     return (
@@ -1438,7 +1522,9 @@ export default function PrecatorioDetailPage() {
   return (
     <div className="relative min-h-[calc(100vh-4rem)]">
       <div className="absolute inset-0 -z-10 bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-black" />
-      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/20 via-sky-200/10 to-emerald-200/10 blur-3xl dark:from-primary/15 dark:via-sky-400/5 dark:to-emerald-400/5" />
+      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/20 via-sky-200/10 to-emerald-200/10 blur-3xl dark:from-primary/20 dark:via-orange-400/10 dark:to-sky-400/10" />
+      <div className="pointer-events-none absolute top-28 right-[-9rem] -z-10 h-72 w-72 rounded-full bg-gradient-to-br from-amber-300/15 via-orange-300/10 to-cyan-300/10 blur-3xl dark:from-amber-500/18 dark:via-primary/14 dark:to-cyan-500/12" />
+      <div className="pointer-events-none absolute bottom-10 left-[-8rem] -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-primary/10 via-rose-200/10 to-amber-200/10 blur-3xl dark:from-primary/12 dark:via-rose-400/8 dark:to-amber-400/10" />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
       {/* Header */}
@@ -1446,29 +1532,42 @@ export default function PrecatorioDetailPage() {
         initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
         animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-        className="rounded-2xl border border-zinc-200/70 bg-white/70 px-4 py-4 shadow-sm backdrop-blur-xl lg:sticky lg:top-4 z-20 dark:border-zinc-800/70 dark:bg-zinc-950/40"
+        className="relative z-20 overflow-hidden rounded-3xl border border-zinc-200/75 bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
       >
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.16),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.2),transparent_48%)]" />
+        <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
         <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
           <div className="flex items-start gap-4">
-            <Button variant="ghost" size="icon" onClick={() => router.back()} className="mt-1 -ml-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => router.back()}
+              className="mt-1 -ml-2 rounded-xl border border-zinc-200/70 bg-white/75 hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
+            >
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 className="text-3xl font-semibold tracking-tight text-foreground">
+                <h1 data-shiny="title" className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                   {precatorio.titulo}
                 </h1>
-                <Badge variant="outline">
+                <span
+                  className={`${getPrioridadeColor(precatorio.prioridade)} inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
+                >
                   {precatorio.prioridade?.toUpperCase() || "MÉDIA"}
-                </Badge>
-                <Badge className={getStatusColor(precatorio.status)}>
-                  {getStatusIcon(precatorio.status)}
-                  <span className="ml-1 font-semibold">
+                </span>
+                <span
+                  className={`${getStatusColor(precatorio.status)} inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
+                >
+                  <span className="inline-flex items-center justify-center">
+                    {getStatusIcon(precatorio.status)}
+                  </span>
+                  <span className="inline-flex items-center font-semibold leading-none">
                     {precatorio.status?.replace("_", " ").toUpperCase() || "NOVO"}
                   </span>
-                </Badge>
+                </span>
               </div>
-              <p className="mt-1 text-sm text-muted-foreground">Dados essenciais do precatório</p>
+              <p className="mt-1 text-sm text-muted-foreground">Dados essenciais do precatório com visão completa do fluxo.</p>
             </div>
           </div>
           <div className="flex flex-wrap items-center gap-2">
@@ -1477,7 +1576,7 @@ export default function PrecatorioDetailPage() {
                 onClick={() => setAdminInterestModalOpen(true)}
                 variant="outline"
                 size="sm"
-                className="h-10 rounded-xl px-4"
+                className="h-10 rounded-xl border-zinc-300/70 bg-white/80 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
               >
                 <AlertCircle className="h-4 w-4 mr-2" />
                 Sinalizar interesse
@@ -1488,7 +1587,7 @@ export default function PrecatorioDetailPage() {
                 onClick={() => setIsEditing(true)}
                 variant="outline"
                 size="sm"
-                className="h-10 rounded-xl px-4"
+                className="h-10 rounded-xl border-zinc-300/70 bg-white/85 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
@@ -1510,7 +1609,7 @@ export default function PrecatorioDetailPage() {
                   onClick={handleSaveEdit}
                   disabled={saving}
                   size="sm"
-                  className="h-10 rounded-xl px-4"
+                  className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {saving ? "Salvando..." : "Salvar"}
@@ -1601,7 +1700,7 @@ export default function PrecatorioDetailPage() {
 
       {/* Tabs Layout Consolidado */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="mb-6 border-b border-zinc-200/70 dark:border-zinc-800/70">
+        <div className="mb-6 rounded-2xl border border-zinc-200/70 bg-white/45 p-1.5 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/35">
           <div className="relative">
             <TabsList className={dashboardTabsListClass}>
             <TabsTrigger
@@ -1663,6 +1762,14 @@ export default function PrecatorioDetailPage() {
               <Percent className="h-4 w-4 mr-2" />
               Propostas
             </TabsTrigger>
+            <button
+              type="button"
+              className={`${dashboardTabsTriggerClass} inline-flex items-center whitespace-nowrap`}
+              onClick={openAgendaForPrecatorio}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Agenda
+            </button>
             <TabsTrigger
               value="timeline"
               className={dashboardTabsTriggerClass}
@@ -1688,10 +1795,11 @@ export default function PrecatorioDetailPage() {
           <TabsContent value="detalhes" className="space-y-6">
 
             {/* Barra de Status */}
-            <DetailSection className="border-zinc-200/70 bg-white/70 p-5 md:p-6 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
+            <DetailSection className="relative overflow-hidden border-zinc-200/70 bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_50%)]" />
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs font-medium uppercase tracking-wide text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
                     Status do crédito
                   </p>
 
@@ -1712,10 +1820,21 @@ export default function PrecatorioDetailPage() {
                 </div>
 
                 <div className="flex flex-wrap items-center gap-2">
+                  {canAdvanceToNextColumn ? (
+                    <Button
+                      size="sm"
+                      className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+                      onClick={handleAdvanceToNextStage}
+                      disabled={advancingStage}
+                    >
+                      <ArrowRight className="h-4 w-4 mr-2" />
+                      {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
+                    </Button>
+                  ) : null}
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-10 rounded-xl px-4"
+                    className="h-10 rounded-xl border border-zinc-200/70 bg-white/80 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
                     onClick={() => {
                       setActiveTab("timeline")
                       syncTabToUrl("timeline")
@@ -1726,7 +1845,7 @@ export default function PrecatorioDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-zinc-200/70 bg-zinc-50/70 p-3 dark:border-zinc-800/70 dark:bg-zinc-900/40">
+              <div className="mt-4 rounded-2xl border border-zinc-200/70 bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-zinc-800/70 dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
                 <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
                   <div className="flex min-w-max items-center gap-2.5 pr-2">
                     {KANBAN_COLUMNS.map((col, index) => {
@@ -1761,7 +1880,7 @@ export default function PrecatorioDetailPage() {
                           variant={chipVariant}
                           color={chipColor}
                           startContent={chipStartContent}
-                          className={`whitespace-nowrap ${isCurrent ? "font-semibold" : "font-medium"} min-h-10`}
+                          className={`whitespace-nowrap ${isCurrent ? "font-semibold ring-1 ring-primary/30" : "font-medium"} min-h-10`}
                         >
                           {col.titulo}
                         </Chip>
@@ -2329,29 +2448,38 @@ export default function PrecatorioDetailPage() {
                 </CardTitle>
               </CardHeader>
                 <CardContent className="pt-0">
-                  {isEditing && canEditValoresPrincipais && (
+                  {isEditing && (canEditValorPrincipal || canEditValorAtualizado) && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                       <div className="space-y-2">
                         <Label>Valor Principal (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={editData.valor_principal ?? ""}
-                          onChange={(e) => setEditData({ ...editData, valor_principal: e.target.value })}
-                          placeholder="0,00"
+                        <CurrencyInput
+                          value={
+                            hasValue(editData.valor_principal) && editData.valor_principal !== ""
+                              ? Number(editData.valor_principal)
+                              : undefined
+                          }
+                          onValueChange={(value) => setEditData({ ...editData, valor_principal: value })}
+                          disabled={!canEditValorPrincipal}
+                          placeholder="R$ 0,00"
                         />
                       </div>
                       <div className="space-y-2">
                         <Label>Valor Atualizado (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          min="0"
-                          value={editData.valor_atualizado ?? ""}
-                          onChange={(e) => setEditData({ ...editData, valor_atualizado: e.target.value })}
-                          placeholder="0,00"
-                        />
+                        {canEditValorAtualizado ? (
+                          <CurrencyInput
+                            value={
+                              hasValue(editData.valor_atualizado) && editData.valor_atualizado !== ""
+                                ? Number(editData.valor_atualizado)
+                                : undefined
+                            }
+                            onValueChange={(value) => setEditData({ ...editData, valor_atualizado: value })}
+                            placeholder="R$ 0,00"
+                          />
+                        ) : (
+                          <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                            {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "—"}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}

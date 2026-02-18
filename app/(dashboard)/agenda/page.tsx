@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import type { Key } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import {
@@ -70,8 +70,8 @@ import {
   Select,
   SelectItem,
   Skeleton,
-  Textarea,
 } from "@heroui/react"
+import { Textarea as UiTextarea } from "@/components/ui/textarea"
 
 type EventForm = {
   titulo: string
@@ -93,6 +93,16 @@ type EventForm = {
   comunicadoMensagem: string
 }
 
+type PrecatorioOption = {
+  id: string
+  label: string
+  titulo: string
+  numeroPrecatorio: string
+  numeroProcesso: string
+  credorNome: string
+  searchText: string
+}
+
 const statusColor: Record<AgendaStatus, "default" | "success" | "danger"> = {
   agendado: "default",
   concluido: "success",
@@ -108,6 +118,9 @@ const prioridadeColor: Record<AgendaPrioridade, "default" | "warning" | "danger"
 const inputClassNames = {
   inputWrapper: "rounded-2xl min-h-11 border border-default-200/80 bg-white dark:bg-zinc-900/95",
 }
+
+const textareaInputClassName =
+  "min-h-[92px] rounded-2xl border-default-200/80 bg-white text-sm leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap focus-visible:ring-warning-400/60 focus-visible:ring-offset-0 dark:bg-zinc-900/95"
 
 const selectClassNames = {
   trigger: "rounded-2xl min-h-11 border border-default-200/80 bg-white dark:bg-zinc-900/95",
@@ -142,6 +155,18 @@ const bool = (obj: Record<string, unknown>, key: string, fallback = false) => {
   const value = obj[key]
   return typeof value === "boolean" ? value : fallback
 }
+
+const normalizeSearch = (value: string) =>
+  value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+
+const sanitizeTextareaValue = (value: string) =>
+  value
+    .replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g, "")
+    .replace(/[\uFFFD\u25A0]/g, "")
 
 function toLocalValue(date: Date) {
   const y = date.getFullYear()
@@ -253,24 +278,33 @@ export default function AgendaPage() {
   const supabase = createBrowserClient()
   const { profile } = useAuth()
   const userId = profile?.id ?? null
-  const roles = Array.isArray(profile?.role) ? profile.role : []
+  const roles = Array.isArray(profile?.role)
+    ? profile.role.map(String)
+    : profile?.role
+      ? [String(profile.role)]
+      : []
   const isAdmin = roles.includes("admin")
+  const isOperador = roles.some((role) => ["operador", "operador_comercial", "operador_calculo"].includes(role))
   const canManageTargets = isAdmin || roles.includes("gestor")
+  const linkedPrecatorioParam = params.get("precatorioId") || ""
+  const shouldOpenCreateFromParam = params.get("novo") === "1"
 
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [events, setEvents] = useState<AgendaEvento[]>([])
   const [users, setUsers] = useState<Array<{ id: string; nome: string; role: string[] }>>([])
-  const [precatorios, setPrecatorios] = useState<Array<{ id: string; label: string }>>([])
+  const [precatorios, setPrecatorios] = useState<PrecatorioOption[]>([])
   const [month, setMonth] = useState(startOfMonth(new Date()))
   const [day, setDay] = useState(startOfDay(new Date()))
   const [search, setSearch] = useState("")
+  const [creditSearch, setCreditSearch] = useState("")
   const [statusFilter, setStatusFilter] = useState("todos")
   const [tipoFilter, setTipoFilter] = useState("todos")
   const [mineOnly, setMineOnly] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [form, setForm] = useState<EventForm>(defaultForm())
+  const createFromParamHandledRef = useRef<string | null>(null)
 
   const runScheduler = useCallback(async () => {
     if (!supabase) return
@@ -279,13 +313,39 @@ export default function AgendaPage() {
 
   const loadOptions = useCallback(async () => {
     if (!supabase) return
+
+    const toPrecatorioOption = (item: any): PrecatorioOption => {
+      const id = String(item.id)
+      const titulo = String(item.titulo || "")
+      const numeroPrecatorio = String(item.numero_precatorio || "")
+      const numeroProcesso = String(item.numero_processo || "")
+      const credorNome = String(item.credor_nome || "")
+      const principalLabel = titulo || numeroPrecatorio || credorNome || id
+      const detailParts = [
+        credorNome && credorNome !== principalLabel ? `Credor: ${credorNome}` : "",
+        numeroPrecatorio && numeroPrecatorio !== principalLabel ? `Prec.: ${numeroPrecatorio}` : "",
+        numeroProcesso ? `Proc.: ${numeroProcesso}` : "",
+      ].filter(Boolean)
+      const label = detailParts.length > 0 ? `${principalLabel} - ${detailParts.join(" | ")}` : principalLabel
+
+      return {
+        id,
+        label,
+        titulo,
+        numeroPrecatorio,
+        numeroProcesso,
+        credorNome,
+        searchText: normalizeSearch(`${principalLabel} ${credorNome} ${numeroPrecatorio} ${numeroProcesso}`),
+      }
+    }
+
     const [usersResult, precatoriosResult] = await Promise.all([
       supabase.from("usuarios").select("id, nome, role, ativo").eq("ativo", true).order("nome", { ascending: true }),
       supabase
         .from("precatorios")
-        .select("id, titulo, numero_precatorio, credor_nome, updated_at")
+        .select("id, titulo, numero_precatorio, numero_processo, credor_nome, updated_at")
         .order("updated_at", { ascending: false })
-        .limit(500),
+        .limit(2000),
     ])
     if (usersResult.error) throw usersResult.error
     if (precatoriosResult.error) throw precatoriosResult.error
@@ -298,13 +358,22 @@ export default function AgendaPage() {
       }))
     )
 
-    setPrecatorios(
-      (precatoriosResult.data || []).map((item: any) => ({
-        id: String(item.id),
-        label: item.titulo || item.numero_precatorio || item.credor_nome || String(item.id),
-      }))
-    )
-  }, [supabase])
+    const options = (precatoriosResult.data || []).map(toPrecatorioOption)
+
+    if (linkedPrecatorioParam && !options.some((item) => item.id === linkedPrecatorioParam)) {
+      const { data: linkedPrecatorio, error } = await supabase
+        .from("precatorios")
+        .select("id, titulo, numero_precatorio, numero_processo, credor_nome")
+        .eq("id", linkedPrecatorioParam)
+        .maybeSingle()
+
+      if (!error && linkedPrecatorio) {
+        options.unshift(toPrecatorioOption(linkedPrecatorio))
+      }
+    }
+
+    setPrecatorios(options)
+  }, [linkedPrecatorioParam, supabase])
 
   const loadEvents = useCallback(async () => {
     if (!supabase || !userId) {
@@ -315,19 +384,24 @@ export default function AgendaPage() {
     setLoading(true)
     try {
       await runScheduler()
-      const { data, error } = await supabase
+      let query = supabase
         .from("agenda_eventos")
         .select("*")
         .gte("inicio_em", subMonths(startOfMonth(month), 2).toISOString())
         .lte("inicio_em", addMonths(endOfMonth(month), 12).toISOString())
-        .order("inicio_em", { ascending: true })
+
+      if (isOperador && !isAdmin) {
+        query = query.or(`criado_por.eq.${userId},destinatario_usuario_id.eq.${userId}`)
+      }
+
+      const { data, error } = await query.order("inicio_em", { ascending: true })
 
       if (error) throw error
       setEvents((data || []).map(normalizeEvent).filter((row): row is AgendaEvento => Boolean(row)))
     } finally {
       setLoading(false)
     }
-  }, [month, runScheduler, supabase, userId])
+  }, [isAdmin, isOperador, month, runScheduler, supabase, userId])
 
   useEffect(() => {
     if (!userId) return
@@ -358,6 +432,31 @@ export default function AgendaPage() {
     })
   }, [events, mineOnly, search, statusFilter, tipoFilter, userId])
 
+  const filteredPrecatorios = useMemo(() => {
+    const query = normalizeSearch(creditSearch)
+    const selected = form.precatorioId ? precatorios.find((item) => item.id === form.precatorioId) : null
+
+    const ranked = query
+      ? precatorios
+          .map((item) => {
+            const starts = item.searchText.startsWith(query)
+            const includes = item.searchText.includes(query)
+            if (!starts && !includes) return null
+            return { item, score: starts ? 2 : 1 }
+          })
+          .filter((entry): entry is { item: PrecatorioOption; score: number } => entry !== null)
+          .sort((a, b) => {
+            if (b.score !== a.score) return b.score - a.score
+            return a.item.label.localeCompare(b.item.label)
+          })
+          .map((entry) => entry.item)
+      : precatorios
+
+    const limited = ranked.slice(0, 120)
+    if (selected && !limited.some((item) => item.id === selected.id)) return [selected, ...limited]
+    return limited
+  }, [creditSearch, form.precatorioId, precatorios])
+
   const calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 })
     const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
@@ -375,10 +474,15 @@ export default function AgendaPage() {
     })
   }, [filtered])
 
-  const openCreate = (baseDay?: Date) => {
+  const openCreate = (baseDay?: Date, prelinkedPrecatorioId = "") => {
     const ref = baseDay ? addHours(startOfDay(baseDay), 9) : new Date()
+    const nextForm = defaultForm(ref)
+    if (prelinkedPrecatorioId) {
+      nextForm.precatorioId = prelinkedPrecatorioId
+    }
     setEditingId(null)
-    setForm(defaultForm(ref))
+    setForm(nextForm)
+    setCreditSearch("")
     setModalOpen(true)
   }
 
@@ -386,7 +490,7 @@ export default function AgendaPage() {
     setEditingId(evento.id)
     setForm({
       titulo: evento.titulo,
-      descricao: evento.descricao || "",
+      descricao: sanitizeTextareaValue(evento.descricao || ""),
       tipo: evento.tipo,
       status: evento.status,
       prioridade: evento.prioridade,
@@ -401,10 +505,28 @@ export default function AgendaPage() {
       alertaAntecedenciaMin: Math.max(0, evento.alerta_antecedencia_min || 0),
       dispararComoComunicado: evento.disparar_como_comunicado,
       comunicadoTitulo: evento.comunicado_titulo || "",
-      comunicadoMensagem: evento.comunicado_mensagem || "",
+      comunicadoMensagem: sanitizeTextareaValue(evento.comunicado_mensagem || ""),
     })
+    setCreditSearch("")
     setModalOpen(true)
   }
+
+  useEffect(() => {
+    if (!shouldOpenCreateFromParam) return
+    const key = `${shouldOpenCreateFromParam ? "1" : "0"}:${linkedPrecatorioParam || ""}`
+    if (createFromParamHandledRef.current === key) return
+    createFromParamHandledRef.current = key
+
+    const nextForm = defaultForm()
+    if (linkedPrecatorioParam) {
+      nextForm.precatorioId = linkedPrecatorioParam
+    }
+
+    setEditingId(null)
+    setForm(nextForm)
+    setCreditSearch("")
+    setModalOpen(true)
+  }, [linkedPrecatorioParam, shouldOpenCreateFromParam])
 
   const saveEvent = async () => {
     if (!supabase || !userId) return
@@ -459,6 +581,7 @@ export default function AgendaPage() {
       setModalOpen(false)
       setEditingId(null)
       setForm(defaultForm())
+      setCreditSearch("")
       await loadEvents()
     } catch (error) {
       console.error("Erro ao salvar agenda:", error)
@@ -719,7 +842,10 @@ export default function AgendaPage() {
 
       <Modal
         isOpen={modalOpen}
-        onOpenChange={setModalOpen}
+        onOpenChange={(open) => {
+          setModalOpen(open)
+          if (!open) setCreditSearch("")
+        }}
         size="4xl"
         scrollBehavior="inside"
         classNames={{ backdrop: "bg-black/40 backdrop-blur-[1px]" }}
@@ -755,13 +881,16 @@ export default function AgendaPage() {
                 </div>
                 <div className="space-y-1.5">
                   <p className="text-xs font-medium text-default-600">Descricao</p>
-                  <Textarea
+                  <UiTextarea
                     aria-label="Descricao"
-                    classNames={{ inputWrapper: "rounded-2xl border border-default-200/80 bg-white dark:bg-zinc-900/95" }}
+                    className={textareaInputClassName}
                     placeholder="Detalhes do agendamento..."
                     value={form.descricao}
-                    minRows={3}
-                    onValueChange={(value) => setForm((prev) => ({ ...prev, descricao: value }))}
+                    rows={4}
+                    spellCheck={false}
+                    onChange={(event) =>
+                      setForm((prev) => ({ ...prev, descricao: sanitizeTextareaValue(event.target.value) }))
+                    }
                   />
                 </div>
 
@@ -927,19 +1056,48 @@ export default function AgendaPage() {
                     />
                   </div>
                   <div className="space-y-1.5">
-                    <p className="text-xs font-medium text-default-600">Credito vinculado</p>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs font-medium text-default-600">Credito vinculado</p>
+                      {form.precatorioId ? (
+                        <Button
+                          radius="full"
+                          size="sm"
+                          variant="light"
+                          className="h-7 min-w-0 px-3 text-xs"
+                          onClick={() => setForm((prev) => ({ ...prev, precatorioId: "" }))}
+                        >
+                          Limpar
+                        </Button>
+                      ) : null}
+                    </div>
+                    <Input
+                      aria-label="Buscar credito vinculado"
+                      classNames={inputClassNames}
+                      placeholder="Busque por credor, numero do precatorio ou processo..."
+                      value={creditSearch}
+                      onValueChange={setCreditSearch}
+                      startContent={<Search className="h-4 w-4 text-default-400" />}
+                    />
                     <Select
                       aria-label="Credito vinculado"
                       classNames={selectClassNames}
+                      placeholder="Selecione um credito"
                       selectedKeys={form.precatorioId ? new Set([form.precatorioId]) : new Set([])}
-                      onSelectionChange={(keys) =>
-                        setForm((prev) => ({ ...prev, precatorioId: toKey(keys) || "" }))
-                      }
+                      onSelectionChange={(keys) => {
+                        const value = toKey(keys) || ""
+                        setForm((prev) => ({ ...prev, precatorioId: value }))
+                        if (value) setCreditSearch("")
+                      }}
                     >
-                      {precatorios.map((item) => (
+                      {filteredPrecatorios.map((item) => (
                         <SelectItem key={item.id}>{item.label}</SelectItem>
                       ))}
                     </Select>
+                    <p className="text-[11px] text-default-500">
+                      {creditSearch.trim()
+                        ? `${filteredPrecatorios.length} resultado(s) na busca`
+                        : `${Math.min(precatorios.length, 120)} de ${precatorios.length} credito(s) exibido(s)`}
+                    </p>
                   </div>
                 </div>
 
@@ -980,16 +1138,14 @@ export default function AgendaPage() {
                     </div>
                     <div className="space-y-1.5">
                       <p className="text-xs font-medium text-default-600">Mensagem do comunicado</p>
-                      <Textarea
+                      <UiTextarea
                         aria-label="Mensagem do comunicado"
-                        classNames={{
-                          inputWrapper:
-                            "rounded-2xl border border-default-200/80 bg-white dark:bg-zinc-900/95",
-                        }}
-                        minRows={4}
+                        className={textareaInputClassName}
+                        rows={4}
                         value={form.comunicadoMensagem}
-                        onValueChange={(value) =>
-                          setForm((prev) => ({ ...prev, comunicadoMensagem: value }))
+                        spellCheck={false}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, comunicadoMensagem: sanitizeTextareaValue(event.target.value) }))
                         }
                       />
                     </div>
@@ -997,7 +1153,7 @@ export default function AgendaPage() {
                 ) : null}
               </ModalBody>
               <ModalFooter>
-                <Button radius="full" className="px-5" variant="flat" onClick={() => { setModalOpen(false); setEditingId(null); setForm(defaultForm()); onClose() }}>Cancelar</Button>
+                <Button radius="full" className="px-5" variant="flat" onClick={() => { setModalOpen(false); setEditingId(null); setForm(defaultForm()); setCreditSearch(""); onClose() }}>Cancelar</Button>
                 <motion.div whileHover={{ scale: 1.03 }} whileTap={{ scale: 0.96 }} transition={{ duration: 0.15 }}>
                   <Button radius="full" className="px-6 font-semibold shadow-sm" color="primary" onClick={() => void saveEvent()} isLoading={saving}>Salvar</Button>
                 </motion.div>
