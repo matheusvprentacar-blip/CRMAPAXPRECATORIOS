@@ -1705,7 +1705,7 @@ export default function PrecatorioDetailPage() {
             >
               <FileText className="h-4 w-4 mr-2" />
               Ofício
-              {precatorio?.file_url && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
+              {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
             </TabsTrigger>
             <TabsTrigger
               value="certidoes"
@@ -3133,7 +3133,7 @@ export default function PrecatorioDetailPage() {
             precatorioId={id}
             canEdit={canEdit}
             onUpdate={loadPrecatorio}
-            pdfUrl={precatorio?.file_url} // Passando URL do Ofício para permitir visualização
+            pdfUrl={precatorio?.file_url || precatorio?.pdf_url} // Passando URL do Ofício para permitir visualização
           />
         </TabsContent>
 
@@ -3141,7 +3141,7 @@ export default function PrecatorioDetailPage() {
         <TabsContent value="oficio" className="space-y-6">
           <OficioViewer
             precatorioId={precatorio.id}
-            fileUrl={precatorio.file_url}
+            fileUrl={precatorio.file_url || precatorio.pdf_url}
             onFileUpdate={loadPrecatorio}
             readonly={!canManageOficio}
             currentStatus={precatorio.status_kanban || precatorio.localizacao_kanban || precatorio.status}

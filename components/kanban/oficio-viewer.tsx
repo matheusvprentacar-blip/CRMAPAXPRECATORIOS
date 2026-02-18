@@ -21,6 +21,7 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
 import { downloadFileAsArrayBuffer, getFileDownloadUrl } from "@/lib/utils/file-upload"
+import { uploadAndAttachPdf } from "@/lib/utils/pdf-upload"
 import { listarDocumentos } from "@/lib/utils/documento-upload"
 import { TIPO_DOCUMENTO_LABELS } from "@/lib/types/documento"
 import { toast } from "sonner"
@@ -265,40 +266,21 @@ export function OficioViewer({
 
     try {
       setUploading(true)
-      const supabase = createBrowserClient()
-      if (!supabase) throw new Error("Supabase não inicializado")
-
-      const fileName = `oficio-${precatorioId}-${Date.now()}.pdf`
-      const { error: uploadError } = await supabase.storage.from("ocr-uploads").upload(fileName, file)
-
-      if (uploadError) {
-        console.error("Upload Error:", uploadError)
-        throw uploadError
-      }
-
-      const {
-        data: { publicUrl },
-      } = supabase.storage.from("ocr-uploads").getPublicUrl(fileName)
-
-      const { error: updateError } = await supabase
-        .from("precatorios")
-        .update({ file_url: publicUrl })
-        .eq("id", precatorioId)
-
-      if (updateError) {
-        console.error("Database Update Error:", updateError)
-        toast.error(`Erro ao salvar no banco: ${updateError.message}`)
-        throw updateError
-      }
+      const { storageRef } = await uploadAndAttachPdf({
+        precatorioId,
+        file,
+      })
 
       toast.success("Ofício anexado com sucesso!")
-      onFileUpdate?.(publicUrl)
+      onFileUpdate?.(storageRef)
       setRefreshKey((prev) => prev + 1)
     } catch (error) {
       console.error("Erro no upload:", error)
-      toast.error("Erro ao fazer upload do ofício.")
+      const message = error instanceof Error ? error.message : "Erro ao fazer upload do ofício."
+      toast.error(message)
     } finally {
       setUploading(false)
+      e.target.value = ""
     }
   }
 

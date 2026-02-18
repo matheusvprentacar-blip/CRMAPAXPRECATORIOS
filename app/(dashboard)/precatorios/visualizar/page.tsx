@@ -458,7 +458,7 @@ function PrecatorioDetailContent() {
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Ofício
-                  {precatorio.file_url && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
+                  {(precatorio.file_url || precatorio.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
                 </TabsTrigger>
                 <TabsTrigger
                   value="documentos"
@@ -735,7 +735,7 @@ function PrecatorioDetailContent() {
               <TabsContent value="oficio" className="space-y-6 animate-in fade-in-50 duration-300">
                 <OficioViewer
                   precatorioId={precatorio.id}
-                  fileUrl={precatorio.file_url}
+                  fileUrl={precatorio.file_url || precatorio.pdf_url}
                   onFileUpdate={loadPrecatorio}
                   readonly={!canManageOficio}
                   currentStatus={precatorio.status_kanban || precatorio.localizacao_kanban || precatorio.status}

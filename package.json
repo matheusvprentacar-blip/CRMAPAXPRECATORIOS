@@ -1,6 +1,6 @@
 {
     "name": "Blackbox AI clone",
-    "version": "1.6.29",
+    "version": "1.6.30",
     "private": true,
     "scripts": {
         "dev": "next dev --turbo",
@@ -55,7 +55,7 @@
         "framer-motion": "^12.34.0",
         "jszip": "^3.10.1",
         "lucide-react": "^0.400.0",
-        "motion": "^12.34.0",
+        "motion": "^12.34.2",
         "next": "^15.5.9",
         "next-themes": "latest",
         "pdf-parse": "^2.4.5",

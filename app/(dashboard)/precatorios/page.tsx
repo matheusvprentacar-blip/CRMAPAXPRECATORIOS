@@ -1,8 +1,9 @@
 "use client"
 /* eslint-disable */
 
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
+import { motion, useInView } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -35,6 +36,31 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+
+function AnimatedListItem({
+  children,
+  index,
+  delay = 0.1,
+}: {
+  children: ReactNode
+  index: number
+  delay?: number
+}) {
+  const ref = useRef<HTMLDivElement | null>(null)
+  const inView = useInView(ref, { amount: 0.5, once: false })
+
+  return (
+    <motion.div
+      ref={ref}
+      data-index={index}
+      initial={{ scale: 0.7, opacity: 0 }}
+      animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
+      transition={{ duration: 0.2, delay: delay + Math.min(index, 8) * 0.02 }}
+    >
+      {children}
+    </motion.div>
+  )
+}
 
 export default function PrecatoriosPage() {
   const router = useRouter()
@@ -555,7 +581,7 @@ export default function PrecatoriosPage() {
 
             {/* Cards sempre no mobile */}
             <div className="grid gap-4 md:hidden">
-              {precatorios.map((precatorio) => {
+              {precatorios.map((precatorio, index) => {
                 const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
                 const valorPrincipal = Number(precatorio.valor_principal ?? 0)
                 const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
@@ -565,11 +591,11 @@ export default function PrecatoriosPage() {
                 const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                 return (
-                  <Card
-                    key={precatorio.id}
-                    className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_20px_45px_-30px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
-                    onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                  >
+                  <AnimatedListItem key={precatorio.id} index={index}>
+                    <Card
+                      className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_20px_45px_-30px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                      onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
+                    >
                     <CardContent className="p-5">
                       <div className="flex gap-4">
                         {canDelete(precatorio) && (
@@ -693,7 +719,8 @@ export default function PrecatoriosPage() {
                         </div>
                       </div>
                     </CardContent>
-                  </Card>
+                    </Card>
+                  </AnimatedListItem>
                 )
               })}
             </div>
@@ -797,7 +824,7 @@ export default function PrecatoriosPage() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {precatorios.map((precatorio) => {
+                  {precatorios.map((precatorio, index) => {
                     const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
                     const valorPrincipal = Number(precatorio.valor_principal ?? 0)
                     const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
@@ -807,11 +834,11 @@ export default function PrecatoriosPage() {
                     const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                     return (
-                      <Card
-                        key={precatorio.id}
-                        className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
-                        onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                      >
+                      <AnimatedListItem key={precatorio.id} index={index}>
+                        <Card
+                          className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                          onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
+                        >
                         <CardContent className="p-5">
                           <div className="flex gap-4">
                             {canDelete(precatorio) && (
@@ -934,7 +961,8 @@ export default function PrecatoriosPage() {
                             </div>
                           </div>
                         </CardContent>
-                      </Card>
+                        </Card>
+                      </AnimatedListItem>
                     )
                   })}
                 </div>
