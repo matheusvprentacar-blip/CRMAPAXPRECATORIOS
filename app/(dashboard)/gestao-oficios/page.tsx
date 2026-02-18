@@ -37,8 +37,8 @@ export default function GestaoOficiosPage() {
     const shinyProps = {
         speed: 2,
         delay: 0,
-        color: "var(--route-shiny-base, #b5b5b5)",
-        shineColor: "var(--route-shiny-shine, #ffffff)",
+        color: "#ff8a00",
+        shineColor: "#ffd28c",
         spread: 120,
         direction: "left" as const,
         yoyo: false,

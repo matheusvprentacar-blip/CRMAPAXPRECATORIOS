@@ -65,6 +65,7 @@ import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-
 import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
 import { buscarCEP, formatarCEP } from "@/lib/utils/cep"
+import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { KANBAN_COLUMNS } from "../../kanban/columns"
 import { MOTION } from "@/lib/motion"
 import { DetailSection } from "@/components/motion/DetailSection"
@@ -730,39 +731,20 @@ export default function PrecatorioDetailPage() {
     }) => {
       if (!id) throw new Error("ID do precatorio nao encontrado.")
       if (!adminTargetUserId) throw new Error("Selecione um destinatario.")
-
-      const response = await fetch("/api/admin/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: adminTargetUserId,
-          title: params.title,
-          body: params.body,
-          kind: params.kind,
-          eventType: params.eventType,
-          entityType: "precatorio",
-          entityId: id,
-          linkUrl: `/precatorios/detalhes?id=${id}&tab=detalhes`,
-          payload: {
-            source: "precatorio_detalhes_admin_alert",
-            actor_user_id: profile?.id || null,
-          },
-        }),
+      await sendAdminNotification({
+        userId: adminTargetUserId,
+        title: params.title,
+        body: params.body,
+        kind: params.kind,
+        eventType: params.eventType,
+        entityType: "precatorio",
+        entityId: id,
+        linkUrl: `/precatorios/detalhes?id=${id}&tab=detalhes`,
+        payload: {
+          source: "precatorio_detalhes_admin_alert",
+          actor_user_id: profile?.id || null,
+        },
       })
-
-      const raw = await response.text()
-      let payload: { ok?: boolean; error?: string; details?: string } | null = null
-      if (raw.trim().startsWith("{")) {
-        try {
-          payload = JSON.parse(raw) as { ok?: boolean; error?: string; details?: string }
-        } catch {
-          payload = null
-        }
-      }
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || payload?.details || `Falha ao enviar alerta (HTTP ${response.status}).`)
-      }
     },
     [adminTargetUserId, id, profile?.id]
   )

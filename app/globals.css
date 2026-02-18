@@ -312,17 +312,17 @@ main h1,
 main [data-shiny="title"] {
   background-image: linear-gradient(
     var(--route-shiny-spread, 120deg),
-    hsl(var(--foreground) / 0.88) 0%,
-    var(--route-shiny-base, #b5b5b5) 36%,
-    var(--route-shiny-shine, #ffffff) 50%,
-    var(--route-shiny-base, #b5b5b5) 64%,
-    hsl(var(--foreground) / 0.88) 100%
+    #ff8a00 0%,
+    #ff9f1a 36%,
+    #ffd28c 50%,
+    #ff9f1a 64%,
+    #ff8a00 100%
   );
   background-size: 220% auto;
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
-  color: hsl(var(--foreground));
+  color: #ff8a00;
   animation: route-shiny-sweep 4.8s linear infinite;
 }
 
@@ -358,7 +358,13 @@ main .route-shiny-important {
 
 @media (prefers-reduced-motion: reduce) {
   main h1,
-  main [data-shiny="title"],
+  main [data-shiny="title"] {
+    animation: none;
+    background-image: none;
+    -webkit-text-fill-color: currentColor;
+    color: #ff8a00;
+  }
+
   main .value-main,
   main .value-total,
   main [data-shiny="important"],

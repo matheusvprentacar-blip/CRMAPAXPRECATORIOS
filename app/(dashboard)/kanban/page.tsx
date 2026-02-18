@@ -38,8 +38,8 @@ import { MOTION } from "@/lib/motion"
 const KANBAN_SHINY_PROPS = {
   speed: 2,
   delay: 0,
-  color: "var(--route-shiny-base, #b5b5b5)",
-  shineColor: "var(--route-shiny-shine, #ffffff)",
+  color: "#ff8a00",
+  shineColor: "#ffd28c",
   spread: 120,
   direction: "left" as const,
   yoyo: false,
@@ -339,7 +339,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
         <div className="space-y-3 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <h4
-              className="min-w-0 flex-1 font-semibold text-sm leading-snug text-foreground line-clamp-2 break-words group-hover:text-orange-600 dark:group-hover:text-orange-400 transition-colors"
+              className="min-w-0 flex-1 font-semibold text-sm leading-snug text-orange-600 dark:text-orange-400 line-clamp-2 break-words transition-colors"
               onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
             >
               {precatorio.titulo || numeroPrecatorio || "Sem título"}

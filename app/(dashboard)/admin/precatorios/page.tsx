@@ -77,6 +77,7 @@ import { toast } from "sonner"
 import { UploadOficiosModal } from "@/components/admin/upload-oficios-modal"
 import { ModalImportarPrecatorio } from "@/components/admin/modal-importar-precatorio"
 import { trackSupabaseError, trackError } from "@/lib/utils/error-tracker"
+import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
 import { getFiltrosAtivos, type FiltrosPrecatorios } from "@/lib/types/filtros"
@@ -654,38 +655,19 @@ export default function AdminPrecatoriosPage() {
         prec.numero_precatorio ||
         prec.credor_nome ||
         "Precatório"
-
-      const response = await fetch("/api/admin/notifications", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: prec.responsavel_calculo_id,
-          title: `Admin quer prioridade no calculo - ${precatorioLabel}`,
-          body: "O administrador sinalizou interesse no calculo deste precatorio. Priorize quando possivel.",
-          kind: "critical",
-          linkUrl: `/precatorios/detalhes?id=${prec.id}`,
-          entityType: "precatorio",
-          entityId: prec.id,
-          eventType: "interesse_calculo_admin",
-          payload: {
-            source: "admin_precatorios_lista",
-          },
-        }),
+      await sendAdminNotification({
+        userId: prec.responsavel_calculo_id,
+        title: `Admin quer prioridade no calculo - ${precatorioLabel}`,
+        body: "O administrador sinalizou interesse no calculo deste precatorio. Priorize quando possivel.",
+        kind: "critical",
+        linkUrl: `/precatorios/detalhes?id=${prec.id}`,
+        entityType: "precatorio",
+        entityId: prec.id,
+        eventType: "interesse_calculo_admin",
+        payload: {
+          source: "admin_precatorios_lista",
+        },
       })
-
-      const raw = await response.text()
-      let payload: { ok?: boolean; error?: string; details?: string } | null = null
-      if (raw.trim().startsWith("{")) {
-        try {
-          payload = JSON.parse(raw) as { ok?: boolean; error?: string; details?: string }
-        } catch {
-          payload = null
-        }
-      }
-
-      if (!response.ok || !payload?.ok) {
-        throw new Error(payload?.error || payload?.details || `Falha ao enviar alerta (HTTP ${response.status}).`)
-      }
 
       toast.success("Alerta enviado ao operador de calculo.")
     } catch (error: any) {
