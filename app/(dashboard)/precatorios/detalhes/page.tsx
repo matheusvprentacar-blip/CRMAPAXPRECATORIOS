@@ -1530,7 +1530,7 @@ export default function PrecatorioDetailPage() {
             </Button>
             <div>
               <div className="flex flex-wrap items-center gap-3">
-                <h1 data-shiny="title" className="text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
+                <h1 className="no-route-shiny text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
                   {precatorio.titulo}
                 </h1>
                 <span
