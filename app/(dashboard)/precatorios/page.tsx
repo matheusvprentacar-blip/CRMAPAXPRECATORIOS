@@ -1,9 +1,8 @@
 "use client"
 /* eslint-disable */
 
-import { useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { motion, useInView } from "framer-motion"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
@@ -40,26 +39,11 @@ import {
 function AnimatedListItem({
   children,
   index,
-  delay = 0.1,
 }: {
   children: ReactNode
   index: number
-  delay?: number
 }) {
-  const ref = useRef<HTMLDivElement | null>(null)
-  const inView = useInView(ref, { amount: 0.5, once: false })
-
-  return (
-    <motion.div
-      ref={ref}
-      data-index={index}
-      initial={{ scale: 0.7, opacity: 0 }}
-      animate={inView ? { scale: 1, opacity: 1 } : { scale: 0.7, opacity: 0 }}
-      transition={{ duration: 0.2, delay: delay + Math.min(index, 8) * 0.02 }}
-    >
-      {children}
-    </motion.div>
-  )
+  return <div data-index={index}>{children}</div>
 }
 
 export default function PrecatoriosPage() {
@@ -593,7 +577,7 @@ export default function PrecatoriosPage() {
                 return (
                   <AnimatedListItem key={precatorio.id} index={index}>
                     <Card
-                      className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_20px_45px_-30px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                      className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)]"
                       onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                     >
                     <CardContent className="p-5">
@@ -836,7 +820,7 @@ export default function PrecatoriosPage() {
                     return (
                       <AnimatedListItem key={precatorio.id} index={index}>
                         <Card
-                          className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                          className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)]"
                           onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         >
                         <CardContent className="p-5">

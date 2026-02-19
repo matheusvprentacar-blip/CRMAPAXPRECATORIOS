@@ -30,6 +30,7 @@ import {
   FileSearch,
   Megaphone,
   CalendarDays,
+  Activity,
 } from "lucide-react"
 import { Avatar, AvatarIcon, Slider } from "@heroui/react"
 import { Button } from "@/components/ui/button"
@@ -52,6 +53,7 @@ import { NotificationsModal } from "@/components/notifications/NotificationsModa
 import { ComunicadosBroadcastModal } from "@/components/comunicados/comunicados-broadcast-modal"
 import { getVersion } from "@tauri-apps/api/app"
 import packageJson from "@/package.json"
+import { TelemetryProvider } from "@/components/telemetry/telemetry-provider"
 
 const navigation = [
   {
@@ -171,6 +173,7 @@ const navigation = [
     ),
     roles: ["admin", "gestor_certidoes", "juridico"],
   },
+  { name: "Telemetria", href: "/admin/telemetria", icon: Activity, roles: ["admin"] },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
   { name: "Usuários", href: "/admin/usuarios", icon: Users, roles: ["admin"] },
   { name: "Financeiro", href: "/admin/financeiro", icon: DollarSign, roles: ["admin", "gestor"] },
@@ -410,6 +413,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   return (
     <ProtectedRoute>
+      <TelemetryProvider>
       <NotificationsProvider>
       <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-zinc-950 dark:to-zinc-900/60">
         {/* Mobile sidebar backdrop */}
@@ -549,6 +553,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       <NotificationsModal />
       <ComunicadosBroadcastModal />
       </NotificationsProvider>
+      </TelemetryProvider>
     </ProtectedRoute>
   )
 }

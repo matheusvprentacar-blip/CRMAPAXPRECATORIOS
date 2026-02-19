@@ -46,6 +46,7 @@ interface AuthContextType {
   profile: UserProfile | null
   loading: boolean
   signIn: (email: string, password: string) => Promise<void>
+  reAuthenticate: (password: string) => Promise<void>
   signUp: (email: string, password: string, nome: string, role?: UserRole[]) => Promise<void>
   signOut: () => Promise<void>
   updateProfile: (updates: Partial<UserProfile>) => Promise<void>
@@ -144,10 +145,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         ...data,
         role: roleArray
       } as UserProfile)
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("[v0] Erro ao carregar perfil (Catch):", JSON.stringify(error, null, 2))
-      if (error.message) console.error("Mensagem de erro:", error.message)
-      if (error.hint) console.error("Hint:", error.hint)
+      const errorMessage = error instanceof Error ? error.message : null
+      const errorHint =
+        typeof error === "object" && error !== null && "hint" in error
+          ? String((error as { hint?: unknown }).hint ?? "")
+          : ""
+
+      if (errorMessage) console.error("Mensagem de erro:", errorMessage)
+      if (errorHint) console.error("Hint:", errorHint)
 
       // Tentar recuperar role do metadata como fallback se falhar o banco (ex: erro de RLS temporário)
       if (user?.app_metadata?.role) {
@@ -164,6 +171,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     localStorage.removeItem("SHOW_REAUTH")
     router.push("/dashboard")
+  }
+
+  async function reAuthenticate(password: string) {
+    if (!supabase) throw new Error("Supabase não está configurado")
+    if (!user?.email) throw new Error("Usuário sem e-mail para reautenticação")
+
+    const { error } = await supabase.auth.signInWithPassword({ email: user.email, password })
+    if (error) throw error
+
+    localStorage.removeItem("SHOW_REAUTH")
   }
 
   async function signUp(email: string, password: string, nome: string, role: UserRole[] = ["operador_comercial"]) {
@@ -212,6 +229,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         profile,
         loading,
         signIn,
+        reAuthenticate,
         signUp,
         signOut,
         updateProfile,
