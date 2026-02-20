@@ -67,14 +67,14 @@ export function SearchBar({
   return (
     <div className="relative flex-1 flex flex-col gap-2 sm:flex-row">
       <div className="relative flex-1">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-zinc-500 dark:text-zinc-400 pointer-events-none" />
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground dark:text-muted-foreground pointer-events-none" />
         <Input
           type="text"
           placeholder={placeholder}
           value={inputValue}
           onChange={(e) => handleInputChange(e.target.value)}
           onKeyDown={handleKeyDown}
-          className="h-11 rounded-xl border-zinc-200/80 dark:border-zinc-700/60 bg-white/85 dark:bg-zinc-900/75 pl-9 pr-9 text-zinc-900 dark:text-zinc-100 dark:placeholder:text-zinc-500 shadow-[0_8px_28px_-18px_rgba(15,23,42,0.45)] focus-visible:ring-orange-400/40"
+          className="h-11 rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted pl-9 pr-9 text-muted-foreground dark:text-muted-foreground dark:placeholder:text-muted-foreground shadow-[0_8px_28px_-18px_rgba(15,23,42,0.45)] focus-visible:ring-primary"
         />
         {inputValue && (
           <Button
@@ -82,7 +82,7 @@ export function SearchBar({
             variant="ghost"
             size="sm"
             onClick={handleClear}
-            className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 p-0 text-zinc-500 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100"
+            className="absolute right-1 top-1/2 h-7 w-7 -translate-y-1/2 p-0 text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground dark:hover:text-muted-foreground"
           >
             <X className="h-4 w-4" />
             <span className="sr-only">Limpar busca</span>
@@ -94,7 +94,7 @@ export function SearchBar({
           type="button"
           onClick={handleSearch}
           variant="secondary"
-          className="h-11 rounded-xl border border-zinc-200/80 dark:border-zinc-700/60 bg-gradient-to-br from-zinc-50 to-zinc-100 text-zinc-800 hover:from-zinc-100 hover:to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 dark:text-zinc-100 dark:hover:from-zinc-700 dark:hover:to-zinc-800 sm:px-5"
+          className="h-11 rounded-xl border border-border dark:border-border bg-gradient-to-br from-zinc-50 to-zinc-100 text-muted-foreground hover:from-zinc-100 hover:to-zinc-200 dark:from-zinc-800 dark:to-zinc-900 dark:text-muted-foreground dark:hover:from-zinc-700 dark:hover:to-zinc-800 sm:px-5"
         >
           Buscar
         </Button>

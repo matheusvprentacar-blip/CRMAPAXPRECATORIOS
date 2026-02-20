@@ -34,7 +34,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <Users className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Nenhum operador com precatórios</p>
+            <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Nenhum operador com precatórios</p>
           </div>
         </CardContent>
       </Card>
@@ -45,7 +45,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
     <Card>
       <CardHeader>
         <CardTitle>Distribuição por Operador</CardTitle>
-        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Carga de trabalho e performance</p>
+        <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Carga de trabalho e performance</p>
       </CardHeader>
       <CardContent>
         <Table>
@@ -74,7 +74,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
                 </TableCell>
                 <TableCell className="text-right">
                   {operator.com_atraso > 0 ? (
-                    <Badge variant="secondary" className="font-mono tabular-nums bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                    <Badge variant="secondary" className="font-mono tabular-nums bg-primary/15 text-primary dark:bg-primary/15 dark:text-primary">
                       {operator.com_atraso}
                     </Badge>
                   ) : (

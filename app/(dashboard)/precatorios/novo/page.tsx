@@ -88,7 +88,7 @@ export default function NovoPrecatorioPage() {
   }
 
   const handleAiExtracted = (data: any) => {
-    console.log("🤖 AI Data Received:", data)
+    console.log("ðŸ¤– AI Data Received:", data)
 
     // Count defined keys
     const keysFound = Object.keys(data).filter(k => data[k] !== undefined && data[k] !== "").length
@@ -200,7 +200,7 @@ export default function NovoPrecatorioPage() {
         <div className="flex gap-2">
           <Button
             variant="outline"
-            className="border-purple-200 bg-purple-50 text-purple-700 hover:bg-purple-100 hover:text-purple-800"
+            className="border-primary/40 bg-primary/15 text-primary hover:bg-primary/15 hover:text-primary"
             onClick={() => setAiModalOpen(true)}
           >
             <Sparkles className="mr-2 h-4 w-4" />
@@ -248,7 +248,7 @@ export default function NovoPrecatorioPage() {
               <div className="grid gap-6 slide-in-from-right-4 animate-in duration-300">
                 <Card className="border-l-4 border-l-blue-500 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-blue-500" /> Dados do Processo</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><FileText className="h-5 w-5 text-primary" /> Dados do Processo</CardTitle>
                     <CardDescription>Identificação jurídica do ativo</CardDescription>
                   </CardHeader>
                   <CardContent className="grid md:grid-cols-2 gap-6">
@@ -310,7 +310,7 @@ export default function NovoPrecatorioPage() {
               <div className="grid gap-6 slide-in-from-right-4 animate-in duration-300">
                 <Card className="border-l-4 border-l-green-500 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-green-500" /> Beneficiário</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><User className="h-5 w-5 text-primary" /> Beneficiário</CardTitle>
                     <CardDescription>Dados de quem receberá o pagamento (Credor)</CardDescription>
                   </CardHeader>
                   <CardContent className="grid md:grid-cols-2 gap-6">
@@ -364,7 +364,7 @@ export default function NovoPrecatorioPage() {
 
                 <Card className="border-l-4 border-l-emerald-500 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-emerald-500" /> Herdeiros</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-primary" /> Herdeiros</CardTitle>
                     <CardDescription>Informe os herdeiros para o rateio do crédito</CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-4">
@@ -428,7 +428,7 @@ export default function NovoPrecatorioPage() {
                               type="button"
                               variant="ghost"
                               size="icon"
-                              className="absolute top-3 right-3 text-muted-foreground hover:text-red-600"
+                              className="absolute top-3 right-3 text-muted-foreground hover:text-destructive"
                               onClick={() => {
                                 const updated = herdeiros.filter((_, i) => i !== index)
                                 setHerdeiros(updated)
@@ -465,7 +465,7 @@ export default function NovoPrecatorioPage() {
               <div className="grid gap-6 slide-in-from-right-4 animate-in duration-300">
                 <Card className="border-l-4 border-l-yellow-500 shadow-sm">
                   <CardHeader>
-                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-yellow-500" /> Valores e Datas</CardTitle>
+                    <CardTitle className="flex items-center gap-2"><Wallet className="h-5 w-5 text-primary" /> Valores e Datas</CardTitle>
                     <CardDescription>Informações financeiras do ativo</CardDescription>
                   </CardHeader>
                   <CardContent className="grid gap-6">
@@ -550,7 +550,7 @@ export default function NovoPrecatorioPage() {
                   <Card>
                     <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-muted-foreground">Financeiro</CardTitle></CardHeader>
                     <CardContent>
-                      <p className="font-semibold text-2xl text-green-600">
+                      <p className="font-semibold text-2xl text-primary">
                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(formData.valor_principal || 0)}
                       </p>
                       <p className="text-sm">Data Base: {formData.data_base ? new Date(formData.data_base).toLocaleDateString('pt-BR') : '-'}</p>
@@ -577,7 +577,7 @@ export default function NovoPrecatorioPage() {
                 Próximo <ChevronRight className="h-4 w-4" />
               </Button>
             ) : (
-              <Button onClick={handleSubmit} disabled={saving} className="bg-green-600 hover:bg-green-700 text-white gap-2 min-w-[150px]">
+              <Button onClick={handleSubmit} disabled={saving} className="bg-primary/15 hover:bg-primary/15 text-white gap-2 min-w-[150px]">
                 {saving ? <Sparkles className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
                 {saving ? "Salvando..." : "Finalizar Cadastro"}
               </Button>

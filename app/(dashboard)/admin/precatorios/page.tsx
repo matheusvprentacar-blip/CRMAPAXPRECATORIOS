@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 /* eslint-disable */
 
 import { useEffect, useMemo, useState } from "react"
@@ -390,23 +390,23 @@ const KANBAN_LABELS: Record<string, string> = {
 }
 
 const STATUS_TONES: Record<string, string> = {
-  entrada: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
-  triagem_interesse: "border-blue-200 text-blue-700 bg-blue-50/60 dark:border-blue-900/50 dark:text-blue-200 dark:bg-blue-950/40",
-  analise_processual_inicial: "border-amber-200 text-amber-700 bg-amber-50/60 dark:border-amber-900/50 dark:text-amber-200 dark:bg-amber-950/40",
-  docs_credor: "border-indigo-200 text-indigo-700 bg-indigo-50/60 dark:border-indigo-900/50 dark:text-indigo-200 dark:bg-indigo-950/40",
-  pronto_calculo: "border-cyan-200 text-cyan-700 bg-cyan-50/60 dark:border-cyan-900/50 dark:text-cyan-200 dark:bg-cyan-950/40",
-  calculo_andamento: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  juridico: "border-purple-200 text-purple-700 bg-purple-50/60 dark:border-purple-900/50 dark:text-purple-200 dark:bg-purple-950/40",
-  calculo_concluido: "border-emerald-200 text-emerald-700 bg-emerald-50/60 dark:border-emerald-900/50 dark:text-emerald-200 dark:bg-emerald-950/40",
-  proposta_negociacao: "border-yellow-200 text-yellow-700 bg-yellow-50/60 dark:border-yellow-900/50 dark:text-yellow-200 dark:bg-yellow-950/40",
-  proposta_aceita: "border-green-200 text-green-700 bg-green-50/60 dark:border-green-900/50 dark:text-green-200 dark:bg-green-950/40",
-  certidoes: "border-teal-200 text-teal-700 bg-teal-50/60 dark:border-teal-900/50 dark:text-teal-200 dark:bg-teal-950/40",
-  fechado: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
-  pos_fechamento: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
-  pausado_credor: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  pausado_documentos: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  sem_interesse: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
-  reprovado: "border-red-200 text-red-700 bg-red-50/60 dark:border-red-900/50 dark:text-red-200 dark:bg-red-950/40",
+  entrada: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
+  triagem_interesse: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  analise_processual_inicial: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  docs_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pronto_calculo: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  calculo_andamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  juridico: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  calculo_concluido: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  proposta_negociacao: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  proposta_aceita: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  certidoes: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  fechado: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pos_fechamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pausado_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pausado_documentos: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  sem_interesse: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
+  reprovado: "border-destructive/40 text-destructive bg-destructive/15 dark:border-destructive/40 dark:text-destructive dark:bg-destructive/15",
 }
 
 type AutoDistribResult = {
@@ -1123,7 +1123,7 @@ export default function AdminPrecatoriosPage() {
 
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Gestão de Precatórios</h1>
+            <h1 className="text-3xl font-bold text-primary">Gestão de Precatórios</h1>
             <p className="text-muted-foreground">Gerencie seus precatórios e distribua para operadores</p>
           </div>
           <div className="flex gap-2">
@@ -1153,7 +1153,7 @@ export default function AdminPrecatoriosPage() {
         <div className="grid gap-4 md:grid-cols-4">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Total</CardTitle>
+              <CardTitle className="text-sm font-medium text-primary">Total</CardTitle>
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -1164,8 +1164,8 @@ export default function AdminPrecatoriosPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Distribuídos</CardTitle>
-              <CheckCircle2 className="h-4 w-4 text-green-600" />
+              <CardTitle className="text-sm font-medium text-primary">Distribuídos</CardTitle>
+              <CheckCircle2 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{precatoriosDistribuidos.length}</div>
@@ -1175,8 +1175,8 @@ export default function AdminPrecatoriosPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Pendentes</CardTitle>
-              <Clock className="h-4 w-4 text-orange-600" />
+              <CardTitle className="text-sm font-medium text-primary">Pendentes</CardTitle>
+              <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">{precatoriosPendentes.length}</div>
@@ -1186,8 +1186,8 @@ export default function AdminPrecatoriosPage() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Valor Total</CardTitle>
-              <TrendingUp className="h-4 w-4 text-blue-600" />
+              <CardTitle className="text-sm font-medium text-primary">Valor Total</CardTitle>
+              <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold">
@@ -1202,7 +1202,7 @@ export default function AdminPrecatoriosPage() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <CardTitle>Meus Precatórios</CardTitle>
+                <CardTitle className="text-primary">Meus Precatórios</CardTitle>
                 <CardDescription>Precatórios criados e gerenciados por você</CardDescription>
               </div>
               <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
@@ -1278,9 +1278,9 @@ export default function AdminPrecatoriosPage() {
             <Tabs value={filtroTab} onValueChange={(v: any) => setFiltroTab(v)}>
               <div className="flex flex-col gap-4">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="todos">Todos ({precatorios.length})</TabsTrigger>
-                  <TabsTrigger value="distribuidos">Distribuídos ({precatoriosDistribuidos.length})</TabsTrigger>
-                  <TabsTrigger value="pendentes">Pendentes ({precatoriosPendentes.length})</TabsTrigger>
+                  <TabsTrigger value="todos" className="data-[state=active]:text-primary">Todos ({precatorios.length})</TabsTrigger>
+                  <TabsTrigger value="distribuidos" className="data-[state=active]:text-primary">Distribuídos ({precatoriosDistribuidos.length})</TabsTrigger>
+                  <TabsTrigger value="pendentes" className="data-[state=active]:text-primary">Pendentes ({precatoriosPendentes.length})</TabsTrigger>
                 </TabsList>
 
                 {precatoriosFiltrados.length > 0 && (
@@ -1301,7 +1301,7 @@ export default function AdminPrecatoriosPage() {
                 {precatoriosFiltrados.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nenhum precatório encontrado</h3>
+                    <h3 className="text-lg font-semibold mb-2 text-primary">Nenhum precatório encontrado</h3>
                     <p className="text-sm text-muted-foreground mb-4">
                       {filtroTab === "todos" && "Faça upload dos ofícios requisitórios"}
                     </p>
@@ -1317,7 +1317,7 @@ export default function AdminPrecatoriosPage() {
                     {precatoriosFiltrados.map((prec) => {
                       const statusKey = prec.status_kanban || "entrada"
                       const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
-                      const statusTone = STATUS_TONES[statusKey] || "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40"
+                      const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
                       const progress = KANBAN_PROGRESS[statusKey] || 0
                       const isSelected = selectedIds.includes(prec.id)
                       const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
@@ -1340,7 +1340,7 @@ export default function AdminPrecatoriosPage() {
                                 className="mt-1"
                               />
                               <div className="flex-1 space-y-1">
-                                <CardTitle className="text-base leading-snug line-clamp-2">{titulo}</CardTitle>
+                                <CardTitle className="text-base leading-snug line-clamp-2 text-primary">{titulo}</CardTitle>
                                 <CardDescription className="line-clamp-1">
                                   {prec.credor_nome || "Credor não informado"}
                                 </CardDescription>
@@ -1382,7 +1382,7 @@ export default function AdminPrecatoriosPage() {
                               </div>
                               <div>
                                 <p className="text-xs text-muted-foreground">Valor atualizado</p>
-                                <p className="font-semibold text-emerald-700">{formatCurrency(valorAtualizado)}</p>
+                                <p className="font-semibold text-primary">{formatCurrency(valorAtualizado)}</p>
                               </div>
                             </div>
 
@@ -1487,7 +1487,7 @@ export default function AdminPrecatoriosPage() {
         <Dialog open={autoDistribDialogOpen} onOpenChange={setAutoDistribDialogOpen}>
           <DialogContent className="max-w-4xl">
             <DialogHeader>
-              <DialogTitle>Distribuicao automatica</DialogTitle>
+              <DialogTitle className="text-primary">Distribuicao automatica</DialogTitle>
               <DialogDescription>
                 Balanceie valores entre operadores e deixe valores destoantes para distribuicao manual.
               </DialogDescription>
@@ -1609,7 +1609,7 @@ export default function AdminPrecatoriosPage() {
                 )}
 
                 {autoDistribPreview && autoDistribPreview.outliers.length > 0 && (
-                  <div className="rounded-lg border border-amber-300/40 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+                  <div className="rounded-lg border border-primary/40 bg-primary/15 p-3 text-sm text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary">
                     <div className="flex items-center gap-2 font-medium">
                       <AlertTriangle className="h-4 w-4" />
                       Valores destoantes nao serao distribuidos automaticamente.
@@ -1656,7 +1656,7 @@ export default function AdminPrecatoriosPage() {
         <Dialog open={distributeDialogOpen} onOpenChange={setDistributeDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Distribuir Precatório</DialogTitle>
+              <DialogTitle className="text-primary">Distribuir Precatório</DialogTitle>
               <DialogDescription>Atribua a um operador comercial</DialogDescription>
             </DialogHeader>
             {selectedPrecatorio && (
@@ -1739,7 +1739,7 @@ export default function AdminPrecatoriosPage() {
         <Dialog open={notifyDialogOpen} onOpenChange={setNotifyDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Enviar aviso</DialogTitle>
+              <DialogTitle className="text-primary">Enviar aviso</DialogTitle>
               <DialogDescription>
                 Notifique os respons\u00e1veis vinculados a este precat\u00f3rio.
               </DialogDescription>
@@ -1807,7 +1807,7 @@ export default function AdminPrecatoriosPage() {
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão</AlertDialogTitle>
+              <AlertDialogTitle className="text-primary">Confirmar Exclusão</AlertDialogTitle>
               <AlertDialogDescription>
                 Tem certeza que deseja excluir &quot;{selectedPrecatorio?.titulo}&quot;? Esta ação não pode ser desfeita.
               </AlertDialogDescription>
@@ -1830,7 +1830,7 @@ export default function AdminPrecatoriosPage() {
         <AlertDialog open={bulkDeleteDialogOpen} onOpenChange={setBulkDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Confirmar Exclusão em Lote</AlertDialogTitle>
+              <AlertDialogTitle className="text-primary">Confirmar Exclusão em Lote</AlertDialogTitle>
               <AlertDialogDescription>
                 Tem certeza que deseja excluir <b>{selectedIds.length}</b> precatórios? Esta ação é irreversível.
               </AlertDialogDescription>

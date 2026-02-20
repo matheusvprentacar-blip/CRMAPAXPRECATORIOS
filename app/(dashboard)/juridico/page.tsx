@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 /* eslint-disable */
 
 import { useEffect, useState } from "react"
@@ -153,19 +153,19 @@ export default function JuridicoPage() {
                         >
                             <div className={cn(
                                 "absolute inset-0 transition-colors",
-                                isFechamento ? "bg-emerald-500/0 group-hover:bg-emerald-500/5" : "bg-blue-500/0 group-hover:bg-blue-500/5"
+                                isFechamento ? "bg-primary/15 group-hover:bg-primary/15" : "bg-primary/15 group-hover:bg-primary/15"
                             )} />
 
                             <CardContent className="p-6 flex items-center justify-between relative z-10">
                                 {isFechamento && (
-                                    <Badge className="absolute right-5 top-4 bg-emerald-600 text-white">
+                                    <Badge className="absolute right-5 top-4 bg-primary/15 text-white">
                                         Jurídico de fechamento
                                     </Badge>
                                 )}
                                 <div className="flex items-start gap-6 flex-1">
                                 {/* Índice */}
                                 <div className="flex flex-col items-center justify-center min-w-[3rem]">
-                                    <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-blue-500/40 transition-colors">
+                                    <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary transition-colors">
                                         {String(index + 1).padStart(2, '0')}
                                     </span>
                                 </div>
@@ -205,7 +205,7 @@ export default function JuridicoPage() {
                                             <CalendarClock className="w-3 h-3" /> Responsável
                                         </label>
                                         <div className="flex flex-col">
-                                            <span className="text-sm font-medium text-blue-600">
+                                            <span className="text-sm font-medium text-primary">
                                                 {p.responsavel_nome}
                                             </span>
                                             <span className="text-xs text-muted-foreground">

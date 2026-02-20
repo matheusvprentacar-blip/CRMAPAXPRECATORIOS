@@ -687,7 +687,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
     <div className="relative space-y-6 calc-scope calc-container px-4 pb-10 pt-4 sm:px-6 lg:px-8">
       <Card className="calc-card relative overflow-hidden">
         <div className="pointer-events-none absolute -top-32 right-0 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 left-0 h-56 w-56 rounded-full bg-emerald-500/10 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-32 left-0 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
         <div className="border-b border-border/60">
           <div className="p-6">
             <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
@@ -739,7 +739,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
                     <button
                       onClick={() => setShowResetDialog(true)}
                       disabled={saving}
-                      className="inline-flex h-9 items-center gap-2 rounded-full border border-rose-500/30 bg-rose-500/5 px-3 text-xs font-semibold text-rose-500 shadow-sm transition hover:bg-rose-500/10 disabled:opacity-50 disabled:cursor-not-allowed sm:text-sm"
+                      className="inline-flex h-9 items-center gap-2 rounded-full border border-destructive/40 bg-destructive/15 px-3 text-xs font-semibold text-destructive shadow-sm transition hover:bg-destructive/15 disabled:opacity-50 disabled:cursor-not-allowed sm:text-sm"
                     >
                       <RotateCcw className="w-4 h-4" />
                       Resetar
@@ -804,7 +804,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
                       isActive
                         ? "border-primary/40 bg-primary/15 text-primary shadow-lg shadow-primary/10 ring-1 ring-primary/30"
                         : isCompleted
-                          ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-500 shadow-sm"
+                          ? "border-primary/40 bg-primary/15 text-primary shadow-sm"
                           : "border-border/60 bg-background/70 text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
@@ -813,7 +813,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
                         isActive
                           ? "border-primary bg-primary text-primary-foreground"
                           : isCompleted
-                            ? "border-emerald-500 bg-emerald-500 text-white"
+                            ? "border-primary/40 bg-primary/15 text-white"
                             : "border-border/60 bg-background text-muted-foreground"
                       }`}
                     >
@@ -828,7 +828,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
                           isActive
                             ? "border-primary/30 bg-primary/10 text-primary"
                             : isCompleted
-                              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-500"
+                              ? "border-primary/40 bg-primary/15 text-primary"
                               : "border-border/60 bg-muted/40 text-muted-foreground"
                         }`}
                       >

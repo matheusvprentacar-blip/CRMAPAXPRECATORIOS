@@ -201,7 +201,7 @@ export function FinancialTab({ user }: FinancialTabProps) {
                                     <TableCell>{new Date(item.due_date).toLocaleDateString('pt-BR')}</TableCell>
                                     <TableCell>{item.description || "-"}</TableCell>
                                     <TableCell className="capitalize">{item.category}</TableCell>
-                                    <TableCell className={item.type === 'expense' ? 'text-red-500' : 'text-green-600'}>
+                                    <TableCell className={item.type === 'expense' ? 'text-destructive' : 'text-primary'}>
                                         {item.type === 'expense' ? '-' : '+'}
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(item.amount)}
                                     </TableCell>

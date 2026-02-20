@@ -4,28 +4,23 @@ import type React from "react"
 import { useEffect } from "react"
 import { HeroUIProvider } from "@heroui/react"
 import { usePathname, useRouter } from "next/navigation"
+import { getSupabase } from "@/lib/supabase/client"
+import {
+  applySystemTheme,
+  DEFAULT_SYSTEM_THEME_CONFIG,
+  deserializeSystemThemeConfig,
+  sanitizeSystemThemeConfig,
+  SYSTEM_THEME_CONFIG_STORAGE_KEY,
+  SYSTEM_THEME_EVENT_NAME,
+} from "@/lib/theme/system-theme"
 
 const UI_ZOOM_STORAGE_KEY = "ui_zoom"
-const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_80_applied"
-const DEFAULT_UI_ZOOM = 0.8
+const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_90_applied"
+const DEFAULT_UI_ZOOM = 0.9
 const UI_ZOOM_MIN = 0.65
 const UI_ZOOM_MAX = 1.15
 
-type RouteShinyPalette = {
-  base: string
-  shine: string
-  accent: string
-  spread: string
-}
-
-const ROUTE_SHINY_PALETTES: RouteShinyPalette[] = [
-  { base: "#d5b58f", shine: "#fff6e9", accent: "#ff8a00", spread: "116deg" },
-  { base: "#a8bdd8", shine: "#f2f8ff", accent: "#3b82f6", spread: "120deg" },
-  { base: "#a6ccb8", shine: "#f2fff8", accent: "#22c55e", spread: "124deg" },
-  { base: "#c2b2dd", shine: "#f8f2ff", accent: "#a855f7", spread: "118deg" },
-  { base: "#d8aec0", shine: "#fff2f7", accent: "#ec4899", spread: "122deg" },
-  { base: "#9ccfcb", shine: "#effffd", accent: "#14b8a6", spread: "126deg" },
-]
+const ROUTE_SHINY_SPREADS = ["116deg", "120deg", "124deg", "118deg", "122deg", "126deg"] as const
 
 const clampZoom = (value: number) => Math.min(UI_ZOOM_MAX, Math.max(UI_ZOOM_MIN, value))
 
@@ -41,12 +36,9 @@ const hashRoute = (value: string) => {
 const applyRouteShinyPalette = (pathname: string) => {
   if (typeof window === "undefined") return
   const root = document.documentElement
-  const palette = ROUTE_SHINY_PALETTES[hashRoute(pathname || "/") % ROUTE_SHINY_PALETTES.length]
+  const spread = ROUTE_SHINY_SPREADS[hashRoute(pathname || "/") % ROUTE_SHINY_SPREADS.length]
 
-  root.style.setProperty("--route-shiny-base", palette.base)
-  root.style.setProperty("--route-shiny-shine", palette.shine)
-  root.style.setProperty("--route-shiny-accent", palette.accent)
-  root.style.setProperty("--route-shiny-spread", palette.spread)
+  root.style.setProperty("--route-shiny-spread", spread)
 }
 
 const readSanitizedZoom = () => {
@@ -64,7 +56,7 @@ const readSanitizedZoom = () => {
   const parsed = Number(savedZoom)
   const invalid = Number.isNaN(parsed) || !Number.isFinite(parsed)
   const outOfRange = parsed < UI_ZOOM_MIN || parsed > UI_ZOOM_MAX
-  const migratedDefault = !migrationApplied && parsed === 1
+  const migratedDefault = !migrationApplied && (parsed === 1 || parsed === 0.8)
   const sanitized = invalid || outOfRange || migratedDefault ? DEFAULT_UI_ZOOM : parsed
 
   if (sanitized !== parsed) {
@@ -115,6 +107,55 @@ export function Providers({ children }: { children: React.ReactNode }) {
     return () => {
       window.removeEventListener("ui-zoom:changed", syncZoom as EventListener)
       window.removeEventListener("storage", syncZoom)
+    }
+  }, [])
+
+  useEffect(() => {
+    const applyFromStorage = () => {
+      const stored = window.localStorage.getItem(SYSTEM_THEME_CONFIG_STORAGE_KEY)
+      const config = deserializeSystemThemeConfig(stored)
+      applySystemTheme(config)
+    }
+
+    const loadThemeFromServer = async () => {
+      try {
+        const supabase = getSupabase()
+        if (!supabase) return
+
+        const { data, error } = await supabase
+          .from("configuracoes_sistema")
+          .select("tema_config")
+          .limit(1)
+          .maybeSingle()
+
+        if (error) return
+
+        const config = sanitizeSystemThemeConfig(data?.tema_config ?? DEFAULT_SYSTEM_THEME_CONFIG)
+        window.localStorage.setItem(SYSTEM_THEME_CONFIG_STORAGE_KEY, JSON.stringify(config))
+        applySystemTheme(config)
+      } catch {
+        // Keep storage/default theme when remote config fails.
+      }
+    }
+
+    const handleThemeChanged = (event: Event) => {
+      const customEvent = event as CustomEvent<{ config?: unknown }>
+      if (customEvent.detail?.config) {
+        applySystemTheme(sanitizeSystemThemeConfig(customEvent.detail.config))
+        return
+      }
+      applyFromStorage()
+    }
+
+    applyFromStorage()
+    void loadThemeFromServer()
+
+    window.addEventListener(SYSTEM_THEME_EVENT_NAME, handleThemeChanged as EventListener)
+    window.addEventListener("storage", applyFromStorage)
+
+    return () => {
+      window.removeEventListener(SYSTEM_THEME_EVENT_NAME, handleThemeChanged as EventListener)
+      window.removeEventListener("storage", applyFromStorage)
     }
   }, [])
 

@@ -25,7 +25,7 @@ export function FinancialKPICards({ data }: FinancialKPICardsProps) {
                     <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-green-600">{formatCurrency(data.totalPaid)}</div>
+                    <div className="text-2xl font-bold text-primary">{formatCurrency(data.totalPaid)}</div>
                     <p className="text-xs text-muted-foreground">Confirmado este mês</p>
                 </CardContent>
             </Card>
@@ -47,7 +47,7 @@ export function FinancialKPICards({ data }: FinancialKPICardsProps) {
                     <AlertCircle className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-yellow-600">{formatCurrency(data.totalPending)}</div>
+                    <div className="text-2xl font-bold text-primary">{formatCurrency(data.totalPending)}</div>
                     <p className="text-xs text-muted-foreground">Aguardando pagamento</p>
                 </CardContent>
             </Card>
@@ -58,7 +58,7 @@ export function FinancialKPICards({ data }: FinancialKPICardsProps) {
                     <Wallet className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                    <div className="text-2xl font-bold text-blue-600">{formatCurrency(data.totalCommissions)}</div>
+                    <div className="text-2xl font-bold text-primary">{formatCurrency(data.totalCommissions)}</div>
                     <p className="text-xs text-muted-foreground">Total de comissões no mês</p>
                 </CardContent>
             </Card>

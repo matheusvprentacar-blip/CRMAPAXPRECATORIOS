@@ -142,13 +142,13 @@ export default function CalculoOperadorPage() {
             className="hover:shadow-md transition-shadow cursor-pointer border-l-4 border-l-green-500/40 group relative overflow-hidden"
             onClick={() => handleAbrirCalculo(p.id)}
           >
-            <div className="absolute inset-0 bg-green-500/0 group-hover:bg-green-500/5 transition-colors" />
+            <div className="absolute inset-0 bg-primary/15 group-hover:bg-primary/15 transition-colors" />
 
             <CardContent className="p-6 flex items-center justify-between relative z-10">
               <div className="flex items-start gap-6 flex-1">
                 {/* Índice */}
                 <div className="flex flex-col items-center justify-center min-w-[3rem]">
-                  <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-green-500/40 transition-colors">
+                  <span className="text-4xl font-black text-muted-foreground/20 group-hover:text-primary transition-colors">
                     {String(index + 1).padStart(2, '0')}
                   </span>
                 </div>
@@ -173,7 +173,7 @@ export default function CalculoOperadorPage() {
                     <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                       <DollarSign className="w-3 h-3" /> Valor Principal
                     </label>
-                    <span className="font-bold text-lg text-emerald-600">
+                    <span className="font-bold text-lg text-primary">
                       {p.valor_principal ? `R$ ${p.valor_principal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "R$ 0,00"}
                     </span>
                   </div>

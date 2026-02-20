@@ -1,4 +1,4 @@
-﻿import type { ReactNode } from "react"
+import type { ReactNode } from "react"
 
 import { cn } from "@/lib/utils"
 
@@ -11,32 +11,32 @@ const toneStyles = {
     value: "text-primary",
   },
   success: {
-    bar: "bg-emerald-500",
-    ring: "ring-emerald-500/20",
-    border: "border-emerald-500/25",
-    badge: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
-    value: "text-emerald-500",
+    bar: "bg-primary/15",
+    ring: "ring-primary",
+    border: "border-primary/40",
+    badge: "bg-primary/15 text-primary border-primary/40",
+    value: "text-primary",
   },
   warning: {
-    bar: "bg-amber-500",
-    ring: "ring-amber-500/20",
-    border: "border-amber-500/25",
-    badge: "bg-amber-500/15 text-amber-500 border-amber-500/30",
-    value: "text-amber-500",
+    bar: "bg-primary/15",
+    ring: "ring-primary",
+    border: "border-primary/40",
+    badge: "bg-primary/15 text-primary border-primary/40",
+    value: "text-primary",
   },
   danger: {
-    bar: "bg-rose-500",
-    ring: "ring-rose-500/20",
-    border: "border-rose-500/25",
-    badge: "bg-rose-500/15 text-rose-500 border-rose-500/30",
-    value: "text-rose-500",
+    bar: "bg-destructive/15",
+    ring: "ring-destructive",
+    border: "border-destructive/40",
+    badge: "bg-destructive/15 text-destructive border-destructive/40",
+    value: "text-destructive",
   },
   info: {
-    bar: "bg-sky-500",
-    ring: "ring-sky-500/20",
-    border: "border-sky-500/25",
-    badge: "bg-sky-500/15 text-sky-500 border-sky-500/30",
-    value: "text-sky-500",
+    bar: "bg-primary/15",
+    ring: "ring-primary",
+    border: "border-primary/40",
+    badge: "bg-primary/15 text-primary border-primary/40",
+    value: "text-primary",
   },
   neutral: {
     bar: "bg-muted-foreground/60",

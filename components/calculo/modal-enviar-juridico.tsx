@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
@@ -108,7 +108,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
             <DialogContent className="sm:max-w-[600px]">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Scale className="h-5 w-5 text-purple-500" />
+                        <Scale className="h-5 w-5 text-primary" />
                         Enviar para Jurídico
                     </DialogTitle>
                     <DialogDescription>
@@ -120,7 +120,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                     {/* Motivo */}
                     <div className="space-y-2">
                         <Label htmlFor="motivo">
-                            Motivo Principal <span className="text-red-500">*</span>
+                            Motivo Principal <span className="text-destructive">*</span>
                         </Label>
                         <Select value={motivo} onValueChange={(value) => {
                             setMotivo(value)
@@ -142,7 +142,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                     {/* Descrição */}
                     <div className="space-y-2">
                         <Label htmlFor="descricao">
-                            Descrição Detalhada <span className="text-red-500">*</span>
+                            Descrição Detalhada <span className="text-destructive">*</span>
                         </Label>
                         <Textarea
                             id="descricao"
@@ -153,13 +153,13 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                                 setError("")
                             }}
                             rows={4}
-                            className={error ? "border-red-500" : ""}
+                            className={error ? "border-destructive/40" : ""}
                         />
-                        {error && <p className="text-sm text-red-500">{error}</p>}
+                        {error && <p className="text-sm text-destructive">{error}</p>}
                     </div>
 
-                    <div className="rounded-lg bg-purple-50 dark:bg-purple-950/20 p-3 text-sm">
-                        <p className="text-purple-800 dark:text-purple-200">
+                    <div className="rounded-lg bg-primary/15 dark:bg-primary/15 p-3 text-sm">
+                        <p className="text-primary dark:text-primary">
                             <strong>Atenção:</strong> O precatório sairá da sua fila de cálculo e ficará bloqueado até o retorno do setor jurídico.
                         </p>
                     </div>
@@ -173,7 +173,7 @@ export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precator
                         type="button"
                         onClick={handleSubmit}
                         disabled={loading || !motivo || !descricao.trim() || descricao.trim().length < 10}
-                        className="bg-purple-600 hover:bg-purple-700 text-white"
+                        className="bg-primary/15 hover:bg-primary/15 text-white"
                     >
                         {loading ? "Enviando..." : "Enviar para Jurídico"}
                     </Button>

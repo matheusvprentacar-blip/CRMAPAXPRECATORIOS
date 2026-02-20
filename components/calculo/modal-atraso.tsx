@@ -163,7 +163,7 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
       <DialogContent className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <AlertCircle className="h-5 w-5 text-orange-500" />
+            <AlertCircle className="h-5 w-5 text-primary" />
             Reportar Atraso no Cálculo
           </DialogTitle>
           <DialogDescription>
@@ -175,7 +175,7 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
           {/* Tipo do Atraso */}
           <div className="space-y-2">
             <Label htmlFor="tipo">
-              Tipo do Atraso <span className="text-red-500">*</span>
+              Tipo do Atraso <span className="text-destructive">*</span>
             </Label>
             <Select value={tipoAtraso} onValueChange={(value) => {
               setTipoAtraso(value)
@@ -197,7 +197,7 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
           {/* Impacto Estimado */}
           <div className="space-y-2">
             <Label htmlFor="impacto">
-              Impacto Estimado <span className="text-red-500">*</span>
+              Impacto Estimado <span className="text-destructive">*</span>
             </Label>
             <Select value={impacto} onValueChange={(value) => {
               setImpacto(value)
@@ -219,7 +219,7 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
           {/* Descrição do Motivo */}
           <div className="space-y-2">
             <Label htmlFor="motivo">
-              Descrição do Motivo <span className="text-red-500">*</span>
+              Descrição do Motivo <span className="text-destructive">*</span>
             </Label>
             <Textarea
               id="motivo"
@@ -230,10 +230,10 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
                 setError("")
               }}
               rows={4}
-              className={error ? "border-red-500" : ""}
+              className={error ? "border-destructive/40" : ""}
             />
             <p className="text-xs text-muted-foreground">{motivo.length} caracteres</p>
-            {error && <p className="text-sm text-red-500">{error}</p>}
+            {error && <p className="text-sm text-destructive">{error}</p>}
           </div>
 
           {/* Sugestões Rápidas */}
@@ -257,8 +257,8 @@ export function ModalAtraso({ open, onOpenChange, precatorioId, precatorioTitulo
             </div>
           )}
 
-          <div className="rounded-lg bg-orange-50 dark:bg-orange-950/20 p-3 text-sm">
-            <p className="text-orange-800 dark:text-orange-200">
+          <div className="rounded-lg bg-primary/15 dark:bg-primary/15 p-3 text-sm">
+            <p className="text-primary dark:text-primary">
               <strong>Importante:</strong> O precatório permanecerá na fila mantendo sua posição original. Você poderá
               processá-lo posteriormente.
             </p>

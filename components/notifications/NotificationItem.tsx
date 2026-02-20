@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { AlertTriangle, Bell, ShieldAlert } from "lucide-react"
 import { cn } from "@/lib/utils"
@@ -11,8 +11,8 @@ import { useNotifications } from "@/components/notifications/useNotifications"
 
 const kindStyles: Record<string, { icon: typeof Bell; badge: string; ring: string }> = {
   info: { icon: Bell, badge: "bg-primary/15 text-primary border-primary/30", ring: "ring-primary/20" },
-  warn: { icon: AlertTriangle, badge: "bg-amber-500/15 text-amber-500 border-amber-500/30", ring: "ring-amber-500/20" },
-  critical: { icon: ShieldAlert, badge: "bg-rose-500/15 text-rose-500 border-rose-500/30", ring: "ring-rose-500/20" },
+  warn: { icon: AlertTriangle, badge: "bg-primary/15 text-primary border-primary/40", ring: "ring-primary" },
+  critical: { icon: ShieldAlert, badge: "bg-destructive/15 text-destructive border-destructive/40", ring: "ring-destructive" },
 }
 
 export function NotificationItem({ notification }: { notification: NotificationRow }) {

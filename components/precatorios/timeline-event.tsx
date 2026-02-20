@@ -27,59 +27,59 @@ export function TimelineEventItem({ event, isLast = false }: TimelineEventItemPr
   const eventConfig = {
     criacao: {
       icon: FileText,
-      color: "bg-blue-500",
+      color: "bg-primary/15",
       label: "Criação",
     },
     inclusao_fila: {
       icon: ListChecks,
-      color: "bg-purple-500",
+      color: "bg-primary/15",
       label: "Inclusão na Fila",
     },
     inicio_calculo: {
       icon: Calculator,
-      color: "bg-green-500",
+      color: "bg-primary/15",
       label: "Início do Cálculo",
     },
     atraso: {
       icon: AlertTriangle,
-      color: "bg-orange-500",
+      color: "bg-primary/15",
       label: "Atraso Reportado",
     },
     atraso_removido: {
       icon: CheckCircle,
-      color: "bg-green-500",
+      color: "bg-primary/15",
       label: "Atraso Removido",
     },
     retomada: {
       icon: PlayCircle,
-      color: "bg-cyan-500",
+      color: "bg-primary/15",
       label: "Retomada",
     },
     finalizacao: {
       icon: CheckCircle,
-      color: "bg-emerald-500",
+      color: "bg-primary/15",
       label: "Finalização",
     },
     mudanca_status: {
       icon: ArrowRightLeft,
-      color: "bg-indigo-500",
+      color: "bg-primary/15",
       label: "Mudança de Status",
     },
     mudanca_sla: {
       icon: Clock,
-      color: "bg-yellow-500",
+      color: "bg-primary/15",
       label: "Atualização de SLA",
     },
     comentario: {
       icon: MessageSquare,
-      color: "bg-gray-500",
+      color: "bg-muted",
       label: "Comentário",
     },
   }
 
   const config = eventConfig[event.tipo] || {
     icon: Circle,
-    color: "bg-gray-500",
+    color: "bg-muted",
     label: event.tipo,
   }
 
@@ -174,7 +174,7 @@ function formatValue(key: string, value: any): string {
   if (typeof value === "boolean") return value ? "Sim" : "Não"
 
   if (typeof value === "number") {
-    // Campos que são números mas NÃO devem ser formatados como moeda
+    // Campos que são números mas NÒO devem ser formatados como moeda
     const nonCurrencyFields = ["sla_horas", "calculo_ultima_versao", "percentual"]
 
     if (nonCurrencyFields.includes(key)) {

@@ -14,11 +14,11 @@
 }
 
 .scroll-list::-webkit-scrollbar-track {
-  background: #060010;
+  background: hsl(var(--background));
 }
 
 .scroll-list::-webkit-scrollbar-thumb {
-  background: #271e37;
+  background: hsl(var(--muted));
   border-radius: 4px;
 }
 
@@ -33,17 +33,17 @@
 
 .item {
   padding: 16px;
-  background-color: #170d27;
+  background-color: hsl(var(--card));
   border-radius: 8px;
   margin-bottom: 1rem;
 }
 
 .item.selected {
-  background-color: #271e37;
+  background-color: hsl(var(--accent));
 }
 
 .item-text {
-  color: white;
+  color: hsl(var(--foreground));
   margin: 0;
 }
 
@@ -53,7 +53,7 @@
   left: 0;
   right: 0;
   height: 50px;
-  background: linear-gradient(to bottom, #060010, transparent);
+  background: linear-gradient(to bottom, hsl(var(--background)), transparent);
   pointer-events: none;
   transition: opacity 0.3s ease;
 }
@@ -64,7 +64,7 @@
   left: 0;
   right: 0;
   height: 100px;
-  background: linear-gradient(to top, #060010, transparent);
+  background: linear-gradient(to top, hsl(var(--background)), transparent);
   pointer-events: none;
   transition: opacity 0.3s ease;
 }

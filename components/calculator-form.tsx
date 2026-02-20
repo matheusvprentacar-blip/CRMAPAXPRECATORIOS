@@ -55,7 +55,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
       endDate,
       interestRate: Number.parseFloat(interestRate),
       correctionIndex,
-      calculationType, // ✅ agora bate com "simple" | "compound"
+      calculationType, // âœ… agora bate com "simple" | "compound"
       calculatedAt: new Date().toISOString(),
     }
 
@@ -81,7 +81,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
     <Card className="max-w-4xl mx-auto">
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <Calculator className="w-5 h-5 text-blue-600" />
+          <Calculator className="w-5 h-5 text-primary" />
           Calcular Precatório
         </CardTitle>
         <CardDescription>Preencha os dados abaixo para calcular o valor atualizado do precatório</CardDescription>
@@ -91,7 +91,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
         <div className="space-y-2">
           <Label htmlFor="principal">Valor Principal (R$)</Label>
           <div className="relative">
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">R$</span>
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">R$</span>
             <Input
               id="principal"
               value={principalValue}
@@ -100,7 +100,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               placeholder="0,00"
             />
           </div>
-          <p className="text-xs text-gray-600">Digite o valor original do precatório</p>
+          <p className="text-xs text-muted-foreground">Digite o valor original do precatório</p>
         </div>
 
         {/* Datas */}
@@ -108,13 +108,13 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
           <div className="space-y-2">
             <Label htmlFor="startDate">Data Inicial</Label>
             <Input id="startDate" type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
-            <p className="text-xs text-gray-600">Data de início do cálculo</p>
+            <p className="text-xs text-muted-foreground">Data de início do cálculo</p>
           </div>
 
           <div className="space-y-2">
             <Label htmlFor="endDate">Data Final</Label>
             <Input id="endDate" type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-            <p className="text-xs text-gray-600">Data de término do cálculo</p>
+            <p className="text-xs text-muted-foreground">Data de término do cálculo</p>
           </div>
         </div>
 
@@ -129,7 +129,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               value={interestRate}
               onChange={(e) => setInterestRate(e.target.value)}
             />
-            <p className="text-xs text-gray-600">Taxa anual de juros</p>
+            <p className="text-xs text-muted-foreground">Taxa anual de juros</p>
           </div>
 
           <div className="space-y-2">
@@ -146,7 +146,7 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
                 <SelectItem value="compound">Juros Compostos</SelectItem>
               </SelectContent>
             </Select>
-            <p className="text-xs text-gray-600">Método de cálculo dos juros</p>
+            <p className="text-xs text-muted-foreground">Método de cálculo dos juros</p>
           </div>
         </div>
 
@@ -164,15 +164,15 @@ export default function CalculatorForm({ onCalculate }: CalculatorFormProps) {
               <SelectItem value="SELIC">SELIC</SelectItem>
             </SelectContent>
           </Select>
-          <p className="text-xs text-gray-600">Índice usado para correção monetária</p>
+          <p className="text-xs text-muted-foreground">Índice usado para correção monetária</p>
         </div>
 
         {/* Info Box */}
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex gap-3">
-          <Info className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-          <div className="text-sm text-blue-900">
+        <div className="bg-primary/15 border border-primary/40 rounded-lg p-4 flex gap-3">
+          <Info className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
+          <div className="text-sm text-primary">
             <p className="font-medium mb-1">Informações Importantes</p>
-            <ul className="list-disc list-inside space-y-1 text-blue-800">
+            <ul className="list-disc list-inside space-y-1 text-primary">
               <li>Os cálculos são estimativas baseadas nos parâmetros informados</li>
               <li>A correção monetária é aplicada de acordo com o índice selecionado</li>
               <li>Consulte um profissional jurídico para validação oficial</li>

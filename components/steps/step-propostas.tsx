@@ -42,16 +42,16 @@ const PROPOSTA_KPI_STYLES: Record<ProposalKpiTone, { bar: string; badge: string;
     value: "text-primary",
   },
   amber: {
-    bar: "bg-amber-500",
-    badge: "bg-amber-500/15 text-amber-400 border-amber-500/30",
-    icon: "bg-amber-500/15 text-amber-400",
-    value: "text-amber-400",
+    bar: "bg-primary/15",
+    badge: "bg-primary/15 text-primary border-primary/40",
+    icon: "bg-primary/15 text-primary",
+    value: "text-primary",
   },
   emerald: {
-    bar: "bg-emerald-500",
-    badge: "bg-emerald-500/15 text-emerald-400 border-emerald-500/30",
-    icon: "bg-emerald-500/15 text-emerald-400",
-    value: "text-emerald-400",
+    bar: "bg-primary/15",
+    badge: "bg-primary/15 text-primary border-primary/40",
+    icon: "bg-primary/15 text-primary",
+    value: "text-primary",
   },
 }
 
@@ -203,8 +203,8 @@ export function StepPropostas({
     const irpfValor = etapaIrpf.irpf_valor || etapaIrpf.valor_irpf || etapaIrpf.irTotal || 0
 
     const honorarios = etapaHonorarios.honorarios || etapaHonorarios || {}
-    const honorariosPercentual = Number(honorarios.honorarios_percentual ?? dados.honorarios_percentual ?? 0)
-    const adiantamentoPercentual = Number(honorarios.adiantamento_percentual ?? dados.adiantamento_percentual ?? 0)
+    const honorariosPercentual = Number(honorarios.honorarios_percentual || dados.honorarios_percentual || 0)
+    const adiantamentoPercentual = Number(honorarios.adiantamento_percentual || dados.adiantamento_percentual || 0)
 
     // Base Pré-descontos = bruto - PSS - IRPF
     const basePreDescontos = round2(totalBruto - pssValor - irpfValor)
@@ -349,7 +349,7 @@ export function StepPropostas({
     }
 
     if (!isManual && (percentualMenorProposta <= 0 || percentualMaiorProposta <= 0)) {
-      toast.error("É necessário definir os percentuais das propostas (maior que zero).")
+      toast.error("? necessário definir os percentuais das propostas (maior que zero).")
       return
     }
 
@@ -444,7 +444,7 @@ export function StepPropostas({
                 <p className="text-xs text-muted-foreground">Defina as faixas percentuais para as propostas.</p>
               </div>
               {isManual && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-amber-500/30 bg-amber-500/10 px-2 py-1 text-[11px] font-semibold text-amber-400">
+                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">
                   <Lock className="h-3 w-3" />
                   Percentuais bloqueados
                 </span>
@@ -502,17 +502,17 @@ export function StepPropostas({
 
             <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4">
               <p className="text-xs text-muted-foreground">Base líquida final</p>
-              <p className="text-xl font-semibold tabular-nums text-sky-300 group-data-[pdf=open]:text-lg">{formatarMoeda(baseLiquidaValor)}</p>
+              <p className="text-xl font-semibold tabular-nums text-primary group-data-[pdf=open]:text-lg">{formatarMoeda(baseLiquidaValor)}</p>
             </div>
 
             <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 p-3">
-                <p className="text-xs text-amber-200/80">Menor proposta</p>
-              <p className="text-lg font-semibold tabular-nums text-amber-300 group-data-[pdf=open]:text-base">{formatarMoeda(menorPropostaValor)}</p>
+              <div className="rounded-xl border border-primary/40 bg-primary/15 p-3">
+                <p className="text-xs text-primary">Menor proposta</p>
+              <p className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(menorPropostaValor)}</p>
               </div>
-              <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/10 p-3">
-                <p className="text-xs text-emerald-200/80">Maior proposta</p>
-              <p className="text-lg font-semibold tabular-nums text-emerald-300 group-data-[pdf=open]:text-base">{formatarMoeda(maiorPropostaValor)}</p>
+              <div className="rounded-xl border border-primary/40 bg-primary/15 p-3">
+                <p className="text-xs text-primary">Maior proposta</p>
+              <p className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(maiorPropostaValor)}</p>
               </div>
             </div>
 
@@ -603,51 +603,51 @@ export function StepPropostas({
               <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
                 <div className="flex items-center justify-between">
                   <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor bruto</p>
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-1 text-[11px] font-semibold text-emerald-300">Total</span>
+                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Total</span>
                 </div>
                 <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between text-muted-foreground"><span>Principal Original</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.principal_original || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>Correção (IPCA-E/IPCA)</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.correcao_monetaria || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>Juros Pré-22</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.juros_pre_22 || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>SELIC (Pós-22)</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.selic || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>EC 136/2025 (IPCA 2025)</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.ec136_2025 || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground border-t border-border/60 pt-2"><span>Juros Originais</span><span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.breakdown?.juros_moratorios_originais || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>Principal Original</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.principal_original || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>Correção (IPCA-E/IPCA)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.correcao_monetaria || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>Juros Pré-22</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_pre_22 || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>SELIC (Pós-22)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.selic || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground"><span>EC 136/2025 (IPCA 2025)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.ec136_2025 || 0)}</span></div>
+                  <div className="flex justify-between text-muted-foreground border-t border-border/60 pt-2"><span>Juros Originais</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_moratorios_originais || 0)}</span></div>
                   <div className="flex justify-between text-sm font-semibold text-foreground"><span>Total Bruto</span><span className="tabular-nums">{formatarMoeda(calculoFinal.valor_atualizado)}</span></div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-rose-500/20 bg-rose-500/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-rose-200/80">Descontos</p>
+              <div className="rounded-xl border border-destructive/40 bg-destructive/15 p-4">
+                <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
                 <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between text-rose-200/80"><span>(-) PSS</span><span className="tabular-nums text-rose-300">{formatarMoeda(calculoFinal.pss_valor)}</span></div>
-                  <div className="flex justify-between text-rose-200/80"><span>(-) IRPF ({calculoFinal.breakdown?.descricao_faixa || "N/A"})</span><span className="tabular-nums text-rose-300">{formatarMoeda(calculoFinal.irpf_valor)}</span></div>
-                  <div className="flex justify-between text-rose-200/80"><span>(-) Honorários ({calculoFinal.honorarios_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-rose-300">{formatarMoeda(calculoFinal.honorarios_valor)}</span></div>
-                  <div className="flex justify-between text-rose-200/80"><span>(-) Adiantamento ({calculoFinal.adiantamento_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-rose-300">{formatarMoeda(calculoFinal.adiantamento_valor)}</span></div>
+                  <div className="flex justify-between text-destructive"><span>(-) PSS</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.pss_valor)}</span></div>
+                  <div className="flex justify-between text-destructive"><span>(-) IRPF ({calculoFinal.breakdown?.descricao_faixa || "N/A"})</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.irpf_valor)}</span></div>
+                  <div className="flex justify-between text-destructive"><span>(-) Honorários ({calculoFinal.honorarios_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.honorarios_valor)}</span></div>
+                  <div className="flex justify-between text-destructive"><span>(-) Adiantamento ({calculoFinal.adiantamento_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.adiantamento_valor)}</span></div>
                 </div>
               </div>
 
-              <div className="rounded-xl border border-sky-500/20 bg-sky-500/10 p-4">
-                <p className="text-xs uppercase tracking-wide text-sky-200/80">Base líquida final</p>
+              <div className="rounded-xl border border-primary/40 bg-primary/15 p-4">
+                <p className="text-xs uppercase tracking-wide text-primary">Base líquida final</p>
                 <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm text-sky-200/80">Base para propostas</span>
-                  <span className="text-lg font-semibold tabular-nums text-sky-300 group-data-[pdf=open]:text-base">{formatarMoeda(calculoFinal.base_liquida_final)}</span>
+                  <span className="text-sm text-primary">Base para propostas</span>
+                  <span className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(calculoFinal.base_liquida_final)}</span>
                 </div>
                 <div className="mt-2 flex items-center justify-between text-sm">
                   <span className="text-muted-foreground">Base pré-descontos</span>
-                  <span className="tabular-nums text-sky-200">{formatarMoeda(calculoFinal.base_liquida_pre_descontos)}</span>
+                  <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.base_liquida_pre_descontos)}</span>
                 </div>
               </div>
 
               <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
                 <p className="text-xs uppercase tracking-wide text-muted-foreground">Propostas</p>
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/10 px-3 py-2 text-sm">
-                    <span className="text-amber-200/80">Menor</span>
-                    <span className="tabular-nums text-amber-300">{formatarMoeda(calculoFinal.menor_proposta)}</span>
+                  <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
+                    <span className="text-primary">Menor</span>
+                    <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.menor_proposta)}</span>
                   </div>
-                  <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-sm">
-                    <span className="text-emerald-200/80">Maior</span>
-                    <span className="tabular-nums text-emerald-300">{formatarMoeda(calculoFinal.maior_proposta)}</span>
+                  <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
+                    <span className="text-primary">Maior</span>
+                    <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.maior_proposta)}</span>
                   </div>
                 </div>
               </div>

@@ -39,11 +39,11 @@ type FinanceBarRow = {
 }
 
 const BAR_CONFIG = [
-  { key: "saldo", name: "Saldo liquido", color: "#22c55e" },
-  { key: "pss", name: "PSS", color: "#0ea5e9" },
-  { key: "irpf", name: "IRPF", color: "#ef4444" },
-  { key: "honorarios", name: "Honorarios", color: "#f59e0b" },
-  { key: "adiantamento", name: "Adiantamento", color: "#14b8a6" },
+  { key: "saldo", name: "Saldo liquido", color: "hsl(var(--chart-4))" },
+  { key: "pss", name: "PSS", color: "hsl(var(--chart-1))" },
+  { key: "irpf", name: "IRPF", color: "hsl(var(--destructive))" },
+  { key: "honorarios", name: "Honorarios", color: "hsl(var(--chart-2))" },
+  { key: "adiantamento", name: "Adiantamento", color: "hsl(var(--chart-5))" },
 ]
 
 const formatCurrency = (value: number) =>
@@ -108,10 +108,10 @@ export function FinancialFlowSankey({ data, loading = false }: FinancialFlowSank
   }, [data])
 
   return (
-    <Card className="overflow-hidden border-zinc-200/70 dark:border-zinc-800/70">
+    <Card className="overflow-hidden border-border dark:border-border">
       <CardHeader>
         <CardTitle>Financeiro por categoria</CardTitle>
-        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+        <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">
           Comparativo em barras dos principais componentes financeiros.
         </p>
       </CardHeader>
@@ -178,10 +178,10 @@ export function FinancialFlowSankey({ data, loading = false }: FinancialFlowSank
         )}
 
         <div className="flex flex-wrap gap-3">
-          <Badge className="bg-emerald-100 text-emerald-800 border border-emerald-200 font-mono tabular-nums">
+          <Badge className="bg-primary/15 text-primary border border-primary/40 font-mono tabular-nums">
             Isento: {formatCount(data.irpfIsento)}
           </Badge>
-          <Badge className="bg-rose-100 text-rose-800 border border-rose-200 font-mono tabular-nums">
+          <Badge className="bg-destructive/15 text-destructive border border-destructive/40 font-mono tabular-nums">
             Nao isento: {formatCount(data.irpfNaoIsento)}
           </Badge>
         </div>

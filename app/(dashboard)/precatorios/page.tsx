@@ -179,7 +179,7 @@ export default function PrecatoriosPage() {
           data?.filter((user: any) => {
             const roles = Array.isArray(user?.role) ? user.role : [user?.role].filter(Boolean)
             return roles.some((r: string) => allowedRoles.has(r))
-          }) ?? []
+          }) || []
 
         setResponsaveis(
           list.map((user: any) => ({
@@ -343,17 +343,17 @@ export default function PrecatoriosPage() {
   return (
     <div className="container mx-auto max-w-7xl p-4 pb-24 md:p-6 space-y-6">
       {/* Header de Módulo */}
-      <section className="relative overflow-hidden rounded-3xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white via-white to-orange-50/70 dark:from-zinc-950/90 dark:via-zinc-950/85 dark:to-orange-950/30 p-5 md:p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.8)]">
-        <div className="pointer-events-none absolute -top-16 right-4 h-44 w-44 rounded-full bg-orange-400/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 left-8 h-40 w-40 rounded-full bg-cyan-400/10 blur-3xl" />
+      <section className="relative overflow-hidden rounded-3xl border border-border dark:border-border bg-gradient-to-br from-white via-white to-orange-50/70 dark:from-zinc-950/90 dark:via-zinc-950/85 dark:to-orange-950/30 p-5 md:p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.8)]">
+        <div className="pointer-events-none absolute -top-16 right-4 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-16 left-8 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
         <div className="relative space-y-5">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-zinc-500 dark:text-zinc-400">Carteira ativa</p>
+              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground dark:text-muted-foreground">Carteira ativa</p>
               <h1 className="mt-1 text-3xl md:text-4xl font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300 dark:from-orange-300 dark:via-amber-200 dark:to-orange-100 bg-clip-text text-transparent drop-shadow-[0_0_14px_rgba(251,146,60,0.28)]">
                 Precatórios
               </h1>
-              <p className="mt-2 text-sm font-medium text-zinc-600 dark:text-zinc-300 max-w-2xl">
+              <p className="mt-2 text-sm font-medium text-muted-foreground dark:text-muted-foreground max-w-2xl">
                 Gerencie a carteira com visão operacional clara, atalhos rápidos e filtros inteligentes.
               </p>
             </div>
@@ -361,7 +361,7 @@ export default function PrecatoriosPage() {
               <Button
                 variant="outline"
                 onClick={() => setImportJsonOpen(true)}
-                className="h-10 rounded-xl border-zinc-300/80 dark:border-zinc-700/70 bg-white/85 dark:bg-zinc-900/70 shadow-sm"
+                className="h-10 rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted shadow-sm"
               >
                 <FileJson className="h-4 w-4 mr-2" />
                 Importar
@@ -377,24 +377,24 @@ export default function PrecatoriosPage() {
           </div>
 
           <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/80 dark:bg-zinc-900/65 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-zinc-500 dark:text-zinc-400">Total</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-zinc-900 dark:text-zinc-100">{totalPrecatorios}</p>
+            <div className="rounded-2xl border border-border dark:border-border bg-background/80 dark:bg-muted px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground dark:text-muted-foreground">Total</p>
+              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-muted-foreground dark:text-muted-foreground">{totalPrecatorios}</p>
             </div>
-            <div className="rounded-2xl border border-emerald-300/50 dark:border-emerald-700/40 bg-emerald-50/70 dark:bg-emerald-950/20 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-700 dark:text-emerald-300">Calculados</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-emerald-700 dark:text-emerald-300">{calculadosCount}</p>
+            <div className="rounded-2xl border border-primary/40 dark:border-primary/40 bg-primary/15 dark:bg-primary/15 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-primary dark:text-primary">Calculados</p>
+              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-primary dark:text-primary">{calculadosCount}</p>
             </div>
-            <div className="rounded-2xl border border-orange-300/50 dark:border-orange-700/40 bg-orange-50/70 dark:bg-orange-950/20 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-orange-700 dark:text-orange-300">Em cálculo / Novo</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-orange-700 dark:text-orange-300">{emCalculoOuNovoCount}</p>
+            <div className="rounded-2xl border border-primary/40 dark:border-primary/40 bg-primary/15 dark:bg-primary/15 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-primary dark:text-primary">Em cálculo / Novo</p>
+              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-primary dark:text-primary">{emCalculoOuNovoCount}</p>
             </div>
           </div>
         </div>
       </section>
 
       {/* Toolbar de Filtros e Busca */}
-      <div className="relative overflow-hidden rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-zinc-50/90 dark:bg-zinc-950/85 backdrop-blur-md shadow-[0_20px_50px_-40px_rgba(15,23,42,0.85)]">
+      <div className="relative overflow-hidden rounded-2xl border border-border dark:border-border bg-muted dark:bg-muted backdrop-blur-md shadow-[0_20px_50px_-40px_rgba(15,23,42,0.85)]">
         <div className="pointer-events-none absolute inset-y-0 right-0 w-56 bg-gradient-to-l from-orange-500/10 to-transparent dark:from-orange-400/12" />
         <div className="relative p-4 md:p-5 space-y-4">
           <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
@@ -414,7 +414,7 @@ export default function PrecatoriosPage() {
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Select value={statusSelectValue} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger className="h-11 w-[190px] rounded-xl border-zinc-200/80 dark:border-zinc-700/60 bg-white/85 dark:bg-zinc-900/75">
+                <SelectTrigger className="h-11 w-[190px] rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted">
                   <SelectValue placeholder="Status" />
                 </SelectTrigger>
                 <SelectContent>
@@ -436,23 +436,23 @@ export default function PrecatoriosPage() {
               />
             </div>
             <div className="flex items-center justify-between gap-3 xl:ml-auto">
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 ring-1 ring-zinc-200/80 dark:ring-zinc-800/70 bg-white/80 dark:bg-zinc-900/70 text-sm font-medium text-zinc-700 dark:text-zinc-200">
+              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 ring-1 ring-ring dark:ring-ring bg-background/80 dark:bg-muted text-sm font-medium text-muted-foreground dark:text-muted-foreground">
                 <span>{totalPrecatorios} registros</span>
                 {loading && initialized && (
-                  <span className="inline-flex items-center gap-1 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground dark:text-muted-foreground">
                     <Loader2 className="h-3 w-3 animate-spin" />
                     Atualizando...
                   </span>
                 )}
               </div>
-              <div className="hidden md:inline-flex items-center rounded-full border border-zinc-200/80 dark:border-zinc-700/70 bg-white/80 dark:bg-zinc-900/70 p-1 shadow-sm">
+              <div className="hidden md:inline-flex items-center rounded-full border border-border dark:border-border bg-background/80 dark:bg-muted p-1 shadow-sm">
                 <button
                   type="button"
                   onClick={() => setViewMode("cards")}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                     viewMode === "cards"
-                      ? "bg-orange-500 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
+                      : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
                   }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
@@ -463,8 +463,8 @@ export default function PrecatoriosPage() {
                   onClick={() => setViewMode("table")}
                   className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
                     viewMode === "table"
-                      ? "bg-orange-500 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                      : "text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
+                      ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
+                      : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
                   }`}
                 >
                   <List className="h-3.5 w-3.5" />
@@ -475,12 +475,12 @@ export default function PrecatoriosPage() {
           </div>
 
           {temFiltrosAtivos && (
-            <div className="flex items-center gap-2 flex-wrap pt-4 border-t border-zinc-200/70 dark:border-zinc-800/70">
-              <span className="text-[11px] font-semibold text-zinc-500 dark:text-zinc-400 uppercase tracking-[0.2em] mr-1">Filtros</span>
+            <div className="flex items-center gap-2 flex-wrap pt-4 border-t border-border dark:border-border">
+              <span className="text-[11px] font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-[0.2em] mr-1">Filtros</span>
               {responsavelAtivo && (
                 <Badge
                   variant="secondary"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-zinc-100/90 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-700/60"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border"
                 >
                   <span className="font-semibold">Responsável:</span>
                   <span>{responsavelAtivo}</span>
@@ -497,7 +497,7 @@ export default function PrecatoriosPage() {
                 <Badge
                   key={index}
                   variant="secondary"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-zinc-100/90 dark:bg-zinc-800/70 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-700/60"
+                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border"
                 >
                   <span className="font-semibold">{filtro.label}:</span>
                   <span>{filtro.displayValue}</span>
@@ -514,7 +514,7 @@ export default function PrecatoriosPage() {
                 variant="ghost"
                 size="sm"
                 onClick={handleClearAllFiltros}
-                className="h-7 rounded-full text-xs text-zinc-600 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-zinc-100"
+                className="h-7 rounded-full text-xs text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
               >
                 Limpar
               </Button>
@@ -526,15 +526,15 @@ export default function PrecatoriosPage() {
       {/* Lista */}
       {
         precatorios.length === 0 ? (
-          <div className="relative overflow-hidden flex flex-col items-center justify-center py-24 text-center rounded-2xl border border-dashed border-zinc-300/70 dark:border-zinc-700/70 bg-gradient-to-br from-white/90 to-zinc-50/70 dark:from-zinc-950/80 dark:to-zinc-900/75">
-            <div className="pointer-events-none absolute -top-12 right-10 h-32 w-32 rounded-full bg-orange-400/15 blur-3xl" />
-            <div className="relative bg-white/85 dark:bg-zinc-900/80 p-4 rounded-2xl border border-zinc-200/70 dark:border-zinc-700/70 mb-4">
+          <div className="relative overflow-hidden flex flex-col items-center justify-center py-24 text-center rounded-2xl border border-dashed border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/70 dark:from-zinc-950/80 dark:to-zinc-900/75">
+            <div className="pointer-events-none absolute -top-12 right-10 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
+            <div className="relative bg-background/85 dark:bg-muted p-4 rounded-2xl border border-border dark:border-border mb-4">
               {searchTerm || temFiltrosAtivos ? <Filter className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
             </div>
-            <h3 className="relative text-lg font-semibold text-zinc-900 dark:text-zinc-100 mb-2">
+            <h3 className="relative text-lg font-semibold text-muted-foreground dark:text-muted-foreground mb-2">
               {searchTerm || temFiltrosAtivos ? "Nenhum resultado encontrado" : "Sua lista está vazia"}
             </h3>
-            <p className="relative text-zinc-600 dark:text-zinc-300 max-w-sm mb-6">
+            <p className="relative text-muted-foreground dark:text-muted-foreground max-w-sm mb-6">
               {searchTerm || temFiltrosAtivos
                 ? "Tente ajustar os filtros ou termo de busca para encontrar o que procura."
                 : "Comece adicionando novos precatórios para gerenciá-los aqui."}
@@ -549,7 +549,7 @@ export default function PrecatoriosPage() {
         ) : (
           <>
             {deletableCount > 0 && (
-              <div className="flex items-center justify-between text-sm text-zinc-600 dark:text-zinc-300 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/70 dark:bg-zinc-900/60 px-3 py-2">
+              <div className="flex items-center justify-between text-sm text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted px-3 py-2">
                 <label className="flex items-center gap-2 font-medium">
                   <Checkbox
                     checked={selectedIds.size > 0 && selectedIds.size === deletableCount}
@@ -558,7 +558,7 @@ export default function PrecatoriosPage() {
                   Selecionar todos
                 </label>
                 {selectedIds.size > 0 && (
-                  <span className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{selectedIds.size} selecionado(s)</span>
+                  <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{selectedIds.size} selecionado(s)</span>
                 )}
               </div>
             )}
@@ -566,18 +566,19 @@ export default function PrecatoriosPage() {
             {/* Cards sempre no mobile */}
             <div className="grid gap-4 md:hidden">
               {precatorios.map((precatorio, index) => {
-                const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
-                const valorPrincipal = Number(precatorio.valor_principal ?? 0)
+                const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+                const valorPrincipal = Number(precatorio.valor_principal || 0)
                 const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                 const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
-                const statusLabel = STATUS_LABELS[precatorio.status ?? ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
+                const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
                 const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                 return (
                   <AnimatedListItem key={precatorio.id} index={index}>
                     <Card
-                      className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)]"
+                      className="group cursor-pointer rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
                       onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                     >
                     <CardContent className="p-5">
@@ -600,7 +601,7 @@ export default function PrecatoriosPage() {
                                   <h3 className="text-base font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
                                     {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
                                   </h3>
-                                  <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
+                                  <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
                                     {statusLabel}
                                   </Badge>
                                   {precatorio.urgente && (
@@ -610,11 +611,11 @@ export default function PrecatoriosPage() {
                                   )}
                                 </div>
                                 {precatorio.titulo && (
-                                  <p className="text-sm text-zinc-600 dark:text-zinc-300">{precatorio.titulo}</p>
+                                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
                                 )}
                                 {responsavelNome && (
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                    Responsável: <span className="font-medium text-zinc-700 dark:text-zinc-200">{responsavelNome}</span>
+                                  <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                    Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
                                   </p>
                                 )}
                               </div>
@@ -624,51 +625,51 @@ export default function PrecatoriosPage() {
                                     ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
                                     : "Aguardando"}
                                 </div>
-                                <div className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mt-1">
+                                <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
                                   {valorExibido > 0 ? valorLabel : "Valor"}
                                 </div>
                               </div>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-3 text-[13px] text-zinc-600 dark:text-zinc-300 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/70 dark:bg-zinc-900/60 p-3">
+                            <div className="grid grid-cols-1 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted p-3">
                               {precatorio.tribunal && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Tribunal</div>
-                                  <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.tribunal}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
+                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
                                 </div>
                               )}
                               {precatorio.numero_precatorio && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Precatório</div>
-                                  <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.numero_precatorio}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Precatório</div>
+                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
                                 </div>
                               )}
                               {precatorio.numero_processo && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Processo</div>
-                                  <div className="font-medium text-zinc-800 dark:text-zinc-200">{maskProcesso(precatorio.numero_processo)}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Processo</div>
+                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
                                 </div>
                               )}
                               {precatorio.devedor && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Devedor</div>
-                                  <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.devedor}</div>
+                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
+                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
                                 </div>
                               )}
                               {precatorio.data_base && (
                                 <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Data-base</div>
-                                  <div className="font-medium text-zinc-800 dark:text-zinc-200">
+                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
+                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">
                                     {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
                                   </div>
                                 </div>
                               )}
                             </div>
 
-                            <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800/60">
+                            <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
                               <div className="flex flex-wrap gap-2 text-xs">
                                 {precatorio.prioridade && (
-                                  <Badge className="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
+                                  <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
                                     Prioridade {precatorio.prioridade}
                                   </Badge>
                                 )}
@@ -677,7 +678,7 @@ export default function PrecatoriosPage() {
                                 {canDelete(precatorio) && (
                                   <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:text-zinc-100">
+                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
                                         <MoreVertical className="h-4 w-4" />
                                       </Button>
                                     </DropdownMenuTrigger>
@@ -712,10 +713,10 @@ export default function PrecatoriosPage() {
             {/* Tabela no desktop */}
             <div className="hidden md:block">
               {viewMode === "table" ? (
-                <div className="rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_18px_42px_-30px_rgba(15,23,42,0.9)] overflow-hidden">
+                <div className="rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_18px_42px_-30px_rgba(15,23,42,0.9)] overflow-hidden">
                   <Table>
                     <TableHeader>
-                      <TableRow className="bg-zinc-100/70 dark:bg-zinc-900/80">
+                      <TableRow className="bg-muted dark:bg-muted">
                         <TableHead className="w-[40px]"></TableHead>
                         <TableHead>Credor</TableHead>
                         <TableHead>Status</TableHead>
@@ -728,16 +729,18 @@ export default function PrecatoriosPage() {
                     </TableHeader>
                     <TableBody>
                       {precatorios.map((precatorio) => {
-                        const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
-                        const valorPrincipal = Number(precatorio.valor_principal ?? 0)
+                        const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+                        const valorPrincipal = Number(precatorio.valor_principal || 0)
                         const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                         const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                        const statusLabel = STATUS_LABELS[precatorio.status ?? ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
+                        const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                        const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                        const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
 
                         return (
                           <TableRow
                             key={precatorio.id}
-                            className="cursor-pointer hover:bg-orange-50/60 dark:hover:bg-zinc-900/60"
+                            className="cursor-pointer hover:bg-primary/15 dark:hover:bg-muted"
                             onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                           >
                             <TableCell onClick={(e) => e.stopPropagation()}>
@@ -750,36 +753,36 @@ export default function PrecatoriosPage() {
                               )}
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium text-orange-500 dark:text-orange-400">{precatorio.credor_nome || precatorio.titulo}</div>
+                              <div className="font-medium text-primary dark:text-primary">{precatorio.credor_nome || precatorio.titulo}</div>
                               {precatorio.numero_precatorio && (
-                                <div className="text-xs text-zinc-500 dark:text-zinc-400">{precatorio.numero_precatorio}</div>
+                                <div className="text-xs text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
                               )}
                             </TableCell>
                             <TableCell>
-                              <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
+                              <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
                                 {statusLabel}
                               </Badge>
                             </TableCell>
-                            <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">{precatorio.tribunal || "-"}</TableCell>
-                            <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
+                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal || "-"}</TableCell>
+                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
                               {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
                             </TableCell>
                             <TableCell>
-                              <div className="font-mono tabular-nums text-zinc-900 dark:text-zinc-100">
+                              <div className={`font-mono tabular-nums ${valorColorClass}`}>
                                 {valorExibido > 0
                                   ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
                                   : "-"}
                               </div>
-                              <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">{valorLabel}</div>
+                              <div className={`text-[10px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>{valorLabel}</div>
                             </TableCell>
-                            <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
+                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
                               {new Date(precatorio.updated_at || precatorio.created_at).toLocaleDateString("pt-BR")}
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               {canDelete(precatorio) && (
                                 <DropdownMenu>
                                   <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:text-zinc-100">
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
                                       <MoreVertical className="h-4 w-4" />
                                     </Button>
                                   </DropdownMenuTrigger>
@@ -809,18 +812,19 @@ export default function PrecatoriosPage() {
               ) : (
                 <div className="grid gap-4">
                   {precatorios.map((precatorio, index) => {
-                    const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
-                    const valorPrincipal = Number(precatorio.valor_principal ?? 0)
+                    const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+                    const valorPrincipal = Number(precatorio.valor_principal || 0)
                     const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                     const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                    const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-400" : "text-orange-600 dark:text-orange-400"
-                    const statusLabel = STATUS_LABELS[precatorio.status ?? ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
+                    const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                    const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                    const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
                     const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                     return (
                       <AnimatedListItem key={precatorio.id} index={index}>
                         <Card
-                          className="group cursor-pointer rounded-2xl border border-zinc-200/80 dark:border-zinc-800/70 bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)]"
+                          className="group cursor-pointer rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
                           onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         >
                         <CardContent className="p-5">
@@ -842,7 +846,7 @@ export default function PrecatoriosPage() {
                                     <h3 className="text-lg font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
                                       {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
                                     </h3>
-                                    <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
+                                    <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
                                       {statusLabel}
                                     </Badge>
                                     {precatorio.urgente && (
@@ -852,11 +856,11 @@ export default function PrecatoriosPage() {
                                     )}
                                   </div>
                                   {precatorio.titulo && (
-                                    <p className="text-sm text-zinc-600 dark:text-zinc-300">{precatorio.titulo}</p>
+                                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
                                   )}
                                   {responsavelNome && (
-                                    <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                                      Responsável: <span className="font-medium text-zinc-700 dark:text-zinc-200">{responsavelNome}</span>
+                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                      Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
                                     </p>
                                   )}
                                 </div>
@@ -867,51 +871,51 @@ export default function PrecatoriosPage() {
                                       ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
                                       : "Aguardando"}
                                   </div>
-                                  <div className="text-[11px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400 mt-1">
+                                  <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
                                     {valorExibido > 0 ? valorLabel : "Valor"}
                                   </div>
                                 </div>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[13px] text-zinc-600 dark:text-zinc-300 rounded-xl border border-zinc-200/70 dark:border-zinc-800/70 bg-white/70 dark:bg-zinc-900/60 p-3">
+                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted p-3">
                                 {precatorio.tribunal && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Tribunal</div>
-                                    <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.tribunal}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
                                   </div>
                                 )}
                                 {precatorio.numero_precatorio && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Precatório</div>
-                                    <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.numero_precatorio}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Precatório</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
                                   </div>
                                 )}
                                 {precatorio.numero_processo && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Nº Processo</div>
-                                    <div className="font-medium text-zinc-800 dark:text-zinc-200">{maskProcesso(precatorio.numero_processo)}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Processo</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
                                   </div>
                                 )}
                                 {precatorio.devedor && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Devedor</div>
-                                    <div className="font-medium text-zinc-800 dark:text-zinc-200">{precatorio.devedor}</div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
                                   </div>
                                 )}
                                 {precatorio.data_base && (
                                   <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-zinc-500 dark:text-zinc-400">Data-base</div>
-                                    <div className="font-medium text-zinc-800 dark:text-zinc-200">
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">
                                       {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
                                     </div>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="flex items-center justify-between gap-3 pt-3 border-t border-zinc-200/70 dark:border-zinc-800/60">
+                              <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
                                 <div className="flex flex-wrap gap-2 text-xs">
                                   {precatorio.prioridade && (
-                                    <Badge className="bg-zinc-100 dark:bg-zinc-800/60 text-zinc-700 dark:text-zinc-200 border border-zinc-200/70 dark:border-zinc-800/60">
+                                    <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
                                       Prioridade {precatorio.prioridade}
                                     </Badge>
                                   )}
@@ -920,7 +924,7 @@ export default function PrecatoriosPage() {
                                   {canDelete(precatorio) && (
                                     <DropdownMenu>
                                       <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:text-zinc-100">
+                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
                                           <MoreVertical className="h-4 w-4" />
                                         </Button>
                                       </DropdownMenuTrigger>
@@ -959,11 +963,11 @@ export default function PrecatoriosPage() {
       {
         selectedIds.size > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex flex-wrap items-center gap-2 rounded-full border border-zinc-200/80 dark:border-zinc-800/70 bg-white/95 dark:bg-zinc-900/90 shadow-[0_20px_45px_-30px_rgba(15,23,42,0.9)] px-4 py-2 backdrop-blur">
-              <span className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            <div className="flex flex-wrap items-center gap-2 rounded-full border border-border dark:border-border bg-background/95 dark:bg-muted shadow-[0_20px_45px_-30px_rgba(15,23,42,0.9)] px-4 py-2 backdrop-blur">
+              <span className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground">
                 {selectedIds.size} selecionado(s)
               </span>
-              <div className="h-6 w-px bg-zinc-200" />
+              <div className="h-6 w-px bg-muted" />
               <Button variant="outline" size="sm" disabled title="Em breve">
                 Exportar
               </Button>
@@ -1060,4 +1064,5 @@ export default function PrecatoriosPage() {
     </div >
   )
 }
+
 

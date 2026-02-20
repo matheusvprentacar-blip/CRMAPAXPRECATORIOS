@@ -39,7 +39,7 @@ export function ChecklistDocumentos({
                 </CardDescription>
               </div>
               {progresso.completo ? (
-                <Badge variant="default" className="bg-green-500">
+                <Badge variant="default" className="bg-primary/15">
                   <CheckCircle2 className="w-3 h-3 mr-1" />
                   Completo
                 </Badge>
@@ -136,14 +136,14 @@ function ChecklistItemRow({
     <div
       className={`flex items-start gap-3 p-3 rounded-lg border transition-colors ${
         item.anexado
-          ? "bg-green-50 border-green-200 dark:bg-green-950/20 dark:border-green-900"
+          ? "bg-primary/15 border-primary/40 dark:bg-primary/15 dark:border-primary/40"
           : "bg-muted/30 border-muted"
       }`}
     >
       {/* Ícone de status */}
       <div className="flex-shrink-0 mt-0.5">
         {item.anexado ? (
-          <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+          <CheckCircle2 className="w-5 h-5 text-primary dark:text-primary" />
         ) : item.obrigatorio ? (
           <AlertCircle className="w-5 h-5 text-destructive" />
         ) : (
@@ -189,12 +189,12 @@ function ChecklistItemRow({
         {/* Status */}
         <div className="mt-2">
           {item.anexado ? (
-            <p className="text-xs text-green-600 dark:text-green-400 font-medium">
-              ✓ Anexado
+            <p className="text-xs text-primary dark:text-primary font-medium">
+              âœ“ Anexado
             </p>
           ) : (
             <p className="text-xs text-muted-foreground">
-              {item.obrigatorio ? "⚠️ Pendente" : "Opcional"}
+              {item.obrigatorio ? "âš ï¸ Pendente" : "Opcional"}
             </p>
           )}
         </div>

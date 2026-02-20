@@ -1,4 +1,4 @@
-﻿
+
 "use client"
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react"
@@ -781,8 +781,8 @@ export default function TelemetriaPage() {
                         border: "1px solid hsl(var(--border))",
                         borderRadius: 8,
                       }}
-                      itemStyle={{ color: "#fff" }}
-                      labelStyle={{ color: "#fff" }}
+                      itemStyle={{ color: "hsl(var(--foreground))" }}
+                      labelStyle={{ color: "hsl(var(--foreground))" }}
                     />
                     <Legend />
                     <Pie data={sourcePie} dataKey="value" nameKey="label" innerRadius={55} outerRadius={90} paddingAngle={2}>
@@ -1051,11 +1051,11 @@ export default function TelemetriaPage() {
             {loading ? (
               <p className="text-sm text-muted-foreground">Carregando telemetria...</p>
             ) : error ? (
-              <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-900/20 dark:text-red-300">
+              <p className="rounded-md border border-destructive/40 bg-destructive/15 px-3 py-2 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive">
                 {error}
               </p>
             ) : recentRange.invalid ? (
-              <p className="rounded-md border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800 dark:border-amber-900/70 dark:bg-amber-900/20 dark:text-amber-300">
+              <p className="rounded-md border border-primary/40 bg-primary/15 px-3 py-2 text-sm text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary">
                 Faixa inválida: a data/hora inicial deve ser menor ou igual à data/hora final.
               </p>
             ) : recentEventsFiltered.length === 0 ? (

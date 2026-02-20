@@ -677,11 +677,11 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
               </div>
 
               {pendingOutliers.length > 0 && (
-                <div className="rounded-lg border border-amber-300/40 bg-amber-50/40 p-3 text-sm text-amber-800 dark:border-amber-700/50 dark:bg-amber-950/30 dark:text-amber-200">
+                <div className="rounded-lg border border-primary/40 bg-primary/15 p-3 text-sm text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary">
                   <p className="font-medium">Creditos destoantes precisam de atribuicao manual</p>
                   <div className="mt-2 space-y-2 text-xs">
                     {pendingOutliers.map((item) => (
-                      <div key={item.key} className="flex flex-col gap-2 rounded-md border border-amber-400/30 bg-background/50 p-2">
+                      <div key={item.key} className="flex flex-col gap-2 rounded-md border border-primary/40 bg-background/50 p-2">
                         <div className="flex items-center justify-between">
                           <span className="truncate">{item.label}</span>
                           <span>

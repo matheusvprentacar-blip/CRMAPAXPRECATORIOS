@@ -11,19 +11,19 @@ interface ComplexityBadgeProps {
 export function ComplexityBadge({ nivel, score, showScore = false, size = "md" }: ComplexityBadgeProps) {
   const config = {
     baixa: {
-      color: "bg-green-500 hover:bg-green-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Baixa",
       icon: CheckCircle,
       description: "Complexidade baixa (0-30 pontos)",
     },
     media: {
-      color: "bg-yellow-500 hover:bg-yellow-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Média",
       icon: AlertTriangle,
       description: "Complexidade média (31-60 pontos)",
     },
     alta: {
-      color: "bg-red-500 hover:bg-red-600 text-white",
+      color: "bg-destructive/15 hover:bg-destructive/15 text-white",
       label: "Alta",
       icon: AlertCircle,
       description: "Complexidade alta (61+ pontos)",
@@ -129,7 +129,7 @@ export function ComplexityDetails({ score, nivel, precatorio }: ComplexityDetail
             {criteriosAtivos.map((criterio, index) => (
               <li key={index} className="flex items-center justify-between text-sm">
                 <span className="flex items-center gap-2">
-                  <CheckCircle className="w-4 h-4 text-green-500" />
+                  <CheckCircle className="w-4 h-4 text-primary" />
                   {criterio.label}
                 </span>
                 <span className="font-medium text-muted-foreground">+{criterio.pontos} pts</span>

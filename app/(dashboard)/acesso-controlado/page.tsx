@@ -141,7 +141,7 @@ export default function AcessoControladoPage() {
                     </div>
 
                     {error && (
-                        <div className="text-sm text-red-600">{error}</div>
+                        <div className="text-sm text-destructive">{error}</div>
                     )}
 
                     <div className="space-y-3">
@@ -165,7 +165,7 @@ export default function AcessoControladoPage() {
 
                                             <div className="text-xs text-muted-foreground mt-1 space-y-1">
                                                 <div className="truncate">
-                                                    Prec.: {r.numero_precatorio || "N/A"} • Proc.: {r.numero_processo || "N/A"}
+                                                    Prec.: {r.numero_precatorio || "N/A"} â€¢ Proc.: {r.numero_processo || "N/A"}
                                                 </div>
                                                 <div className="truncate">
                                                     Resp.: {r.responsavel_calculo_nome || r.responsavel_nome || "Não atribuído"}

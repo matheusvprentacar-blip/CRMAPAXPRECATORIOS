@@ -19,8 +19,6 @@ import {
   X,
   LogOut,
   Scale,
-  Moon,
-  Sun,
   RotateCcw,
   User,
   FileCheck,
@@ -45,7 +43,6 @@ import {
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/auth-context"
 import { ProtectedRoute } from "@/lib/auth/protected-route"
-import { useTheme } from "next-themes"
 import Image from "next/image"
 import { NotificationsProvider } from "@/components/notifications/useNotifications"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
@@ -54,6 +51,7 @@ import { ComunicadosBroadcastModal } from "@/components/comunicados/comunicados-
 import { getVersion } from "@tauri-apps/api/app"
 import packageJson from "@/package.json"
 import { TelemetryProvider } from "@/components/telemetry/telemetry-provider"
+import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 
 const navigation = [
   {
@@ -180,14 +178,13 @@ const navigation = [
 ]
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const DEFAULT_UI_ZOOM = 0.8
+  const DEFAULT_UI_ZOOM = 0.9
   const UI_ZOOM_STORAGE_KEY = "ui_zoom"
-  const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_80_applied"
+  const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_90_applied"
 
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
   const { profile, signOut } = useAuth()
-  const { theme, setTheme } = useTheme()
   const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
   const [uiZoomPreview, setUiZoomPreview] = useState(DEFAULT_UI_ZOOM)
   const baseFontSizeRef = useRef<number | null>(null)
@@ -247,8 +244,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const invalid = Number.isNaN(parsed) || !Number.isFinite(parsed)
     const outOfRange = parsed < ZOOM_MIN || parsed > ZOOM_MAX
 
-    // Migra usuários do padrão antigo (100%) para o novo padrão (80%) uma vez.
-    const migratedDefault = !migrationApplied && parsed === 1
+    // Migra usuários do padrão antigo (100% e 80%) para o novo padrão (90%) uma vez.
+    const migratedDefault = !migrationApplied && (parsed === 1 || parsed === 0.8)
 
     const sanitized = invalid || outOfRange || migratedDefault ? DEFAULT_UI_ZOOM : parsed
     if (sanitized !== parsed) {
@@ -415,7 +412,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     <ProtectedRoute>
       <TelemetryProvider>
       <NotificationsProvider>
-      <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-zinc-950 dark:to-zinc-900/60">
+      <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-black dark:to-zinc-950">
         {/* Mobile sidebar backdrop */}
         {sidebarOpen && (
           <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
@@ -440,7 +437,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         <aside
           className={cn(
             "fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
-            "bg-zinc-100 text-zinc-900 border-zinc-300/70 shadow-xl dark:bg-zinc-950/40 dark:text-zinc-100 dark:border-zinc-800/60",
+            "bg-muted text-muted-foreground border-border shadow-xl dark:bg-black dark:text-muted-foreground dark:border-border",
             sidebarOpen ? "translate-x-0" : "-translate-x-full",
           )}
         >
@@ -450,7 +447,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
             {/* Logo Area */}
             <div className="flex items-center gap-3 p-6 border-b border-border/50">
-              <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-orange-100">
+              <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-primary/40">
                 <Image
                   src={logoUrl || "/logo-apax.png"}
                   alt="Logo"
@@ -481,15 +478,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     className={cn(
                       "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
                       isActive
-                        ? "bg-amber-50 text-zinc-900 font-semibold dark:bg-amber-900/20 dark:text-zinc-100"
-                        : "text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900/60 dark:hover:text-zinc-100",
+                        ? "bg-primary/15 text-muted-foreground font-semibold dark:bg-primary/15 dark:text-muted-foreground"
+                        : "text-muted-foreground hover:bg-muted hover:text-muted-foreground dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-muted-foreground",
                     )}
                     onClick={() => setSidebarOpen(false)}
                   >
                     {isActive && (
-                      <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-amber-500 rounded-r-full" />
+                      <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary/15 rounded-r-full" />
                     )}
-                    <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-amber-600" : "text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100")} />
+                    <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground dark:text-muted-foreground dark:group-hover:text-muted-foreground")} />
                     {item.name}
                   </Link>
                 )
@@ -508,7 +505,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         {/* Main content */}
         <div className="lg:pl-64">
           {/* Mobile header */}
-          <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-zinc-200/70 dark:bg-zinc-950/70 dark:border-zinc-800/60 lg:hidden">
+          <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border lg:hidden">
             <div className="flex items-center justify-between p-4">
               <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
                 {sidebarOpen ? <X /> : <Menu />}
@@ -516,32 +513,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
               <div className="flex items-center gap-2">
                 <NotificationBell />
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                  onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-                >
-                  {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-                </Button>
+                <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
                 {profileMenu}
               </div>
             </div>
           </header>
 
           {/* Desktop header */}
-          <header className="hidden lg:block sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-zinc-200/70 dark:bg-zinc-950/70 dark:border-zinc-800/60">
+          <header className="hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border">
             {/* Subtle noise texture or gradient could be added here via pseudo-element if desired, for now keeping it clean/glassy */}
             <div className="flex items-center justify-end p-4 gap-2">
               <NotificationBell />
-              <Button
-                variant="ghost"
-                size="icon"
-                className="text-muted-foreground hover:text-foreground hover:bg-muted/60"
-                onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
-              >
-                {theme === "dark" ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
-              </Button>
+              <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
               {profileMenu}
             </div>
           </header>

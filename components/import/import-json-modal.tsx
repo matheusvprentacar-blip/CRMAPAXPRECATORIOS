@@ -26,7 +26,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // ==============================================================================
-  // HELPERS DE VALIDAÇÃO (Locais)
+  // HELPERS DE VALIDACAO (Locais)
   // ==============================================================================
   function normalizarCPFCNPJ(v: string) { return v.replace(/[^\d]/g, '') }
 
@@ -168,7 +168,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
   }
 
   // ==============================================================================
-  // CRIAÇÃO (INSERT)
+  // CRIACAO (INSERT)
   // ==============================================================================
   async function handleCreate() {
     if (!preview || selectedIndices.size === 0) return
@@ -405,7 +405,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
               </div>
 
               <div className="text-sm text-muted-foreground space-y-2">
-                <p>📋 <strong>Formato esperado:</strong></p>
+                <p>ðŸ“‹ <strong>Formato esperado:</strong></p>
                 <pre className="bg-muted p-3 rounded text-xs overflow-x-auto">
                   {`{
   "precatorios": [
@@ -428,7 +428,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
                 <div>
                   <p className="font-medium">Validar Dados</p>
                   <p className="text-sm text-muted-foreground">
-                    {preview.total} encontrados • {selectedIndices.size} selecionados para importação
+                    {preview.total} encontrados â€¢ {selectedIndices.size} selecionados para importação
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
@@ -490,12 +490,12 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
                         <TableCell className="text-xs font-mono">{item.dados.credor_cpf_cnpj || '-'}</TableCell>
                         <TableCell>
                           {item.valido ? (
-                            <Badge variant="default" className="bg-green-600 hover:bg-green-700">OK</Badge>
+                            <Badge variant="default" className="bg-primary/15 hover:bg-primary/15">OK</Badge>
                           ) : (
                             <div className="flex flex-col gap-1">
                               <Badge variant="destructive">Inválido</Badge>
                               {item.avisos.map((avi: string, idx: number) => (
-                                <span key={idx} className="text-[10px] text-red-500 leading-tight">{avi}</span>
+                                <span key={idx} className="text-[10px] text-destructive leading-tight">{avi}</span>
                               ))}
                             </div>
                           )}
@@ -515,7 +515,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
                 <div>
                   <p className="font-medium">Resultado da Importação</p>
                   <p className="text-sm text-muted-foreground">
-                    {result.criados} criados com sucesso • {result.erros} erros
+                    {result.criados} criados com sucesso â€¢ {result.erros} erros
                   </p>
                 </div>
               </div>
@@ -535,7 +535,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
                         <TableCell>{item.credor_nome}</TableCell>
                         <TableCell>
                           {item.sucesso ? (
-                            <Badge variant="default" className="bg-green-600">Criado</Badge>
+                            <Badge variant="default" className="bg-primary/15">Criado</Badge>
                           ) : (
                             <Badge variant="destructive">Erro</Badge>
                           )}

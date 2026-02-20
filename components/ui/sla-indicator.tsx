@@ -14,31 +14,31 @@ interface SLAIndicatorProps {
 export function SLAIndicator({ dataEntrada, slaHoras, status, size = "md", showDetails = true }: SLAIndicatorProps) {
   const config = {
     nao_iniciado: {
-      color: "bg-gray-400 hover:bg-gray-500 text-white",
+      color: "bg-muted hover:bg-muted text-white",
       label: "Não Iniciado",
       icon: Circle,
       description: "Cálculo ainda não iniciado",
     },
     no_prazo: {
-      color: "bg-green-500 hover:bg-green-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "No Prazo",
       icon: CheckCircle,
       description: "Dentro do prazo (< 80% do SLA)",
     },
     atencao: {
-      color: "bg-yellow-500 hover:bg-yellow-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Atenção",
       icon: AlertTriangle,
       description: "Próximo do limite (80-100% do SLA)",
     },
     atrasado: {
-      color: "bg-red-500 hover:bg-red-600 text-white",
+      color: "bg-destructive/15 hover:bg-destructive/15 text-white",
       label: "Atrasado",
       icon: AlertCircle,
       description: "SLA ultrapassado (> 100%)",
     },
     concluido: {
-      color: "bg-blue-500 hover:bg-blue-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Concluído",
       icon: CheckCircle,
       description: "Cálculo finalizado",
@@ -162,7 +162,7 @@ export function SLADetails({ dataEntrada, slaHoras, status, urgente, nivelComple
                 <div className="flex-1 bg-secondary rounded-full h-2 overflow-hidden">
                   <div
                     className={`h-full transition-all ${
-                      percentual < 80 ? "bg-green-500" : percentual < 100 ? "bg-yellow-500" : "bg-red-500"
+                      percentual < 80 ? "bg-primary/15" : percentual < 100 ? "bg-primary/15" : "bg-destructive/15"
                     }`}
                     style={{ width: `${Math.min(percentual, 100)}%` }}
                   />
@@ -178,7 +178,7 @@ export function SLADetails({ dataEntrada, slaHoras, status, urgente, nivelComple
             {status !== "concluido" && (
               <div className="pt-2 border-t">
                 <p className="text-sm text-muted-foreground">Tempo Restante:</p>
-                <p className={`text-lg font-bold ${horasRestantes === 0 ? "text-red-500" : "text-foreground"}`}>
+                <p className={`text-lg font-bold ${horasRestantes === 0 ? "text-destructive" : "text-foreground"}`}>
                   {horasRestantes > 0 ? `${horasRestantes}h` : "SLA Ultrapassado"}
                 </p>
               </div>

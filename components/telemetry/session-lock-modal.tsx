@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import { useEffect, useRef, useState, type FormEvent } from "react"
 import {
@@ -46,9 +46,9 @@ export function SessionLockModal({ open, loading, error, reason, onUnlock, onSig
 
   return (
     <AlertDialog open={open}>
-      <AlertDialogContent className="sm:max-w-md rounded-2xl border-orange-200/70 dark:border-zinc-700">
+      <AlertDialogContent className="sm:max-w-md rounded-2xl border-primary/40 dark:border-border">
         <AlertDialogHeader className="space-y-2">
-          <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300">
+          <div className="inline-flex h-11 w-11 items-center justify-center rounded-full bg-primary/15 text-primary dark:bg-primary/15 dark:text-primary">
             <Lock className="h-5 w-5" />
           </div>
           <AlertDialogTitle>Sessão bloqueada</AlertDialogTitle>
@@ -76,7 +76,7 @@ export function SessionLockModal({ open, loading, error, reason, onUnlock, onSig
           </div>
 
           {error ? (
-            <p className="rounded-md border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-900/70 dark:bg-red-900/20 dark:text-red-300">
+            <p className="rounded-md border border-destructive/40 bg-destructive/15 px-3 py-2 text-sm text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive">
               {error}
             </p>
           ) : null}

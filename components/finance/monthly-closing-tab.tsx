@@ -168,11 +168,11 @@ export function MonthlyClosingTab() {
                         <div className="space-y-2">
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Receita Líquida (Realizado)</span>
-                                <span className="font-medium text-green-600">{formatCurrency(data?.netRevenue || 0)}</span>
+                                <span className="font-medium text-primary">{formatCurrency(data?.netRevenue || 0)}</span>
                             </div>
                             <div className="flex justify-between text-sm">
                                 <span className="text-muted-foreground">Despesas Operacionais</span>
-                                <span className="font-medium text-red-600">{formatCurrency(data?.netExpense || 0)}</span>
+                                <span className="font-medium text-destructive">{formatCurrency(data?.netExpense || 0)}</span>
                             </div>
                             <Separator />
                             <div className="flex justify-between text-base font-semibold">
@@ -182,11 +182,11 @@ export function MonthlyClosingTab() {
                         </div>
 
                         {commValueNum > 0 && (
-                            <div className="rounded-lg bg-orange-50 p-4 border border-orange-100 mt-4">
-                                <div className="flex items-center gap-2 mb-2 text-orange-800 font-medium">
+                            <div className="rounded-lg bg-primary/15 p-4 border border-primary/40 mt-4">
+                                <div className="flex items-center gap-2 mb-2 text-primary font-medium">
                                     <Calculator className="h-4 w-4" /> Simulador
                                 </div>
-                                <div className="space-y-2 text-sm text-orange-900">
+                                <div className="space-y-2 text-sm text-primary">
                                     <div className="flex justify-between">
                                         <span>Saldo Atual</span>
                                         <span>{formatCurrency(currentBalance)}</span>
@@ -195,7 +195,7 @@ export function MonthlyClosingTab() {
                                         <span>(-) Nova Comissão</span>
                                         <span>{formatCurrency(commValueNum)}</span>
                                     </div>
-                                    <Separator className="bg-orange-200" />
+                                    <Separator className="bg-primary/15" />
                                     <div className="flex justify-between font-bold text-lg">
                                         <span>Resultado Final</span>
                                         <span>{formatCurrency(finalResult)}</span>

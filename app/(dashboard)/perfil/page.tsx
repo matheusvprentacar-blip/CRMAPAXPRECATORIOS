@@ -40,7 +40,7 @@ const ROLE_DESCRIPTIONS = {
     "Gerenciar precatórios comercialmente. Pode criar, editar, distribuir precatórios e enviar para cálculo.",
   operador_calculo:
     "Realizar cálculos de precatórios. Pode acessar a fila de cálculo, realizar cálculos e gerenciar seus precatórios.",
-  operador: "Operador geral do sistema. Acesso básico às funcionalidades.",
+  operador: "Operador geral do sistema. Acesso básico ?s funcionalidades.",
   analista: "Analisar dados e gerar relatórios. Acesso de leitura aos dados do sistema.",
   gestor: "Gerenciar equipes e visualizar métricas. Acesso a dashboards e relatórios gerenciais.",
 }
@@ -114,7 +114,7 @@ export default function PerfilPage() {
         setEstado(data.estado || "")
         setCargo(data.cargo || "")
         setDescricaoCargo(data.descricao_cargo || "")
-        setNotificacoesEmail(data.notificacoes_email ?? true)
+        setNotificacoesEmail(Boolean(data.notificacoes_email))
         setTema(data.tema || "system")
         setSystemTheme(data.tema || "system")
       }
@@ -491,9 +491,9 @@ export default function PerfilPage() {
             </div>
 
             {roleDescription && (
-              <Alert className="bg-blue-50 dark:bg-blue-900/20 border-blue-200">
-                <Shield className="h-4 w-4 text-blue-600" />
-                <AlertDescription className="text-sm text-blue-800 dark:text-blue-200">
+              <Alert className="bg-primary/15 dark:bg-primary/15 border-primary/40">
+                <Shield className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-sm text-primary dark:text-primary">
                   <strong>Permissões do seu perfil ({roleDisplay}):</strong>
                   <br />
                   {roleDescription}
@@ -548,7 +548,7 @@ export default function PerfilPage() {
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                Escolha o tema que será aplicado à interface do sistema
+                Escolha o tema que será aplicado ? interface do sistema
               </p>
             </div>
           </CardContent>
@@ -562,9 +562,9 @@ export default function PerfilPage() {
         )}
 
         {success && (
-          <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
-            <CheckCircle2 className="h-4 w-4 text-green-600" />
-            <AlertDescription className="text-green-600">Perfil atualizado com sucesso!</AlertDescription>
+          <Alert className="border-primary/40 bg-primary/15 dark:bg-primary/15">
+            <CheckCircle2 className="h-4 w-4 text-primary" />
+            <AlertDescription className="text-primary">Perfil atualizado com sucesso!</AlertDescription>
           </Alert>
         )}
 
@@ -599,7 +599,7 @@ export default function PerfilPage() {
                 <Input
                   id="novaSenha"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={novaSenha}
                   onChange={(e) => setNovaSenha(e.target.value)}
                   autoComplete="new-password"
@@ -611,7 +611,7 @@ export default function PerfilPage() {
                 <Input
                   id="confirmarSenha"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                   value={confirmarSenha}
                   onChange={(e) => setConfirmarSenha(e.target.value)}
                   autoComplete="new-password"
@@ -626,9 +626,9 @@ export default function PerfilPage() {
             )}
 
             {successSenha && (
-              <Alert className="border-green-500 bg-green-50 dark:bg-green-900/20">
-                <CheckCircle2 className="h-4 w-4 text-green-600" />
-                <AlertDescription className="text-green-600">Senha alterada com sucesso!</AlertDescription>
+              <Alert className="border-primary/40 bg-primary/15 dark:bg-primary/15">
+                <CheckCircle2 className="h-4 w-4 text-primary" />
+                <AlertDescription className="text-primary">Senha alterada com sucesso!</AlertDescription>
               </Alert>
             )}
 

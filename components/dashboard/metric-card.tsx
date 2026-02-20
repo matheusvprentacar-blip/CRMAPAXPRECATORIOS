@@ -28,9 +28,9 @@ export function MetricCard({
 }: MetricCardProps) {
   const variantStyles = {
     default: "border-border",
-    success: "border-green-500/50 bg-green-50/50 dark:bg-green-950/20",
-    warning: "border-yellow-500/50 bg-yellow-50/50 dark:bg-yellow-950/20",
-    danger: "border-red-500/50 bg-red-50/50 dark:bg-red-950/20",
+    success: "border-primary/40 bg-primary/15 dark:bg-primary/15",
+    warning: "border-primary/40 bg-primary/15 dark:bg-primary/15",
+    danger: "border-destructive/40 bg-destructive/15 dark:bg-destructive/15",
   }
 
   const getTrendIcon = () => {
@@ -49,11 +49,11 @@ export function MetricCard({
   const getTrendColor = () => {
     switch (trend) {
       case "up":
-        return "text-green-600 dark:text-green-400"
+        return "text-primary dark:text-primary"
       case "down":
-        return "text-red-600 dark:text-red-400"
+        return "text-destructive dark:text-destructive"
       case "neutral":
-        return "text-gray-600 dark:text-gray-400"
+        return "text-muted-foreground dark:text-muted-foreground"
       default:
         return ""
     }
@@ -62,15 +62,15 @@ export function MetricCard({
   return (
     <Card className={cn(variantStyles[variant], className)}>
       <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-xs font-semibold tracking-wide uppercase text-zinc-500">{title}</CardTitle>
-        {Icon && <Icon className="h-4 w-4 text-zinc-400" />}
+        <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">{title}</CardTitle>
+        {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </CardHeader>
       <CardContent>
         <div className="space-y-1">
           <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary">
             {value}
           </div>
-          {subtitle && <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{subtitle}</p>}
+          {subtitle && <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{subtitle}</p>}
           {trend && trendValue && (
             <div className={cn("flex items-center gap-1 text-xs font-medium", getTrendColor())}>
               {getTrendIcon()}

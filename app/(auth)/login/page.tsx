@@ -39,7 +39,7 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-background to-orange-100 dark:from-background dark:via-background dark:to-orange-950/20 p-4">
-      <Card className="w-full max-w-md shadow-xl border-orange-100/50 dark:border-border">
+      <Card className="w-full max-w-md shadow-xl border-primary/40 dark:border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-6">
             <div className="relative w-28 h-28 aspect-square">
@@ -74,7 +74,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -95,7 +95,7 @@ export default function LoginPage() {
               </Label>
             </div>
             {error && (
-              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+              <div className="text-sm text-destructive dark:text-destructive bg-destructive/15 dark:bg-destructive/15 p-3 rounded-md">
                 {error}
               </div>
             )}

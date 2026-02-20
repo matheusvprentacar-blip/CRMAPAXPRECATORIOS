@@ -4,9 +4,22 @@ import { ResponsiveContainer, PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
-const COLORS = ['#0ea5e9', '#22c55e', '#eab308', '#f97316', '#ef4444', '#8b5cf6', '#ec4899']
+type ExpenseDatum = {
+    name: string
+    value: number
+}
 
-export function ExpensesBreakdown({ data, loading }: { data: any[], loading: boolean }) {
+const COLORS = [
+    "hsl(var(--chart-1))",
+    "hsl(var(--chart-2))",
+    "hsl(var(--chart-3))",
+    "hsl(var(--chart-4))",
+    "hsl(var(--destructive))",
+    "hsl(var(--chart-5))",
+    "hsl(var(--primary))",
+]
+
+export function ExpensesBreakdown({ data, loading }: { data: ExpenseDatum[], loading: boolean }) {
     if (loading) return <SkeletonCard title="Despesas por Categoria" />
 
     return (
@@ -31,7 +44,7 @@ export function ExpensesBreakdown({ data, loading }: { data: any[], loading: boo
                                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                                 ))}
                             </Pie>
-                            <Tooltip formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))} />
+                            <Tooltip formatter={(value: number | string) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))} />
                         </PieChart>
                     </ResponsiveContainer>
                 </div>
@@ -48,7 +61,7 @@ export function ExpensesBreakdown({ data, loading }: { data: any[], loading: boo
     )
 }
 
-export function TopExpenses({ data, loading }: { data: any[], loading: boolean }) {
+export function TopExpenses({ data, loading }: { data: ExpenseDatum[], loading: boolean }) {
     if (loading) return <SkeletonCard title="Top 5 Gastos" />
 
     return (
@@ -70,11 +83,15 @@ export function TopExpenses({ data, loading }: { data: any[], loading: boolean }
                                 interval={0}
                             />
                             <Tooltip
-                                formatter={(value: any) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}
-                                contentStyle={{ color: 'black' }}
+                                formatter={(value: number | string) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value))}
+                                contentStyle={{
+                                    color: "hsl(var(--foreground))",
+                                    background: "hsl(var(--popover))",
+                                    border: "1px solid hsl(var(--border))",
+                                }}
                             />
-                            <Bar dataKey="value" fill="#8884d8" radius={[0, 4, 4, 0]}>
-                                <LabelList dataKey="value" position="right" formatter={(val: any) => `R$${val}`} />
+                            <Bar dataKey="value" fill="hsl(var(--chart-1))" radius={[0, 4, 4, 0]}>
+                                <LabelList dataKey="value" position="right" formatter={(val: number | string) => `R$${val}`} />
                             </Bar>
                         </BarChart>
                     </ResponsiveContainer>

@@ -173,7 +173,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
                       )}
                     </p>
                   </div>
-                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                  <div className="text-right text-base font-semibold tabular-nums text-primary">
                     {resultado.memoriaCalculo.ipca.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
@@ -181,7 +181,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
             )}
 
             {resultado.memoriaCalculo.juros && (
-              <div className="rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3">
+              <div className="rounded-2xl border border-primary/40 bg-primary/15 p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">2. Juros Moratórios (Pré-2022)</p>
@@ -192,7 +192,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
                       {resultado.memoriaCalculo.juros.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.juros.percentual?.toFixed(4)}%
                     </p>
                   </div>
-                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                  <div className="text-right text-base font-semibold tabular-nums text-primary">
                     {resultado.memoriaCalculo.juros.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
@@ -200,7 +200,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
             )}
 
             {resultado.memoriaCalculo.selic && (
-              <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3">
+              <div className="rounded-2xl border border-primary/40 bg-primary/15 p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">3. SELIC Acumulada (Pós-2022)</p>
@@ -211,7 +211,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
                       {resultado.memoriaCalculo.selic.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.selic.percentual?.toFixed(4)}%
                     </p>
                   </div>
-                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                  <div className="text-right text-base font-semibold tabular-nums text-primary">
                     {resultado.memoriaCalculo.selic.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
@@ -219,7 +219,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
             )}
 
             {resultado.memoriaCalculo.ipca2025 && (
-              <div className="rounded-2xl border border-sky-500/20 bg-sky-500/5 p-3">
+              <div className="rounded-2xl border border-primary/40 bg-primary/15 p-3">
                 <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
                   <div className="space-y-1">
                     <p className="text-sm font-semibold text-foreground">4. EC 136/2025 (IPCA 2025)</p>
@@ -230,7 +230,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
                       {resultado.memoriaCalculo.ipca2025.base?.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })} × {resultado.memoriaCalculo.ipca2025.percentual?.toFixed(4)}%
                     </p>
                   </div>
-                  <div className="text-right text-base font-semibold tabular-nums text-amber-400">
+                  <div className="text-right text-base font-semibold tabular-nums text-primary">
                     {resultado.memoriaCalculo.ipca2025.resultado.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                   </div>
                 </div>
@@ -243,7 +243,7 @@ export function StepAtualizacaoMonetaria({ dados, setDados, onCompletar, voltar 
                   <p className="text-sm text-muted-foreground">Valor atualizado final</p>
                   <p className="text-xs text-muted-foreground">(Soma dos itens 1, 2, 3 e 4)</p>
                 </div>
-                <p className="text-2xl font-semibold tabular-nums text-emerald-400">
+                <p className="text-2xl font-semibold tabular-nums text-primary">
                   {(resultado.memoriaCalculo.ipca.resultado + resultado.memoriaCalculo.juros.resultado + resultado.memoriaCalculo.selic.resultado + (resultado.memoriaCalculo.ipca2025?.resultado || 0)).toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                 </p>
               </div>

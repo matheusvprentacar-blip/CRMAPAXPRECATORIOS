@@ -81,15 +81,15 @@ export default function PropostasPage() {
     // Helper components
     function StatusDot({ valid }: { valid: boolean }) {
         const Icon = valid ? CheckCircle2 : Clock
-        return <Icon className={`h-3 w-3 ${valid ? "text-emerald-500" : "text-amber-500"}`} />
+        return <Icon className={`h-3 w-3 ${valid ? "text-primary" : "text-primary"}`} />
     }
 
     function ValidationPill({ label, valid }: { label: string, valid: boolean }) {
         return (
             <div className={`flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-[10px] font-medium transition-colors
                 ${valid
-                    ? "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-800/30 dark:bg-emerald-950/30 dark:text-emerald-400"
-                    : "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-800/30 dark:bg-amber-950/30 dark:text-amber-400"
+                    ? "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+                    : "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
                 }`}>
                 <StatusDot valid={valid} />
                 <span className="leading-none">{label}</span>
@@ -190,7 +190,7 @@ export default function PropostasPage() {
                                                         <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
                                                             Valor Proposta
                                                         </label>
-                                                        <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
+                                                        <span className="font-bold text-lg text-primary dark:text-primary">
                                                             {(p.proposta_maior_valor || p.proposta_menor_valor || 0).toLocaleString("pt-BR", {
                                                                 style: "currency",
                                                                 currency: "BRL"

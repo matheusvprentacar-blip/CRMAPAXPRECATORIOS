@@ -9,43 +9,43 @@ interface DelayTypeBadgeProps {
 export function DelayTypeBadge({ tipo, size = "md" }: DelayTypeBadgeProps) {
   const config = {
     titular_falecido: {
-      color: "bg-purple-500 hover:bg-purple-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Titular Falecido",
       icon: UserX,
       description: "Requer documentação de espólio",
     },
     penhora: {
-      color: "bg-red-500 hover:bg-red-600 text-white",
+      color: "bg-destructive/15 hover:bg-destructive/15 text-white",
       label: "Penhora",
       icon: AlertTriangle,
       description: "Penhora identificada no precatório",
     },
     cessao_parcial: {
-      color: "bg-orange-500 hover:bg-orange-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Cessão Parcial",
       icon: Users,
       description: "Cessão parcial de crédito",
     },
     doc_incompleta: {
-      color: "bg-yellow-500 hover:bg-yellow-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Doc. Incompleta",
       icon: FileX,
       description: "Documentação incompleta",
     },
     duvida_juridica: {
-      color: "bg-blue-500 hover:bg-blue-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Dúvida Jurídica",
       icon: HelpCircle,
       description: "Requer análise jurídica",
     },
     aguardando_cliente: {
-      color: "bg-cyan-500 hover:bg-cyan-600 text-white",
+      color: "bg-primary/15 hover:bg-primary/15 text-white",
       label: "Aguardando Cliente",
       icon: Clock,
       description: "Aguardando informações do cliente",
     },
     outro: {
-      color: "bg-gray-500 hover:bg-gray-600 text-white",
+      color: "bg-muted hover:bg-muted text-white",
       label: "Outro",
       icon: MoreHorizontal,
       description: "Outro motivo",

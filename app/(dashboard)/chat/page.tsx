@@ -89,7 +89,7 @@ function isDeletedMessage(msg: Pick<ChatMensagem, "texto">): boolean {
 
 function getMetaMessageText(msg: Pick<ChatMensagem, "texto" | "arquivo_nome">): string {
   if (isDeletedMessage(msg)) return "Mensagem apagada"
-  if (msg.arquivo_nome) return `📎 ${msg.arquivo_nome}`
+  if (msg.arquivo_nome) return `?? ${msg.arquivo_nome}`
   return msg.texto || ""
 }
 
@@ -296,7 +296,7 @@ export default function ChatPage() {
         return
       }
 
-      const list = (data ?? []).filter((u: Usuario) => u.id !== profile.id)
+      const list = (data || []).filter((u: Usuario) => u.id !== profile.id)
       setUsuarios(list)
       await loadUserMeta(list)
     } finally {
@@ -324,7 +324,7 @@ export default function ChatPage() {
         return
       }
 
-      const list = (data ?? []) as ChatMensagem[]
+      const list = (data || []) as ChatMensagem[]
       setMensagens(list)
 
       await supabase
@@ -417,7 +417,7 @@ export default function ChatPage() {
     if (data && selectedUser?.id && selectedUser.id !== senderId) {
       const senderName = profile?.nome || "Usuário"
       const bodyText = data.arquivo_nome
-        ? `📎 ${data.arquivo_nome}`
+        ? `?? ${data.arquivo_nome}`
         : data.texto || "Nova mensagem"
       const { error: notifyError } = await supabase.from("notifications").insert({
         user_id: selectedUser.id,
@@ -442,7 +442,7 @@ export default function ChatPage() {
         [selectedUser.id]: {
           lastMessage: data ? getMetaMessageText(data as ChatMensagem) : prev[selectedUser.id]?.lastMessage,
           lastAt: data?.created_at || new Date().toISOString(),
-          unreadCount: prev[selectedUser.id]?.unreadCount ?? 0,
+          unreadCount: prev[selectedUser.id]?.unreadCount || 0,
         },
       }))
     }
@@ -457,7 +457,7 @@ export default function ChatPage() {
     if (isDeletedMessage(msg)) return
 
     const ok = window.confirm(
-      "Deseja apagar esta mensagem? Ela será substituída por “Mensagem apagada”."
+      "Deseja apagar esta mensagem? Ela será substituída por ?Mensagem apagada?."
     )
     if (!ok) return
 
@@ -512,7 +512,7 @@ export default function ChatPage() {
           ...(prev[selectedUser.id] || { unreadCount: 0 }),
           lastMessage: last ? getMetaMessageText(last) : prev[selectedUser.id]?.lastMessage,
           lastAt: last?.created_at || prev[selectedUser.id]?.lastAt,
-          unreadCount: prev[selectedUser.id]?.unreadCount ?? 0,
+          unreadCount: prev[selectedUser.id]?.unreadCount || 0,
         },
       }))
 
@@ -566,7 +566,7 @@ export default function ChatPage() {
     }
 
     const meta: Record<string, { lastMessage?: string; lastAt?: string; unreadCount: number }> = {}
-      ; (data ?? []).forEach((msg) => {
+      ; (data || []).forEach((msg) => {
         const otherId = msg.remetente_id === profile.id ? msg.destinatario_id : msg.remetente_id
         if (!meta[otherId]) {
           meta[otherId] = {
@@ -578,7 +578,7 @@ export default function ChatPage() {
         if (msg.destinatario_id === profile.id && msg.lida === false) {
           meta[otherId] = {
             ...meta[otherId],
-            unreadCount: (meta[otherId]?.unreadCount ?? 0) + 1,
+            unreadCount: (meta[otherId]?.unreadCount || 0) + 1,
           }
         }
       })
@@ -595,7 +595,7 @@ export default function ChatPage() {
       mensagens
         .filter((msg) => msg.arquivo_url && !attachmentUrls[msg.id])
         .map(async (msg) => {
-          const url = await getFileDownloadUrl(msg.arquivo_url ?? null)
+          const url = await getFileDownloadUrl(msg.arquivo_url || null)
           return url ? [msg.id, url] : null
         })
     )
@@ -676,7 +676,7 @@ export default function ChatPage() {
           "grid grid-cols-1 lg:grid-cols-[360px_minmax(0,1fr)]"
         )}
       >
-        {/* LEFT — Sidebar (Messenger-like) */}
+        {/* LEFT ? Sidebar (Messenger-like) */}
         <section
           className={cn(
             "h-full flex flex-col min-h-0",
@@ -715,12 +715,12 @@ export default function ChatPage() {
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   ref={searchInputRef}
-                  placeholder="Pesquisar no Messenger…"
+                  placeholder="Pesquisar no Messenger?"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   className={cn(
                     "h-10 pl-9 pr-9 rounded-full",
-                    "bg-muted/60 border-border focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                    "bg-muted/60 border-border focus-visible:ring-2 focus-visible:ring-primary"
                   )}
                 />
                 {searchTerm && (
@@ -742,7 +742,7 @@ export default function ChatPage() {
             <ScrollArea className="h-full">
               <div className="py-2">
                 {loadingUsuarios && (
-                  <div className="px-4 py-3 text-xs text-muted-foreground">Carregando…</div>
+                  <div className="px-4 py-3 text-xs text-muted-foreground">Carregando?</div>
                 )}
 
                 {!loadingUsuarios && filteredUsuarios.length === 0 && (
@@ -756,7 +756,7 @@ export default function ChatPage() {
                   const meta = userMeta[user.id]
                   const lastMessage = meta?.lastMessage || "Nenhuma mensagem"
                   const unread = meta?.unreadCount || 0
-                  const online = isRecent(meta?.lastAt ?? null)
+                  const online = isRecent(meta?.lastAt || null)
 
                   return (
                     <button
@@ -789,7 +789,7 @@ export default function ChatPage() {
                           <span
                             className={cn(
                               "absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-background",
-                              online ? "bg-emerald-500" : "bg-muted-foreground/60"
+                              online ? "bg-primary/15" : "bg-muted-foreground/60"
                             )}
                             title={online ? "online" : "offline"}
                           />
@@ -812,7 +812,7 @@ export default function ChatPage() {
                               </span>
 
                               {unread > 0 && (
-                                <span className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-blue-600 text-white flex items-center justify-center">
+                                <span className="min-w-[20px] h-5 px-1.5 rounded-full text-[10px] font-semibold bg-primary/15 text-white flex items-center justify-center">
                                   {unread}
                                 </span>
                               )}
@@ -834,7 +834,7 @@ export default function ChatPage() {
           </div>
         </section>
 
-        {/* RIGHT — Chat panel */}
+        {/* RIGHT ? Chat panel */}
         <section
           className={cn(
             "h-full min-h-0 flex flex-col",
@@ -905,7 +905,7 @@ export default function ChatPage() {
                       </AvatarGroup>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {selectedUser.email || "Usuário interno"} •{" "}
+                      {selectedUser.email || "Usuário interno"} ?{" "}
                       {formatRelative(userMeta[selectedUser.id]?.lastAt)}
                     </p>
                   </div>
@@ -937,7 +937,7 @@ export default function ChatPage() {
               <div className="px-4 py-4">
                 <h3 className="text-sm font-semibold">Selecione uma conversa</h3>
                 <p className="text-xs text-muted-foreground">
-                  Escolha um contato à esquerda para começar.
+                  Escolha um contato ? esquerda para começar.
                 </p>
               </div>
             )}
@@ -950,7 +950,7 @@ export default function ChatPage() {
               <div className="pointer-events-none absolute inset-x-0 bottom-24 z-20 flex justify-center">
                 <Button
                   size="sm"
-                  className="pointer-events-auto rounded-full shadow-lg bg-blue-600 hover:bg-blue-700"
+                  className="pointer-events-auto rounded-full shadow-lg bg-primary/15 hover:bg-primary/15"
                   onClick={() => scrollToBottom("smooth")}
                 >
                   <ArrowDown className="h-4 w-4 mr-2" />
@@ -967,7 +967,7 @@ export default function ChatPage() {
                 )}
               >
                 {loadingMensagens && (
-                  <div className="text-xs text-muted-foreground">Carregando mensagens…</div>
+                  <div className="text-xs text-muted-foreground">Carregando mensagens?</div>
                 )}
 
                 {!loadingMensagens && !selectedUser && (
@@ -1069,7 +1069,7 @@ export default function ChatPage() {
                               "px-3.5 py-2.5 text-sm leading-relaxed",
                               "rounded-2xl",
                               isMine
-                                ? "bg-blue-600 text-white"
+                                ? "bg-primary/15 text-white"
                                 : "bg-background border border-border text-foreground",
                               // grouping corners (like Messenger)
                               isMine ? (prevSame ? "rounded-tr-md" : "") : prevSame ? "rounded-tl-md" : "",
@@ -1104,7 +1104,7 @@ export default function ChatPage() {
                                           void handleDeleteMessage(msg)
                                         }}
                                         disabled={deletingMessageId === msg.id}
-                                        className="text-red-600 focus:text-red-600"
+                                        className="text-destructive focus:text-destructive"
                                       >
                                         <Trash2 className="h-4 w-4" />
                                         {deletingMessageId === msg.id ? "Excluindo..." : "Excluir mensagem"}
@@ -1132,7 +1132,7 @@ export default function ChatPage() {
                                           <div
                                             className={cn(
                                               "overflow-hidden rounded-xl border",
-                                              isMine ? "border-white/15 bg-white/5" : "border-border bg-muted/20"
+                                              isMine ? "border-border/15 bg-background/5" : "border-border bg-muted/20"
                                             )}
                                           >
                                             <button
@@ -1176,7 +1176,7 @@ export default function ChatPage() {
                                                   <div
                                                     className={cn(
                                                       "rounded-full border px-2 py-0.5 text-[10px] uppercase",
-                                                      isMine ? "border-white/20 text-white/80" : "border-border text-muted-foreground"
+                                                      isMine ? "border-border/20 text-white/80" : "border-border text-muted-foreground"
                                                     )}
                                                   >
                                                     {attachmentExt}
@@ -1188,7 +1188,7 @@ export default function ChatPage() {
                                             <div
                                               className={cn(
                                                 "flex items-center justify-between gap-3 px-3 py-2",
-                                                isMine ? "bg-white/10" : "bg-muted/30"
+                                                isMine ? "bg-background/10" : "bg-muted/30"
                                               )}
                                             >
                                               <div
@@ -1214,7 +1214,7 @@ export default function ChatPage() {
                                                     type="button"
                                                     className={cn(
                                                       "text-[11px] font-semibold hover:underline inline-flex items-center gap-1",
-                                                      isMine ? "text-white" : "text-blue-600 dark:text-blue-400"
+                                                      isMine ? "text-white" : "text-primary dark:text-primary"
                                                     )}
                                                     onClick={() => openPDF(msg.arquivo_url!, attachmentName)}
                                                   >
@@ -1227,7 +1227,7 @@ export default function ChatPage() {
                                                   type="button"
                                                   className={cn(
                                                     "text-[11px] font-semibold hover:underline inline-flex items-center gap-1",
-                                                    isMine ? "text-white" : "text-blue-600 dark:text-blue-400"
+                                                    isMine ? "text-white" : "text-primary dark:text-primary"
                                                   )}
                                                   onClick={() => void handleDownloadAttachment(msg)}
                                                 >
@@ -1249,7 +1249,7 @@ export default function ChatPage() {
                           {showTimestamp && (
                             <div className={cn("mt-1 text-[11px] text-muted-foreground", isMine ? "text-right" : "text-left")}>
                               {new Date(msg.created_at).toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" })}
-                              {isMine && <span className="ml-2">{msg.lida ? "✓✓" : "✓"}</span>}
+                              {isMine && <span className="ml-2">{msg.lida ? "??" : "?"}</span>}
                             </div>
                           )}
                         </div>
@@ -1288,7 +1288,7 @@ export default function ChatPage() {
 
             {uploadingFile && (
               <div className="mb-2 h-1 rounded-full bg-muted overflow-hidden">
-                <div className="h-full w-1/2 animate-pulse bg-blue-600" />
+                <div className="h-full w-1/2 animate-pulse bg-primary/15" />
               </div>
             )}
 
@@ -1317,7 +1317,7 @@ export default function ChatPage() {
 
               <div className="flex-1">
                 <Textarea
-                  placeholder="Digite uma mensagem…"
+                  placeholder="Digite uma mensagem?"
                   value={messageText}
                   onChange={(e) => setMessageText(e.target.value)}
                   onKeyDown={(e) => {
@@ -1336,7 +1336,7 @@ export default function ChatPage() {
                     "min-h-[44px] max-h-36",
                     "rounded-3xl px-4 py-2 text-sm",
                     "bg-muted/60 border-border",
-                    "focus-visible:ring-2 focus-visible:ring-blue-500/30"
+                    "focus-visible:ring-2 focus-visible:ring-primary"
                   )}
                 />
               </div>
@@ -1344,7 +1344,7 @@ export default function ChatPage() {
               <Button
                 onClick={handleSendMessage}
                 disabled={!selectedUser || (!messageText.trim() && !attachedFile) || uploadingFile}
-                className="rounded-full h-10 w-10 p-0 bg-blue-600 hover:bg-blue-700"
+                className="rounded-full h-10 w-10 p-0 bg-primary/15 hover:bg-primary/15"
                 title="Enviar"
               >
                 <Send className="w-5 h-5" />

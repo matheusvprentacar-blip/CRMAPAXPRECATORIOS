@@ -96,13 +96,13 @@ export function AdvancedFilters({
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          className="relative h-11 rounded-xl border-zinc-200/80 dark:border-zinc-700/60 bg-white/85 dark:bg-zinc-900/75 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100/80 dark:hover:bg-zinc-800/70"
+          className="relative h-11 rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted text-muted-foreground dark:text-muted-foreground hover:bg-muted dark:hover:bg-muted"
         >
           <Filter className="h-4 w-4 mr-2" />
           {totalFiltrosAtivos > 0 ? `Filtros (${totalFiltrosAtivos})` : "Filtros"}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto border-zinc-200/80 dark:border-zinc-800/70 bg-white/95 dark:bg-zinc-950/95">
+      <SheetContent className="w-full sm:max-w-lg overflow-y-auto border-border dark:border-border bg-background/95 dark:bg-muted">
         <SheetHeader>
           <SheetTitle>Filtros Avançados</SheetTitle>
           <SheetDescription>

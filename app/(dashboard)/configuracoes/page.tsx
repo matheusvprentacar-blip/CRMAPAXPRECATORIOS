@@ -6,24 +6,64 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Upload, Loader2, Image as ImageIcon, Save, X } from "lucide-react"
+import { Upload, Loader2, Image as ImageIcon, Save, X, Palette, Check } from "lucide-react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import Image from "next/image"
 import { UpdateChecker } from "@/components/settings/update-checker"
+import {
+  DEFAULT_CUSTOM_THEME,
+  DEFAULT_SYSTEM_THEME_CONFIG,
+  getThemePresetOptions,
+  resolveSystemThemePalette,
+  sanitizeSystemThemeConfig,
+  SYSTEM_THEME_CONFIG_STORAGE_KEY,
+  SYSTEM_THEME_EVENT_NAME,
+  type CustomThemeInput,
+  type SystemThemeConfig,
+} from "@/lib/theme/system-theme"
+
+const CUSTOM_THEME_FIELDS: Array<{
+  key: keyof CustomThemeInput
+  label: string
+  placeholder: string
+  affects: string
+}> = [
+  {
+    key: "primary",
+    label: "Cor primaria",
+    placeholder: "#ff8a00",
+    affects: "Altera: botoes principais, titulos destacados, links e acoes ativas.",
+  },
+  {
+    key: "secondary",
+    label: "Cor secundaria",
+    placeholder: "#f59e0b",
+    affects: "Altera: superficies secundarias, chips neutros e areas de apoio.",
+  },
+  {
+    key: "accent",
+    label: "Cor de destaque",
+    placeholder: "#fb923c",
+    affects: "Altera: estados de hover, realces visuais e elementos de enfase.",
+  },
+]
 
 export default function ConfiguracoesPage() {
   const { toast } = useToast()
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingTheme, setSavingTheme] = useState(false)
   const [uploading, setUploading] = useState(false)
+  const themePresets = getThemePresetOptions()
 
   const [config, setConfig] = useState({
     id: '',
     logo_url: '',
     nome_empresa: 'CRM APAX Precat\u00f3rios',
-    subtitulo_empresa: 'Sistema de Gestão',
+    subtitulo_empresa: 'Sistema de Gestao',
+    tema_config: DEFAULT_SYSTEM_THEME_CONFIG as SystemThemeConfig,
   })
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
@@ -46,7 +86,11 @@ export default function ConfiguracoesPage() {
       if (error) throw error
 
       if (data) {
-        setConfig(data)
+        setConfig((prev) => ({
+          ...prev,
+          ...data,
+          tema_config: sanitizeSystemThemeConfig((data as { tema_config?: unknown }).tema_config),
+        }))
         if (data.logo_url) {
           setPreviewUrl(data.logo_url)
         }
@@ -56,6 +100,46 @@ export default function ConfiguracoesPage() {
     } finally {
       setLoading(false)
     }
+  }
+
+  function updateThemeConfig(next: SystemThemeConfig) {
+    setConfig((prev) => ({
+      ...prev,
+      tema_config: sanitizeSystemThemeConfig(next),
+    }))
+  }
+
+  function updateThemeMode(mode: SystemThemeConfig["mode"]) {
+    updateThemeConfig({
+      ...config.tema_config,
+      mode,
+    })
+  }
+
+  function updateThemePreset(preset: SystemThemeConfig["preset"]) {
+    updateThemeConfig({
+      ...config.tema_config,
+      preset,
+      mode: "preset",
+    })
+  }
+
+  function updateCustomColor(field: keyof CustomThemeInput, value: string) {
+    updateThemeConfig({
+      ...config.tema_config,
+      mode: "custom",
+      custom: {
+        ...(config.tema_config.custom || DEFAULT_CUSTOM_THEME),
+        [field]: value,
+      },
+    })
+  }
+
+  function applyThemeLocally(themeConfig: SystemThemeConfig) {
+    if (typeof window === "undefined") return
+    const safeConfig = sanitizeSystemThemeConfig(themeConfig)
+    window.localStorage.setItem(SYSTEM_THEME_CONFIG_STORAGE_KEY, JSON.stringify(safeConfig))
+    window.dispatchEvent(new CustomEvent(SYSTEM_THEME_EVENT_NAME, { detail: { config: safeConfig } }))
   }
 
   function handleFileSelect(event: React.ChangeEvent<HTMLInputElement>) {
@@ -222,6 +306,52 @@ export default function ConfiguracoesPage() {
     }
   }
 
+  async function handleSaveThemeConfig() {
+    setSavingTheme(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) throw new Error("Supabase nao disponivel")
+      if (!config.id) throw new Error("Registro de configuracoes nao encontrado")
+
+      const safeThemeConfig = sanitizeSystemThemeConfig(config.tema_config)
+
+      const { error } = await supabase
+        .from("configuracoes_sistema")
+        .update({
+          tema_config: safeThemeConfig,
+        })
+        .eq("id", config.id)
+
+      if (error) throw error
+
+      applyThemeLocally(safeThemeConfig)
+      setConfig((prev) => ({
+        ...prev,
+        tema_config: safeThemeConfig,
+      }))
+
+      toast({
+        title: "Tema atualizado!",
+        description: "A nova paleta foi aplicada em todo o sistema.",
+      })
+    } catch (error: any) {
+      console.error("Erro ao salvar tema:", error)
+      toast({
+        title: "Erro ao salvar tema",
+        description: error?.message ?? "Nao foi possivel salvar o tema.",
+        variant: "destructive",
+      })
+    } finally {
+      setSavingTheme(false)
+    }
+  }
+
+  const activeThemeConfig = sanitizeSystemThemeConfig(config.tema_config)
+  const customTheme = activeThemeConfig.custom
+  const previewPalette = resolveSystemThemePalette(activeThemeConfig)
+  const lightPreview = previewPalette.light
+  const darkPreview = previewPalette.dark
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
@@ -376,6 +506,242 @@ export default function ConfiguracoesPage() {
             </CardContent>
           </Card>
         </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Palette className="h-5 w-5" />
+              Tema e Paleta Global
+            </CardTitle>
+            <CardDescription>
+              Escolha um preset ou personalize textos e destaques do sistema. Fundos sao fixos e, no modo escuro, permanecem pretos.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant={activeThemeConfig.mode === "preset" ? "default" : "outline"}
+                onClick={() => updateThemeMode("preset")}
+              >
+                {activeThemeConfig.mode === "preset" ? <Check className="h-4 w-4 mr-1" /> : null}
+                Usar paleta predefinida
+              </Button>
+              <Button
+                type="button"
+                variant={activeThemeConfig.mode === "custom" ? "default" : "outline"}
+                onClick={() => updateThemeMode("custom")}
+              >
+                {activeThemeConfig.mode === "custom" ? <Check className="h-4 w-4 mr-1" /> : null}
+                Personalizar
+              </Button>
+            </div>
+
+            <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {themePresets.map((preset) => {
+                const selected =
+                  activeThemeConfig.mode === "preset" &&
+                  activeThemeConfig.preset === (preset.id as SystemThemeConfig["preset"])
+
+                return (
+                  <button
+                    key={preset.id}
+                    type="button"
+                    onClick={() => updateThemePreset(preset.id as SystemThemeConfig["preset"])}
+                    className={`rounded-lg border p-3 text-left transition-all ${
+                      selected
+                        ? "border-primary ring-2 ring-primary/20 bg-primary/5"
+                        : "border-border/70 hover:border-primary/40 hover:bg-muted/40"
+                    }`}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="font-medium">{preset.name}</div>
+                      {selected ? <Check className="h-4 w-4 text-primary" /> : null}
+                    </div>
+                    <p className="mt-1 text-xs text-muted-foreground">{preset.description}</p>
+                    <div className="mt-3 flex items-center gap-2">
+                      <span
+                        className="h-5 w-5 rounded-full border border-border/60"
+                        style={{ backgroundColor: `hsl(${preset.light.primary})` }}
+                      />
+                      <span
+                        className="h-5 w-5 rounded-full border border-border/60"
+                        style={{ backgroundColor: `hsl(${preset.light.secondary})` }}
+                      />
+                      <span
+                        className="h-5 w-5 rounded-full border border-border/60"
+                        style={{ backgroundColor: `hsl(${preset.dark.background})` }}
+                      />
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+
+            <div className="rounded-xl border border-border/60 bg-muted/20 p-4 md:p-5 space-y-4">
+              <div>
+                <p className="text-sm font-semibold">Exemplo de como o sistema vai ficar</p>
+                <p className="text-xs text-muted-foreground">
+                  Pre-visualizacao rapida de fundo, cards, titulos, botoes e destaques com a paleta atual.
+                </p>
+              </div>
+
+              <div className="grid gap-3 lg:grid-cols-2">
+                <div
+                  className="rounded-lg border p-3 space-y-3"
+                  style={{
+                    backgroundColor: `hsl(${lightPreview.background})`,
+                    borderColor: `hsl(${lightPreview.border})`,
+                    color: `hsl(${lightPreview.foreground})`,
+                  }}
+                >
+                  <div className="text-xs font-medium opacity-80">Tema claro</div>
+                  <div
+                    className="rounded-md border p-3 space-y-2"
+                    style={{
+                      backgroundColor: `hsl(${lightPreview.card})`,
+                      borderColor: `hsl(${lightPreview.border})`,
+                    }}
+                  >
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: `hsl(${lightPreview.primary})` }}
+                    >
+                      Titulo e destaque principal
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: `hsl(${lightPreview["muted-foreground"]})` }}
+                    >
+                      Texto auxiliar e informacoes secundarias.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs font-medium"
+                        style={{
+                          backgroundColor: `hsl(${lightPreview.primary})`,
+                          color: `hsl(${lightPreview["primary-foreground"]})`,
+                        }}
+                      >
+                        Botao primario
+                      </button>
+                      <span
+                        className="rounded px-2 py-1 text-xs font-medium border"
+                        style={{
+                          borderColor: `hsl(${lightPreview.accent})`,
+                          backgroundColor: `hsl(${lightPreview.accent})`,
+                          color: `hsl(${lightPreview["accent-foreground"]})`,
+                        }}
+                      >
+                        Destaque
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div
+                  className="rounded-lg border p-3 space-y-3"
+                  style={{
+                    backgroundColor: `hsl(${darkPreview.background})`,
+                    borderColor: `hsl(${darkPreview.border})`,
+                    color: `hsl(${darkPreview.foreground})`,
+                  }}
+                >
+                  <div className="text-xs font-medium opacity-80">Tema escuro</div>
+                  <div
+                    className="rounded-md border p-3 space-y-2"
+                    style={{
+                      backgroundColor: `hsl(${darkPreview.card})`,
+                      borderColor: `hsl(${darkPreview.border})`,
+                    }}
+                  >
+                    <p
+                      className="text-sm font-semibold"
+                      style={{ color: `hsl(${darkPreview.primary})` }}
+                    >
+                      Titulo e destaque principal
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: `hsl(${darkPreview["muted-foreground"]})` }}
+                    >
+                      Texto auxiliar e informacoes secundarias.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        className="rounded px-2 py-1 text-xs font-medium"
+                        style={{
+                          backgroundColor: `hsl(${darkPreview.primary})`,
+                          color: `hsl(${darkPreview["primary-foreground"]})`,
+                        }}
+                      >
+                        Botao primario
+                      </button>
+                      <span
+                        className="rounded px-2 py-1 text-xs font-medium border"
+                        style={{
+                          borderColor: `hsl(${darkPreview.accent})`,
+                          backgroundColor: `hsl(${darkPreview.accent})`,
+                          color: `hsl(${darkPreview["accent-foreground"]})`,
+                        }}
+                      >
+                        Destaque
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {activeThemeConfig.mode === "custom" ? (
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {CUSTOM_THEME_FIELDS.map((field) => (
+                  <div key={field.key} className="space-y-2 rounded-lg border border-border/60 bg-muted/20 p-3">
+                    <Label htmlFor={`theme-${field.key}`}>{field.label}</Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id={`theme-${field.key}`}
+                        type="color"
+                        value={customTheme[field.key]}
+                        onChange={(e) => updateCustomColor(field.key, e.target.value)}
+                        className="h-10 w-16 p-1"
+                      />
+                      <Input
+                        value={customTheme[field.key]}
+                        onChange={(e) => updateCustomColor(field.key, e.target.value)}
+                        placeholder={field.placeholder}
+                      />
+                    </div>
+                    <p className="text-[11px] text-muted-foreground leading-relaxed">
+                      {field.affects}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border/60 bg-muted/30 p-3">
+              <p className="text-xs text-muted-foreground">
+                A paleta salva sera aplicada para todos os usuarios do sistema.
+              </p>
+              <Button onClick={handleSaveThemeConfig} disabled={savingTheme}>
+                {savingTheme ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Salvando tema...
+                  </>
+                ) : (
+                  <>
+                    <Palette className="h-4 w-4 mr-2" />
+                    Salvar paleta
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
 
         <Card className="md:max-w-md">
           <CardHeader>

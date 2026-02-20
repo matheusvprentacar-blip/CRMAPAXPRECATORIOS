@@ -189,7 +189,7 @@ export default function MeusPrecatoriosPage() {
                         {(precatorio.proposta_menor_valor_display || precatorio.proposta_maior_valor_display) && (
                           <div className="flex items-center gap-2 text-xs">
                             <span className="text-muted-foreground">Propostas:</span>
-                            <div className="flex items-center gap-1 font-medium bg-green-500/10 text-green-700 dark:text-green-400 px-2 py-0.5 rounded">
+                            <div className="flex items-center gap-1 font-medium bg-primary/15 text-primary dark:text-primary px-2 py-0.5 rounded">
                               {precatorio.proposta_menor_valor_display || "-"}
                               <span className="text-muted-foreground mx-1">até</span>
                               {precatorio.proposta_maior_valor_display || "-"}

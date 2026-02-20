@@ -452,8 +452,8 @@ export function ComunicadosBroadcastModal() {
       <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden border border-primary/20">
         <div className="grid md:grid-cols-[220px_1fr] max-h-[90vh]">
           <div className="bg-gradient-to-b from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-zinc-900 p-6 flex items-center justify-center">
-            <div className="rounded-2xl bg-white/80 dark:bg-zinc-900/70 p-6 shadow-sm">
-              <Megaphone className="w-16 h-16 text-orange-500" />
+            <div className="rounded-2xl bg-background/80 dark:bg-muted p-6 shadow-sm">
+              <Megaphone className="w-16 h-16 text-primary" />
             </div>
           </div>
 
@@ -476,8 +476,8 @@ export function ComunicadosBroadcastModal() {
               </div>
 
               {activeItem.kind === "alerta" && alerta?.entity_type === "precatorio" && (
-                <div className="rounded-lg border border-orange-200/60 bg-orange-50/60 dark:border-orange-900/60 dark:bg-orange-950/30 p-3 space-y-1">
-                  <p className="text-xs font-semibold uppercase text-orange-700 dark:text-orange-300">
+                <div className="rounded-lg border border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15 p-3 space-y-1">
+                  <p className="text-xs font-semibold uppercase text-primary dark:text-primary">
                     Credito com interesse do admin
                   </p>
                   <p className="text-sm font-medium text-foreground">

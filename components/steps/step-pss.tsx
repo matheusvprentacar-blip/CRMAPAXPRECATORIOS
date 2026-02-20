@@ -238,7 +238,7 @@ export function StepPSS({ dados, setDados, onCompletar, voltar, resultadosEtapas
                     <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssIPCA)}</span>
                   </div>
 
-                  <div className="flex flex-col gap-2 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">2. SELIC (Proporcional)</p>
                       <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorSelic.toFixed(6)}</p>
@@ -246,7 +246,7 @@ export function StepPSS({ dados, setDados, onCompletar, voltar, resultadosEtapas
                     <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssSelic)}</span>
                   </div>
 
-                  <div className="flex flex-col gap-2 rounded-2xl border border-sky-500/20 bg-sky-500/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">3. EC 136/2025 (IPCA 2025)</p>
                       <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorIpca2025.toFixed(6)}</p>

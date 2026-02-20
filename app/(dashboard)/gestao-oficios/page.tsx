@@ -37,8 +37,6 @@ export default function GestaoOficiosPage() {
     const shinyProps = {
         speed: 2,
         delay: 0,
-        color: "#ff8a00",
-        shineColor: "#ffd28c",
         spread: 120,
         direction: "left" as const,
         yoyo: false,
@@ -247,11 +245,11 @@ export default function GestaoOficiosPage() {
 
                             <div className="shrink-0 md:pt-1">
                                 {p.file_url ? (
-                                    <Badge className="bg-green-100 text-green-700 hover:bg-green-200 border-green-200">
+                                    <Badge className="bg-primary/15 text-primary hover:bg-primary/15 border-primary/40">
                                         <FileCheck className="w-3 h-3 mr-1" /> Ofício Anexado
                                     </Badge>
                                 ) : (
-                                    <Badge variant={"outline"} className="text-orange-700 bg-orange-50 border-orange-200">
+                                    <Badge variant={"outline"} className="text-primary bg-primary/15 border-primary/40">
                                         Pendente
                                     </Badge>
                                 )}

@@ -31,9 +31,9 @@
 
 .inner-content {
   position: relative;
-  border: 1px solid #222;
-  background: #000;
-  color: white;
+  border: 1px solid hsl(var(--border));
+  background: hsl(var(--card));
+  color: hsl(var(--card-foreground));
   font-size: 16px;
   text-align: center;
   padding: 16px 26px;

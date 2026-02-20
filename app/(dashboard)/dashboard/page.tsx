@@ -256,13 +256,21 @@ const DEFAULT_PROPOSTA_COMPILADA: PropostaCompilada = {
   maiorProposta: 0,
   quantidadeComProposta: 0,
 }
-const CHART_PALETTE = ["#0EA5E9", "#22C55E", "#F59E0B", "#EF4444", "#6366F1", "#14B8A6", "#A855F7"]
+const CHART_PALETTE = [
+  "hsl(var(--chart-1))",
+  "hsl(var(--chart-2))",
+  "hsl(var(--chart-3))",
+  "hsl(var(--destructive))",
+  "hsl(var(--chart-5))",
+  "hsl(var(--chart-4))",
+  "hsl(var(--primary))",
+]
 
 const PERIOD_OPTIONS: Array<{ value: PeriodKey; label: string; days: number | null }> = [
-  { value: "30d", label: "Últimos 30 dias", days: 30 },
-  { value: "90d", label: "Últimos 90 dias", days: 90 },
-  { value: "180d", label: "Últimos 6 meses", days: 180 },
-  { value: "365d", label: "Últimos 12 meses", days: 365 },
+  { value: "30d", label: "Òšltimos 30 dias", days: 30 },
+  { value: "90d", label: "Òšltimos 90 dias", days: 90 },
+  { value: "180d", label: "Òšltimos 6 meses", days: 180 },
+  { value: "365d", label: "Òšltimos 12 meses", days: 365 },
   { value: "all", label: "Todo o período", days: null },
 ]
 
@@ -282,7 +290,7 @@ const toRecord = (value: any): Record<string, number> => {
 const normalizeKpis = (raw: any): DashboardKpis => {
   const source = raw || {}
   return {
-    periodo: { inicio: source.periodo?.inicio ?? null, fim: source.periodo?.fim ?? null },
+    periodo: { inicio: source.periodo?.inicio || null, fim: source.periodo?.fim || null },
     resumo: {
       total_precatorios: toNumber(source.resumo?.total_precatorios),
       total_principal: toNumber(source.resumo?.total_principal),
@@ -363,7 +371,7 @@ const humanizeKey = (value: string) =>
   value.replace(/[_-]+/g, " ").replace(/\b\w/g, (char) => char.toUpperCase())
 
 const getPeriodRange = (key: PeriodKey): PeriodRange => {
-  const preset = PERIOD_OPTIONS.find((option) => option.value === key) ?? PERIOD_OPTIONS[0]
+  const preset = PERIOD_OPTIONS.find((option) => option.value === key) || PERIOD_OPTIONS[0]
   if (!preset.days) return { label: preset.label, inicio: null, fim: null }
   const fim = new Date()
   const inicio = new Date()
@@ -391,8 +399,8 @@ function GlassCard(props: any) {
     <Card
       {...props}
       className={[
-        "border border-zinc-200/70 bg-white/70 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40",
-        props?.className ?? "",
+        "border border-border bg-background/70 backdrop-blur-xl dark:border-border dark:bg-muted",
+        props?.className || "",
       ].join(" ")}
       shadow="sm"
       radius="lg"
@@ -408,7 +416,7 @@ function ToneChip({ tone = "default", children, className = "" }: any) {
     default: { color: "default", variant: "flat" },
     primary: { color: "primary", variant: "flat" },
   }
-  const cfg = map[tone] ?? map.default
+  const cfg = map[tone] || map.default
   return (
     <Chip {...cfg} size="sm" className={["font-semibold", className].join(" ")}>
       {children}
@@ -428,12 +436,12 @@ function SimpleTableCard({
   return (
     <GlassCard>
       <CardHeader className="flex flex-col items-start gap-1">
-        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">{title}</div>
-        {description ? <div className="text-sm text-zinc-600 dark:text-zinc-300">{description}</div> : null}
+        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">{title}</div>
+        {description ? <div className="text-sm text-muted-foreground dark:text-muted-foreground">{description}</div> : null}
       </CardHeader>
       <CardBody className="pt-0">
         {rows.length === 0 ? (
-          <div className="py-10 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300">{emptyLabel}</div>
+          <div className="py-10 text-center text-sm font-medium text-muted-foreground dark:text-muted-foreground">{emptyLabel}</div>
         ) : (
           <Table
             aria-label={title}
@@ -441,8 +449,8 @@ function SimpleTableCard({
             isStriped
             className="rounded-xl"
             classNames={{
-              th: "bg-zinc-50/70 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-300",
-              td: "text-zinc-800 dark:text-zinc-100",
+              th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
+              td: "text-muted-foreground dark:text-muted-foreground",
             }}
           >
             <TableHeader>
@@ -474,7 +482,7 @@ function Chart3DCard({
 }: Chart3DCardProps) {
   const isCurrency = valueFormatter(1).includes("R$")
   const compactFormatter = (value: any) => {
-    const numeric = Number(value ?? 0)
+    const numeric = Number(value || 0)
     return isCurrency
       ? new Intl.NumberFormat("pt-BR", {
         style: "currency",
@@ -507,12 +515,12 @@ function Chart3DCard({
   }) {
     if (!active || !payload?.length) return null
     const item = payload[0]?.payload
-    const value = Number(item?.value ?? payload[0]?.value ?? 0)
+    const value = Number(item?.value || payload[0]?.value || 0)
 
     return (
-      <div className="rounded-xl border border-zinc-200 bg-white/95 p-3 text-sm shadow-2xl dark:border-zinc-800 dark:bg-zinc-950/95">
-        <p className="font-semibold text-zinc-900 dark:text-white/90">{item?.name ?? "Item"}</p>
-        <p className="mt-1 font-mono text-base tabular-nums text-zinc-900 dark:text-white/90">{valueFormatter(value)}</p>
+      <div className="rounded-xl border border-border bg-background/95 p-3 text-sm shadow-2xl dark:border-border dark:bg-muted">
+        <p className="font-semibold text-muted-foreground dark:text-white/90">{item?.name || "Item"}</p>
+        <p className="mt-1 font-mono text-base tabular-nums text-muted-foreground dark:text-white/90">{valueFormatter(value)}</p>
       </div>
     )
   }
@@ -520,12 +528,12 @@ function Chart3DCard({
   return (
     <GlassCard className="overflow-hidden">
       <CardHeader className="flex flex-col items-start gap-1">
-        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">{title}</div>
-        {description ? <div className="text-sm text-zinc-600 dark:text-zinc-300">{description}</div> : null}
+        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">{title}</div>
+        {description ? <div className="text-sm text-muted-foreground dark:text-muted-foreground">{description}</div> : null}
       </CardHeader>
       <CardBody className="pt-0">
         {rows.length === 0 ? (
-          <div className="py-10 text-center text-sm font-medium text-zinc-600 dark:text-zinc-300">{emptyLabel}</div>
+          <div className="py-10 text-center text-sm font-medium text-muted-foreground dark:text-muted-foreground">{emptyLabel}</div>
         ) : (
           <div className="w-full" style={{ height: Math.max(chartHeight, height) }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -571,18 +579,18 @@ function DashboardMetricTile({
 
       <CardBody className="relative p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-zinc-100 text-zinc-800 dark:bg-zinc-900 dark:text-white/90">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-muted text-muted-foreground dark:bg-muted dark:text-white/90">
             <Icon className="h-5 w-5" />
           </div>
           {badgeLabel ? <ToneChip tone={badgeTone}>{badgeLabel}</ToneChip> : null}
         </div>
 
         <div className="mt-4 space-y-1">
-          <div className="text-sm font-medium text-zinc-600 dark:text-zinc-300">{title}</div>
+          <div className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{title}</div>
           <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.05rem,2.1vw,1.8rem)] font-bold tracking-tight text-primary">
             {value}
           </div>
-          {subtitle ? <div className="text-xs text-zinc-500 dark:text-zinc-400">{subtitle}</div> : null}
+          {subtitle ? <div className="text-xs text-muted-foreground dark:text-muted-foreground">{subtitle}</div> : null}
         </div>
       </CardBody>
     </GlassCard>
@@ -605,7 +613,7 @@ export default function DashboardPage() {
     return Array.isArray(profile.role) ? profile.role : [profile.role]
   }, [profile?.role])
 
-  const isAdmin = roles.includes("admin") || roles.includes("gestor")
+  const isAdmin = roles.includes("admin")
   const periodRange = useMemo(() => getPeriodRange(period), [period])
 
   const kanbanLabelMap = useMemo(() => {
@@ -619,18 +627,19 @@ export default function DashboardPage() {
     return map
   }, [])
 
-  const formatKanbanStatus = (status: string) => kanbanLabelMap.get(status) ?? humanizeKey(status)
+  const formatKanbanStatus = (status: string) => kanbanLabelMap.get(status) || humanizeKey(status)
 
   const roleFilter = useMemo(() => {
-    if (!profile?.id) return null
-    if (roles.includes("operador_comercial")) {
-      return `criado_por.eq.${profile.id},responsavel.eq.${profile.id}`
-    }
-    if (roles.includes("operador_calculo")) {
-      return `responsavel_calculo_id.eq.${profile.id},responsavel.eq.${profile.id},criado_por.eq.${profile.id}`
-    }
-    return null
-  }, [profile?.id, roles])
+    if (!profile?.id || isAdmin) return null
+    return [
+      "dono_usuario_id",
+      "criado_por",
+      "responsavel",
+      "responsavel_calculo_id",
+    ]
+      .map((field) => `${field}.eq.${profile.id}`)
+      .join(",")
+  }, [profile?.id, isAdmin])
 
   useEffect(() => {
     if (!profile) return
@@ -817,7 +826,7 @@ export default function DashboardPage() {
       .not("responsavel_calculo_id", "is", null)
       .is("deleted_at", null)
 
-    const isAdminRole = userRoles.includes("admin") || userRoles.includes("gestor")
+    const isAdminRole = userRoles.includes("admin")
     if (!isAdminRole && userId) query = query.eq("responsavel_calculo_id", userId)
 
     const { data, error } = await query
@@ -850,10 +859,14 @@ export default function DashboardPage() {
   }
 
   async function fetchCriticalData(supabase: any): Promise<CriticalPrecatorio[]> {
-    const { data, error } = await supabase.rpc("get_critical_precatorios")
+    const { data, error } = isAdmin
+      ? await supabase.rpc("get_critical_precatorios")
+      : ({ data: null, error: { message: "non_admin_fallback" } } as any)
 
     if (error) {
-      console.error("[DASHBOARD] Erro ao buscar críticos:", error)
+      if (isAdmin) {
+        console.error("[DASHBOARD] Erro ao buscar críticos:", error)
+      }
       let queryFallback = supabase
         .from("precatorios")
         .select(
@@ -961,8 +974,8 @@ export default function DashboardPage() {
             <CardBody className="py-10">
               <div className="flex flex-col items-center gap-3">
                 <Spinner size="lg" />
-                <div className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Carregando dashboard…</div>
-                <div className="text-xs text-zinc-500 dark:text-zinc-400">Preparando KPIs, gráficos e métricas.</div>
+                <div className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Carregando dashboard?</div>
+                <div className="text-xs text-muted-foreground dark:text-muted-foreground">Preparando KPIs, gráficos e métricas.</div>
               </div>
             </CardBody>
           </GlassCard>
@@ -1010,16 +1023,11 @@ export default function DashboardPage() {
   ].filter((row) => row.value > 0)
 
   const propostaStatusRows = buildRows(kpis.propostas.por_status, humanizeKey)
-  const usuarioRoleRows = buildRows(kpis.usuarios.por_role, humanizeKey)
   const juridicoParecerRows = buildRows(kpis.juridico.parecer_por_status, humanizeKey)
   const juridicoResultadoRows = buildRows(kpis.juridico.resultado_final, humanizeKey)
   const atividadesRows = buildRows(kpis.atividades.por_tipo, humanizeKey)
 
   const topCritical = operational.critical.slice(0, 7)
-  const topRoles = usuarioRoleRows.slice(0, 6).map((row) => ({
-    ...row,
-    percent: kpis.usuarios.ativos_total > 0 ? (row.value / kpis.usuarios.ativos_total) * 100 : 0,
-  }))
 
   const slaBase =
     kpis.sla.no_prazo + kpis.sla.atencao + kpis.sla.atrasado + kpis.sla.nao_iniciado + kpis.sla.concluido
@@ -1043,15 +1051,15 @@ export default function DashboardPage() {
               <div className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                 <LayoutGrid className="h-5 w-5" />
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-white/90 sm:text-3xl">
+              <h1 className="text-2xl font-bold tracking-tight text-muted-foreground dark:text-white/90 sm:text-3xl">
                 Dashboard estratégico
               </h1>
             </div>
-            <p className="text-sm text-zinc-600 dark:text-zinc-300">
-              {isAdmin ? "Visão completa de todos os precatórios" : `Seu desempenho — ${profile?.nome || "Usuário"}`}
+            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
+              {isAdmin ? "Visão completa de todos os precatórios" : `Seu desempenho ? ${profile?.nome || "Usuário"}`}
             </p>
             {lastUpdated ? (
-              <div className="text-xs text-zinc-500 dark:text-zinc-400">
+              <div className="text-xs text-muted-foreground dark:text-muted-foreground">
                 Atualizado em {new Date(lastUpdated).toLocaleString("pt-BR")}
               </div>
             ) : null}
@@ -1070,14 +1078,14 @@ export default function DashboardPage() {
               className="w-[240px]"
               classNames={{
                 trigger:
-                  "border-zinc-200/80 bg-white/95 text-zinc-900 shadow-sm dark:border-zinc-800/80 dark:bg-zinc-950 dark:text-zinc-100",
-                value: "text-zinc-900 dark:text-zinc-100",
+                  "border-border bg-background/95 text-muted-foreground shadow-sm dark:border-border dark:bg-muted dark:text-muted-foreground",
+                value: "text-muted-foreground dark:text-muted-foreground",
                 popoverContent:
-                  "z-[120] rounded-xl border border-zinc-200/90 bg-white text-zinc-900 shadow-2xl backdrop-blur-none dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100",
+                  "z-[120] rounded-xl border border-border bg-background text-muted-foreground shadow-2xl backdrop-blur-none dark:border-border dark:bg-muted dark:text-muted-foreground",
                 listboxWrapper: "bg-transparent",
                 listbox: "bg-transparent",
               }}
-              startContent={<Clock className="h-4 w-4 text-zinc-500" />}
+              startContent={<Clock className="h-4 w-4 text-muted-foreground" />}
             >
               {PERIOD_OPTIONS.map((option) => (
                 <SelectItem key={option.value}>{option.label}</SelectItem>
@@ -1159,10 +1167,10 @@ export default function DashboardPage() {
                   <CardBody className="p-5 sm:p-6">
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">
+                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">
                           Meta mensal operacional
                         </div>
-                        <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
+                        <div className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">
                           Resultado médio entre documentos, certidões e SLA.
                         </div>
                       </div>
@@ -1171,7 +1179,7 @@ export default function DashboardPage() {
 
                     <div className="mt-6 space-y-5">
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
                           <span>Documentos recebidos</span>
                           <span className="font-mono tabular-nums text-primary">{docsPercent.toFixed(0)}%</span>
                         </div>
@@ -1179,7 +1187,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
                           <span>Certidões recebidas</span>
                           <span className="font-mono tabular-nums text-primary">{certPercent.toFixed(0)}%</span>
                         </div>
@@ -1187,7 +1195,7 @@ export default function DashboardPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-zinc-600 dark:text-zinc-300">
+                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
                           <span>SLA saudável</span>
                           <span className="font-mono tabular-nums text-primary">{slaHealthyPercent.toFixed(0)}%</span>
                         </div>
@@ -1198,8 +1206,8 @@ export default function DashboardPage() {
                     <Divider className="my-6" />
 
                     <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
-                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Saldo líquido</div>
+                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
+                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Saldo líquido</div>
                         <div
                           className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(0.74rem,1.1vw,0.92rem)] font-semibold leading-tight text-primary tabular-nums tracking-tight"
                           title={formatCurrency(kpis.resumo.total_saldo_liquido)}
@@ -1207,14 +1215,14 @@ export default function DashboardPage() {
                           {formatCurrencyNoBreak(kpis.resumo.total_saldo_liquido)}
                         </div>
                       </div>
-                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400">Vencidas</div>
+                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
+                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Vencidas</div>
                         <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
                           {formatCount(kpis.documentos_certidoes.certidoes_vencidas)}
                         </div>
                       </div>
-                      <div className="min-w-0 rounded-xl bg-zinc-50/70 p-3 dark:bg-zinc-900/50">
-                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400">SLA atrasado</div>
+                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
+                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">SLA atrasado</div>
                         <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
                           {formatCount(kpis.sla.atrasado)}
                         </div>
@@ -1258,54 +1266,14 @@ export default function DashboardPage() {
                 </div>
               </div>
 
-              <div className="col-span-12 xl:col-span-5 xl:self-stretch">
-                <GlassCard className="h-full">
-                  <CardBody className="p-5 sm:p-6">
-                    <div className="flex items-center justify-between">
-                      <div>
-                        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Distribuição por role</div>
-                        <div className="mt-1 text-sm text-zinc-600 dark:text-zinc-300">
-                          {formatCount(kpis.usuarios.ativos_total)} usuários ativos no total
-                        </div>
-                      </div>
-                      <Users className="h-5 w-5 text-zinc-500" />
-                    </div>
-
-                    <div className="mt-6 space-y-4">
-                      {topRoles.length === 0 ? (
-                        <div className="rounded-xl border border-dashed border-zinc-300/60 p-6 text-center text-sm text-zinc-600 dark:border-zinc-800 dark:text-zinc-300">
-                          Sem distribuição de usuários.
-                        </div>
-                      ) : (
-                        topRoles.map((row) => (
-                          <div key={row.label} className="flex items-center gap-3">
-                            <div title={row.label} className="w-28 shrink-0 truncate text-xs font-medium text-zinc-700 dark:text-zinc-300">
-                              {row.label}
-                            </div>
-                            <div className="relative h-2.5 w-full rounded-full bg-zinc-200 dark:bg-zinc-800">
-                              <div
-                                className="absolute left-0 top-0 h-full rounded-full bg-primary/80"
-                                style={{ width: `${Math.max(row.percent, row.percent > 0 ? 8 : 0)}%` }}
-                              />
-                            </div>
-                            <div className="w-10 text-right text-xs font-semibold tabular-nums text-zinc-700 dark:text-zinc-300">
-                              {row.percent.toFixed(0)}%
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </CardBody>
-                </GlassCard>
-              </div>
-
-              <div className="col-span-12 xl:col-span-7 xl:self-stretch">
+              {isAdmin ? (
+                <div className="col-span-12 xl:self-stretch">
                 <GlassCard className="h-full">
                   <CardBody className="p-5 sm:p-6">
                     <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                       <div>
-                        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Precatórios críticos</div>
-                        <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Precatórios críticos</div>
+                        <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                           Itens com maior risco operacional no momento.
                         </div>
                       </div>
@@ -1325,7 +1293,7 @@ export default function DashboardPage() {
                       isHeaderSticky
                       isStriped
                       classNames={{
-                        th: "bg-zinc-50/70 text-zinc-600 dark:bg-zinc-900/60 dark:text-zinc-300",
+                        th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
                       }}
                     >
                       <TableHeader>
@@ -1341,15 +1309,15 @@ export default function DashboardPage() {
                           <TableRow key={item.id}>
                             <TableCell>
                               <div className="flex flex-col">
-                                <span className="font-medium text-zinc-900 dark:text-white/90">
+                                <span className="font-medium text-muted-foreground dark:text-white/90">
                                   {item.numero_precatorio || item.titulo}
                                 </span>
-                                <span className="text-xs text-zinc-500 dark:text-zinc-400">
+                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">
                                   {humanizeKey(item.status || "sem_status")}
                                 </span>
                               </div>
                             </TableCell>
-                            <TableCell className="text-sm text-zinc-600 dark:text-zinc-300">
+                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
                               {item.responsavel_nome || "Não atribuído"}
                             </TableCell>
                             <TableCell>
@@ -1374,7 +1342,8 @@ export default function DashboardPage() {
                     </Table>
                   </CardBody>
                 </GlassCard>
-              </div>
+                </div>
+              ) : null}
             </div>
           </Tab>
 
@@ -1391,8 +1360,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Movimento do período</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Movimento do período</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                       {periodRange.inicio && periodRange.fim
                         ? `${periodRange.label} (${formatDateShort(periodRange.inicio)} - ${formatDateShort(periodRange.fim)})`
                         : periodRange.label}
@@ -1411,8 +1380,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Propostas</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Valores e distribuição</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Propostas</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Valores e distribuição</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                     <MetricCard title="Valor total" value={formatCurrency(kpis.propostas.valor_total)} icon={Wallet} />
@@ -1426,8 +1395,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">SLA e cálculo</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Controle de prazo e progresso da fila</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">SLA e cálculo</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Controle de prazo e progresso da fila</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                     <MetricCard title="Pronto para cálculo" value={formatCount(kpis.calculo.pronto_calculo)} icon={ListChecks} />
@@ -1447,18 +1416,18 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Documentos e certidões</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Progresso dos itens obrigatórios</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Documentos e certidões</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Progresso dos itens obrigatórios</div>
                   </div>
 
                   <div className="grid gap-4 md:grid-cols-2">
                     <GlassCard>
                       <CardHeader className="pb-0">
-                        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Documentos do credor</div>
+                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Documentos do credor</div>
                       </CardHeader>
                       <CardBody className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-zinc-700 dark:text-zinc-300">
+                          <span className="text-muted-foreground dark:text-muted-foreground">
                             {formatCount(kpis.documentos_certidoes.docs_recebidos)} / {formatCount(kpis.documentos_certidoes.total_docs)}
                           </span>
                           <ToneChip tone="success">{docsPercent.toFixed(0)}%</ToneChip>
@@ -1469,11 +1438,11 @@ export default function DashboardPage() {
 
                     <GlassCard>
                       <CardHeader className="pb-0">
-                        <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Certidões</div>
+                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Certidões</div>
                       </CardHeader>
                       <CardBody className="space-y-3">
                         <div className="flex items-center justify-between text-sm">
-                          <span className="text-zinc-700 dark:text-zinc-300">
+                          <span className="text-muted-foreground dark:text-muted-foreground">
                             {formatCount(kpis.documentos_certidoes.certidoes_recebidas)} / {formatCount(kpis.documentos_certidoes.total_certidoes)}
                           </span>
                           <ToneChip tone="primary">{certPercent.toFixed(0)}%</ToneChip>
@@ -1502,8 +1471,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Jurídico</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Status de parecer e resultado</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Jurídico</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Status de parecer e resultado</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <SimpleTableCard title="Parecer por status" rows={juridicoParecerRows} emptyLabel="Sem pareceres" />
@@ -1515,8 +1484,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Ofícios</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Pendências e concluído</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Ofícios</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Pendências e concluído</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
                     <MetricCard title="Análise Processual Inicial" value={formatCount(kpis.oficios.analise_processual_inicial)} icon={FileText} />
@@ -1528,8 +1497,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-4">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Atividades</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">Eventos por tipo</div>
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Atividades</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Eventos por tipo</div>
                   </div>
                   <SimpleTableCard title="Atividades por tipo" rows={atividadesRows} emptyLabel="Sem atividades" />
                 </CardBody>
@@ -1550,8 +1519,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6 space-y-5">
                   <div>
-                    <div className="text-base font-semibold text-zinc-900 dark:text-white/90">Operação</div>
-                    <div className="text-sm text-zinc-600 dark:text-zinc-300">
+                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Operação</div>
+                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">
                       Indicadores operacionais detalhados
                     </div>
                   </div>

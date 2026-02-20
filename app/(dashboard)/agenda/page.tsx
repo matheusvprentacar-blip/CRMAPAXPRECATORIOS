@@ -116,19 +116,19 @@ const prioridadeColor: Record<AgendaPrioridade, "default" | "warning" | "danger"
 }
 
 const inputClassNames = {
-  inputWrapper: "rounded-2xl min-h-11 border border-default-200/80 bg-white dark:bg-zinc-900/95",
+  inputWrapper: "rounded-2xl min-h-11 border border-default-200/80 bg-background dark:bg-muted",
 }
 
 const textareaInputClassName =
-  "min-h-[92px] rounded-2xl border-default-200/80 bg-white text-sm leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap focus-visible:ring-warning-400/60 focus-visible:ring-offset-0 dark:bg-zinc-900/95"
+  "min-h-[92px] rounded-2xl border-default-200/80 bg-background text-sm leading-relaxed [overflow-wrap:anywhere] whitespace-pre-wrap focus-visible:ring-warning-400/60 focus-visible:ring-offset-0 dark:bg-muted"
 
 const selectClassNames = {
-  trigger: "rounded-2xl min-h-11 border border-default-200/80 bg-white dark:bg-zinc-900/95",
+  trigger: "rounded-2xl min-h-11 border border-default-200/80 bg-background dark:bg-muted",
   popoverContent:
-    "rounded-2xl border border-default-200/80 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md shadow-xl",
+    "rounded-2xl border border-default-200/80 bg-background/95 dark:bg-muted backdrop-blur-md shadow-xl",
 }
 
-const solidCardClassName = "rounded-2xl border border-default-200/80 bg-white dark:bg-zinc-900/95 shadow-sm"
+const solidCardClassName = "rounded-2xl border border-default-200/80 bg-background dark:bg-muted shadow-sm"
 
 const toKey = (keys: "all" | Set<Key>) => {
   if (keys === "all") return ""
@@ -703,7 +703,7 @@ export default function AgendaPage() {
             </Select>
           </div>
 
-          <div className="flex min-h-11 items-center rounded-2xl border border-default-200/80 bg-white dark:bg-zinc-900/95 px-3">
+          <div className="flex min-h-11 items-center rounded-2xl border border-default-200/80 bg-background dark:bg-muted px-3">
             <motion.div whileHover={{ y: -1 }} whileTap={{ scale: 0.98 }} transition={{ duration: 0.14 }} className="w-full">
               <Button
                 radius="full"
@@ -752,7 +752,7 @@ export default function AgendaPage() {
                     className={`min-h-[88px] rounded-xl border p-2 text-left transition ${
                       active
                         ? "border-warning bg-warning-50/90 dark:bg-warning-500/15"
-                        : "border-default-200/70 bg-white/95 dark:bg-zinc-900/90 hover:bg-default-50 dark:hover:bg-zinc-800/90"
+                        : "border-default-200/70 bg-background/95 dark:bg-muted hover:bg-default-50 dark:hover:bg-muted"
                     } ${isSameMonth(item, month) ? "" : "opacity-40"}`}
                   >
                     <div className="flex items-center justify-between text-xs">
@@ -850,7 +850,7 @@ export default function AgendaPage() {
         scrollBehavior="inside"
         classNames={{ backdrop: "bg-black/40 backdrop-blur-[1px]" }}
       >
-        <ModalContent className="rounded-3xl border border-default-200/80 bg-white dark:bg-zinc-950 shadow-2xl">
+        <ModalContent className="rounded-3xl border border-default-200/80 bg-background dark:bg-muted shadow-2xl">
           {(onClose) => (
             <>
               <ModalHeader className="pb-2">

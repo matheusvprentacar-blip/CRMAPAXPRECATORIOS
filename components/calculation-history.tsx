@@ -42,11 +42,11 @@ export default function CalculationHistory({ calculations, setCalculations }: Ca
     return (
       <Card className="max-w-4xl mx-auto">
         <CardContent className="flex flex-col items-center justify-center py-12">
-          <div className="w-16 h-16 rounded-full bg-gray-100 flex items-center justify-center mb-4">
-            <Calendar className="w-8 h-8 text-gray-400" />
+          <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mb-4">
+            <Calendar className="w-8 h-8 text-muted-foreground" />
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhum cálculo realizado</h3>
-          <p className="text-gray-600 text-center max-w-md">
+          <h3 className="text-lg font-semibold text-muted-foreground mb-2">Nenhum cálculo realizado</h3>
+          <p className="text-muted-foreground text-center max-w-md">
             Utilize a calculadora para realizar seu primeiro cálculo de precatório
           </p>
         </CardContent>
@@ -92,36 +92,36 @@ export default function CalculationHistory({ calculations, setCalculations }: Ca
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
-                    <DollarSign className="w-5 h-5 text-blue-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <DollarSign className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Valor Principal</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-muted-foreground">Valor Principal</p>
+                    <p className="font-semibold text-muted-foreground">
                       {calculation.principalValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-green-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Juros</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-muted-foreground">Juros</p>
+                    <p className="font-semibold text-muted-foreground">
                       {calculation.interestValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </p>
                   </div>
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center">
-                    <TrendingUp className="w-5 h-5 text-purple-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <TrendingUp className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Correção Monetária</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-muted-foreground">Correção Monetária</p>
+                    <p className="font-semibold text-muted-foreground">
                       {calculation.correctionValue.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
                     </p>
                   </div>
@@ -130,30 +130,30 @@ export default function CalculationHistory({ calculations, setCalculations }: Ca
 
               <div className="space-y-3">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center">
-                    <Calendar className="w-5 h-5 text-orange-600" />
+                  <div className="w-10 h-10 rounded-lg bg-primary/15 flex items-center justify-center">
+                    <Calendar className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <p className="text-sm text-gray-600">Período</p>
-                    <p className="font-semibold text-gray-900">
+                    <p className="text-sm text-muted-foreground">Período</p>
+                    <p className="font-semibold text-muted-foreground">
                       {new Date(calculation.startDate).toLocaleDateString("pt-BR")} até{" "}
                       {new Date(calculation.endDate).toLocaleDateString("pt-BR")}
                     </p>
                   </div>
                 </div>
 
-                <div className="bg-gray-50 rounded-lg p-3 space-y-1">
+                <div className="bg-muted rounded-lg p-3 space-y-1">
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Taxa de Juros:</span>
-                    <span className="font-medium text-gray-900">{calculation.interestRate}% a.a.</span>
+                    <span className="text-muted-foreground">Taxa de Juros:</span>
+                    <span className="font-medium text-muted-foreground">{calculation.interestRate}% a.a.</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Índice:</span>
-                    <span className="font-medium text-gray-900">{calculation.correctionIndex}</span>
+                    <span className="text-muted-foreground">Índice:</span>
+                    <span className="font-medium text-muted-foreground">{calculation.correctionIndex}</span>
                   </div>
                   <div className="flex justify-between text-sm">
-                    <span className="text-gray-600">Tipo:</span>
-                    <span className="font-medium text-gray-900">
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="font-medium text-muted-foreground">
                       {calculation.calculationType === "simple" ? "Juros Simples" : "Juros Compostos"}
                     </span>
                   </div>

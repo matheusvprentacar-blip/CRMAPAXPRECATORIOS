@@ -69,19 +69,19 @@ export default function TestConnectionPage() {
       <Card className="w-full max-w-2xl">
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            {status === "loading" && <Loader2 className="h-6 w-6 animate-spin text-blue-600" />}
-            {status === "success" && <CheckCircle2 className="h-6 w-6 text-green-600" />}
-            {status === "error" && <XCircle className="h-6 w-6 text-red-600" />}
+            {status === "loading" && <Loader2 className="h-6 w-6 animate-spin text-primary" />}
+            {status === "success" && <CheckCircle2 className="h-6 w-6 text-primary" />}
+            {status === "error" && <XCircle className="h-6 w-6 text-destructive" />}
             Teste de Conexão Supabase
           </CardTitle>
           <CardDescription>Verificando configuração e conectividade com o banco de dados</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div className="p-4 rounded-lg bg-slate-50 border">
+          <div className="p-4 rounded-lg bg-muted border">
             <p className="font-medium mb-2">Status:</p>
             <p
               className={`text-lg ${
-                status === "success" ? "text-green-600" : status === "error" ? "text-red-600" : "text-blue-600"
+                status === "success" ? "text-primary" : status === "error" ? "text-destructive" : "text-primary"
               }`}
             >
               {message}
@@ -89,12 +89,12 @@ export default function TestConnectionPage() {
           </div>
 
           {details && (
-            <div className="p-4 rounded-lg bg-slate-50 border space-y-2">
+            <div className="p-4 rounded-lg bg-muted border space-y-2">
               <p className="font-medium mb-2">Detalhes:</p>
               {Object.entries(details).map(([key, value]) => (
                 <div key={key} className="flex justify-between text-sm">
-                  <span className="text-slate-600 capitalize">{key.replace(/([A-Z])/g, " $1").trim()}:</span>
-                  <span className="font-mono text-slate-900">
+                  <span className="text-muted-foreground capitalize">{key.replace(/([A-Z])/g, " $1").trim()}:</span>
+                  <span className="font-mono text-muted-foreground">
                     {typeof value === "boolean" ? (value ? "Sim" : "Não") : String(value)}
                   </span>
                 </div>

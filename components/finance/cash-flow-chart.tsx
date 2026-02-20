@@ -4,7 +4,13 @@ import { ResponsiveContainer, AreaChart, Area, XAxis, YAxis, CartesianGrid, Tool
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from "lucide-react"
 
-export function CashFlowChart({ data, loading }: { data: any[], loading: boolean }) {
+type CashFlowPoint = {
+    name: string
+    income: number
+    expense: number
+}
+
+export function CashFlowChart({ data, loading }: { data: CashFlowPoint[], loading: boolean }) {
     if (loading) {
         return (
             <Card className="col-span-4 h-[350px] flex items-center justify-center">
@@ -27,17 +33,17 @@ export function CashFlowChart({ data, loading }: { data: any[], loading: boolean
                         <AreaChart data={data}>
                             <defs>
                                 <linearGradient id="colorIncome" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="hsl(var(--chart-4))" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="hsl(var(--chart-4))" stopOpacity={0} />
                                 </linearGradient>
                                 <linearGradient id="colorExpense" x1="0" y1="0" x2="0" y2="1">
-                                    <stop offset="5%" stopColor="#ef4444" stopOpacity={0.1} />
-                                    <stop offset="95%" stopColor="#ef4444" stopOpacity={0} />
+                                    <stop offset="5%" stopColor="hsl(var(--destructive))" stopOpacity={0.1} />
+                                    <stop offset="95%" stopColor="hsl(var(--destructive))" stopOpacity={0} />
                                 </linearGradient>
                             </defs>
                             <XAxis
                                 dataKey="name"
-                                stroke="#888888"
+                                stroke="hsl(var(--muted-foreground))"
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
@@ -47,7 +53,7 @@ export function CashFlowChart({ data, loading }: { data: any[], loading: boolean
                                 }}
                             />
                             <YAxis
-                                stroke="#888888"
+                                stroke="hsl(var(--muted-foreground))"
                                 fontSize={12}
                                 tickLine={false}
                                 axisLine={false}
@@ -63,7 +69,7 @@ export function CashFlowChart({ data, loading }: { data: any[], loading: boolean
                                 type="monotone"
                                 dataKey="income"
                                 name="Receitas"
-                                stroke="#10b981"
+                                stroke="hsl(var(--chart-4))"
                                 fillOpacity={1}
                                 fill="url(#colorIncome)"
                             />
@@ -71,7 +77,7 @@ export function CashFlowChart({ data, loading }: { data: any[], loading: boolean
                                 type="monotone"
                                 dataKey="expense"
                                 name="Despesas"
-                                stroke="#ef4444"
+                                stroke="hsl(var(--destructive))"
                                 fillOpacity={1}
                                 fill="url(#colorExpense)"
                             />

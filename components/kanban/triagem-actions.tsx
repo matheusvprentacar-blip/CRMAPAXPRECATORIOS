@@ -120,7 +120,7 @@ export function TriagemActions({ precatorioId, precatorio, onUpdate }: TriagemAc
                     precatorio?.titulo ||
                     precatorio?.numero_precatorio ||
                     precatorio?.credor_nome ||
-                    "PrecatÃ³rio"
+                    "Precatório"
                 const dateLabel = dataRecontato.toLocaleDateString("pt-BR")
                 const { error: notificationError } = await supabase
                     .from("notifications")
@@ -136,7 +136,7 @@ export function TriagemActions({ precatorioId, precatorio, onUpdate }: TriagemAc
                     })
 
                 if (notificationError) {
-                    console.warn("Erro ao criar notificaÃ§Ã£o de recontato:", notificationError)
+                    console.warn("Erro ao criar notificação de recontato:", notificationError)
                 }
             }
 

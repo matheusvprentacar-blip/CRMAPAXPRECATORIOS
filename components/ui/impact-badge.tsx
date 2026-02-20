@@ -10,19 +10,19 @@ interface ImpactBadgeProps {
 export function ImpactBadge({ impacto, size = "md", showIcon = true }: ImpactBadgeProps) {
   const config = {
     baixo: {
-      color: "bg-green-100 text-green-800 border-green-300",
+      color: "bg-primary/15 text-primary border-primary/40",
       label: "Baixo",
       icon: TrendingDown,
       description: "Resolução em até 24h",
     },
     medio: {
-      color: "bg-yellow-100 text-yellow-800 border-yellow-300",
+      color: "bg-primary/15 text-primary border-primary/40",
       label: "Médio",
       icon: AlertCircle,
       description: "Resolução em 2-5 dias",
     },
     alto: {
-      color: "bg-red-100 text-red-800 border-red-300",
+      color: "bg-destructive/15 text-destructive border-destructive/40",
       label: "Alto",
       icon: TrendingUp,
       description: "Resolução > 5 dias",

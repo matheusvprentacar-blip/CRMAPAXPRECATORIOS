@@ -201,7 +201,7 @@ export function ModalCalculoManual({ open, onOpenChange, precatorio, onSuccess }
             <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                 <DialogHeader>
                     <DialogTitle className="flex items-center gap-2">
-                        <Calculator className="w-5 h-5 text-orange-500" />
+                        <Calculator className="w-5 h-5 text-primary" />
                         Inserção Manual de Valores
                     </DialogTitle>
                     <DialogDescription>
@@ -324,13 +324,13 @@ export function ModalCalculoManual({ open, onOpenChange, precatorio, onSuccess }
                     </div>
 
                     {/* Seção 3: Resultado Final */}
-                    <div className="space-y-4 border p-4 rounded-lg bg-orange-50 border-orange-100">
-                        <h3 className="font-semibold text-sm uppercase tracking-wider text-orange-700">Resultado Final</h3>
+                    <div className="space-y-4 border p-4 rounded-lg bg-primary/15 border-primary/40">
+                        <h3 className="font-semibold text-sm uppercase tracking-wider text-primary">Resultado Final</h3>
 
                         <div className="space-y-2">
-                            <Label className="text-orange-900">Base Líquida Final (Para Propostas)</Label>
+                            <Label className="text-primary">Base Líquida Final (Para Propostas)</Label>
                             <CurrencyInput
-                                className="font-bold text-lg border-orange-200 text-orange-900"
+                                className="font-bold text-lg border-primary/40 text-primary"
                                 value={baseLiquida}
                                 onValueChange={(val) => setBaseLiquida(val || 0)}
                             />
@@ -339,36 +339,36 @@ export function ModalCalculoManual({ open, onOpenChange, precatorio, onSuccess }
                         <div className="grid grid-cols-2 gap-4 pt-2">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-emerald-700">Menor Proposta</Label>
+                                    <Label className="text-primary">Menor Proposta</Label>
                                     <div className="flex items-center gap-1">
                                         <Input
                                             className="w-16 h-7 text-sm text-right px-2 py-1"
                                             value={menorPropostaPerc}
                                             onChange={(e) => setMenorPropostaPerc(e.target.value)}
                                         />
-                                        <span className="text-sm text-emerald-700 font-bold">%</span>
+                                        <span className="text-sm text-primary font-bold">%</span>
                                     </div>
                                 </div>
                                 <CurrencyInput
-                                    className="font-bold text-emerald-700"
+                                    className="font-bold text-primary"
                                     value={menorProposta}
                                     onValueChange={(val) => setMenorProposta(val || 0)}
                                 />
                             </div>
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <Label className="text-amber-700">Maior Proposta</Label>
+                                    <Label className="text-primary">Maior Proposta</Label>
                                     <div className="flex items-center gap-1">
                                         <Input
                                             className="w-16 h-7 text-sm text-right px-2 py-1"
                                             value={maiorPropostaPerc}
                                             onChange={(e) => setMaiorPropostaPerc(e.target.value)}
                                         />
-                                        <span className="text-sm text-amber-700 font-bold">%</span>
+                                        <span className="text-sm text-primary font-bold">%</span>
                                     </div>
                                 </div>
                                 <CurrencyInput
-                                    className="font-bold text-amber-700"
+                                    className="font-bold text-primary"
                                     value={maiorProposta}
                                     onValueChange={(val) => setMaiorProposta(val || 0)}
                                 />
@@ -389,7 +389,7 @@ export function ModalCalculoManual({ open, onOpenChange, precatorio, onSuccess }
 
                 <DialogFooter>
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
-                    <Button onClick={handleSave} disabled={loading} className="bg-orange-600 hover:bg-orange-700 text-white">
+                    <Button onClick={handleSave} disabled={loading} className="bg-primary/15 hover:bg-primary/15 text-white">
                         {loading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
                         Salvar Cálculo Manual
                     </Button>

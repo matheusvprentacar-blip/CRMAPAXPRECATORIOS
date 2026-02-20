@@ -44,14 +44,14 @@ export default function DiagnosticoPage() {
                 .select()
 
             if (error) {
-                addLog(`❌ ERRO UPDATE STATUS: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
+                addLog(`âŒ ERRO UPDATE STATUS: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
                 console.error("Full error:", error)
             } else {
-                addLog("✅ SUCESSO UPDATE STATUS")
+                addLog("âœ… SUCESSO UPDATE STATUS")
             }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
-            addLog(`❌ EXCEPTION: ${e.message}`)
+            addLog(`âŒ EXCEPTION: ${e.message}`)
         }
     }
 
@@ -70,13 +70,13 @@ export default function DiagnosticoPage() {
                 .select()
 
             if (error) {
-                addLog(`❌ ERRO UPDATE DADOS: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
+                addLog(`âŒ ERRO UPDATE DADOS: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
             } else {
-                addLog("✅ SUCESSO UPDATE DADOS")
+                addLog("âœ… SUCESSO UPDATE DADOS")
             }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
-            addLog(`❌ EXCEPTION: ${e.message}`)
+            addLog(`âŒ EXCEPTION: ${e.message}`)
         }
     }
 
@@ -87,7 +87,7 @@ export default function DiagnosticoPage() {
             if (!supabase) throw new Error("Supabase client not init")
             const { data: { user } } = await supabase.auth.getUser()
             if (!user) {
-                addLog("❌ ERRO: Usuário não logado")
+                addLog("âŒ ERRO: Usuário não logado")
                 return
             }
 
@@ -103,13 +103,13 @@ export default function DiagnosticoPage() {
                 .select()
 
             if (error) {
-                addLog(`❌ ERRO INSERT ATIVIDADE: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
+                addLog(`âŒ ERRO INSERT ATIVIDADE: code=${error.code} message=${error.message} details=${error.details} hint=${error.hint}`)
             } else {
-                addLog("✅ SUCESSO INSERT ATIVIDADE")
+                addLog("âœ… SUCESSO INSERT ATIVIDADE")
             }
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
         } catch (e: any) {
-            addLog(`❌ EXCEPTION: ${e.message}`)
+            addLog(`âŒ EXCEPTION: ${e.message}`)
         }
     }
 
@@ -134,11 +134,11 @@ export default function DiagnosticoPage() {
                         <Button onClick={testInsertAtividade} variant="outline">Testar Insert Atividade</Button>
                     </div>
 
-                    <div className="bg-slate-950 text-green-400 p-4 rounded-md font-mono text-xs h-96 overflow-auto">
+                    <div className="bg-muted text-primary p-4 rounded-md font-mono text-xs h-96 overflow-auto">
                         {logs.map((log, i) => (
                             <div key={i}>{log}</div>
                         ))}
-                        {logs.length === 0 && <span className="text-slate-500">Aguardando testes...</span>}
+                        {logs.length === 0 && <span className="text-muted-foreground">Aguardando testes...</span>}
                     </div>
                 </CardContent>
             </Card>

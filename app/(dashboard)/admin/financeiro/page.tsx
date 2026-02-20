@@ -123,28 +123,28 @@ export default function FinanceiroPage() {
                                 value={summary?.balance || 0}
                                 icon={DollarSign}
                                 description="Receitas Realizadas - Despesas Realizadas"
-                                color={summary?.balance >= 0 ? "text-green-600" : "text-red-600"}
+                                color={summary?.balance >= 0 ? "text-primary" : "text-destructive"}
                             />
                             <KpiCard
                                 title="Receitas (Realizadas)"
                                 value={summary?.netRevenue || 0}
                                 icon={ArrowUp}
                                 description={`Total Faturado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(summary?.totalRevenue || 0)}`}
-                                color="text-green-600"
+                                color="text-primary"
                             />
                             <KpiCard
                                 title="Despesas (Realizadas)"
                                 value={summary?.netExpense || 0}
                                 icon={ArrowDown}
                                 description={`Total Lançado: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(summary?.totalExpense || 0)}`}
-                                color="text-red-600"
+                                color="text-destructive"
                             />
                             <KpiCard
                                 title="A Receber (Atrasado)"
                                 value={summary?.overdueReceivables || 0}
                                 icon={AlertCircle}
                                 description="Inadimplência detectada"
-                                color="text-orange-600"
+                                color="text-primary"
                             />
                         </div>
 
@@ -161,7 +161,7 @@ export default function FinanceiroPage() {
                         <Card>
                             <CardHeader>
                                 <CardTitle>Transações Recentes</CardTitle>
-                                <CardDescription>Últimas movimentações. Veja a aba 'Transações' para gestão completa.</CardDescription>
+                                <CardDescription>Últimas movimentações. Veja a aba &apos;Transações&apos; para gestão completa.</CardDescription>
                             </CardHeader>
                             <CardContent>
                                 <GlobalTransactionsTable data={recent} onUpdate={fetchDashboardData} />

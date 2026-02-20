@@ -621,7 +621,7 @@ export default function UsuariosPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">-</div>
+              <div className="text-2xl font-bold text-primary">-</div>
               <p className="text-xs text-muted-foreground">Implementar checklist</p>
             </CardContent>
           </Card>
@@ -676,7 +676,7 @@ export default function UsuariosPage() {
                               <div>
                                 <p className="font-medium text-base">{usuario.nome}</p>
                                 <p className="text-xs text-muted-foreground">
-                                  {usuario.ativo ? <span className="text-green-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Ativo</span> : "Inativo"}
+                                  {usuario.ativo ? <span className="text-primary flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Ativo</span> : "Inativo"}
                                 </p>
                               </div>
                             </div>
@@ -744,7 +744,7 @@ export default function UsuariosPage() {
                                   </DropdownMenuItem>
                                   <DropdownMenuItem
                                     disabled={isSelf || actionLoading || redistributionLoading || redistributionSaving}
-                                    className="text-red-600 focus:text-red-600"
+                                    className="text-destructive focus:text-destructive"
                                     onClick={() => prepareUserAction(usuario, "delete")}
                                   >
                                     <Trash2 className="h-4 w-4" />
@@ -999,14 +999,14 @@ export default function UsuariosPage() {
                 </div>
 
                 {redistributionPreview && redistributionPreview.outliers.length > 0 && (
-                  <div className="rounded-lg border border-amber-300/40 bg-amber-50/40 p-3 text-sm text-amber-800">
+                  <div className="rounded-lg border border-primary/40 bg-primary/15 p-3 text-sm text-primary">
                     <div className="flex items-center gap-2 font-medium">
                       <AlertTriangle className="h-4 w-4" />
                       Créditos destoantes exigem atribuição manual.
                     </div>
                     <div className="mt-3 space-y-2">
                       {redistributionPreview.outliers.map((credit) => (
-                        <div key={credit.id} className="rounded-md border border-amber-400/30 bg-background/70 p-2">
+                        <div key={credit.id} className="rounded-md border border-primary/40 bg-background/70 p-2">
                           <div className="flex items-center justify-between gap-2">
                             <span className="truncate">{getCreditLabel(credit)}</span>
                             <span>{formatCurrency(getCreditValue(credit))}</span>
@@ -1097,7 +1097,7 @@ export default function UsuariosPage() {
                   handleConfirmUserAction()
                 }}
                 disabled={actionLoading}
-                className={selectedAction === "delete" ? "bg-red-600 hover:bg-red-700" : undefined}
+                className={selectedAction === "delete" ? "bg-destructive/15 hover:bg-destructive/15" : undefined}
               >
                 {actionLoading ? (
                   <>

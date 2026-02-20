@@ -111,7 +111,7 @@ export default function RegisterPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -123,7 +123,7 @@ export default function RegisterPage() {
               <Input
                 id="confirmPassword"
                 type="password"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
                 required
@@ -131,12 +131,12 @@ export default function RegisterPage() {
               />
             </div>
             {error && (
-              <div className="text-sm text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 p-3 rounded-md">
+              <div className="text-sm text-destructive dark:text-destructive bg-destructive/15 dark:bg-destructive/15 p-3 rounded-md">
                 {error}
               </div>
             )}
             {success && (
-              <div className="text-sm text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/20 p-3 rounded-md">
+              <div className="text-sm text-primary dark:text-primary bg-primary/15 dark:bg-primary/15 p-3 rounded-md">
                 Conta criada com sucesso! Redirecionando para login...
               </div>
             )}

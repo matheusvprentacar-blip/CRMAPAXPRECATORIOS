@@ -37,7 +37,7 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
     const propostas = resultados[6] || {}
 
     const formatDate = (dateString: string) => {
-        if (!dateString) return "—"
+        if (!dateString) return "â€”"
         return new Date(dateString).toLocaleDateString("pt-BR")
     }
 
@@ -93,13 +93,13 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                         </div>
                         <div>
                             <p className="text-muted-foreground">Juros de Mora</p>
-                            <p className="font-semibold text-green-600">
+                            <p className="font-semibold text-primary">
                                 {formatCurrency(atualizacao.valorJuros || atualizacao.juros_mora || precatorio?.juros_mora_aplicados)}
                             </p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Percentual Juros</p>
-                            <p className="font-mono text-xs mt-1">{atualizacao.taxa_juros_moratorios || atualizacao.taxaJuros || "—"}%</p>
+                            <p className="font-mono text-xs mt-1">{atualizacao.taxa_juros_moratorios || atualizacao.taxaJuros || "â€”"}%</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">SELIC (se aplicável)</p>
@@ -107,7 +107,7 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                         </div>
                         <div>
                             <p className="text-muted-foreground">Coeficiente Correção</p>
-                            <p className="font-mono text-xs mt-1">{atualizacao.indice_correcao || "—"}</p>
+                            <p className="font-mono text-xs mt-1">{atualizacao.indice_correcao || "â€”"}</p>
                         </div>
                     </CardContent>
                 </Card>
@@ -123,7 +123,7 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                     <CardContent className="pt-4 grid grid-cols-2 gap-4 text-sm">
                         <div>
                             <p className="text-muted-foreground">PSS Total</p>
-                            <p className="font-semibold text-red-600">-{formatCurrency(pss.pss_valor || pss.pssTotal)}</p>
+                            <p className="font-semibold text-destructive">-{formatCurrency(pss.pss_valor || pss.pssTotal)}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">PSS (Contribuição Patrominal)</p>
@@ -131,7 +131,7 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                         </div>
                         <div className="col-span-2 pt-2 border-t">
                             <p className="text-muted-foreground">IRPF Total</p>
-                            <p className="font-semibold text-red-600">-{formatCurrency(irpf.valor_irpf || irpf.irTotal)}</p>
+                            <p className="font-semibold text-destructive">-{formatCurrency(irpf.valor_irpf || irpf.irTotal)}</p>
                         </div>
                         <div>
                             <p className="text-muted-foreground">Alíquota Efetiva</p>
@@ -190,13 +190,13 @@ export function ResumoCalculoDetalhado({ precatorio }: ResumoCalculoDetalhadoPro
                         <div className="flex justify-between items-center p-2 rounded bg-background border">
                             <div>
                                 <p className="text-xs text-muted-foreground uppercase font-bold">Proposta Menor ({propostas.percentual_menor || precatorio.proposta_menor_percentual}%)</p>
-                                <p className="text-lg font-bold text-green-700">{formatCurrency(propostas.menor_proposta || precatorio.proposta_menor_valor)}</p>
+                                <p className="text-lg font-bold text-primary">{formatCurrency(propostas.menor_proposta || precatorio.proposta_menor_valor)}</p>
                             </div>
                         </div>
                         <div className="flex justify-between items-center p-2 rounded bg-background border">
                             <div>
                                 <p className="text-xs text-muted-foreground uppercase font-bold">Proposta Maior ({propostas.percentual_maior || precatorio.proposta_maior_percentual}%)</p>
-                                <p className="text-lg font-bold text-green-700">{formatCurrency(propostas.maior_proposta || precatorio.proposta_maior_valor)}</p>
+                                <p className="text-lg font-bold text-primary">{formatCurrency(propostas.maior_proposta || precatorio.proposta_maior_valor)}</p>
                             </div>
                         </div>
                     </div>

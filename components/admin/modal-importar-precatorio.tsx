@@ -420,7 +420,7 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
-            <Upload className="h-5 w-5 text-orange-500" />
+            <Upload className="h-5 w-5 text-primary" />
             Importar Precatorio (OCR)
           </DialogTitle>
           <DialogDescription>Envie o PDF do Oficio ou precatorio para extracao automatica dos dados.</DialogDescription>
@@ -434,7 +434,7 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
               onDrop={handleDrop}
               className={`
                                 border-2 border-dashed rounded-lg p-8 flex flex-col items-center justify-center text-center transition-colors cursor-pointer
-                                ${dragging ? "border-orange-500 bg-orange-50" : "border-muted-foreground/25 hover:bg-muted/50"}
+                                ${dragging ? "border-primary/40 bg-primary/15" : "border-muted-foreground/25 hover:bg-muted/50"}
                             `}
               onClick={() => fileInputRef.current?.click()}
             >
@@ -450,8 +450,8 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
 
               {file ? (
                 <div className="flex flex-col items-center animate-in fade-in zoom-in duration-300">
-                  <div className="bg-orange-100 p-3 rounded-full mb-3">
-                    <FileText className="h-8 w-8 text-orange-600" />
+                  <div className="bg-primary/15 p-3 rounded-full mb-3">
+                    <FileText className="h-8 w-8 text-primary" />
                   </div>
                   <p className="font-medium text-sm">{file.name}</p>
                   <p className="text-xs text-muted-foreground mt-1">{(file.size / 1024 / 1024).toFixed(2)} MB</p>
@@ -459,7 +459,7 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="mt-2 text-red-500 h-8"
+                    className="mt-2 text-destructive h-8"
                     onClick={(e) => {
                       e.stopPropagation()
                       setFile(null)
@@ -483,7 +483,7 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
           {step === "processing" && (
             <div className="space-y-4 text-center py-4">
               <div className="relative mx-auto w-16 h-16">
-                <Loader2 className="h-16 w-16 animate-spin text-orange-500/30" />
+                <Loader2 className="h-16 w-16 animate-spin text-primary" />
                 <div className="absolute inset-0 flex items-center justify-center font-bold text-xs">{progress}%</div>
               </div>
               <div className="space-y-1">
@@ -506,7 +506,7 @@ export function ModalImportarPrecatorio({ open, onOpenChange, onSuccess, onExtra
                   type="button"
                   onClick={() => handleProcess()}
                   disabled={!file}
-                  className="bg-orange-600 hover:bg-orange-700 text-white flex gap-2 items-center"
+                  className="bg-primary/15 hover:bg-primary/15 text-white flex gap-2 items-center"
                 >
                   OCR Premium
                 </Button>

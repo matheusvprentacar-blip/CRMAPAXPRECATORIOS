@@ -45,7 +45,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
         <CardContent>
           <div className="flex flex-col items-center justify-center py-12 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mb-4" />
-            <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">Nenhum precatório crítico no momento</p>
+            <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Nenhum precatório crítico no momento</p>
             <p className="text-xs text-muted-foreground mt-2">
               Precatórios com alta complexidade, SLA estourado ou atraso de alto impacto aparecerão aqui
             </p>
@@ -56,25 +56,25 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
   }
 
   const getCriticalityColor = (score: number) => {
-    if (score >= 70) return "border-red-500 bg-red-50/50 dark:bg-red-950/20"
-    if (score >= 40) return "border-orange-500 bg-orange-50/50 dark:bg-orange-950/20"
-    return "border-yellow-500 bg-yellow-50/50 dark:bg-yellow-950/20"
+    if (score >= 70) return "border-destructive/40 bg-destructive/15 dark:bg-destructive/15"
+    if (score >= 40) return "border-primary/40 bg-primary/15 dark:bg-primary/15"
+    return "border-primary/40 bg-primary/15 dark:bg-primary/15"
   }
 
   const getCriticalityIcon = (score: number) => {
-    if (score >= 70) return "🔴"
-    if (score >= 40) return "🟠"
-    return "🟡"
+    if (score >= 70) return "ðŸ”´"
+    if (score >= 40) return "ðŸŸ "
+    return "ðŸŸ¡"
   }
 
   return (
     <Card>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
-          <AlertTriangle className="h-5 w-5 text-orange-500" />
+          <AlertTriangle className="h-5 w-5 text-primary" />
           Precatórios Críticos
         </CardTitle>
-        <p className="text-sm font-medium text-zinc-600 dark:text-zinc-300">
+        <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">
           Precatórios que precisam atenção imediata (ordenados por criticidade)
         </p>
       </CardHeader>
@@ -160,11 +160,11 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
                     )}
 
                     {precatorio.motivo_atraso_calculo && (
-                      <div className="mt-2 rounded-md bg-orange-100 dark:bg-orange-900/20 p-2">
-                        <p className="text-xs font-medium text-orange-800 dark:text-orange-200">
+                      <div className="mt-2 rounded-md bg-primary/15 dark:bg-primary/15 p-2">
+                        <p className="text-xs font-medium text-primary dark:text-primary">
                           Motivo do Atraso:
                         </p>
-                        <p className="text-xs text-orange-700 dark:text-orange-300 mt-1">
+                        <p className="text-xs text-primary dark:text-primary mt-1">
                           {precatorio.motivo_atraso_calculo}
                         </p>
                       </div>

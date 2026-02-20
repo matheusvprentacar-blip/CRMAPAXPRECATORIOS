@@ -135,7 +135,7 @@ export function GlobalTransactionsTable({ data, onUpdate }: TransactionsTablePro
                                         </div>
                                     </TableCell>
                                     <TableCell className="capitalize">{item.category}</TableCell>
-                                    <TableCell className={item.type === 'expense' ? 'text-red-500' : 'text-green-600'}>
+                                    <TableCell className={item.type === 'expense' ? 'text-destructive' : 'text-primary'}>
                                         {item.type === 'expense' ? '-' : '+'}
                                         {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(item.amount))}
                                     </TableCell>
@@ -149,10 +149,10 @@ export function GlobalTransactionsTable({ data, onUpdate }: TransactionsTablePro
                                     <TableCell className="text-right">
                                         <div className="flex justify-end gap-1">
                                             <Button variant="ghost" size="icon" onClick={() => setEditingItem(item)}>
-                                                <Pencil className="w-4 h-4 text-blue-500" />
+                                                <Pencil className="w-4 h-4 text-primary" />
                                             </Button>
                                             <Button variant="ghost" size="icon" onClick={() => handleDelete(item.id)}>
-                                                <Trash2 className="w-4 h-4 text-red-500" />
+                                                <Trash2 className="w-4 h-4 text-destructive" />
                                             </Button>
                                         </div>
                                     </TableCell>

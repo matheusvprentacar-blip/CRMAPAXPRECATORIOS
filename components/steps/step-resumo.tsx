@@ -30,22 +30,22 @@ const SUMMARY_KPI_STYLES: Record<
     value: "text-primary",
   },
   rose: {
-    bar: "bg-rose-500",
-    badge: "bg-rose-500/10 border-rose-500/25 text-rose-300",
-    icon: "bg-rose-500/15 text-rose-300",
-    value: "text-rose-300",
+    bar: "bg-destructive/15",
+    badge: "bg-destructive/15 border-destructive/40 text-destructive",
+    icon: "bg-destructive/15 text-destructive",
+    value: "text-destructive",
   },
   emerald: {
-    bar: "bg-emerald-500",
-    badge: "bg-emerald-500/10 border-emerald-500/25 text-emerald-300",
-    icon: "bg-emerald-500/15 text-emerald-300",
-    value: "text-emerald-300",
+    bar: "bg-primary/15",
+    badge: "bg-primary/15 border-primary/40 text-primary",
+    icon: "bg-primary/15 text-primary",
+    value: "text-primary",
   },
   indigo: {
-    bar: "bg-indigo-500",
-    badge: "bg-indigo-500/10 border-indigo-500/25 text-indigo-300",
-    icon: "bg-indigo-500/15 text-indigo-300",
-    value: "text-indigo-300",
+    bar: "bg-primary/15",
+    badge: "bg-primary/15 border-primary/40 text-primary",
+    icon: "bg-primary/15 text-primary",
+    value: "text-primary",
   },
 }
 
@@ -123,7 +123,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
   const menorProposta = resumo.menor_proposta ?? resumo.menorProposta ?? 0
   const maiorProposta = resumo.maior_proposta ?? resumo.maiorProposta ?? 0
   const faixaPropostasLabel =
-    menorProposta > 0 && maiorProposta > 0 ? `${formatarMoeda(menorProposta)} • ${formatarMoeda(maiorProposta)}` : "—"
+    menorProposta > 0 && maiorProposta > 0 ? `${formatarMoeda(menorProposta)} â€¢ ${formatarMoeda(maiorProposta)}` : "â€”"
   const principalOriginal = dados.valor_principal_original ?? 0
   const correcaoMonetaria = etapaAtualizacao.memoriaCalculo?.ipca?.resultado ?? 0
   const jurosPre22 = etapaAtualizacao.memoriaCalculo?.juros?.resultado ?? 0
@@ -184,8 +184,8 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
             <span
               className={`rounded-full border px-2.5 py-1 font-semibold ${
                 canFinalizar
-                  ? "border-emerald-500/25 bg-emerald-500/10 text-emerald-300"
-                  : "border-amber-500/25 bg-amber-500/10 text-amber-300"
+                  ? "border-primary/40 bg-primary/15 text-primary"
+                  : "border-primary/40 bg-primary/15 text-primary"
               }`}
             >
               {canFinalizar ? "Pronto para finalizar" : "Em revisão"}
@@ -196,7 +196,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
       <CardContent>
         <div className="space-y-6">
         {!resumo || Object.keys(resumo).length === 0 ? (
-          <div className="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-muted-foreground">
+          <div className="rounded-2xl border border-primary/40 bg-primary/15 p-4 text-sm text-muted-foreground">
             <p className="text-foreground font-semibold">Resumo indisponível</p>
             <p>Complete todas as etapas anteriores.</p>
           </div>
@@ -227,7 +227,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
           <SummaryKpiCard
             label="Faixa propostas"
             value={faixaPropostasLabel}
-            helper="Min • Max"
+            helper="Min â€¢ Max"
             tone="indigo"
             icon={<ShieldCheck className="h-4 w-4" />}
           />
@@ -252,31 +252,31 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between text-muted-foreground">
                       <span>Principal</span>
-                      <span className={`tabular-nums ${principalOriginal ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${principalOriginal ? "text-primary" : "text-muted-foreground"}`}>
                         {formatarMoeda(principalOriginal)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Correção (IPCA)</span>
-                      <span className={`tabular-nums ${correcaoMonetaria ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${correcaoMonetaria ? "text-primary" : "text-muted-foreground"}`}>
                         {formatarMoeda(correcaoMonetaria)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Juros pré-22</span>
-                      <span className={`tabular-nums ${jurosPre22 ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${jurosPre22 ? "text-primary" : "text-muted-foreground"}`}>
                         {formatarMoeda(jurosPre22)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>SELIC (pós-22)</span>
-                      <span className={`tabular-nums ${selic ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${selic ? "text-primary" : "text-muted-foreground"}`}>
                         {formatarMoeda(selic)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>EC 136/2025 (IPCA 2025)</span>
-                      <span className={`tabular-nums ${ec136 ? "text-emerald-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${ec136 ? "text-primary" : "text-muted-foreground"}`}>
                         {formatarMoeda(ec136)}
                       </span>
                     </div>
@@ -288,29 +288,29 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 </div>
 
                 <div className="border-t border-border/60 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-rose-200/80">Descontos</p>
+                  <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
                   <div className="mt-2 space-y-1">
                     <div className="flex justify-between text-muted-foreground">
                       <span>PSS</span>
-                      <span className={`tabular-nums ${pssValor ? "text-rose-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${pssValor ? "text-destructive" : "text-muted-foreground"}`}>
                         {isentoPss ? "Isento" : formatarMoeda(pssValor)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>IRPF</span>
-                      <span className={`tabular-nums ${irpfValor ? "text-rose-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${irpfValor ? "text-destructive" : "text-muted-foreground"}`}>
                         {formatarMoeda(irpfValor)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Honorários</span>
-                      <span className={`tabular-nums ${honorariosValor ? "text-rose-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${honorariosValor ? "text-destructive" : "text-muted-foreground"}`}>
                         {formatarMoeda(honorariosValor)}
                       </span>
                     </div>
                     <div className="flex justify-between text-muted-foreground">
                       <span>Adiantamento</span>
-                      <span className={`tabular-nums ${adiantamentoValor ? "text-rose-300" : "text-muted-foreground"}`}>
+                      <span className={`tabular-nums ${adiantamentoValor ? "text-destructive" : "text-muted-foreground"}`}>
                         {formatarMoeda(adiantamentoValor)}
                       </span>
                     </div>
@@ -318,14 +318,14 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 </div>
 
                 <div className="border-t border-border/60 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-emerald-200/80">Resultado final</p>
+                  <p className="text-xs uppercase tracking-wide text-primary">Resultado final</p>
                   <div className="mt-2 flex items-center justify-between">
                     <span className="text-sm text-muted-foreground">Base líquida final</span>
-                    <span className="text-xl font-semibold tabular-nums text-emerald-300">{formatarMoeda(baseLiquidaFinal)}</span>
+                    <span className="text-xl font-semibold tabular-nums text-primary">{formatarMoeda(baseLiquidaFinal)}</span>
                   </div>
                   <div className="mt-2 flex items-center justify-between text-sm">
                     <span className="text-muted-foreground">Base pré-descontos</span>
-                    <span className="tabular-nums text-emerald-200">{formatarMoeda(basePreDescontos)}</span>
+                    <span className="tabular-nums text-primary">{formatarMoeda(basePreDescontos)}</span>
                   </div>
                 </div>
               </div>
@@ -339,7 +339,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 <span
                   className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
                     pssValor
-                      ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
                       : "border-border/60 bg-muted/20 text-muted-foreground"
                   }`}
                 >
@@ -348,7 +348,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 <span
                   className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
                     irpfValor
-                      ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
                       : "border-border/60 bg-muted/20 text-muted-foreground"
                   }`}
                 >
@@ -357,7 +357,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 <span
                   className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
                     honorariosValor
-                      ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
                       : "border-border/60 bg-muted/20 text-muted-foreground"
                   }`}
                 >
@@ -366,7 +366,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
                 <span
                   className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
                     adiantamentoValor
-                      ? "border-rose-500/25 bg-rose-500/10 text-rose-300"
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
                       : "border-border/60 bg-muted/20 text-muted-foreground"
                   }`}
                 >

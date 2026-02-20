@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 /* eslint-disable */
 
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
@@ -176,7 +176,7 @@ function requireSupabase(): SupabaseClientType {
 }
 
 /**
- * ✅ Versão compatível com `output: "export"`:
+ * âœ… Versão compatível com `output: "export"`:
  * - Remove rota dinâmica `/precatorios/[id]`
  * - Usa querystring: `/precatorios/detalhes?id=<UUID>`
  */
@@ -228,7 +228,7 @@ export default function PrecatorioDetailPage() {
   }
 
   const getEsferaDevedorLabel = (value?: string | null) => {
-    if (!value) return "—"
+    if (!value) return "â€”"
     const normalized = normalizeEsferaDevedor(value)
     const option = ESFERA_DEVEDOR_OPTIONS.find((opt) => opt.value === normalized)
     return option?.label || value
@@ -299,15 +299,15 @@ export default function PrecatorioDetailPage() {
     (col) => col.id === statusAtual || col.statusIds?.includes(statusAtual)
   )
   const statusAtualLabel =
-    statusAtualColumn?.titulo || (statusAtual ? statusAtual.replace(/_/g, " ") : "—")
+    statusAtualColumn?.titulo || (statusAtual ? statusAtual.replace(/_/g, " ") : "â€”")
 
   const hasCalculoSalvo = (() => {
     if (!precatorio) return false
     const dadosCalculo = precatorio.dados_calculo
     const hasDadosCalculo =
       !!dadosCalculo && typeof dadosCalculo === "object" && Object.keys(dadosCalculo).length > 0
-    const valorAtualizado = Number(precatorio.valor_atualizado ?? 0)
-    const saldoLiquido = Number(precatorio.saldo_liquido ?? 0)
+    const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+    const saldoLiquido = Number(precatorio.saldo_liquido || 0)
     return hasDadosCalculo || valorAtualizado > 0 || saldoLiquido > 0 || !!precatorio.calculo_ultima_versao
   })()
 
@@ -336,32 +336,32 @@ export default function PrecatorioDetailPage() {
     SEM_CONTATO: {
       label: "Sem contato",
       badgeClass:
-        "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-800 dark:bg-zinc-900/60 dark:text-zinc-200",
-      dotClass: "bg-zinc-500",
+        "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+      dotClass: "bg-muted",
     },
     CONTATO_EM_ANDAMENTO: {
       label: "Contato em andamento",
       badgeClass:
-        "border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/50 dark:bg-blue-950/40 dark:text-blue-200",
-      dotClass: "bg-blue-500",
+        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+      dotClass: "bg-primary/15",
     },
     PEDIR_RETORNO: {
       label: "Pedir retorno",
       badgeClass:
-        "border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-700 dark:bg-amber-950/40 dark:text-amber-200",
-      dotClass: "bg-amber-500",
+        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+      dotClass: "bg-primary/15",
     },
     SEM_INTERESSE: {
       label: "Sem interesse",
       badgeClass:
-        "border-red-200 bg-red-50 text-red-700 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-200",
-      dotClass: "bg-red-500",
+        "border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive",
+      dotClass: "bg-destructive/15",
     },
     TEM_INTERESSE: {
       label: "Tem interesse",
       badgeClass:
-        "border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/70 dark:bg-emerald-900/40 dark:text-emerald-200",
-      dotClass: "bg-emerald-500",
+        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+      dotClass: "bg-primary/15",
     },
   }
   const getTriagemStatusMeta = (status?: string | null) => {
@@ -370,16 +370,16 @@ export default function PrecatorioDetailPage() {
       return {
         label: "Não informado",
         badgeClass:
-          "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200",
-        dotClass: "bg-zinc-500",
+          "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+        dotClass: "bg-muted",
       }
     }
     return (
-      TRIAGEM_STATUS_META[normalized] ?? {
+      TRIAGEM_STATUS_META[normalized] || {
         label: normalized.replace(/_/g, " ").toLowerCase(),
         badgeClass:
-          "border-zinc-200 bg-zinc-100 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-900/40 dark:text-zinc-200",
-        dotClass: "bg-zinc-500",
+          "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+        dotClass: "bg-muted",
       }
     )
   }
@@ -404,7 +404,7 @@ export default function PrecatorioDetailPage() {
   const resolveStatusColumnId = (status?: string | null) => {
     if (!status) return null
     const column = KANBAN_COLUMNS.find((col) => col.id === status || col.statusIds?.includes(status))
-    return column?.id ?? status
+    return column?.id || status
   }
   const getTabForStatus = (status?: string | null) => {
     const normalized = resolveStatusColumnId(status)
@@ -412,7 +412,7 @@ export default function PrecatorioDetailPage() {
     if (normalized === "proposta_aceita") {
       return canEditFechamento ? "fechamento" : "propostas"
     }
-    return STATUS_TAB_MAP[normalized] ?? null
+    return STATUS_TAB_MAP[normalized] || null
   }
   const syncTabToUrl = (tab: string) => {
     if (!id) return
@@ -548,15 +548,15 @@ export default function PrecatorioDetailPage() {
 
       if (isForced) {
         // Try the privileged RPC
-        console.log("🔒 [Acesso Controlado] Tentando acesso forçado via RPC...")
+        console.log("ðŸ”’ [Acesso Controlado] Tentando acesso forçado via RPC...")
         const { data: rpcData, error: rpcError } = await supabase.rpc("buscar_precatorio_por_id_acesso_controlado", {
           p_id: id,
         })
 
         if (rpcError) {
-          console.error("❌ [Acesso Controlado] Erro na RPC:", rpcError)
+          console.error("âŒ [Acesso Controlado] Erro na RPC:", rpcError)
         } else if (rpcData && rpcData.length > 0) {
-          console.log("✅ [Acesso Controlado] Dados recuperados via RPC")
+          console.log("âœ… [Acesso Controlado] Dados recuperados via RPC")
           forcedData = rpcData[0]
           // [CONTROLLED ACCESS] Fetch responsible name manually since RPC returns raw table
           if (forcedData.responsavel) {
@@ -1160,7 +1160,7 @@ export default function PrecatorioDetailPage() {
     col.id === precatorio?.status_kanban || col.statusIds?.includes(precatorio?.status_kanban)
   )
 
-  const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex]?.id ?? null : null
+  const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex]?.id || null : null
   const nextColumn = currentColumnIndex >= 0 && currentColumnIndex < KANBAN_COLUMNS.length - 1
     ? KANBAN_COLUMNS[currentColumnIndex + 1]
     : null
@@ -1288,9 +1288,9 @@ export default function PrecatorioDetailPage() {
   }
 
   const formatDate = (date: string | null | undefined) => {
-    if (!date) return "—"
+    if (!date) return "â€”"
     const [y, m, d] = String(date).split("-")
-    if (!y || !m || !d) return "—"
+    if (!y || !m || !d) return "â€”"
     return `${d}/${m}/${y}`
   }
   const formatPercent = (value: number | null | undefined) => {
@@ -1438,30 +1438,30 @@ export default function PrecatorioDetailPage() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case "novo":
-        return "border border-blue-300/70 bg-blue-100/90 text-blue-900 dark:border-blue-500/40 dark:bg-blue-500/20 dark:text-blue-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       case "em_andamento":
-        return "border border-amber-300/70 bg-amber-100/90 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       case "concluido":
-        return "border border-emerald-300/70 bg-emerald-100/90 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       case "cancelado":
-        return "border border-red-300/70 bg-red-100/90 text-red-900 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-100"
+        return "border border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive"
       default:
-        return "border border-zinc-300/70 bg-zinc-100/90 text-zinc-900 dark:border-zinc-600/50 dark:bg-zinc-800/70 dark:text-zinc-100"
+        return "border border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground"
     }
   }
 
   const getPrioridadeColor = (prioridade: string | undefined) => {
     switch (prioridade) {
       case "urgente":
-        return "border border-red-300/70 bg-red-100/85 text-red-900 dark:border-red-500/40 dark:bg-red-500/20 dark:text-red-100"
+        return "border border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive"
       case "alta":
-        return "border border-orange-300/70 bg-orange-100/85 text-orange-900 dark:border-orange-500/40 dark:bg-orange-500/20 dark:text-orange-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       case "media":
-        return "border border-amber-300/70 bg-amber-100/85 text-amber-900 dark:border-amber-500/40 dark:bg-amber-500/20 dark:text-amber-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       case "baixa":
-        return "border border-emerald-300/70 bg-emerald-100/85 text-emerald-900 dark:border-emerald-500/40 dark:bg-emerald-500/20 dark:text-emerald-100"
+        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
       default:
-        return "border border-zinc-300/70 bg-zinc-100/85 text-zinc-900 dark:border-zinc-600/50 dark:bg-zinc-800/70 dark:text-zinc-100"
+        return "border border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground"
     }
   }
 
@@ -1502,11 +1502,11 @@ export default function PrecatorioDetailPage() {
   }
 
   const dashboardCardClass =
-    "group relative overflow-hidden rounded-2xl border border-zinc-200/70 bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
+    "group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
   const dashboardTabsListClass =
-    "h-auto w-full gap-1.5 rounded-2xl border border-zinc-200/70 bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-zinc-800/70 dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+    "h-auto w-full gap-1.5 rounded-2xl border border-border bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-border dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
   const dashboardTabsTriggerClass =
-    "rounded-xl px-3.5 py-2 text-sm font-medium text-zinc-600 transition-all duration-300 hover:bg-zinc-100/80 hover:text-zinc-900 data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-zinc-900 data-[state=active]:shadow-sm dark:text-zinc-300 dark:hover:bg-zinc-900/60 dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+    "rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-muted-foreground data-[state=active]:shadow-sm dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
 
   if (!id) {
     return (
@@ -1559,7 +1559,7 @@ export default function PrecatorioDetailPage() {
         initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
         animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
         transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-        className="relative z-20 overflow-hidden rounded-3xl border border-zinc-200/75 bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
+        className="relative z-20 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
       >
         <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.16),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.2),transparent_48%)]" />
         <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
@@ -1569,7 +1569,7 @@ export default function PrecatorioDetailPage() {
               variant="ghost"
               size="icon"
               onClick={() => router.back()}
-              className="mt-1 -ml-2 rounded-xl border border-zinc-200/70 bg-white/75 hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
+              className="mt-1 -ml-2 rounded-xl border border-border bg-background/75 hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
@@ -1581,7 +1581,7 @@ export default function PrecatorioDetailPage() {
                 <span
                   className={`${getPrioridadeColor(precatorio.prioridade)} inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
                 >
-                  {precatorio.prioridade?.toUpperCase() || "MÉDIA"}
+                  {precatorio.prioridade?.toUpperCase() || "M?DIA"}
                 </span>
                 <span
                   className={`${getStatusColor(precatorio.status)} inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
@@ -1603,7 +1603,7 @@ export default function PrecatorioDetailPage() {
                 onClick={() => setAdminInterestModalOpen(true)}
                 variant="outline"
                 size="sm"
-                className="h-10 rounded-xl border-zinc-300/70 bg-white/80 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
+                className="h-10 rounded-xl border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
               >
                 <AlertCircle className="h-4 w-4 mr-2" />
                 Sinalizar interesse
@@ -1614,7 +1614,7 @@ export default function PrecatorioDetailPage() {
                 onClick={() => setIsEditing(true)}
                 variant="outline"
                 size="sm"
-                className="h-10 rounded-xl border-zinc-300/70 bg-white/85 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
+                className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
               >
                 <Edit className="h-4 w-4 mr-2" />
                 Editar
@@ -1688,7 +1688,7 @@ export default function PrecatorioDetailPage() {
                 </div>
                 <div className="space-y-2">
                   <Label>Crédito em foco</Label>
-                  <div className="rounded-xl border border-zinc-200/70 bg-white/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/40">
+                  <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-border dark:bg-muted">
                     {precatorioAdminLabel}
                   </div>
                 </div>
@@ -1727,7 +1727,7 @@ export default function PrecatorioDetailPage() {
 
       {/* Tabs Layout Consolidado */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="mb-6 rounded-2xl border border-zinc-200/70 bg-white/45 p-1.5 backdrop-blur-xl dark:border-zinc-800/70 dark:bg-zinc-950/35">
+        <div className="mb-6 rounded-2xl border border-border bg-background/45 p-1.5 backdrop-blur-xl dark:border-border dark:bg-muted">
           <div className="relative">
             <TabsList className={dashboardTabsListClass}>
             <TabsTrigger
@@ -1750,7 +1750,7 @@ export default function PrecatorioDetailPage() {
             >
               <FileText className="h-4 w-4 mr-2" />
               Ofício
-              {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
+              {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/15" />}
             </TabsTrigger>
             <TabsTrigger
               value="certidoes"
@@ -1822,11 +1822,11 @@ export default function PrecatorioDetailPage() {
           <TabsContent value="detalhes" className="space-y-6">
 
             {/* Barra de Status */}
-            <DetailSection className="relative overflow-hidden border-zinc-200/70 bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-zinc-800/70 dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
+            <DetailSection className="relative overflow-hidden border-border bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
               <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_50%)]" />
               <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
                 <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-zinc-500 dark:text-zinc-400">
+                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:text-muted-foreground">
                     Status do crédito
                   </p>
 
@@ -1861,7 +1861,7 @@ export default function PrecatorioDetailPage() {
                   <Button
                     size="sm"
                     variant="secondary"
-                    className="h-10 rounded-xl border border-zinc-200/70 bg-white/80 px-4 shadow-sm hover:bg-white dark:border-zinc-700/70 dark:bg-zinc-900/55 dark:hover:bg-zinc-900"
+                    className="h-10 rounded-xl border border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
                     onClick={() => {
                       setActiveTab("timeline")
                       syncTabToUrl("timeline")
@@ -1872,7 +1872,7 @@ export default function PrecatorioDetailPage() {
                 </div>
               </div>
 
-              <div className="mt-4 rounded-2xl border border-zinc-200/70 bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-zinc-800/70 dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
+              <div className="mt-4 rounded-2xl border border-border bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-border dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
                 <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
                   <div className="flex min-w-max items-center gap-2.5 pr-2">
                     {KANBAN_COLUMNS.map((col, index) => {
@@ -1927,7 +1927,7 @@ export default function PrecatorioDetailPage() {
             onOpenChange={setSemInteresseModalOpen}
             precatorioId={id}
             onConfirm={handleConfirmSemInteresse}
-            initialMotivo={precatorio?.motivo_sem_interesse ?? ""}
+            initialMotivo={precatorio?.motivo_sem_interesse || ""}
             initialDataRecontato={
               precatorio?.data_recontato ? new Date(precatorio.data_recontato) : null
             }
@@ -1972,7 +1972,7 @@ export default function PrecatorioDetailPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Status</label>
-                          <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "—"}</p>
+                          <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "â€”"}</p>
                         </div>
                       </div>
                     </>
@@ -1980,26 +1980,26 @@ export default function PrecatorioDetailPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                       <InfoRow
                         label="Número do Precatório"
-                        value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "—"}
+                        value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "â€”"}
                         valueClassName="text-base font-semibold"
                       />
                       <InfoRow
                         label="Número do Processo"
-                        value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "—"}
+                        value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "â€”"}
                       />
                       <InfoRow
                         label="Número do Ofício"
-                        value={precatorio.numero_oficio || "—"}
+                        value={precatorio.numero_oficio || "â€”"}
                       />
                       <InfoRow
                         label="Status"
-                        value={precatorio.status?.replace(/_/g, " ") || "—"}
+                        value={precatorio.status?.replace(/_/g, " ") || "â€”"}
                       />
                       <div>
                         <label className="text-sm font-medium text-muted-foreground">Responsável</label>
                         <div className="flex items-center gap-2 mt-1">
                           <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "—"}</span>
+                          <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "â€”"}</span>
                         </div>
                       </div>
                     </div>
@@ -2126,7 +2126,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_penhora_valor ?? ""}
+                              value={editData.analise_penhora_valor || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_penhora_valor: e.target.value })
                               }
@@ -2138,7 +2138,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_penhora_percentual ?? ""}
+                              value={editData.analise_penhora_percentual || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_penhora_percentual: e.target.value })
                               }
@@ -2154,7 +2154,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_cessao_valor ?? ""}
+                              value={editData.analise_cessao_valor || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_cessao_valor: e.target.value })
                               }
@@ -2166,7 +2166,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_cessao_percentual ?? ""}
+                              value={editData.analise_cessao_percentual || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_cessao_percentual: e.target.value })
                               }
@@ -2182,7 +2182,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_itcmd_valor ?? ""}
+                              value={editData.analise_itcmd_valor || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_itcmd_valor: e.target.value })
                               }
@@ -2194,7 +2194,7 @@ export default function PrecatorioDetailPage() {
                             <Input
                               type="number"
                               step="0.01"
-                              value={editData.analise_itcmd_percentual ?? ""}
+                              value={editData.analise_itcmd_percentual || ""}
                               onChange={(e) =>
                                 setEditData({ ...editData, analise_itcmd_percentual: e.target.value })
                               }
@@ -2208,7 +2208,7 @@ export default function PrecatorioDetailPage() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={editData.analise_adiantamento_valor ?? ""}
+                          value={editData.analise_adiantamento_valor || ""}
                           onChange={(e) =>
                             setEditData({ ...editData, analise_adiantamento_valor: e.target.value })
                           }
@@ -2220,7 +2220,7 @@ export default function PrecatorioDetailPage() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={editData.analise_adiantamento_percentual ?? ""}
+                          value={editData.analise_adiantamento_percentual || ""}
                           onChange={(e) =>
                             setEditData({ ...editData, analise_adiantamento_percentual: e.target.value })
                           }
@@ -2232,7 +2232,7 @@ export default function PrecatorioDetailPage() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={editData.analise_honorarios_valor ?? ""}
+                          value={editData.analise_honorarios_valor || ""}
                           onChange={(e) =>
                             setEditData({ ...editData, analise_honorarios_valor: e.target.value })
                           }
@@ -2244,7 +2244,7 @@ export default function PrecatorioDetailPage() {
                         <Input
                           type="number"
                           step="0.01"
-                          value={editData.analise_honorarios_percentual ?? ""}
+                          value={editData.analise_honorarios_percentual || ""}
                           onChange={(e) =>
                             setEditData({ ...editData, analise_honorarios_percentual: e.target.value })
                           }
@@ -2290,7 +2290,7 @@ export default function PrecatorioDetailPage() {
                         <p
                           className={`text-sm font-semibold ${
                             precatorio.analise_viavel === true
-                              ? "text-emerald-600"
+                              ? "text-primary"
                               : precatorio.analise_viavel === false
                                 ? "text-destructive"
                                 : "text-muted-foreground"
@@ -2319,13 +2319,13 @@ export default function PrecatorioDetailPage() {
                             <p className="text-sm font-semibold text-foreground">
                               {hasValue(precatorio.analise_penhora_valor)
                                 ? formatCurrency(precatorio.analise_penhora_valor)
-                                : "—"}
+                                : "â€”"}
                             </p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs font-medium text-muted-foreground">Penhora percentual (%)</p>
                             <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_penhora_percentual) || "—"}
+                              {formatPercent(precatorio.analise_penhora_percentual) || "â€”"}
                             </p>
                           </div>
                         </>
@@ -2337,13 +2337,13 @@ export default function PrecatorioDetailPage() {
                             <p className="text-sm font-semibold text-foreground">
                               {hasValue(precatorio.analise_cessao_valor)
                                 ? formatCurrency(precatorio.analise_cessao_valor)
-                                : "—"}
+                                : "â€”"}
                             </p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs font-medium text-muted-foreground">Cessão percentual (%)</p>
                             <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_cessao_percentual) || "—"}
+                              {formatPercent(precatorio.analise_cessao_percentual) || "â€”"}
                             </p>
                           </div>
                         </>
@@ -2355,13 +2355,13 @@ export default function PrecatorioDetailPage() {
                             <p className="text-sm font-semibold text-foreground">
                               {hasValue(precatorio.analise_itcmd_valor)
                                 ? formatCurrency(precatorio.analise_itcmd_valor)
-                                : "—"}
+                                : "â€”"}
                             </p>
                           </div>
                           <div className="space-y-1">
                             <p className="text-xs font-medium text-muted-foreground">ITCMD percentual (%)</p>
                             <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_itcmd_percentual) || "—"}
+                              {formatPercent(precatorio.analise_itcmd_percentual) || "â€”"}
                             </p>
                           </div>
                         </>
@@ -2371,13 +2371,13 @@ export default function PrecatorioDetailPage() {
                         <p className="text-sm font-semibold text-foreground">
                           {hasValue(precatorio.analise_adiantamento_valor)
                             ? formatCurrency(precatorio.analise_adiantamento_valor)
-                            : "—"}
+                            : "â€”"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Adiantamento recebido percentual (%)</p>
                         <p className="text-sm font-semibold text-foreground">
-                          {formatPercent(precatorio.analise_adiantamento_percentual) || "—"}
+                          {formatPercent(precatorio.analise_adiantamento_percentual) || "â€”"}
                         </p>
                       </div>
                       <div className="space-y-1">
@@ -2385,13 +2385,13 @@ export default function PrecatorioDetailPage() {
                         <p className="text-sm font-semibold text-foreground">
                           {hasValue(precatorio.analise_honorarios_valor)
                             ? formatCurrency(precatorio.analise_honorarios_valor)
-                            : "—"}
+                            : "â€”"}
                         </p>
                       </div>
                       <div className="space-y-1">
                         <p className="text-xs font-medium text-muted-foreground">Honorários contratuais percentual (%)</p>
                         <p className="text-sm font-semibold text-foreground">
-                          {formatPercent(precatorio.analise_honorarios_percentual) || "—"}
+                          {formatPercent(precatorio.analise_honorarios_percentual) || "â€”"}
                         </p>
                       </div>
                     </div>
@@ -2456,10 +2456,10 @@ export default function PrecatorioDetailPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                       <InfoRow
                         label="Vara de Origem"
-                        value={precatorio.tribunal || "—"}
+                        value={precatorio.tribunal || "â€”"}
                         valueClassName="text-base font-semibold"
                       />
-                      <InfoRow label="Devedor" value={precatorio.devedor || "—"} />
+                      <InfoRow label="Devedor" value={precatorio.devedor || "â€”"} />
                       <InfoRow label="Esfera do Devedor" value={getEsferaDevedorLabel(precatorio.esfera_devedor)} />
                     </div>
                   )}
@@ -2504,7 +2504,7 @@ export default function PrecatorioDetailPage() {
                           />
                         ) : (
                           <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                            {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "—"}
+                            {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "â€”"}
                           </div>
                         )}
                       </div>
@@ -2519,7 +2519,7 @@ export default function PrecatorioDetailPage() {
                           const valorPrincipal = isEditing ? editData.valor_principal : precatorio.valor_principal
                           return hasValue(valorPrincipal) && valorPrincipal !== ""
                             ? formatCurrency(Number(valorPrincipal))
-                            : "—"
+                            : "â€”"
                         })()}
                       </p>
                     </div>
@@ -2530,14 +2530,14 @@ export default function PrecatorioDetailPage() {
                           const valorAtualizado = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
                           return hasValue(valorAtualizado) && valorAtualizado !== ""
                             ? formatCurrency(Number(valorAtualizado))
-                            : "—"
+                            : "â€”"
                         })()}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Saldo Líquido</label>
                       <p className="text-xl font-bold text-foreground">
-                        {hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "—"}
+                        {hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "â€”"}
                       </p>
                     </div>
                   </div>
@@ -2550,7 +2550,7 @@ export default function PrecatorioDetailPage() {
                           ? precatorio.pss_valor === 0
                             ? "Isento"
                             : formatCurrency(precatorio.pss_valor)
-                          : "—"}
+                          : "â€”"}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -2560,7 +2560,7 @@ export default function PrecatorioDetailPage() {
                           ? formatCurrency(precatorio.irpf_valor)
                           : precatorio.irpf_isento
                             ? "Isento"
-                            : "—"}
+                            : "â€”"}
                       </p>
                     </div>
                     <div className="space-y-1">
@@ -2568,7 +2568,7 @@ export default function PrecatorioDetailPage() {
                       <p className="text-base text-foreground">
                         {hasValue(precatorio.honorarios_valor)
                           ? formatCurrency(precatorio.honorarios_valor)
-                          : "—"}
+                          : "â€”"}
                       </p>
                     </div>
                   </div>
@@ -2576,14 +2576,14 @@ export default function PrecatorioDetailPage() {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Maior</label>
-                      <p className="text-xl font-bold text-red-500 dark:text-red-400">
-                        {hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "—"}
+                      <p className="text-xl font-bold text-destructive dark:text-destructive">
+                        {hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "â€”"}
                       </p>
                     </div>
                     <div className="space-y-1">
                       <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Menor</label>
-                      <p className="text-xl font-bold text-green-600 dark:text-green-400">
-                        {hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "—"}
+                      <p className="text-xl font-bold text-primary dark:text-primary">
+                        {hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "â€”"}
                       </p>
                     </div>
                   </div>
@@ -2804,21 +2804,21 @@ export default function PrecatorioDetailPage() {
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Banco</label>
-                          <p className="text-base">{precatorio.banco || "—"}</p>
+                          <p className="text-base">{precatorio.banco || "â€”"}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Tipo</label>
-                          <p className="text-base capitalize">{precatorio.tipo_conta || "—"}</p>
+                          <p className="text-base capitalize">{precatorio.tipo_conta || "â€”"}</p>
                         </div>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Agência</label>
-                          <p className="text-base">{precatorio.agencia || "—"}</p>
+                          <p className="text-base">{precatorio.agencia || "â€”"}</p>
                         </div>
                         <div>
                           <label className="text-sm font-medium text-muted-foreground">Conta</label>
-                          <p className="text-base">{precatorio.conta || "—"}</p>
+                          <p className="text-base">{precatorio.conta || "â€”"}</p>
                         </div>
                       </div>
                       {precatorio.chave_pix && (
@@ -2865,10 +2865,10 @@ export default function PrecatorioDetailPage() {
                       </div>
                     ) : (
                       <div className="space-y-2">
-                        <p className="font-medium text-base">{precatorio.credor_nome || "—"}</p>
+                        <p className="font-medium text-base">{precatorio.credor_nome || "â€”"}</p>
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <p className="text-sm text-muted-foreground">{precatorio.credor_cpf_cnpj || "—"}</p>
-                          <p className="text-sm text-muted-foreground">{precatorio.credor_telefone || "—"}</p>
+                          <p className="text-sm text-muted-foreground">{precatorio.credor_cpf_cnpj || "â€”"}</p>
+                          <p className="text-sm text-muted-foreground">{precatorio.credor_telefone || "â€”"}</p>
                         </div>
                       </div>
                     )}
@@ -2883,8 +2883,8 @@ export default function PrecatorioDetailPage() {
                       </div>
                     ) : (
                       <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <p className="font-medium text-base">{precatorio.advogado_nome || "—"}</p>
-                        <p className="text-sm text-muted-foreground">{precatorio.advogado_oab || "—"}</p>
+                        <p className="font-medium text-base">{precatorio.advogado_nome || "â€”"}</p>
+                        <p className="text-sm text-muted-foreground">{precatorio.advogado_oab || "â€”"}</p>
                       </div>
                     )}
                   </div>
@@ -2986,7 +2986,7 @@ export default function PrecatorioDetailPage() {
                               onChange={(e) => updateHerdeiroEdit("nome_completo", e.target.value)}
                             />
                           ) : (
-                            <p className="text-base">{selectedHerdeiro.nome_completo || "—"}</p>
+                            <p className="text-base">{selectedHerdeiro.nome_completo || "â€”"}</p>
                           )}
                         </div>
                         <div className="space-y-1">
@@ -2997,7 +2997,7 @@ export default function PrecatorioDetailPage() {
                               onChange={(e) => updateHerdeiroEdit("cpf", e.target.value)}
                             />
                           ) : (
-                            <p className="text-base">{selectedHerdeiro.cpf || "—"}</p>
+                            <p className="text-base">{selectedHerdeiro.cpf || "â€”"}</p>
                           )}
                         </div>
                         <div className="space-y-1">
@@ -3008,7 +3008,7 @@ export default function PrecatorioDetailPage() {
                               onChange={(e) => updateHerdeiroEdit("telefone", e.target.value)}
                             />
                           ) : (
-                            <p className="text-base">{selectedHerdeiro.telefone || "—"}</p>
+                            <p className="text-base">{selectedHerdeiro.telefone || "â€”"}</p>
                           )}
                         </div>
                         <div className="space-y-1">
@@ -3019,7 +3019,7 @@ export default function PrecatorioDetailPage() {
                               onChange={(e) => updateHerdeiroEdit("email", e.target.value)}
                             />
                           ) : (
-                            <p className="text-base">{selectedHerdeiro.email || "—"}</p>
+                            <p className="text-base">{selectedHerdeiro.email || "â€”"}</p>
                           )}
                         </div>
                         <div className="space-y-1">
@@ -3034,7 +3034,7 @@ export default function PrecatorioDetailPage() {
                               }}
                             />
                           ) : (
-                            <p className="text-base">{formatPercent(selectedHerdeiro.percentual_participacao) || "—"}</p>
+                            <p className="text-base">{formatPercent(selectedHerdeiro.percentual_participacao) || "â€”"}</p>
                           )}
                         </div>
                         <div className="space-y-1 sm:col-span-2">
@@ -3045,7 +3045,7 @@ export default function PrecatorioDetailPage() {
                               onChange={(e) => updateHerdeiroEdit("endereco", e.target.value)}
                             />
                           ) : (
-                            <p className="text-base">{selectedHerdeiro.endereco || "—"}</p>
+                            <p className="text-base">{selectedHerdeiro.endereco || "â€”"}</p>
                           )}
                         </div>
                       </div>
@@ -3063,7 +3063,7 @@ export default function PrecatorioDetailPage() {
                                 onChange={(e) => updateHerdeiroEdit("banco", e.target.value)}
                               />
                             ) : (
-                              <p className="text-base">{selectedHerdeiro.banco || "—"}</p>
+                              <p className="text-base">{selectedHerdeiro.banco || "â€”"}</p>
                             )}
                           </div>
                           <div className="space-y-1">
@@ -3074,7 +3074,7 @@ export default function PrecatorioDetailPage() {
                                 onChange={(e) => updateHerdeiroEdit("tipo_conta", e.target.value)}
                               />
                             ) : (
-                              <p className="text-base capitalize">{selectedHerdeiro.tipo_conta || "—"}</p>
+                              <p className="text-base capitalize">{selectedHerdeiro.tipo_conta || "â€”"}</p>
                             )}
                           </div>
                           <div className="space-y-1">
@@ -3085,7 +3085,7 @@ export default function PrecatorioDetailPage() {
                                 onChange={(e) => updateHerdeiroEdit("agencia", e.target.value)}
                               />
                             ) : (
-                              <p className="text-base">{selectedHerdeiro.agencia || "—"}</p>
+                              <p className="text-base">{selectedHerdeiro.agencia || "â€”"}</p>
                             )}
                           </div>
                           <div className="space-y-1">
@@ -3096,7 +3096,7 @@ export default function PrecatorioDetailPage() {
                                 onChange={(e) => updateHerdeiroEdit("conta", e.target.value)}
                               />
                             ) : (
-                              <p className="text-base">{selectedHerdeiro.conta || "—"}</p>
+                              <p className="text-base">{selectedHerdeiro.conta || "â€”"}</p>
                             )}
                           </div>
                           <div className="space-y-1 sm:col-span-2">
@@ -3107,7 +3107,7 @@ export default function PrecatorioDetailPage() {
                                 onChange={(e) => updateHerdeiroEdit("chave_pix", e.target.value)}
                               />
                             ) : (
-                              <p className="text-base">{selectedHerdeiro.chave_pix || "—"}</p>
+                              <p className="text-base">{selectedHerdeiro.chave_pix || "â€”"}</p>
                             )}
                           </div>
                         </div>
@@ -3207,12 +3207,12 @@ export default function PrecatorioDetailPage() {
         <TabsContent value="juridico" className="mt-0 space-y-6">
           <div className="max-w-4xl">
             {precatorio.status_kanban === "proposta_aceita" && (
-              <Card className={`${dashboardCardClass} mb-4 border-emerald-200 bg-emerald-50/70 dark:border-emerald-900/60 dark:bg-emerald-950/25`}>
-                <CardContent className="py-4 flex items-start gap-3 text-emerald-900">
+              <Card className={`${dashboardCardClass} mb-4 border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15`}>
+                <CardContent className="py-4 flex items-start gap-3 text-primary">
                   <CheckCircle2 className="h-5 w-5 mt-0.5" />
                   <div>
                     <p className="font-semibold">Aceite confirmado</p>
-                    <p className="text-sm text-emerald-700">
+                    <p className="text-sm text-primary">
                       Este precatório entrou em jurídico de fechamento e aguarda parecer do jurídico.
                     </p>
                   </div>
@@ -3336,7 +3336,7 @@ export default function PrecatorioDetailPage() {
                       <p className="text-sm font-semibold">
                         {precatorio.juridico_liberou_fechamento ? "Crédito aprovado" : "Crédito reprovado"}
                         {precatorio.juridico_resultado_final
-                          ? ` • ${precatorio.juridico_resultado_final === "nao_elegivel" ? "Não elegível" : "Reprovado"}`
+                          ? ` â€¢ ${precatorio.juridico_resultado_final === "nao_elegivel" ? "Não elegível" : "Reprovado"}`
                           : ""}
                       </p>
                       <p className="text-sm text-muted-foreground whitespace-pre-line">
@@ -3442,7 +3442,7 @@ export default function PrecatorioDetailPage() {
             precatorio={precatorio}
             onUpdate={loadPrecatorio}
             userRole={userRole}
-            currentUserId={profile?.id ?? null}
+            currentUserId={profile?.id || null}
           />
         </TabsContent>
 

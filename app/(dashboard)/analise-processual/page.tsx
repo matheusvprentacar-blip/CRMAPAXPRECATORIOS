@@ -312,7 +312,7 @@ export default function AnaliseProcessualPage() {
             </div>
             <Badge
               variant="outline"
-              className="w-fit rounded-full border-amber-300 bg-amber-50 px-3 py-1 text-sm font-medium text-amber-700 dark:border-amber-500/40 dark:bg-amber-950/30 dark:text-amber-200"
+              className="w-fit rounded-full border-primary/40 bg-primary/15 px-3 py-1 text-sm font-medium text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
             >
               {filteredPrecatorios.length} na fila ativa
             </Badge>
@@ -323,13 +323,13 @@ export default function AnaliseProcessualPage() {
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Total em análise</p>
               <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">{filteredPrecatorios.length}</p>
             </div>
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-500/25 dark:bg-emerald-500/[0.08]">
-              <p className="text-[11px] uppercase tracking-wide text-emerald-700/90 dark:text-emerald-300/90">Análises registradas</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-emerald-700 dark:text-emerald-300">{analisesRegistradas}</p>
+            <div className="rounded-xl border border-primary/40 bg-primary/15 p-4 dark:border-primary/40 dark:bg-primary/15/[0.08]">
+              <p className="text-[11px] uppercase tracking-wide text-primary dark:text-primary">Análises registradas</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-primary dark:text-primary">{analisesRegistradas}</p>
             </div>
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-500/25 dark:bg-amber-500/[0.08]">
-              <p className="text-[11px] uppercase tracking-wide text-amber-700/90 dark:text-amber-300/90">Pendentes de preenchimento</p>
-              <p className="mt-1 text-2xl font-semibold tabular-nums text-amber-700 dark:text-amber-300">{pendentesAnalise}</p>
+            <div className="rounded-xl border border-primary/40 bg-primary/15 p-4 dark:border-primary/40 dark:bg-primary/15/[0.08]">
+              <p className="text-[11px] uppercase tracking-wide text-primary dark:text-primary">Pendentes de preenchimento</p>
+              <p className="mt-1 text-2xl font-semibold tabular-nums text-primary dark:text-primary">{pendentesAnalise}</p>
             </div>
             <div className="rounded-xl border border-border/70 bg-background/70 p-4">
               <p className="text-[11px] uppercase tracking-wide text-muted-foreground">Dados incompletos</p>
@@ -415,13 +415,13 @@ export default function AnaliseProcessualPage() {
         {filteredPrecatorios.map((p, index) => (
           <Card
             key={p.id}
-            className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg hover:border-amber-300/40 dark:hover:border-amber-500/30 hover:bg-amber-50/30 dark:hover:bg-amber-950/[0.12] cursor-pointer"
+            className="group relative overflow-hidden rounded-2xl border border-border/70 bg-card shadow-sm transition-all hover:-translate-y-[1px] hover:shadow-lg hover:border-primary/40 dark:hover:border-primary/40 hover:bg-primary/15 dark:hover:bg-primary/15/[0.12] cursor-pointer"
             onClick={() => handleAbrir(p.id)}
           >
             <CardContent className="relative z-10 p-5 md:p-6">
               <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-[64px_minmax(0,1.25fr)_minmax(0,1.25fr)_minmax(0,1fr)_minmax(240px,1fr)] md:gap-6">
                 <div className="flex items-start md:justify-center">
-                  <span className="text-4xl font-black leading-none text-foreground/15 group-hover:text-amber-500/50 transition-colors">
+                  <span className="text-4xl font-black leading-none text-foreground/15 group-hover:text-primary transition-colors">
                     {String(index + 1).padStart(2, "0")}
                   </span>
                 </div>
@@ -455,7 +455,7 @@ export default function AnaliseProcessualPage() {
                       <CalendarClock className="w-3 h-3" /> Data
                     </label>
                     <p className="font-medium text-sm">
-                      {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "—"}
+                      {p.created_at ? new Date(p.created_at).toLocaleDateString("pt-BR") : "â€”"}
                     </p>
                     <p className="text-xs text-muted-foreground truncate" title={p.tribunal || undefined}>
                       {p.tribunal || "Tribunal n/d"}
@@ -466,7 +466,7 @@ export default function AnaliseProcessualPage() {
                     <label className="text-xs font-semibold text-muted-foreground uppercase">Status</label>
                     <Badge
                       variant="outline"
-                      className="w-fit border-amber-300 bg-amber-50 text-amber-700 dark:border-amber-500/35 dark:bg-amber-950/30 dark:text-amber-200"
+                      className="w-fit border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
                     >
                       Análise processual
                     </Badge>
@@ -478,7 +478,7 @@ export default function AnaliseProcessualPage() {
                         type="button"
                         size="sm"
                         variant="outline"
-                        className="mt-2 h-8 rounded-full border-amber-300 px-4 text-amber-700 hover:bg-amber-100 dark:border-amber-500/40 dark:text-amber-200 dark:hover:bg-amber-950/30 font-medium"
+                        className="mt-2 h-8 rounded-full border-primary/40 px-4 text-primary hover:bg-primary/15 dark:border-primary/40 dark:text-primary dark:hover:bg-primary/15 font-medium"
                         onClick={(e) => {
                           e.stopPropagation()
                           openAnaliseModal(p)
@@ -513,7 +513,7 @@ export default function AnaliseProcessualPage() {
             <DialogTitle>Resultado da análise processual</DialogTitle>
             {selectedPrecatorio && (
               <p className="text-sm text-muted-foreground">
-                {selectedPrecatorio.credor_nome || "Credor não informado"} •{" "}
+                {selectedPrecatorio.credor_nome || "Credor não informado"} â€¢{" "}
                 {selectedPrecatorio.numero_processo || "Processo N/A"}
               </p>
             )}

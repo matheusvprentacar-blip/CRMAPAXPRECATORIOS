@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star, RefreshCcw } from "lucide-react"
 import { getSupabase } from "@/lib/supabase/client"
 import { ModalAtraso } from "@/components/calculo/modal-atraso"
@@ -61,6 +62,7 @@ export default function FilaCalculoPage() {
   const [precatorioParaManual, setPrecatorioParaManual] = useState<PrecatorioCalculo | null>(null)
   const [precatorioSelecionado, setPrecatorioSelecionado] = useState<PrecatorioCalculo | null>(null)
   const [calculando, setCalculando] = useState<string | null>(null)
+  const [recalculoPopoverId, setRecalculoPopoverId] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("aguardando")
 
   useEffect(() => {
@@ -356,17 +358,17 @@ export default function FilaCalculoPage() {
   const getStatusBadgeClass = (status?: string | null) => {
     switch (status) {
       case "pronto_calculo":
-        return "bg-amber-100 text-amber-700 border-amber-200"
+        return "bg-primary/15 text-primary border-primary/40"
       case "calculo_andamento":
       case "em_calculo":
-        return "bg-blue-100 text-blue-700 border-blue-200"
+        return "bg-primary/15 text-primary border-primary/40"
       case "calculo_concluido":
       case "calculado":
-        return "bg-emerald-100 text-emerald-700 border-emerald-200"
+        return "bg-primary/15 text-primary border-primary/40"
       case "juridico":
-        return "bg-purple-100 text-purple-700 border-purple-200"
+        return "bg-primary/15 text-primary border-primary/40"
       default:
-        return "bg-slate-100 text-slate-600 border-slate-200"
+        return "bg-muted text-muted-foreground border-border"
     }
   }
 
@@ -376,39 +378,45 @@ export default function FilaCalculoPage() {
         return {
           label: "Concluído",
           progress: 100,
-          barClass: "bg-blue-500",
-          textClass: "text-blue-600 dark:text-blue-400",
+          barClass: "bg-primary/15",
+          textClass: "text-primary dark:text-primary",
         }
       case "atrasado":
         return {
           label: "Atrasado",
           progress: 100,
-          barClass: "bg-red-500",
-          textClass: "text-red-600 dark:text-red-400",
+          barClass: "bg-destructive/15",
+          textClass: "text-destructive dark:text-destructive",
         }
       case "atencao":
         return {
           label: "Atenção",
           progress: 85,
-          barClass: "bg-amber-500",
-          textClass: "text-amber-600 dark:text-amber-400",
+          barClass: "bg-primary/15",
+          textClass: "text-primary dark:text-primary",
         }
       case "no_prazo":
         return {
           label: "No Prazo",
           progress: 55,
-          barClass: "bg-emerald-500",
-          textClass: "text-emerald-600 dark:text-emerald-400",
+          barClass: "bg-primary/15",
+          textClass: "text-primary dark:text-primary",
         }
       default:
         return {
           label: "Não Iniciado",
           progress: 12,
-          barClass: "bg-slate-400",
-          textClass: "text-slate-600 dark:text-slate-300",
+          barClass: "bg-muted",
+          textClass: "text-muted-foreground dark:text-muted-foreground",
         }
     }
   }
+
+  const formatCurrency = (value?: number | null) =>
+    `R$ ${(value ?? 0).toLocaleString("pt-BR", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })}`
 
   return (
     <motion.div
@@ -425,7 +433,7 @@ export default function FilaCalculoPage() {
         transition={{ duration: 0.22, ease: "easeOut", delay: reduceMotion ? 0 : 0.04 }}
       >
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Fila de Cálculo</h1>
+          <h1 className="text-3xl font-bold tracking-tight text-primary">Fila de Cálculo</h1>
           <p className="text-muted-foreground">Gestão de precatórios para cálculo</p>
         </div>
         <div className="flex items-center gap-2">
@@ -463,13 +471,13 @@ export default function FilaCalculoPage() {
           transition={{ duration: 0.18, ease: "easeOut", delay: reduceMotion ? 0 : 0.02 }}
         >
         <TabsList className="grid w-full max-w-4xl grid-cols-5">
-          <TabsTrigger value="aguardando">Aguardando Cálculo</TabsTrigger>
-          <TabsTrigger value="iniciado">Cálculo Iniciado</TabsTrigger>
-          <TabsTrigger value="atrasados" className="data-[state=active]:bg-red-100 data-[state=active]:text-red-900">
+          <TabsTrigger value="aguardando" className="data-[state=active]:text-primary">Aguardando Cálculo</TabsTrigger>
+          <TabsTrigger value="iniciado" className="data-[state=active]:text-primary">Cálculo Iniciado</TabsTrigger>
+          <TabsTrigger value="atrasados" className="data-[state=active]:text-primary">
             Cálculo em Atraso
           </TabsTrigger>
-          <TabsTrigger value="juridico">Jurídico</TabsTrigger>
-          <TabsTrigger value="concluidos">Cálculos Concluídos</TabsTrigger>
+          <TabsTrigger value="juridico" className="data-[state=active]:text-primary">Jurídico</TabsTrigger>
+          <TabsTrigger value="concluidos" className="data-[state=active]:text-primary">Cálculos Concluídos</TabsTrigger>
         </TabsList>
         </motion.div>
 
@@ -523,7 +531,7 @@ export default function FilaCalculoPage() {
                 <Card>
                   <CardContent className="flex flex-col items-center justify-center py-16">
                     <Calculator className="h-16 w-16 text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">
+                    <h3 className="text-lg font-semibold mb-2 text-primary">
                       {searchTerm ? "Nenhum precatório encontrado" : "Lista vazia"}
                     </h3>
                     <p className="text-sm text-muted-foreground text-center max-w-md">
@@ -543,241 +551,310 @@ export default function FilaCalculoPage() {
                 </Card>
                 </motion.div>
               ) : (
-                <AnimatePresence initial={false} mode="popLayout">
-                  {filteredFila.map((precatorio, index) => {
-                    const statusAtual = precatorio.localizacao_kanban || precatorio.status || null
-                    const isJuridico = statusAtual === "juridico"
-                    const isEmCalculo = statusAtual === "calculo_andamento" || statusAtual === "em_calculo"
-                    const isConcluido = statusAtual === "calculo_concluido" || statusAtual === "calculado"
-                    const isCalculado = isConcluido || precatorio.calculo_externo
-                    return (
-                      <motion.div
-                        key={`${activeTab}-${precatorio.id}`}
-                        layout
-                        initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.99 }}
-                        animate={{ opacity: 1, y: 0, scale: 1 }}
-                        exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
-                        transition={{
-                          duration: reduceMotion ? 0 : 0.2,
-                          ease: "easeOut",
-                          delay: reduceMotion ? 0 : Math.min(index * 0.02, 0.14),
-                        }}
-                        whileHover={reduceMotion ? undefined : { y: -2 }}
-                      >
-                      <Card
-                        onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                        className={cn(
-                          "hover:shadow-md transition-shadow cursor-pointer border-l-4 group relative overflow-hidden",
-                          activeTab === 'atrasados' ? "border-l-red-500/60" : "border-l-orange-500/40"
-                        )}
-                      >
-                        {/* Efeito de hover */}
-                        <div className={cn(
-                          "absolute inset-0 transition-colors",
-                          activeTab === 'atrasados' ? "bg-red-500/0 group-hover:bg-red-500/5" : "bg-orange-500/0 group-hover:bg-orange-500/5"
-                        )} />
+                <motion.div layout className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                  <AnimatePresence initial={false} mode="popLayout">
+                    {filteredFila.map((precatorio, index) => {
+                      const statusAtual = precatorio.localizacao_kanban || precatorio.status || null
+                      const isJuridico = statusAtual === "juridico"
+                      const isEmCalculo = statusAtual === "calculo_andamento" || statusAtual === "em_calculo"
+                      const isConcluido = statusAtual === "calculo_concluido" || statusAtual === "calculado"
+                      const isCalculado = isConcluido || precatorio.calculo_externo
+                      const titulo = precatorio.titulo || precatorio.numero_precatorio || "Precatorio sem titulo"
+                      const valorPrincipal = precatorio.valor_principal ?? 0
+                      const valorAtualizado = precatorio.valor_atualizado ?? valorPrincipal
+                      const responsavel = precatorio.responsavel_calculo_nome || precatorio.criador_nome || "Nao atribuido"
+                      const sla = getSlaVisual(precatorio.sla_status)
 
-                        <CardContent className="p-6 relative z-10 space-y-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-start gap-6 flex-1">
-                              {/* Índice */}
-                              <div className="flex flex-col items-center justify-center min-w-[3rem]">
-                                <span className={cn(
-                                  "text-4xl font-black text-muted-foreground/20 transition-colors",
-                                  activeTab === 'atrasados' ? "group-hover:text-red-500/40" : "group-hover:text-orange-500/40"
-                                )}>
-                                  {String(index + 1).padStart(2, '0')}
-                                </span>
-                              </div>
-
-                              {/* Colunas de Dados */}
-                              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 w-full">
-
-                                {/* 1. Credor & Status */}
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2 mb-1">
-                                    <span className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                      <User className="w-3 h-3" /> Credor
-                                    </span>
-                                    {precatorio.urgente && <Badge variant="destructive" className="text-[10px] h-4 px-1">Urgente</Badge>}
+                      return (
+                        <motion.div
+                          key={`${activeTab}-${precatorio.id}`}
+                          layout
+                          initial={reduceMotion ? false : { opacity: 0, y: 10, scale: 0.99 }}
+                          animate={{ opacity: 1, y: 0, scale: 1 }}
+                          exit={reduceMotion ? undefined : { opacity: 0, y: -8, scale: 0.99 }}
+                          transition={{
+                            duration: reduceMotion ? 0 : 0.2,
+                            ease: "easeOut",
+                            delay: reduceMotion ? 0 : Math.min(index * 0.02, 0.14),
+                          }}
+                          className="h-full"
+                        >
+                          <Card
+                              onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
+                              className={cn(
+                                "h-full cursor-pointer border-border/60 transition-shadow hover:shadow-lg",
+                                activeTab === "atrasados" ? "border-destructive/40" : "border-primary/40"
+                              )}
+                            >
+                              <CardContent className="flex h-full flex-col space-y-4 p-5">
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="min-w-0 space-y-1">
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="font-semibold">#{String(index + 1).padStart(2, "0")}</span>
+                                    <Badge variant="outline" className={cn("h-5 border px-2 text-[10px]", getStatusBadgeClass(statusAtual))}>
+                                      {getStatusLabel(statusAtual)}
+                                    </Badge>
+                                    {precatorio.urgente && (
+                                      <Badge variant="destructive" className="h-5 px-2 text-[10px]">
+                                        Urgente
+                                      </Badge>
+                                    )}
                                     {adminInteresseIds.has(precatorio.id) && (
-                                      <Badge variant="destructive" className="text-[10px] h-4 px-1 flex items-center gap-1">
+                                      <Badge variant="destructive" className="flex h-5 items-center gap-1 px-2 text-[10px]">
                                         <Star className="h-3 w-3" /> Admin
                                       </Badge>
                                     )}
-                                    <Badge variant="outline" className={cn("text-[10px] h-4 px-1 border", getStatusBadgeClass(statusAtual))}>
-                                      {getStatusLabel(statusAtual)}
-                                    </Badge>
                                   </div>
-                                  <p className="font-medium truncate text-base" title={precatorio.credor_nome || ""}>{precatorio.credor_nome || "Nome não informado"}</p>
-                                  <p className="text-xs text-muted-foreground truncate">{precatorio.advogado_nome || "Advogado N/I"}</p>
+                                  <p className="line-clamp-2 text-base font-semibold leading-snug text-primary">{titulo}</p>
+                                  <p className="line-clamp-1 text-sm text-muted-foreground">
+                                    {precatorio.credor_nome || "Credor nao informado"}
+                                  </p>
                                 </div>
+                              </div>
 
-                                {/* 2. Valor */}
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                    <Calculator className="w-3 h-3" />
-                                    {isCalculado ? "Valor Atualizado" : "Valor Principal"}
-                                  </label>
-                                  <span className="font-bold text-lg text-emerald-600 dark:text-emerald-400">
-                                    {isCalculado
-                                      ? (precatorio.valor_atualizado ? `R$ ${precatorio.valor_atualizado.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "R$ 0,00")
-                                      : (precatorio.valor_principal ? `R$ ${precatorio.valor_principal.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : "R$ 0,00")
-                                    }
+                              <div className="space-y-1">
+                                <p className="line-clamp-1 text-xs text-muted-foreground">{precatorio.advogado_nome || "Advogado N/I"}</p>
+                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                  <span>{precatorio.numero_processo || "Sem processo"}</span>
+                                  <span>
+                                    {"\u2022"} {precatorio.numero_precatorio || "Sem precatório"}
                                   </span>
-                                  {isCalculado && (
-                                    <div className="flex flex-col gap-0.5 text-xs text-muted-foreground mt-1">
-                                      <span title="Menor Proposta">Min: {precatorio.proposta_menor_valor ? `R$ ${precatorio.proposta_menor_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}</span>
-                                      <span title="Maior Proposta">Max: {precatorio.proposta_maior_valor ? `R$ ${precatorio.proposta_maior_valor.toLocaleString('pt-BR', { minimumFractionDigits: 2 })}` : '-'}</span>
-                                    </div>
+                                </div>
+                              </div>
+
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>Status atual</span>
+                                  <span>{sla.progress}%</span>
+                                </div>
+                                <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70">
+                                  <div className={cn("h-full rounded-full transition-all duration-300", sla.barClass)} style={{ width: `${sla.progress}%` }} />
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Valor principal</p>
+                                  <p className="font-semibold tabular-nums">{formatCurrency(valorPrincipal)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Valor atualizado</p>
+                                  <p className="font-semibold tabular-nums text-primary dark:text-primary">
+                                    {formatCurrency(valorAtualizado)}
+                                  </p>
+                                </div>
+                              </div>
+
+                              {isCalculado && (
+                                <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                                  <div className="rounded-md border border-border/60 bg-muted/20 p-2">
+                                    <p className="text-[11px] uppercase">Min proposta</p>
+                                    <p className="font-medium tabular-nums">
+                                      {precatorio.proposta_menor_valor ? formatCurrency(precatorio.proposta_menor_valor) : "-"}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-md border border-border/60 bg-muted/20 p-2">
+                                    <p className="text-[11px] uppercase">Max proposta</p>
+                                    <p className="font-medium tabular-nums">
+                                      {precatorio.proposta_maior_valor ? formatCurrency(precatorio.proposta_maior_valor) : "-"}
+                                    </p>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <User className="h-3 w-3" />
+                                    <span>Responsável cálculo</span>
+                                  </div>
+                                  <span className="font-medium text-foreground">{responsavel}</span>
+                                </div>
+                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>SLA</span>
+                                  <span className={cn("font-medium", sla.textClass)}>{sla.label}</span>
+                                </div>
+                              </div>
+
+                              {activeTab === "atrasados" && precatorio.motivo_atraso_calculo && (
+                                <div className="rounded-md border border-destructive/40 bg-destructive/15 p-2 text-xs text-destructive">
+                                  <div className="flex items-center gap-1">
+                                    <AlertCircle className="h-3 w-3" />
+                                    <span>Em atraso: {precatorio.motivo_atraso_calculo}</span>
+                                  </div>
+                                </div>
+                              )}
+
+                              <div className="mt-auto space-y-2 border-t border-border/50 pt-3">
+                                <div className="flex flex-wrap gap-2">
+                                  {!isJuridico && activeTab !== "juridico" && activeTab !== "concluidos" && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 flex-1 min-w-[120px]"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setPrecatorioSelecionado(precatorio)
+                                        setModalJuridicoOpen(true)
+                                      }}
+                                    >
+                                      <Gavel className="mr-1 h-3 w-3" /> Juridico
+                                    </Button>
+                                  )}
+
+                                  {(activeTab === "aguardando" || activeTab === "iniciado") && !isJuridico && !precatorio.motivo_atraso_calculo && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 flex-1 min-w-[120px] border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleReportarAtraso(precatorio)
+                                      }}
+                                    >
+                                      <AlertCircle className="mr-1 h-3 w-3" /> Atraso
+                                    </Button>
+                                  )}
+
+                                  {activeTab === "atrasados" && precatorio.motivo_atraso_calculo && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 flex-1 min-w-[120px] border-destructive/40 text-destructive hover:bg-destructive/15 hover:text-destructive"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRemoverAtraso(precatorio.id)
+                                      }}
+                                    >
+                                      Resolver atraso
+                                    </Button>
+                                  )}
+
+                                  {isJuridico && (
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      className="h-8 flex-1 min-w-[120px] border-primary/40 text-primary hover:bg-primary/15 hover:text-primary"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleRetornarJuridico(precatorio.id)
+                                      }}
+                                    >
+                                      Retornar juridico
+                                    </Button>
                                   )}
                                 </div>
 
-                                {/* 3. Processo */}
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                    <AlertCircle className="w-3 h-3" /> Processo
-                                  </label>
-                                  <p className="font-medium text-sm font-mono">{precatorio.numero_processo || "N/A"}</p>
-                                  <p className="text-xs text-muted-foreground">{precatorio.numero_precatorio || "Prec. N/A"}</p>
-                                </div>
+                                <div className="flex flex-wrap gap-2">
+                                  {!isConcluido && !isJuridico && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 flex-1 min-w-[140px] bg-primary/15 text-white hover:bg-primary/15"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleCalcular(precatorio.id)
+                                      }}
+                                      title={isEmCalculo ? "Abrir calculo" : "Iniciar calculo"}
+                                    >
+                                      <Calculator className="mr-1 h-3 w-3" />
+                                      {isEmCalculo ? "Abrir calculo" : "Iniciar calculo"}
+                                    </Button>
+                                  )}
 
-                                {/* 4. SLA & Responsável */}
-                                <div className="space-y-1">
-                                  <label className="text-xs font-semibold text-muted-foreground uppercase flex items-center gap-1">
-                                    <Clock className="w-3 h-3" /> SLA & Responsável
-                                  </label>
-                                  <div className="flex flex-col gap-1">
-                                    {(() => {
-                                      const sla = getSlaVisual(precatorio.sla_status)
-                                      return (
-                                        <div className="space-y-1.5">
-                                          <div className="h-2 w-full overflow-hidden rounded-full bg-muted/70">
-                                            <div
-                                              className={cn("h-full rounded-full transition-all duration-300", sla.barClass)}
-                                              style={{ width: `${sla.progress}%` }}
-                                            />
+                                  {isEmCalculo && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 flex-1 min-w-[120px] bg-primary/15 text-white hover:bg-primary/15"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        handleFinalizarCalculo(precatorio.id)
+                                      }}
+                                      title="Finalizar calculo"
+                                    >
+                                      <Calculator className="mr-1 h-3 w-3" /> Finalizar
+                                    </Button>
+                                  )}
+
+                                  {!isJuridico && !isConcluido && (
+                                    <Button
+                                      size="sm"
+                                      className="h-8 flex-1 min-w-[120px] bg-primary/15 text-white hover:bg-primary/15"
+                                      onClick={(e) => {
+                                        e.stopPropagation()
+                                        setPrecatorioParaManual(precatorio)
+                                        setModalManualOpen(true)
+                                      }}
+                                      title="Inserir valores calculados externamente"
+                                    >
+                                      <DollarSign className="mr-1 h-3 w-3" /> Inserir Manual
+                                    </Button>
+                                  )}
+
+                                  {isConcluido && !isJuridico && (
+                                    <Popover
+                                      open={recalculoPopoverId === precatorio.id}
+                                      onOpenChange={(open) => setRecalculoPopoverId(open ? precatorio.id : null)}
+                                    >
+                                      <PopoverTrigger asChild>
+                                        <Button
+                                          variant="outline"
+                                          size="sm"
+                                          onClick={(e) => e.stopPropagation()}
+                                          className="h-8 flex-1 min-w-[120px] rounded-md border-primary/40 bg-background/70 px-3 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
+                                          title="Realizar calculo novamente"
+                                        >
+                                          <RefreshCcw className="mr-1 h-3 w-3" />
+                                          Recalcular
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent
+                                        className="w-[320px] border-border/70 bg-popover/95 p-3 backdrop-blur"
+                                        align="end"
+                                        onClick={(e) => e.stopPropagation()}
+                                      >
+                                        <div className="space-y-3">
+                                          <p className="text-sm font-medium text-primary">
+                                            Deseja mesmo realizar o calculo novamente?
+                                          </p>
+                                          <p className="text-xs text-muted-foreground">
+                                            Isso ira excluir todas as informacoes atuais do calculo.
+                                          </p>
+                                          <div className="flex justify-end gap-2">
+                                            <Button
+                                              size="sm"
+                                              variant="outline"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                setRecalculoPopoverId(null)
+                                              }}
+                                            >
+                                              Cancelar
+                                            </Button>
+                                            <Button
+                                              size="sm"
+                                              className="bg-primary text-primary-foreground hover:bg-primary/90"
+                                              onClick={(e) => {
+                                                e.stopPropagation()
+                                                setRecalculoPopoverId(null)
+                                                handleCalcular(precatorio.id)
+                                              }}
+                                            >
+                                              Confirmar
+                                            </Button>
                                           </div>
-                                          <span className={cn("block text-xs font-semibold leading-none", sla.textClass)}>
-                                            {sla.label}
-                                          </span>
                                         </div>
-                                      )
-                                    })()}
-                                    <span className="text-xs text-muted-foreground truncate" title={precatorio.responsavel_calculo_nome || precatorio.criador_nome || "Ninguém"}>
-                                      Resp: {precatorio.responsavel_calculo_nome || precatorio.criador_nome || "Não atribuído"}
-                                    </span>
-                                  </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  )}
                                 </div>
                               </div>
-                            </div>
-                          </div>
-
-                          {/* Linha de Ações (Botões) */}
-                          <div className="flex flex-col gap-3 pt-2 border-t border-border/50 md:flex-row md:items-center md:justify-between">
-                            {(activeTab === "aguardando" || activeTab === "iniciado") && !isJuridico && !precatorio.motivo_atraso_calculo && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleReportarAtraso(precatorio); }}
-                                className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-red-600 transition-colors hover:bg-red-50 hover:text-red-700"
-                              >
-                                <AlertCircle className="w-3 h-3" /> Reportar Atraso
-                              </button>
-                            )}
-
-                            {activeTab === "atrasados" && precatorio.motivo_atraso_calculo && (
-                              <div className="inline-flex min-h-8 items-center gap-2 rounded-full bg-red-50 px-3 py-1 text-xs text-red-600">
-                                <AlertCircle className="w-3 h-3" />
-                                <span>Em Atraso: {precatorio.motivo_atraso_calculo}</span>
-                                <button
-                                  onClick={(e) => { e.stopPropagation(); handleRemoverAtraso(precatorio.id); }}
-                                  className="ml-2 underline font-bold"
-                                >Resolver</button>
-                              </div>
-                            )}
-
-                            {!isJuridico && activeTab !== "juridico" && activeTab !== "concluidos" && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); setPrecatorioSelecionado(precatorio); setModalJuridicoOpen(true); }}
-                                className="inline-flex h-8 items-center gap-1 rounded-full px-2.5 text-xs font-medium text-purple-600 transition-colors hover:bg-purple-50 hover:text-purple-700"
-                              >
-                                <Gavel className="w-3 h-3" /> Jurídico
-                              </button>
-                            )}
-
-                            {isJuridico && (
-                              <button
-                                onClick={(e) => { e.stopPropagation(); handleRetornarJuridico(precatorio.id); }}
-                                className="inline-flex h-8 items-center rounded-md bg-emerald-50 px-3 text-xs font-bold text-emerald-700 transition-colors hover:bg-emerald-100"
-                              >
-                                Retornar do Jurídico
-                              </button>
-                            )}
-
-                            <div className="ml-auto flex flex-wrap items-center gap-2 md:justify-end">
-                              {!isConcluido && !isJuridico && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCalcular(precatorio.id)
-                                  }}
-                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-blue-600 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-blue-700 active:scale-95"
-                                  title={isEmCalculo ? "Abrir cálculo" : "Iniciar cálculo"}
-                                >
-                                  <Calculator className="w-3 h-3" /> {isEmCalculo ? "Abrir cálculo" : "Iniciar cálculo"}
-                                </button>
-                              )}
-
-                              {isConcluido && !isJuridico && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleCalcular(precatorio.id)
-                                  }}
-                                  className="recalc-shine-border h-8 rounded-md border-primary/40 bg-background/70 px-3 text-xs font-semibold text-primary hover:bg-primary/10 hover:text-primary"
-                                  title="Realizar cálculo novamente"
-                                >
-                                  <RefreshCcw className="w-3 h-3" />
-                                  Recalcular
-                                </Button>
-                              )}
-
-                              {isEmCalculo && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleFinalizarCalculo(precatorio.id)
-                                  }}
-                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-emerald-600 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-emerald-700 active:scale-95"
-                                  title="Finalizar cálculo"
-                                >
-                                  <Calculator className="w-3 h-3" /> Finalizar
-                                </button>
-                              )}
-
-                              {!isJuridico && !isConcluido && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    setPrecatorioParaManual(precatorio);
-                                    setModalManualOpen(true);
-                                  }}
-                                  className="inline-flex h-8 items-center gap-2 rounded-md bg-orange-500 px-4 text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 hover:bg-orange-600 active:scale-95"
-                                  title="Inserir valores calculados externamente"
-                                >
-                                  <DollarSign className="w-3 h-3" /> Inserir Manual
-                                </button>
-                              )}
-                            </div>
-                          </div>
-
-                        </CardContent>
-                      </Card>
-                      </motion.div>
-                    )
-                  })}
-                </AnimatePresence>
+                              </CardContent>
+                            </Card>
+                        </motion.div>
+                      )
+                    })}
+                  </AnimatePresence>
+                </motion.div>
               )}
             </motion.div>
           )}
@@ -828,3 +905,5 @@ export default function FilaCalculoPage() {
     </motion.div>
   )
 }
+
+

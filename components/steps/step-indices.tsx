@@ -295,13 +295,13 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
             )}
 
             {dadosSelic && (
-              <div className="flex h-full flex-col gap-4 rounded-2xl border border-emerald-500/25 bg-emerald-500/5 p-4">
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-foreground">2. SELIC</p>
                     <p className="text-xs text-muted-foreground">{dadosSelic.inicioPeriodo} a {dadosSelic.fimPeriodo}</p>
                   </div>
-                  <span className="rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-emerald-500">
+                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Acumulada
                   </span>
                 </div>
@@ -320,13 +320,13 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
             )}
 
             {dadosIpca2025 ? (
-              <div className="flex h-full flex-col gap-4 rounded-2xl border border-sky-500/25 bg-sky-500/5 p-4">
+              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-semibold text-foreground">3. IPCA-E 2025</p>
                     <p className="text-xs text-muted-foreground">{dadosIpca2025.inicioPeriodo} a {dadosIpca2025.fimPeriodo}</p>
                   </div>
-                  <span className="rounded-full border border-sky-500/30 bg-sky-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-sky-500">
+                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Projeção
                   </span>
                 </div>

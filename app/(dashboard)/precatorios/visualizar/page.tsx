@@ -388,8 +388,8 @@ function PrecatorioDetailContent() {
 
             {/* Responsável Cálculo */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background border">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center">
-                <svg className="h-5 w-5 text-blue-600 dark:text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                <svg className="h-5 w-5 text-primary dark:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
                 </svg>
               </div>
@@ -418,8 +418,8 @@ function PrecatorioDetailContent() {
 
             {/* Gestor de Certidões */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background border">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-green-500/10 flex items-center justify-center">
-                <svg className="h-5 w-5 text-green-600 dark:text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                <svg className="h-5 w-5 text-primary dark:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
               </div>
@@ -448,8 +448,8 @@ function PrecatorioDetailContent() {
 
             {/* Gestor de Ofícios */}
             <div className="flex items-start gap-3 p-3 rounded-lg bg-background border">
-              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-amber-500/10 flex items-center justify-center">
-                <svg className="h-5 w-5 text-amber-600 dark:text-amber-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <div className="flex-shrink-0 w-10 h-10 rounded-full bg-primary/15 flex items-center justify-center">
+                <svg className="h-5 w-5 text-primary dark:text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                 </svg>
               </div>
@@ -496,11 +496,11 @@ function PrecatorioDetailContent() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="oficio"
-                  className="data-[state=active]:border-cyan-500 data-[state=active]:text-cyan-600 border-b-2 border-transparent rounded-none px-2 py-3 bg-transparent h-auto font-medium"
+                  className="data-[state=active]:border-primary/40 data-[state=active]:text-primary border-b-2 border-transparent rounded-none px-2 py-3 bg-transparent h-auto font-medium"
                 >
                   <FileText className="h-4 w-4 mr-2" />
                   Ofício
-                  {(precatorio.file_url || precatorio.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-cyan-500" />}
+                  {(precatorio.file_url || precatorio.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/15" />}
                 </TabsTrigger>
                 <TabsTrigger
                   value="documentos"
@@ -679,7 +679,7 @@ function PrecatorioDetailContent() {
                         </div>
                         <div className="space-y-0.5">
                           <Label className="text-[10px] text-muted-foreground uppercase">Saldo Líquido</Label>
-                          <div className="text-sm font-bold text-green-600">{precatorio.saldo_liquido ? formatBR(Number(precatorio.saldo_liquido)) : "-"}</div>
+                          <div className="text-sm font-bold text-primary">{precatorio.saldo_liquido ? formatBR(Number(precatorio.saldo_liquido)) : "-"}</div>
                         </div>
                       </div>
                       <div className="space-y-1 pt-3 border-t">

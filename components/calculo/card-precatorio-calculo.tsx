@@ -78,8 +78,8 @@ export function CardPrecatorioCalculo({
 
   return (
     <Card
-      className={`hover:shadow-md transition-all ${precatorio.urgente ? "border-red-500 border-2" : ""
-        } ${precatorio.motivo_atraso_calculo ? "bg-orange-50/50 dark:bg-orange-950/10" : ""}`}
+      className={`hover:shadow-md transition-all ${precatorio.urgente ? "border-destructive/40 border-2" : ""
+        } ${precatorio.motivo_atraso_calculo ? "bg-primary/15 dark:bg-primary/15" : ""}`}
     >
       <CardContent className="p-6">
         <div className="space-y-4">
@@ -99,7 +99,7 @@ export function CardPrecatorioCalculo({
                 )}
 
                 {precatorio.motivo_atraso_calculo && (
-                  <Badge variant="secondary" className="flex items-center gap-1 bg-orange-100 text-orange-800 dark:bg-orange-900 dark:text-orange-200">
+                  <Badge variant="secondary" className="flex items-center gap-1 bg-primary/15 text-primary dark:bg-primary/15 dark:text-primary">
                     <Clock className="h-3 w-3" />
                     Atraso Reportado
                   </Badge>
@@ -151,7 +151,7 @@ export function CardPrecatorioCalculo({
             <div className="grid gap-2 text-sm">
               {precatorio.criador_nome && (
                 <div className="flex items-center gap-2">
-                  <User className="h-4 w-4 text-blue-500" />
+                  <User className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Criado por:</span>
                   <span className="font-medium">{precatorio.criador_nome}</span>
                 </div>
@@ -159,7 +159,7 @@ export function CardPrecatorioCalculo({
 
               {precatorio.responsavel_nome && (
                 <div className="flex items-center gap-2">
-                  <Briefcase className="h-4 w-4 text-green-500" />
+                  <Briefcase className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Comercial:</span>
                   <span className="font-medium">{precatorio.responsavel_nome}</span>
                 </div>
@@ -167,7 +167,7 @@ export function CardPrecatorioCalculo({
 
               {precatorio.responsavel_calculo_nome && (
                 <div className="flex items-center gap-2">
-                  <UserCog className="h-4 w-4 text-purple-500" />
+                  <UserCog className="h-4 w-4 text-primary" />
                   <span className="text-muted-foreground">Cálculo:</span>
                   <span className="font-medium">{precatorio.responsavel_calculo_nome}</span>
                 </div>
@@ -178,9 +178,9 @@ export function CardPrecatorioCalculo({
           {/* Informação de Atraso (se houver) - FASE 2 */}
           {precatorio.motivo_atraso_calculo && (
             <div className="pt-3 border-t">
-              <div className="rounded-lg bg-orange-100 dark:bg-orange-900/20 p-3 space-y-3">
+              <div className="rounded-lg bg-primary/15 dark:bg-primary/15 p-3 space-y-3">
                 <div className="flex items-center gap-2 flex-wrap">
-                  <p className="text-xs font-medium text-orange-800 dark:text-orange-200 flex items-center gap-1">
+                  <p className="text-xs font-medium text-primary dark:text-primary flex items-center gap-1">
                     <Clock className="h-3 w-3" />
                     Atraso Reportado:
                   </p>
@@ -192,12 +192,12 @@ export function CardPrecatorioCalculo({
                   )}
                 </div>
 
-                <p className="text-sm text-orange-700 dark:text-orange-300">
+                <p className="text-sm text-primary dark:text-primary">
                   {precatorio.motivo_atraso_calculo}
                 </p>
 
                 {precatorio.data_atraso_calculo && (
-                  <p className="text-xs text-orange-600 dark:text-orange-400">
+                  <p className="text-xs text-primary dark:text-primary">
                     Reportado em: {formatDate(precatorio.data_atraso_calculo)}
                   </p>
                 )}
@@ -209,7 +209,7 @@ export function CardPrecatorioCalculo({
                       onClick={onReportarAtraso}
                       variant="outline"
                       size="sm"
-                      className="flex-1 text-orange-700 border-orange-300 hover:bg-orange-50 dark:text-orange-300 dark:border-orange-700 dark:hover:bg-orange-900/20"
+                      className="flex-1 text-primary border-primary/40 hover:bg-primary/15 dark:text-primary dark:border-primary/40 dark:hover:bg-primary/15"
                     >
                       <AlertCircle className="h-3 w-3 mr-1" />
                       Renovar Atraso
@@ -218,7 +218,7 @@ export function CardPrecatorioCalculo({
                       onClick={onRemoverAtraso}
                       variant="outline"
                       size="sm"
-                      className="flex-1 text-green-700 border-green-300 hover:bg-green-50 dark:text-green-300 dark:border-green-700 dark:hover:bg-green-900/20"
+                      className="flex-1 text-primary border-primary/40 hover:bg-primary/15 dark:text-primary dark:border-primary/40 dark:hover:bg-primary/15"
                     >
                       <Clock className="h-3 w-3 mr-1" />
                       Remover Atraso
@@ -269,7 +269,7 @@ export function CardPrecatorioCalculo({
             <Button
               onClick={onReportarAtraso}
               variant="outline"
-              className="flex-1 border-orange-200 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+              className="flex-1 border-primary/40 text-primary hover:bg-primary/15 hover:text-primary"
               size="sm"
             >
               <AlertCircle className="h-4 w-4 mr-2" />
@@ -279,7 +279,7 @@ export function CardPrecatorioCalculo({
             <Button
               onClick={onEnviarJuridico}
               variant="outline"
-              className="flex-1 border-purple-200 text-purple-700 hover:bg-purple-50 hover:text-purple-800"
+              className="flex-1 border-primary/40 text-primary hover:bg-primary/15 hover:text-primary"
               size="sm"
             >
               <Scale className="h-4 w-4 mr-2" />
