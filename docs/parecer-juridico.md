@@ -9,11 +9,10 @@
   - `legal_opinion_attachments`
   - base de tenant: `tenants` e `tenant_members`
 - RLS por tenant para tabelas e bucket `legal-opinions`.
-- APIs em `app/api/legal-opinions/*` para CRUD, comentarios, eventos e anexos.
+- Camada de dados em `features/legal-opinion/api.ts` usando Supabase direto no cliente com RLS por tenant.
 - Interface:
   - Lista do modulo em `/parecer-juridico`
   - Detalhe em `/parecer-juridico/detalhes?id=<uuid>`
-  - Compatibilidade de rota em `/parecer-juridico/[id]`
   - Aba integrada no detalhe de precatorio (`tab=juridico`)
 
 ## Como aplicar no Supabase
@@ -31,4 +30,3 @@
 3. Abra um precatorio em `/precatorios/detalhes?id=<id>&tab=juridico` e valide o painel.
 4. No detalhe do parecer, adicione comentario e anexo.
 5. Baixe o anexo e confirme que a extensao original foi preservada.
-
