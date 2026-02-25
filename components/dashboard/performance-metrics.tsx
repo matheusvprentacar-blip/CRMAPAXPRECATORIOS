@@ -1,7 +1,7 @@
 "use client"
 
 import { MetricCard } from "./metric-card"
-import { Clock, CheckCircle2, AlertCircle } from "lucide-react"
+import { Clock, CheckCircle2, AlertCircle } from "@/components/icons"
 import type { PerformanceMetrics } from "@/lib/types/dashboard"
 
 interface PerformanceMetricsProps {
@@ -73,6 +73,7 @@ export function PerformanceMetrics({ data, loading }: PerformanceMetricsProps) {
         <MetricCard
           title="SLA Estourado"
           value={data.sla_estourado}
+          animatedNumber={{ end: data.sla_estourado }}
           subtitle={data.sla_estourado === 0 ? "Nenhum atraso" : "Precatórios atrasados"}
           icon={AlertCircle}
           variant={getSLAVariant()}

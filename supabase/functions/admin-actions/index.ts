@@ -14,6 +14,7 @@ const ASSIGNMENT_FIELDS = [
     'responsavel_calculo_id',
     'operador_calculo',
     'responsavel_certidoes_id',
+    'responsavel_escrituras_id',
     'responsavel_oficio_id',
     'responsavel_juridico_id',
 ] as const

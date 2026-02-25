@@ -7,7 +7,18 @@ import type { User } from "@supabase/supabase-js"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
-export type UserRole = "admin" | "operador_comercial" | "operador_calculo" | "operador" | "analista" | "gestor" | "gestor_certidoes" | "gestor_oficio" | "juridico" | "financeiro"
+export type UserRole =
+  | "admin"
+  | "operador_comercial"
+  | "operador_calculo"
+  | "operador"
+  | "analista"
+  | "gestor"
+  | "gestor_certidoes"
+  | "gestor_oficio"
+  | "gestor_escrituras"
+  | "juridico"
+  | "financeiro"
 
 interface UserProfile {
   id: string

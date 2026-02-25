@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { Clock, CheckCircle, AlertTriangle, AlertCircle, Circle } from "lucide-react"
+import { Clock, CheckCircle, AlertTriangle, AlertCircle, Circle } from "@/components/icons"
 import { formatDistanceToNow } from "date-fns"
 import { ptBR } from "date-fns/locale"
 

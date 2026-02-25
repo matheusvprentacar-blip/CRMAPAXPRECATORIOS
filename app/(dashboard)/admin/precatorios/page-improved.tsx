@@ -41,7 +41,7 @@ import {
   User,
   TrendingUp,
   X,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { maskProcesso } from "@/lib/masks"

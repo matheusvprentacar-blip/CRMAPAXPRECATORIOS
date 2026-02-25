@@ -1,6 +1,7 @@
 import type React from "react"
+import Script from "next/script";
 import type { Metadata } from "next"
-import { Manrope, Roboto_Mono } from "next/font/google"
+import { Manrope, Montserrat, Roboto_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import "./globals.css"
 import { AuthProvider } from "@/lib/auth/auth-context"
@@ -15,6 +16,13 @@ const manrope = Manrope({
   display: "swap",
   variable: "--font-sans",
   weight: ["400", "500", "600", "700"],
+})
+
+const montserrat = Montserrat({
+  subsets: ["latin"],
+  display: "swap",
+  variable: "--font-title",
+  weight: ["500", "600", "700", "800"],
 })
 
 const robotoMono = Roboto_Mono({
@@ -53,7 +61,22 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="pt-BR" className={`${manrope.variable} ${robotoMono.variable}`} suppressHydrationWarning>
+    <html lang="pt-BR" className={`${manrope.variable} ${montserrat.variable} ${robotoMono.variable}`} suppressHydrationWarning>
+      <head>
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/react-grab/dist/index.global.js"
+            crossOrigin="anonymous"
+            strategy="beforeInteractive"
+          />
+        )}
+        {process.env.NODE_ENV === "development" && (
+          <Script
+            src="//unpkg.com/@react-grab/codex/dist/client.global.js"
+            strategy="lazyOnload"
+          />
+        )}
+      </head>
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <AuthProvider>

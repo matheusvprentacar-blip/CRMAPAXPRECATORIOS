@@ -1,7 +1,7 @@
 "use client"
 
 import { MetricCard } from "./metric-card"
-import { Layers, TrendingUp, TrendingDown, Activity } from "lucide-react"
+import { Layers, TrendingUp, TrendingDown, Activity } from "@/components/icons"
 import type { ComplexityMetrics } from "@/lib/types/dashboard"
 
 interface ComplexityOverviewProps {
@@ -25,7 +25,9 @@ export function ComplexityOverview({ data, loading }: ComplexityOverviewProps) {
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-lg font-semibold">Visão por Complexidade</h3>
-          <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Distribuição de precatórios por nível de complexidade</p>
+          <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">
+            Distribuição de precatórios por nível de complexidade
+          </p>
         </div>
       </div>
 
@@ -33,6 +35,7 @@ export function ComplexityOverview({ data, loading }: ComplexityOverviewProps) {
         <MetricCard
           title="Baixa Complexidade"
           value={data.baixa}
+          animatedNumber={{ end: data.baixa }}
           subtitle={`${data.percentuais.baixa.toFixed(1)}% do total`}
           icon={TrendingDown}
           variant="success"
@@ -41,6 +44,7 @@ export function ComplexityOverview({ data, loading }: ComplexityOverviewProps) {
         <MetricCard
           title="Média Complexidade"
           value={data.media}
+          animatedNumber={{ end: data.media }}
           subtitle={`${data.percentuais.media.toFixed(1)}% do total`}
           icon={Activity}
           variant="warning"
@@ -49,6 +53,7 @@ export function ComplexityOverview({ data, loading }: ComplexityOverviewProps) {
         <MetricCard
           title="Alta Complexidade"
           value={data.alta}
+          animatedNumber={{ end: data.alta }}
           subtitle={`${data.percentuais.alta.toFixed(1)}% do total`}
           icon={TrendingUp}
           variant="danger"
@@ -57,6 +62,7 @@ export function ComplexityOverview({ data, loading }: ComplexityOverviewProps) {
         <MetricCard
           title="Total de Precatórios"
           value={data.total}
+          animatedNumber={{ end: data.total }}
           subtitle="Todos os níveis"
           icon={Layers}
           variant="default"

@@ -11,7 +11,7 @@ import { StepHonorarios } from "./steps/step-honorarios"
 import { StepPropostas } from "./steps/step-propostas"
 import { StepResumo } from "./steps/step-resumo"
 import { Card } from "./ui/card"
-import { Check, RotateCcw, Eye } from "lucide-react"
+import { Check, RotateCcw, Eye } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import type { Precatorio } from "@/lib/types/database"
 import { PdfUploadButton } from "./pdf-upload-button"
@@ -137,6 +137,8 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       if (data) {
         console.log("[v0] Precatório carregado do Supabase:", data)
         setPrecatorioData(data as Precatorio)
+        const previsaoPagamentoRaw = data.previsao_pagamento ? String(data.previsao_pagamento).slice(0, 4) : ""
+        const previsaoPagamentoAno = /^\d{4}$/.test(previsaoPagamentoRaw) ? previsaoPagamentoRaw : ""
 
         if (data.pdf_url) {
           console.log("[v0] PDF encontrado (raw):", data.pdf_url)
@@ -160,6 +162,12 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
           credor: data.credor_nome || "",
           numeroProcesso: data.numero_processo || "",
           tribunal: data.tribunal || "",
+          loa: data.loa || "",
+          ano_orcamentario:
+            data.ano_orcamentario !== null && data.ano_orcamentario !== undefined
+              ? String(data.ano_orcamentario)
+              : "",
+          previsao_pagamento: previsaoPagamentoAno,
           analise_penhora: data.analise_penhora ?? null,
           analise_cessao: data.analise_cessao ?? null,
           analise_herdeiros: data.analise_herdeiros ?? null,
@@ -310,11 +318,23 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       }
 
       const resumoFinal = resultadosEtapas[6]
+      const dadosBasicos = resultadosEtapas[0]
       const propostas = resultadosEtapas[5]
       const honorarios = resultadosEtapas[4]
       const irpf = resultadosEtapas[4] || resultadosEtapas[3] // compat
       const pss = resultadosEtapas[3] || resultadosEtapas[2] // compat
       const atualizacao = resultadosEtapas[2] || resultadosEtapas[1]
+      const toYearNumberOrNull = (value: any) => {
+        const raw = String(value ?? "").trim()
+        if (!/^\d{4}$/.test(raw)) return null
+        const year = Number(raw)
+        return Number.isInteger(year) && year >= 1900 && year <= 2999 ? year : null
+      }
+      const toYearDateOrNull = (value: any) => {
+        const year = toYearNumberOrNull(value)
+        return year ? `${year}-01-01` : null
+      }
+      const loaValue = String((dadosBasicos?.loa ?? dados.loa ?? "") || "").trim() || null
 
       const { error } = await supabase
         .from("precatorios")
@@ -349,6 +369,9 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
             atualizacao?.taxaJuros ?? atualizacao?.taxa_juros_moratorios ?? 0,
           ),
           qtd_salarios_minimos: safeNumber(resumoFinal?.qtdSalariosMinimos ?? 0),
+          loa: loaValue,
+          ano_orcamentario: toYearNumberOrNull(dadosBasicos?.ano_orcamentario ?? dados.ano_orcamentario),
+          previsao_pagamento: toYearDateOrNull(dadosBasicos?.previsao_pagamento ?? dados.previsao_pagamento),
           dados_calculo: {
             dados,
             resultadosEtapas,
@@ -419,6 +442,17 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
         if (m) return `${m[3]}-${m[2]}-${m[1]}`
         return null
       }
+      const toYearNumberOrNull = (value: any) => {
+        const raw = String(value ?? "").trim()
+        if (!/^\d{4}$/.test(raw)) return null
+        const year = Number(raw)
+        return Number.isInteger(year) && year >= 1900 && year <= 2999 ? year : null
+      }
+      const toYearDateOrNull = (value: any) => {
+        const year = toYearNumberOrNull(value)
+        return year ? `${year}-01-01` : null
+      }
+      const loaValue = String((dadosBasicos?.loa ?? dados.loa ?? "") || "").trim() || null
 
       const { data: { user } } = await supabase.auth.getUser()
 
@@ -447,6 +481,9 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
           toISODate(dadosBasicos?.data_expedicao || dados.dataExpedicao) ||
           toISODate(new Date().toISOString().slice(0, 10)),
         data_calculo: toISODate(new Date().toISOString().slice(0, 10)),
+        loa: loaValue,
+        ano_orcamentario: toYearNumberOrNull(dadosBasicos?.ano_orcamentario ?? dados.ano_orcamentario),
+        previsao_pagamento: toYearDateOrNull(dadosBasicos?.previsao_pagamento ?? dados.previsao_pagamento),
         pss_valor: safeNumber(propostas?.pss_valor || pss?.pss_valor),
         pss_oficio_valor: safeNumber(pss?.pss_oficio_valor),
         irpf_valor: safeNumber(propostas?.irpf_valor || irpf?.valor_irpf || irpf?.irTotal),

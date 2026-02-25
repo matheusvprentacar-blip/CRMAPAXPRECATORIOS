@@ -25,7 +25,7 @@ import {
   Bell,
   Palette,
   Shield,
-} from "lucide-react"
+} from "@/components/icons"
 import { useAuth } from "@/lib/auth/auth-context"
 import { useTheme } from "next-themes"
 import { createBrowserClient } from "@/lib/supabase/client"

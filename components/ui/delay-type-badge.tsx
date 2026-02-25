@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { UserX, AlertTriangle, FileX, HelpCircle, Clock, Users, MoreHorizontal } from "lucide-react"
+import { UserX, AlertTriangle, FileX, HelpCircle, Clock, Users, MoreHorizontal } from "@/components/icons"
 
 interface DelayTypeBadgeProps {
   tipo: "titular_falecido" | "penhora" | "cessao_parcial" | "doc_incompleta" | "duvida_juridica" | "aguardando_cliente" | "outro"

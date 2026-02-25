@@ -25,7 +25,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import { Loader2, Save, Trash2, Upload, FileText } from "lucide-react"
+import { Loader2, Save, Trash2, Upload, FileText } from "@/components/icons"
 
 interface ItemChecklistDialogProps {
   open: boolean
@@ -86,6 +86,10 @@ export function ItemChecklistDialog({
   async function handleSave() {
     if (!formData.nome.trim()) {
       alert("Nome é obrigatório")
+      return
+    }
+    if (!item && !formData.arquivo_url) {
+      alert("Anexe um arquivo antes de salvar o item customizado.")
       return
     }
 
@@ -305,7 +309,7 @@ export function ItemChecklistDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || deleting}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || deleting}>
+            <Button onClick={handleSave} disabled={saving || deleting || (!item && !formData.arquivo_url)}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

@@ -26,7 +26,7 @@ import {
   Bell,
   Palette,
   Shield,
-} from "lucide-react"
+} from "@/components/icons"
 import { useAuth } from "@/lib/auth/auth-context"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { UploadFoto } from "@/components/perfil/upload-foto"

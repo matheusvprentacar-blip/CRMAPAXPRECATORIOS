@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { ExternalLink, Loader2, AlertCircle } from "lucide-react"
+import { ExternalLink, Loader2, AlertCircle } from "@/components/icons"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"
 
 import { useRouter } from "next/navigation"

@@ -1,7 +1,7 @@
 "use client"
 
-import { useState } from "react"
-import { Upload, X, FileText, AlertCircle } from "lucide-react"
+import { useEffect, useMemo, useState } from "react"
+import { Upload, X, FileText, AlertCircle } from "@/components/icons"
 import {
   Dialog,
   DialogContent,
@@ -39,6 +39,12 @@ interface UploadDocumentoModalProps {
   precatorioId: string
   onSuccess?: () => void
   tiposJaAnexados?: TipoDocumento[]
+  tiposPermitidos?: TipoDocumento[]
+  tipoDocumentoFixo?: TipoDocumento
+  rotuloTipoDocumentoFixo?: string
+  descricaoTipoDocumentoFixo?: string
+  titulo?: string
+  descricao?: string
 }
 
 export function UploadDocumentoModal({
@@ -47,16 +53,51 @@ export function UploadDocumentoModal({
   precatorioId,
   onSuccess,
   tiposJaAnexados = [],
+  tiposPermitidos,
+  tipoDocumentoFixo,
+  rotuloTipoDocumentoFixo,
+  descricaoTipoDocumentoFixo,
+  titulo = "Anexar Documento",
+  descricao = "Faça upload de um documento relacionado ao precatório",
 }: UploadDocumentoModalProps) {
   const [loading, setLoading] = useState(false)
-  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento | "">("")
+  const [tipoDocumento, setTipoDocumento] = useState<TipoDocumento | "">(tipoDocumentoFixo ?? "")
   const [arquivo, setArquivo] = useState<File | null>(null)
   const [observacao, setObservacao] = useState("")
   const [dragActive, setDragActive] = useState(false)
 
-  const tiposDisponiveis = Object.keys(TIPO_DOCUMENTO_LABELS).filter(
-    (tipo) => !tiposJaAnexados.includes(tipo as TipoDocumento)
-  ) as TipoDocumento[]
+  const labelsTipoDocumento = useMemo(() => {
+    if (!tipoDocumentoFixo || !rotuloTipoDocumentoFixo) return TIPO_DOCUMENTO_LABELS
+    return {
+      ...TIPO_DOCUMENTO_LABELS,
+      [tipoDocumentoFixo]: rotuloTipoDocumentoFixo,
+    }
+  }, [tipoDocumentoFixo, rotuloTipoDocumentoFixo])
+
+  const descricoesTipoDocumento = useMemo(() => {
+    if (!tipoDocumentoFixo || !descricaoTipoDocumentoFixo) return TIPO_DOCUMENTO_DESCRICOES
+    return {
+      ...TIPO_DOCUMENTO_DESCRICOES,
+      [tipoDocumentoFixo]: descricaoTipoDocumentoFixo,
+    }
+  }, [tipoDocumentoFixo, descricaoTipoDocumentoFixo])
+
+  const tiposDisponiveis = useMemo(() => {
+    const tiposBase = Object.keys(labelsTipoDocumento) as TipoDocumento[]
+    const filtroPermitidos = tiposPermitidos ? new Set(tiposPermitidos) : null
+
+    return tiposBase.filter((tipo) => {
+      const permitido = filtroPermitidos ? filtroPermitidos.has(tipo) : true
+      const naoAnexado = !tiposJaAnexados.includes(tipo)
+      return permitido && naoAnexado
+    })
+  }, [labelsTipoDocumento, tiposJaAnexados, tiposPermitidos])
+
+  useEffect(() => {
+    if (open && tipoDocumentoFixo) {
+      setTipoDocumento(tipoDocumentoFixo)
+    }
+  }, [open, tipoDocumentoFixo])
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault()
@@ -79,13 +120,11 @@ export function UploadDocumentoModal({
   }
 
   const handleFileSelect = (file: File) => {
-    // Validar tipo
     if (!MIME_TYPES_PERMITIDOS.includes(file.type)) {
       toast.error("Tipo de arquivo não permitido")
       return
     }
 
-    // Validar tamanho
     if (file.size > TAMANHO_MAXIMO_BYTES) {
       toast.error(`Arquivo muito grande. Máximo: ${formatarTamanho(TAMANHO_MAXIMO_BYTES)}`)
       return
@@ -100,8 +139,10 @@ export function UploadDocumentoModal({
     }
   }
 
+  const tipoAtivo = (tipoDocumento || tipoDocumentoFixo || "") as TipoDocumento | ""
+
   const handleUpload = async () => {
-    if (!tipoDocumento) {
+    if (!tipoAtivo) {
       toast.error("Selecione o tipo de documento")
       return
     }
@@ -113,11 +154,11 @@ export function UploadDocumentoModal({
 
     setLoading(true)
     try {
-      const opcional = !DOCUMENTOS_OBRIGATORIOS.includes(tipoDocumento)
+      const opcional = !DOCUMENTOS_OBRIGATORIOS.includes(tipoAtivo)
 
       const result = await uploadDocumento({
         precatorio_id: precatorioId,
-        tipo_documento: tipoDocumento,
+        tipo_documento: tipoAtivo,
         arquivo,
         observacao: observacao.trim() || undefined,
         opcional,
@@ -139,67 +180,67 @@ export function UploadDocumentoModal({
   }
 
   const handleClose = () => {
-    setTipoDocumento("")
+    setTipoDocumento(tipoDocumentoFixo ?? "")
     setArquivo(null)
     setObservacao("")
     setDragActive(false)
     onOpenChange(false)
   }
 
-  const isObrigatorio = tipoDocumento && DOCUMENTOS_OBRIGATORIOS.includes(tipoDocumento)
+  const isObrigatorio = Boolean(tipoAtivo && DOCUMENTOS_OBRIGATORIOS.includes(tipoAtivo))
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="sm:max-w-[500px]">
         <DialogHeader>
-          <DialogTitle>Anexar Documento</DialogTitle>
-          <DialogDescription>
-            Faça upload de um documento relacionado ao precatório
-          </DialogDescription>
+          <DialogTitle>{titulo}</DialogTitle>
+          <DialogDescription>{descricao}</DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          {/* Tipo de Documento */}
           <div className="space-y-2">
             <Label htmlFor="tipo">
               Tipo de Documento <span className="text-destructive">*</span>
             </Label>
-            <Select
-              value={tipoDocumento}
-              onValueChange={(value) => setTipoDocumento(value as TipoDocumento)}
-              disabled={loading}
-            >
-              <SelectTrigger id="tipo">
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposDisponiveis.map((tipo) => (
-                  <SelectItem key={tipo} value={tipo}>
-                    {TIPO_DOCUMENTO_LABELS[tipo]}
-                    {DOCUMENTOS_OBRIGATORIOS.includes(tipo) && (
-                      <span className="text-destructive ml-1">*</span>
-                    )}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {tipoDocumento && TIPO_DOCUMENTO_DESCRICOES[tipoDocumento] && (
-              <p className="text-xs text-muted-foreground">
-                {TIPO_DOCUMENTO_DESCRICOES[tipoDocumento]}
-              </p>
+
+            {tipoDocumentoFixo ? (
+              <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm font-medium">
+                {labelsTipoDocumento[tipoDocumentoFixo]}
+              </div>
+            ) : (
+              <Select
+                value={tipoDocumento}
+                onValueChange={(value) => setTipoDocumento(value as TipoDocumento)}
+                disabled={loading}
+              >
+                <SelectTrigger id="tipo">
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposDisponiveis.map((tipo) => (
+                    <SelectItem key={tipo} value={tipo}>
+                      {labelsTipoDocumento[tipo]}
+                      {DOCUMENTOS_OBRIGATORIOS.includes(tipo) && (
+                        <span className="text-destructive ml-1">*</span>
+                      )}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+
+            {tipoAtivo && descricoesTipoDocumento[tipoAtivo] && (
+              <p className="text-xs text-muted-foreground">{descricoesTipoDocumento[tipoAtivo]}</p>
             )}
           </div>
 
-          {/* Upload de Arquivo */}
           <div className="space-y-2">
             <Label>
               Arquivo <span className="text-destructive">*</span>
             </Label>
             <div
               className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
-                dragActive
-                  ? "border-primary bg-primary/5"
-                  : "border-muted-foreground/25"
+                dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
               }`}
               onDragEnter={handleDrag}
               onDragLeave={handleDrag}
@@ -210,10 +251,7 @@ export function UploadDocumentoModal({
                 <div className="space-y-2">
                   <Upload className="w-8 h-8 mx-auto text-muted-foreground" />
                   <div className="text-sm text-muted-foreground">
-                    <label
-                      htmlFor="file-upload"
-                      className="text-primary cursor-pointer hover:underline"
-                    >
+                    <label htmlFor="file-upload" className="text-primary cursor-pointer hover:underline">
                       Clique para selecionar
                     </label>{" "}
                     ou arraste o arquivo aqui
@@ -236,17 +274,10 @@ export function UploadDocumentoModal({
                     <FileText className="w-5 h-5 text-primary" />
                     <div className="text-left">
                       <p className="text-sm font-medium">{arquivo.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {formatarTamanho(arquivo.size)}
-                      </p>
+                      <p className="text-xs text-muted-foreground">{formatarTamanho(arquivo.size)}</p>
                     </div>
                   </div>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => setArquivo(null)}
-                    disabled={loading}
-                  >
+                  <Button size="sm" variant="ghost" onClick={() => setArquivo(null)} disabled={loading}>
                     <X className="w-4 h-4" />
                   </Button>
                 </div>
@@ -254,7 +285,6 @@ export function UploadDocumentoModal({
             </div>
           </div>
 
-          {/* Observação */}
           <div className="space-y-2">
             <Label htmlFor="observacao">Observação (opcional)</Label>
             <Textarea
@@ -267,7 +297,6 @@ export function UploadDocumentoModal({
             />
           </div>
 
-          {/* Alert de documento obrigatório */}
           {isObrigatorio && (
             <Alert>
               <AlertCircle className="h-4 w-4" />
@@ -282,7 +311,7 @@ export function UploadDocumentoModal({
           <Button variant="outline" onClick={handleClose} disabled={loading}>
             Cancelar
           </Button>
-          <Button onClick={handleUpload} disabled={loading || !tipoDocumento || !arquivo}>
+          <Button onClick={handleUpload} disabled={loading || !tipoAtivo || !arquivo}>
             {loading ? "Enviando..." : "Enviar Documento"}
           </Button>
         </DialogFooter>

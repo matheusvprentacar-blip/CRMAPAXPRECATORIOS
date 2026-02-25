@@ -3,7 +3,7 @@
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog'
-import { FileJson, Upload, Loader2, CheckCircle2, XCircle, Download } from 'lucide-react'
+import { FileJson, Upload, Loader2, CheckCircle2, XCircle, Download } from "@/components/icons"
 import { toast } from 'sonner'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'

@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Switch, SwitchField } from "@/components/switch"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
-import { Loader2, Printer, CheckCircle2, Percent, Save, Edit, User, Scale } from "lucide-react"
+import { Loader2, Printer, CheckCircle2, Percent, Save, Edit, User, Scale } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
 import {
@@ -22,7 +22,7 @@ import {
 
 import { Textarea } from "@/components/ui/textarea"
 import { ProposalConfigModal } from "./proposal-config-modal"
-import { Settings } from "lucide-react"
+import { Settings } from "@/components/icons"
 import { useAuth } from "@/lib/auth/auth-context"
 
 interface AbaPropostaProps {
@@ -80,6 +80,8 @@ export function AbaProposta({
 
     // Estado para configuração do modelo
     const [showConfigModal, setShowConfigModal] = useState(false)
+    const proposalModalSurfaceClass =
+        "border border-border/80 !bg-[#fbf6ef] !text-[#22160e] shadow-[0_24px_56px_-34px_rgba(15,23,42,0.58)] dark:border-[#4c3729] dark:!bg-[#17120f] dark:!text-[#f5eee4]"
 
     useEffect(() => {
         setPropostaAceita(!!precatorio?.proposta_aceita)
@@ -1110,7 +1112,7 @@ export function AbaProposta({
 
             {/* Modal de Sucesso + Escolha de Impressão */}
             <Dialog open={showPrintDialog} onOpenChange={setShowPrintDialog}>
-                <DialogContent className="sm:max-w-md">
+                <DialogContent className={`sm:max-w-md ${proposalModalSurfaceClass}`}>
                     <DialogHeader>
                         <DialogTitle>Propostas Salvas</DialogTitle>
                         <DialogDescription>
@@ -1145,7 +1147,7 @@ export function AbaProposta({
 
             {/* Novo Modal: Editar Descrição */}
             <Dialog open={showDescriptionModal} onOpenChange={setShowDescriptionModal}>
-                <DialogContent className="max-w-xl">
+                <DialogContent className={`max-w-xl ${proposalModalSurfaceClass}`}>
                     <DialogHeader>
                         <DialogTitle>Editar Descrição da Proposta</DialogTitle>
                         <DialogDescription>

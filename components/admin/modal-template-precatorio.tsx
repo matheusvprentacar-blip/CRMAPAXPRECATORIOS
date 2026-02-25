@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
-import { Upload, FileText, Loader2 } from "lucide-react"
+import { Upload, FileText, Loader2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 

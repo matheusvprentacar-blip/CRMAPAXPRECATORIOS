@@ -22,7 +22,7 @@ import {
   Calculator,
   CheckSquare,
   Scale
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { Badge } from "@/components/ui/badge"
@@ -116,6 +116,7 @@ function PrecatorioDetailContent() {
       "gestor",
       "gestor_oficio",
       "gestor_certidoes",
+      "gestor_escrituras",
     ].includes(role),
   )
 

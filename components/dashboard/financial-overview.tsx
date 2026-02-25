@@ -1,7 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { TrendingUp, Wallet } from "lucide-react"
+import { TrendingUp, Wallet } from "@/components/icons"
+import CountUp from "react-countup"
 
 interface FinancialOverviewProps {
     data: {
@@ -12,28 +13,40 @@ interface FinancialOverviewProps {
 }
 
 export function FinancialOverview({ data, loading }: FinancialOverviewProps) {
-    const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat("pt-BR", {
-            style: "currency",
-            currency: "BRL",
-            minimumFractionDigits: 2,
-        }).format(value)
-    }
+    const currencyPrefix = "R$\u00A0"
 
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {/* Total Valor Principal */}
-            <Card className="shadow-sm border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card
+                allowShadow
+                disableDefaultSurface
+                className="relative overflow-hidden rounded-3xl border border-primary/30 bg-content1 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-primary/24 dark:shadow-[0_30px_76px_-42px_rgba(251,146,60,0.42)]"
+            >
+                <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
+                    <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-2xl" />
+                    <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.12)_100%)]" />
+                </div>
+                <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Total Valor Principal</CardTitle>
                     <Wallet className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                     {loading ? (
-                        <div className="h-7 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-7 w-32 animate-pulse rounded-2xl bg-muted" />
                     ) : (
                         <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary">
-                            {formatCurrency(data.totalPrincipal)}
+                            <CountUp
+                                end={data.totalPrincipal}
+                                duration={0.9}
+                                separator="."
+                                decimal=","
+                                decimals={2}
+                                prefix={currencyPrefix}
+                                enableScrollSpy
+                                scrollSpyOnce
+                                scrollSpyDelay={120}
+                            />
                         </div>
                     )}
                     <p className="mt-1 text-sm font-medium text-muted-foreground dark:text-muted-foreground">
@@ -43,17 +56,35 @@ export function FinancialOverview({ data, loading }: FinancialOverviewProps) {
             </Card>
 
             {/* Total Valor Atualizado */}
-            <Card className="shadow-sm border-border/50">
-                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card
+                allowShadow
+                disableDefaultSurface
+                className="relative overflow-hidden rounded-3xl border border-orange-500/30 bg-content1 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-orange-500/26 dark:shadow-[0_30px_76px_-42px_rgba(251,146,60,0.42)]"
+            >
+                <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
+                    <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-gradient-to-br from-orange-400/38 to-transparent blur-2xl" />
+                    <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(251,146,60,0.13)_100%)]" />
+                </div>
+                <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Total Valor Atualizado</CardTitle>
                     <TrendingUp className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent>
+                <CardContent className="relative z-10">
                     {loading ? (
-                        <div className="h-7 w-32 bg-muted animate-pulse rounded" />
+                        <div className="h-7 w-32 animate-pulse rounded-2xl bg-muted" />
                     ) : (
                         <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary dark:text-primary">
-                            {formatCurrency(data.totalAtualizado)}
+                            <CountUp
+                                end={data.totalAtualizado}
+                                duration={0.9}
+                                separator="."
+                                decimal=","
+                                decimals={2}
+                                prefix={currencyPrefix}
+                                enableScrollSpy
+                                scrollSpyOnce
+                                scrollSpyDelay={120}
+                            />
                         </div>
                     )}
                     <p className="mt-1 text-sm font-medium text-muted-foreground dark:text-muted-foreground">

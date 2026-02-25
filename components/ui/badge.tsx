@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Chip } from "@heroui/react"
+import { Chip } from "@/lib/heroui/compat"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"

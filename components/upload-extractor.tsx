@@ -6,7 +6,7 @@ import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { FileUp, Loader2 } from "lucide-react"
+import { FileUp, Loader2 } from "@/components/icons"
 import { extrairDadosDeTexto } from "@/lib/extrair-dados"
 
 interface UploadExtractorProps {

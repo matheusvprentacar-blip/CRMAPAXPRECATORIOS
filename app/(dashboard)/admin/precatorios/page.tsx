@@ -70,7 +70,7 @@ import {
   TrendingUp,
   Star,
   X,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { toast } from "sonner"
@@ -198,6 +198,7 @@ const STATUS_EXPANSION_MAP: Record<string, string[]> = {
   docs_credor: ["docs_credor", "aguardando_documentos"],
   em_negociacao: ["em_negociacao", "proposta_negociacao"],
   proposta_negociacao: ["proposta_negociacao", "em_negociacao"],
+  escrituras: ["escrituras"],
   concluido: ["concluido", "fechado", "finalizado"],
   fechado: ["fechado", "concluido", "finalizado"],
   finalizado: ["finalizado", "fechado", "concluido"],
@@ -214,6 +215,7 @@ const CALCULO_FINALIZADO_STATUSES = new Set([
   "proposta_negociacao",
   "proposta_aceita",
   "certidoes",
+  "escrituras",
 ])
 
 const normalizeStatus = (status?: string | null) => (status || "").trim().toLowerCase()
@@ -352,15 +354,16 @@ const matchesAdvancedFilters = (prec: PrecatorioAdmin, filtros: FiltrosPrecatori
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
   triagem_interesse: 15,
-  analise_processual_inicial: 25,
-  docs_credor: 35,
-  pronto_calculo: 45,
-  calculo_andamento: 55,
-  juridico: 65,
+  docs_credor: 25,
+  analise_processual_inicial: 35,
+  juridico: 45,
+  pronto_calculo: 55,
+  calculo_andamento: 65,
   calculo_concluido: 75,
   proposta_negociacao: 85,
   proposta_aceita: 90,
   certidoes: 95,
+  escrituras: 97,
   fechado: 100,
   pos_fechamento: 100,
   pausado_credor: 20,
@@ -381,6 +384,7 @@ const KANBAN_LABELS: Record<string, string> = {
   proposta_negociacao: "Proposta / Negociação",
   proposta_aceita: "Proposta aceita",
   certidoes: "Certidões",
+  escrituras: "Escrituras",
   fechado: "Fechado",
   pos_fechamento: "Pós-fechamento",
   pausado_credor: "Pausado (credor)",
@@ -401,6 +405,7 @@ const STATUS_TONES: Record<string, string> = {
   proposta_negociacao: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   proposta_aceita: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   certidoes: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  escrituras: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   fechado: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   pos_fechamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   pausado_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",

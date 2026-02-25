@@ -1,9 +1,19 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { ArrowUp, ArrowDown, Minus, LucideIcon } from "lucide-react"
+import { ArrowUp, ArrowDown, Minus, LucideIcon } from "@/components/icons"
+import CountUp from "react-countup"
 import { cn } from "@/lib/utils"
+
+interface AnimatedNumberConfig {
+  end: number
+  decimals?: number
+  prefix?: string
+  suffix?: string
+  duration?: number
+  separator?: string
+  decimal?: string
+}
 
 interface MetricCardProps {
   title: string
@@ -14,6 +24,7 @@ interface MetricCardProps {
   trendValue?: string
   variant?: "default" | "success" | "warning" | "danger"
   className?: string
+  animatedNumber?: AnimatedNumberConfig
 }
 
 export function MetricCard({
@@ -25,12 +36,24 @@ export function MetricCard({
   trendValue,
   variant = "default",
   className,
+  animatedNumber,
 }: MetricCardProps) {
   const variantStyles = {
-    default: "border-border",
-    success: "border-primary/40 bg-primary/15 dark:bg-primary/15",
-    warning: "border-primary/40 bg-primary/15 dark:bg-primary/15",
-    danger: "border-destructive/40 bg-destructive/15 dark:bg-destructive/15",
+    default:
+      "border-border/70 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-primary/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+    success:
+      "border-emerald-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-emerald-500/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+    warning:
+      "border-amber-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-amber-500/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+    danger:
+      "border-destructive/40 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-destructive/28 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+  }
+
+  const glowStyles = {
+    default: "from-primary/30 to-transparent",
+    success: "from-emerald-400/30 to-transparent",
+    warning: "from-amber-400/30 to-transparent",
+    danger: "from-destructive/35 to-transparent",
   }
 
   const getTrendIcon = () => {
@@ -59,16 +82,40 @@ export function MetricCard({
     }
   }
 
+  const renderValue = () => {
+    if (!animatedNumber || !Number.isFinite(animatedNumber.end)) return value
+
+    return (
+      <CountUp
+        end={animatedNumber.end}
+        duration={animatedNumber.duration ?? 0.9}
+        separator={animatedNumber.separator ?? "."}
+        decimal={animatedNumber.decimal ?? ","}
+        decimals={animatedNumber.decimals ?? (Number.isInteger(animatedNumber.end) ? 0 : 2)}
+        prefix={animatedNumber.prefix}
+        suffix={animatedNumber.suffix}
+        enableScrollSpy
+        scrollSpyOnce
+        scrollSpyDelay={120}
+      />
+    )
+  }
+
   return (
-    <Card className={cn(variantStyles[variant], className)}>
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+    <Card className={cn("relative overflow-hidden backdrop-blur-md", variantStyles[variant], className)}>
+      <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
+        <div className={cn("absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br blur-2xl", glowStyles[variant])} />
+        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.08)_100%)]" />
+      </div>
+
+      <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
         <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">{title}</CardTitle>
         {Icon && <Icon className="h-4 w-4 text-muted-foreground" />}
       </CardHeader>
-      <CardContent>
+      <CardContent className="relative z-10">
         <div className="space-y-1">
           <div className="font-mono text-2xl font-semibold tabular-nums tracking-tight text-primary">
-            {value}
+            {renderValue()}
           </div>
           {subtitle && <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{subtitle}</p>}
           {trend && trendValue && (

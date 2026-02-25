@@ -6,12 +6,11 @@ import { Badge } from "@/components/ui/badge"
 import { Progress } from "@/components/ui/progress"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, FileText, Plus, Pencil, AlertCircle, Eye, CheckCircle, ImageIcon, Trash2, Download } from "lucide-react"
+import { Loader2, FileText, Plus, Pencil, AlertCircle, Eye, CheckCircle, ImageIcon, Trash2, Download } from "@/components/icons"
 import { ItemChecklistDialog } from "./item-checklist-dialog"
-import { getFileDownloadUrl, downloadFileAsArrayBuffer } from "@/lib/utils/file-upload"
+import { buildDownloadFileName, downloadFileWithMetadata, getFileDownloadUrl } from "@/lib/utils/file-upload"
 import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { saveAs } from "file-saver"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -70,6 +69,14 @@ const STATUS_CERTIDOES_LABELS: Record<string, string> = {
 
 const EXCLUDED_CERTIDAO_MARKER = "__EXCLUIDO__"
 
+const normalizeNomeItem = (value?: string | null) => {
+  if (!value) return ""
+  return value
+    .trim()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
 const getFileNameFromUrl = (url?: string | null) => {
   if (!url) return "arquivo"
   if (url.startsWith("storage:")) {
@@ -251,7 +258,7 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
     }
   }
 
-  async function updateStatusCertidoes(value: string, options?: { advanceToFechamento?: boolean }) {
+  async function updateStatusCertidoes(value: string, options?: { advanceToEscrituras?: boolean }) {
     const previous = statusCertidoes
     setStatusCertidoes(value)
     setSavingStatusCertidoes(true)
@@ -264,9 +271,10 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
         updated_at: new Date().toISOString(),
       }
 
-      if (options?.advanceToFechamento) {
-        payload.status_kanban = "fechado"
-        payload.localizacao_kanban = "fechado"
+      if (options?.advanceToEscrituras) {
+        payload.status_kanban = "escrituras"
+        payload.localizacao_kanban = "escrituras"
+        payload.status_escrituras = "nao_iniciado"
       }
 
       const { error } = await supabase
@@ -338,19 +346,67 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
         // POST
         const payload = {
           p_precatorio_id: precatorioId,
-          p_tipo_grupo: 'CERTIDAO',
+          p_tipo_grupo: "CERTIDAO",
           p_nome_item: itemData.nome,
-          p_observacao: itemData.observacao,
+          p_observacao: itemData.observacao || null,
           p_validade: itemData.validade || null,
-          p_arquivo_url: itemData.arquivo_url || null
+          p_arquivo_url: itemData.arquivo_url || null,
         }
 
-        const { error } = await supabase.rpc('adicionar_item_customizado', payload)
+        const { data: createdResult, error } = await supabase.rpc("adicionar_item_customizado", payload)
 
         if (error) {
           console.error("[Checklist Certidões] Erro no INSERT:", error)
           throw error
         }
+
+        let createdItemId: string | null = null
+        if (typeof createdResult === "string" && createdResult.length > 20) {
+          createdItemId = createdResult
+        } else if (
+          createdResult &&
+          typeof createdResult === "object" &&
+          "id" in createdResult &&
+          typeof (createdResult as { id: unknown }).id === "string"
+        ) {
+          createdItemId = (createdResult as { id: string }).id
+        }
+
+        if (!createdItemId) {
+          const { data: refreshedItems, error: refreshError } = await supabase.rpc("obter_itens_precatorio", {
+            p_precatorio_id: precatorioId,
+          })
+          if (refreshError) throw refreshError
+
+          const targetName = normalizeNomeItem(itemData.nome)
+          const createdItem = (refreshedItems || [])
+            .filter(
+              (candidate: any) =>
+                candidate.tipo_grupo === "CERTIDAO" &&
+                candidate.observacao !== EXCLUDED_CERTIDAO_MARKER &&
+                normalizeNomeItem(candidate.nome_item) === targetName
+            )
+            .sort((a: any, b: any) => {
+              const left = Date.parse(a?.created_at || "") || 0
+              const right = Date.parse(b?.created_at || "") || 0
+              return right - left
+            })[0]
+
+          createdItemId = createdItem?.id || null
+        }
+
+        if (!createdItemId) {
+          throw new Error("Item criado, mas nao foi possivel identificar o registro para aplicar status e anexo.")
+        }
+
+        const { error: updateError } = await supabase.rpc("atualizar_status_item", {
+          p_item_id: createdItemId,
+          p_novo_status: itemData.status || "PENDENTE",
+          p_validade: itemData.validade || null,
+          p_observacao: itemData.observacao || null,
+          p_arquivo_url: itemData.arquivo_url || null,
+        })
+        if (updateError) throw updateError
 
         toast({
           title: "Item adicionado",
@@ -420,11 +476,11 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
 
   async function handleConcluirAnalise() {
     try {
-      await updateStatusCertidoes('concluido', { advanceToFechamento: true })
+      await updateStatusCertidoes('concluido', { advanceToEscrituras: true })
 
       toast({
         title: "Certidões Concluídas",
-        description: "Status das certidões atualizado e enviado para fechamento.",
+        description: "Status das certidões atualizado e enviado para escrituras.",
       })
 
       setConfirmConclusaoOpen(false)
@@ -454,13 +510,19 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
 
       toast({ title: "Baixando", description: `Iniciando download de ${name}...` })
 
-      const buffer = await downloadFileAsArrayBuffer(url, supabase, name)
-      if (!buffer) throw new Error("Falha ao baixar arquivo")
+      const downloaded = await downloadFileWithMetadata(url, supabase, name)
+      if (!downloaded) throw new Error("Falha ao baixar arquivo")
 
-      const blob = new Blob([buffer])
-      const ext = getFileExt(getFileNameFromUrl(url))
-      const safeName = name.replace(/[^a-z0-9]/gi, '_').substring(0, 50)
-      const fileName = `${safeName}.${ext.toLowerCase()}`
+      const fileName = buildDownloadFileName({
+        preferredName: name,
+        sourceFileName: downloaded.fileName,
+        sourceUrl: url,
+        mimeType: downloaded.mimeType,
+      })
+
+      const blob = new Blob([downloaded.buffer], {
+        type: downloaded.mimeType || "application/octet-stream",
+      })
 
       await saveFileWithPicker(blob, fileName)
 
@@ -505,7 +567,7 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
           <div>
             <p className="text-sm font-medium">Status das Certidões</p>
             <p className="text-xs text-muted-foreground">
-              Necessário para avançar para o fechamento.
+              Necessário para avançar para escrituras.
             </p>
           </div>
           <Select
@@ -737,7 +799,7 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
                 Marcar Certidões como Concluídas
               </Button>
               <p className="text-xs text-muted-foreground text-center mt-2">
-                Ao concluir, o status das certidões permitirá avançar para <strong>Fechamento</strong>.
+                Ao concluir, o status das certidões permitirá avançar para <strong>Escrituras</strong>.
               </p>
             </div>
           </div>
@@ -774,7 +836,7 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
             <AlertDialogTitle>Marcar certidões como concluídas?</AlertDialogTitle>
             <AlertDialogDescription>
               Esta ação marcará as certidões como concluídas e liberará o avanço para
-              <strong> Fechamento</strong>.
+              <strong> Escrituras</strong>.
               Certifique-se de que todas as certidões necessárias foram anexadas e validadas.
             </AlertDialogDescription>
           </AlertDialogHeader>

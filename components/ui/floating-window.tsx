@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from "react"
 import { createPortal } from "react-dom"
-import { X, GripHorizontal, Maximize2, Minimize2 } from "lucide-react"
+import { X, GripHorizontal, Maximize2, Minimize2 } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 
 interface FloatingWindowProps {

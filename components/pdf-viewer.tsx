@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Download, ExternalLink, AlertCircle } from "lucide-react"
+import { Download, ExternalLink, AlertCircle } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"

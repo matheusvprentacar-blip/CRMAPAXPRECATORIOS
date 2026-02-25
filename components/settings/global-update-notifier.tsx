@@ -13,7 +13,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { CheckCircle2, Loader2, Upload } from "lucide-react"
+import { CheckCircle2, Loader2, Upload } from "@/components/icons"
 
 type UpdaterModule = typeof import("@tauri-apps/plugin-updater")
 type AvailableUpdate = Awaited<ReturnType<UpdaterModule["check"]>>

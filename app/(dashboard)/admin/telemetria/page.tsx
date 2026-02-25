@@ -1,5 +1,4 @@
-
-"use client"
+﻿"use client"
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react"
 import {
@@ -7,12 +6,14 @@ import {
   AlertTriangle,
   BarChart3,
   Clock,
+  Gauge,
   Lock,
   PieChart as PieIcon,
   RefreshCw,
   ShieldAlert,
+  Sparkles,
   Users,
-} from "lucide-react"
+} from "@/components/icons"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { getSupabase } from "@/lib/supabase/client"
 import { Button } from "@/components/ui/button"
@@ -20,6 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Input } from "@/components/ui/input"
+import { Progress } from "@/components/ui/progress"
+import { motion } from "framer-motion"
 
 import {
   ResponsiveContainer,
@@ -98,6 +101,13 @@ const TELEMETRY_SELECT =
 const TELEMETRY_PAGE_SIZE = 500
 const TELEMETRY_MAX_ROWS = 5000
 const RECENT_EVENTS_PAGE_SIZE_OPTIONS = [20, 50, 100] as const
+const SESSIONS_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
+const GLASS_PANEL_CLASS =
+  "border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_18px_55px_-35px_hsl(var(--foreground)/0.65)]"
+const SECTION_VARIANTS = {
+  initial: { opacity: 0, y: 14 },
+  animate: { opacity: 1, y: 0 },
+}
 
 function normalizeUser(raw: unknown): TelemetryUser | null {
   if (!raw) return null
@@ -244,6 +254,8 @@ type SessionAgg = {
   started_at_ms: number
   ended_at_ms: number
   duration_ms: number
+  worked_ms: number
+  worked_pct: number
   idle_ms: number
   idle_pct: number
   locks: number
@@ -293,6 +305,10 @@ function buildSessions(events: TelemetryEventRow[]): SessionAgg[] {
     // Idle pairing: idle_started -> idle_ended
     let idleMs = 0
     let idleStart: number | null = null
+    // Tempo trabalhado conta enquanto a sessão está ativa.
+    // Para de contar quando entra em inatividade e encerra em session_ended.
+    let workedMs = 0
+    let activeStart: number | null = startedAt
 
     let locks = 0
     let reauth = 0
@@ -301,14 +317,25 @@ function buildSessions(events: TelemetryEventRow[]): SessionAgg[] {
 
     const sourceCounts = new Map<TelemetryEventRow["source"], number>()
     for (const { e, ms } of sorted) {
+      if (ms < startedAt || ms > endedAt) continue
       sourceCounts.set(e.source, (sourceCounts.get(e.source) ?? 0) + 1)
 
       if (e.event_type === "idle_started") {
         if (idleStart === null) idleStart = ms
+        if (activeStart !== null) {
+          workedMs += Math.max(0, ms - activeStart)
+          activeStart = null
+        }
       } else if (e.event_type === "idle_ended") {
         if (idleStart !== null) {
           idleMs += Math.max(0, ms - idleStart)
           idleStart = null
+        }
+        if (activeStart === null) activeStart = ms
+      } else if (e.event_type === "session_ended") {
+        if (activeStart !== null) {
+          workedMs += Math.max(0, ms - activeStart)
+          activeStart = null
         }
       }
 
@@ -320,8 +347,13 @@ function buildSessions(events: TelemetryEventRow[]): SessionAgg[] {
 
     // Se começou idle e não terminou, fecha no fim da sessão (ou último evento)
     if (idleStart !== null) idleMs += Math.max(0, endedAt - idleStart)
+    // Se ainda estava ativo ao fim da sessão, fecha no limite do período da sessão.
+    if (activeStart !== null) workedMs += Math.max(0, endedAt - activeStart)
+
+    workedMs = clamp(workedMs, 0, durationMs)
 
     const idlePct = durationMs > 0 ? clamp((idleMs / durationMs) * 100, 0, 100) : 0
+    const workedPct = durationMs > 0 ? clamp((workedMs / durationMs) * 100, 0, 100) : 0
 
     const dominantSource =
       (Array.from(sourceCounts.entries()).sort((a, b) => (b[1] ?? 0) - (a[1] ?? 0))[0]?.[0] as
@@ -343,6 +375,8 @@ function buildSessions(events: TelemetryEventRow[]): SessionAgg[] {
       started_at_ms: startedAt,
       ended_at_ms: endedAt,
       duration_ms: durationMs,
+      worked_ms: workedMs,
+      worked_pct: workedPct,
       idle_ms: idleMs,
       idle_pct: idlePct,
       locks,
@@ -368,8 +402,16 @@ export default function TelemetriaPage() {
   const [rangeKey, setRangeKey] = useState<RangeKey>("24h")
   const [recentEventsFrom, setRecentEventsFrom] = useState("")
   const [recentEventsTo, setRecentEventsTo] = useState("")
+  const [eventTypeFilter, setEventTypeFilter] = useState<string>("all")
+  const [eventSourceFilter, setEventSourceFilter] = useState<"all" | TelemetryEventRow["source"]>("all")
+  const [eventSearchTerm, setEventSearchTerm] = useState("")
+  const [eventSessionFilter, setEventSessionFilter] = useState("")
   const [recentEventsPage, setRecentEventsPage] = useState(1)
   const [recentEventsPageSize, setRecentEventsPageSize] = useState<(typeof RECENT_EVENTS_PAGE_SIZE_OPTIONS)[number]>(20)
+  const [sessionsPage, setSessionsPage] = useState(1)
+  const [sessionsPageSize, setSessionsPageSize] = useState<(typeof SESSIONS_PAGE_SIZE_OPTIONS)[number]>(10)
+  const [sessionsSourceFilter, setSessionsSourceFilter] = useState<"all" | TelemetryEventRow["source"]>("all")
+  const [sessionsSearchTerm, setSessionsSearchTerm] = useState("")
 
   const loadTelemetry = useCallback(async (isRefresh = false) => {
     const supabase = getSupabase()
@@ -509,6 +551,18 @@ export default function TelemetriaPage() {
     })
   }, [byUserFiltered, rangeKey])
 
+  const eventTypeOptions = useMemo(() => {
+    const unique = Array.from(new Set(rangeFilteredEvents.map((event) => event.event_type).filter(Boolean)))
+    return unique.sort((a, b) => formatEventLabel(a).localeCompare(formatEventLabel(b), "pt-BR"))
+  }, [rangeFilteredEvents])
+
+  useEffect(() => {
+    if (eventTypeFilter === "all") return
+    if (!eventTypeOptions.includes(eventTypeFilter)) {
+      setEventTypeFilter("all")
+    }
+  }, [eventTypeFilter, eventTypeOptions])
+
   const recentRange = useMemo(() => {
     const fromMs = recentEventsFrom ? safeMs(recentEventsFrom) : null
     const toInputMs = recentEventsTo ? safeMs(recentEventsTo) : null
@@ -520,14 +574,25 @@ export default function TelemetriaPage() {
 
   const recentEventsFiltered = useMemo(() => {
     if (recentRange.invalid) return []
+    const query = eventSearchTerm.trim().toLowerCase()
     return rangeFilteredEvents.filter((event) => {
       const eventMs = safeMs(event.occurred_at)
       if (eventMs === null) return false
       if (recentRange.fromMs !== null && eventMs < recentRange.fromMs) return false
       if (recentRange.toMs !== null && eventMs > recentRange.toMs) return false
+      if (eventTypeFilter !== "all" && event.event_type !== eventTypeFilter) return false
+      if (eventSourceFilter !== "all" && event.source !== eventSourceFilter) return false
+      if (eventSessionFilter && event.session_id !== eventSessionFilter) return false
+      if (query) {
+        const userName = event.usuario?.nome?.toLowerCase() ?? ""
+        const userEmail = event.usuario?.email?.toLowerCase() ?? ""
+        const payload = event.event_data ? JSON.stringify(event.event_data).toLowerCase() : ""
+        const haystack = `${event.event_type.toLowerCase()} ${event.source.toLowerCase()} ${event.session_id.toLowerCase()} ${event.user_id.toLowerCase()} ${userName} ${userEmail} ${payload}`
+        if (!haystack.includes(query)) return false
+      }
       return true
     })
-  }, [rangeFilteredEvents, recentRange])
+  }, [eventSearchTerm, eventSessionFilter, eventSourceFilter, eventTypeFilter, rangeFilteredEvents, recentRange])
 
   const recentEventsTotalPages = useMemo(
     () => Math.max(1, Math.ceil(recentEventsFiltered.length / recentEventsPageSize)),
@@ -536,7 +601,20 @@ export default function TelemetriaPage() {
 
   useEffect(() => {
     setRecentEventsPage(1)
-  }, [rangeKey, selectedUserId, recentEventsFrom, recentEventsTo])
+  }, [
+    eventSearchTerm,
+    eventSessionFilter,
+    eventSourceFilter,
+    eventTypeFilter,
+    rangeKey,
+    selectedUserId,
+    recentEventsFrom,
+    recentEventsTo,
+  ])
+
+  useEffect(() => {
+    setEventSessionFilter("")
+  }, [rangeKey, selectedUserId])
 
   useEffect(() => {
     setRecentEventsPage((current) => Math.min(current, recentEventsTotalPages))
@@ -558,6 +636,43 @@ export default function TelemetriaPage() {
 
   const sessions = useMemo(() => buildSessions(rangeFilteredEvents), [rangeFilteredEvents])
 
+  const sessionsFiltered = useMemo(() => {
+    const query = sessionsSearchTerm.trim().toLowerCase()
+    return sessions.filter((session) => {
+      if (sessionsSourceFilter !== "all" && session.source !== sessionsSourceFilter) return false
+      if (!query) return true
+      const haystack = `${session.user_label} ${session.email ?? ""} ${session.session_id}`.toLowerCase()
+      return haystack.includes(query)
+    })
+  }, [sessions, sessionsSearchTerm, sessionsSourceFilter])
+
+  const sessionsTotalPages = useMemo(
+    () => Math.max(1, Math.ceil(sessionsFiltered.length / sessionsPageSize)),
+    [sessionsFiltered.length, sessionsPageSize]
+  )
+
+  useEffect(() => {
+    setSessionsPage(1)
+  }, [rangeKey, selectedUserId, sessionsSearchTerm, sessionsSourceFilter, sessionsPageSize])
+
+  useEffect(() => {
+    setSessionsPage((current) => Math.min(current, sessionsTotalPages))
+  }, [sessionsTotalPages])
+
+  const sessionsPageStart = (sessionsPage - 1) * sessionsPageSize
+
+  const sessionsPageRows = useMemo(
+    () => sessionsFiltered.slice(sessionsPageStart, sessionsPageStart + sessionsPageSize),
+    [sessionsFiltered, sessionsPageSize, sessionsPageStart]
+  )
+
+  const sessionsRangeLabel = useMemo(() => {
+    if (sessionsFiltered.length === 0) return "0 de 0"
+    const from = sessionsPageStart + 1
+    const to = Math.min(sessionsPageStart + sessionsPageSize, sessionsFiltered.length)
+    return `${from}-${to} de ${sessionsFiltered.length}`
+  }, [sessionsFiltered.length, sessionsPageSize, sessionsPageStart])
+
   const summary = useMemo(() => {
     const uniqueUsers = new Set(rangeFilteredEvents.map((e) => e.user_id).filter(Boolean))
     const uniqueSessions = new Set(rangeFilteredEvents.map((e) => e.session_id).filter(Boolean))
@@ -567,9 +682,12 @@ export default function TelemetriaPage() {
     const focusLost = rangeFilteredEvents.filter((e) => e.event_type === "window_blurred").length
 
     const totalDuration = sessions.reduce((acc, s) => acc + s.duration_ms, 0)
+    const totalWorked = sessions.reduce((acc, s) => acc + s.worked_ms, 0)
     const totalIdle = sessions.reduce((acc, s) => acc + s.idle_ms, 0)
 
     const avgSession = sessions.length > 0 ? totalDuration / sessions.length : 0
+    const avgWorkedSession = sessions.length > 0 ? totalWorked / sessions.length : 0
+    const workRateGlobal = totalDuration > 0 ? clamp((totalWorked / totalDuration) * 100, 0, 100) : 0
     const idlePctGlobal = totalDuration > 0 ? clamp((totalIdle / totalDuration) * 100, 0, 100) : 0
 
     const lockRate = sessions.length > 0 ? (sessions.filter((s) => s.locks > 0).length / sessions.length) * 100 : 0
@@ -579,11 +697,11 @@ export default function TelemetriaPage() {
     const series = buildTimeSeries(rangeFilteredEvents, rangeKey)
     const peak = series.slice().sort((a, b) => (b.total ?? 0) - (a.total ?? 0))[0] ?? null
 
-    // sessões atualmente “travadas” (melhor esforço com dados carregados):
+    // sessões atualmente ?travadas? (melhor esforço com dados carregados):
     // considera travada se último evento da sessão no período for session_locked
     const currentlyLocked = sessions.filter((s) => s.last_event_type === "session_locked").length
 
-    // score “saúde” (0..100) simples
+    // score ?saúde? (0..100) simples
     const penalty = locks * 4 + reauth * 6 + focusLost * 1 + idlePctGlobal * 0.25
     const health = clamp(Math.round(100 - penalty / 10), 0, 100)
 
@@ -595,6 +713,9 @@ export default function TelemetriaPage() {
       reauth,
       focusLost,
       avgSession,
+      totalWorked,
+      avgWorkedSession,
+      workRateGlobal,
       idlePctGlobal,
       lockRate,
       reauthRate,
@@ -628,101 +749,256 @@ export default function TelemetriaPage() {
     return { topRisk }
   }, [sessions])
 
+  const dominantSource = useMemo(() => {
+    if (!sourcePie.length) return "-"
+    const sorted = sourcePie.slice().sort((a, b) => b.value - a.value)
+    return sorted[0]?.label ?? "-"
+  }, [sourcePie])
+
+  const healthIndicator = useMemo(() => {
+    if (summary.health >= 80) return { label: "Estavel", tone: "text-emerald-500" }
+    if (summary.health >= 50) return { label: "Atencao", tone: "text-amber-500" }
+    return { label: "Critico", tone: "text-destructive" }
+  }, [summary.health])
+
+  const productivityIndicator = useMemo(() => {
+    if (summary.workRateGlobal >= 80) return { label: "Alta", tone: "positive" as const }
+    if (summary.workRateGlobal >= 60) return { label: "Moderada", tone: "warning" as const }
+    return { label: "Baixa", tone: "danger" as const }
+  }, [summary.workRateGlobal])
+
   const pieColors = [
     "hsl(var(--primary))",
     "hsl(var(--secondary-foreground))",
     "hsl(var(--muted-foreground))",
   ]
 
+  const exportRecentEventsCsv = useCallback(() => {
+    if (recentEventsFiltered.length === 0) return
+
+    const escapeCsv = (value: string) => `"${value.replace(/"/g, '""')}"`
+    const rows = recentEventsFiltered.map((event) => {
+      const userLabel = event.usuario?.nome || event.usuario?.email || event.user_id
+      return [
+        event.occurred_at,
+        userLabel,
+        event.usuario?.email ?? "",
+        formatEventLabel(event.event_type),
+        SOURCE_LABELS[event.source],
+        event.session_id,
+        event.user_id,
+        compactPayload(event.event_data),
+      ]
+        .map((cell) => escapeCsv(String(cell ?? "")))
+        .join(",")
+    })
+
+    const header = [
+      "ocorrido_em",
+      "usuario",
+      "email",
+      "evento",
+      "origem",
+      "session_id",
+      "user_id",
+      "payload_compacto",
+    ]
+      .map((cell) => escapeCsv(cell))
+      .join(",")
+
+    const csvContent = [header, ...rows].join("\n")
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement("a")
+    link.href = url
+    link.download = `telemetria-eventos-${new Date().toISOString().replace(/[:.]/g, "-")}.csv`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }, [recentEventsFiltered])
+
   return (
     <RoleGuard allowedRoles={["admin"]}>
       <div className="space-y-6">
-        <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-          <div>
-            <h1 className="text-3xl font-bold tracking-tight">Telemetria de uso</h1>
-            <p className="text-muted-foreground">
-              Monitoramento visual de atividade, inatividade, foco, minimização e bloqueio de sessão.
-            </p>
-            <p className="mt-1 text-xs text-muted-foreground">
-              Observação: carregamento paginado em lotes de <span className="font-medium">{TELEMETRY_PAGE_SIZE}</span>,
-              até <span className="font-medium">{TELEMETRY_MAX_ROWS} eventos</span> por consulta
-              {loadCapped ? " (limite atual atingido)." : "."}
-            </p>
+        <motion.section
+          initial={SECTION_VARIANTS.initial}
+          animate={SECTION_VARIANTS.animate}
+          transition={{ duration: 0.28, ease: "easeOut" }}
+          className={`relative overflow-hidden rounded-2xl ${GLASS_PANEL_CLASS}`}
+        >
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.24),transparent_52%),radial-gradient(circle_at_bottom_left,hsl(var(--chart-4)/0.16),transparent_52%)]" />
+          <div className="relative space-y-6 p-6 lg:p-7">
+            <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
+              <div className="space-y-3">
+                <Badge
+                  variant="outline"
+                  className="w-fit border-primary/35 bg-primary/10 px-2.5 py-1 text-[11px] font-medium uppercase tracking-[0.12em] text-primary"
+                >
+                  <Sparkles className="mr-1.5 h-3.5 w-3.5" />
+                  Painel de telemetria
+                </Badge>
+                <div>
+                  <h1 className="text-3xl font-semibold tracking-tight">Telemetria de uso</h1>
+                  <p className="mt-1 max-w-3xl text-sm text-muted-foreground">
+                    Monitoramento em tempo quase real de atividade, inatividade, foco e bloqueio de sessao.
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <span>
+                    Lote: <span className="font-medium text-foreground">{TELEMETRY_PAGE_SIZE}</span>
+                  </span>
+                  <span>
+                    Maximo por consulta: <span className="font-medium text-foreground">{TELEMETRY_MAX_ROWS}</span>
+                  </span>
+                  <span>
+                    Estado:{" "}
+                    <span className={loadCapped ? "font-medium text-amber-500" : "font-medium text-foreground"}>
+                      {loadCapped ? "limite atingido" : "carregamento completo"}
+                    </span>
+                  </span>
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-3 xl:w-[560px]">
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <div className="mb-1 text-xs text-muted-foreground">Saude da operacao</div>
+                  <div className="mb-2 flex items-center justify-between">
+                    <span className="text-xl font-semibold tabular-nums">{summary.health}</span>
+                    <span className={`text-xs font-medium ${healthIndicator.tone}`}>{healthIndicator.label}</span>
+                  </div>
+                  <Progress value={summary.health} className="h-1.5 bg-muted/70" />
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <div className="text-xs text-muted-foreground">Tempo trabalhado (periodo)</div>
+                  <div className="mt-2 text-base font-semibold tabular-nums">{formatDuration(summary.totalWorked)}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    Para em desconexao ou inatividade
+                  </div>
+                </div>
+                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
+                  <div className="text-xs text-muted-foreground">Origem dominante</div>
+                  <div className="mt-2 text-base font-semibold">{dominantSource}</div>
+                  <div className="mt-1 text-xs text-muted-foreground">
+                    {sourcePie.reduce((acc, item) => acc + item.value, 0)} eventos
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
+              <div className="w-full sm:w-[220px]">
+                <Select value={rangeKey} onValueChange={(v) => setRangeKey(v as RangeKey)}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Periodo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="24h">{RANGE_LABELS["24h"]}</SelectItem>
+                    <SelectItem value="7d">{RANGE_LABELS["7d"]}</SelectItem>
+                    <SelectItem value="30d">{RANGE_LABELS["30d"]}</SelectItem>
+                    <SelectItem value="all">{RANGE_LABELS["all"]}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <Button variant="outline" onClick={() => void loadTelemetry(true)} disabled={loading || refreshing}>
+                <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+                Atualizar
+              </Button>
+            </div>
           </div>
+        </motion.section>
 
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <div className="w-full sm:w-[220px]">
-              <Select value={rangeKey} onValueChange={(v) => setRangeKey(v as RangeKey)}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Período" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="24h">{RANGE_LABELS["24h"]}</SelectItem>
-                  <SelectItem value="7d">{RANGE_LABELS["7d"]}</SelectItem>
-                  <SelectItem value="30d">{RANGE_LABELS["30d"]}</SelectItem>
-                  <SelectItem value="all">{RANGE_LABELS["all"]}</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
+        <motion.div
+          initial={SECTION_VARIANTS.initial}
+          animate={SECTION_VARIANTS.animate}
+          transition={{ duration: 0.28, ease: "easeOut", delay: 0.04 }}
+        >
+          <Card className={GLASS_PANEL_CLASS}>
+            <CardHeader>
+              <CardTitle>Visao separada por usuario</CardTitle>
+              <CardDescription>Selecione um usuario para ver a telemetria dele + analises por sessao.</CardDescription>
+            </CardHeader>
+            <CardContent className="grid gap-4 md:grid-cols-[320px_1fr] md:items-end">
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Usuário</p>
+                <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione um usuario" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os usuários</SelectItem>
+                    {userOptions.map((option) => (
+                      <SelectItem key={option.userId} value={option.userId}>
+                        {option.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <Button variant="outline" onClick={() => void loadTelemetry(true)} disabled={loading || refreshing}>
-              <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-              Atualizar
-            </Button>
-          </div>
-        </div>
+              <div className="rounded-lg border border-border/60 bg-muted/25 p-3 text-sm">
+                {selectedUser ? (
+                  <p>
+                    Exibindo <span className="font-semibold">{RANGE_LABELS[rangeKey]}</span> de{" "}
+                    <span className="font-semibold">{selectedUser.label}</span>
+                    {selectedUser.email ? ` (${selectedUser.email})` : ""}.
+                  </p>
+                ) : (
+                  <p>
+                    Exibindo <span className="font-semibold">{RANGE_LABELS[rangeKey]}</span> de todos os usuários ({userOptions.length} com eventos no carregamento).
+                  </p>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
 
-        <Card className="border-border/60">
-          <CardHeader>
-            <CardTitle>Visão separada por usuário</CardTitle>
-            <CardDescription>Selecione um usuário para ver a telemetria dele + análises por sessão.</CardDescription>
-          </CardHeader>
-          <CardContent className="grid gap-4 md:grid-cols-[320px_1fr] md:items-end">
-            <div className="space-y-2">
-              <p className="text-sm font-medium">Usuário</p>
-              <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Selecione um usuário" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os usuários</SelectItem>
-                  {userOptions.map((option) => (
-                    <SelectItem key={option.userId} value={option.userId}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
-              {selectedUser ? (
-                <p>
-                  Exibindo <span className="font-semibold">{RANGE_LABELS[rangeKey]}</span> de{" "}
-                  <span className="font-semibold">{selectedUser.label}</span>
-                  {selectedUser.email ? ` (${selectedUser.email})` : ""}.
-                </p>
-              ) : (
-                <p>
-                  Exibindo <span className="font-semibold">{RANGE_LABELS[rangeKey]}</span> de todos os usuários (
-                  {userOptions.length} com eventos no carregamento).
-                </p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-6">
-          <SummaryCard title="Eventos" value={summary.events} icon={Activity} />
-          <SummaryCard title={selectedUserId === "all" ? "Usuários ativos" : "Sessões"} value={selectedUserId === "all" ? summary.users : summary.sessions} icon={Users} />
-          <SummaryCard title="Bloqueios" value={summary.locks} icon={Lock} />
-          <SummaryCard title="Falhas de senha" value={summary.reauth} icon={ShieldAlert} />
-          <SummaryCard title="Sessões travadas (agora)" value={summary.currentlyLocked} icon={Lock} />
-          <SummaryCard title="Saúde (0–100)" value={summary.health} icon={AlertTriangle} />
-        </div>
-
+        <motion.div
+          initial={SECTION_VARIANTS.initial}
+          animate={SECTION_VARIANTS.animate}
+          transition={{ duration: 0.28, ease: "easeOut", delay: 0.08 }}
+          className="grid gap-4 md:grid-cols-2 xl:grid-cols-6"
+        >
+          <SummaryCard title="Eventos" value={summary.events} icon={Activity} helper={RANGE_LABELS[rangeKey]} />
+          <SummaryCard
+            title={selectedUserId === "all" ? "Usuarios ativos" : "Sessoes"}
+            value={selectedUserId === "all" ? summary.users : summary.sessions}
+            icon={Users}
+            helper={selectedUserId === "all" ? "Com atividade no periodo" : "Sessoes no recorte atual"}
+          />
+          <SummaryCard
+            title="Produtividade"
+            value={Math.round(summary.workRateGlobal)}
+            icon={Clock}
+            helper={`${productivityIndicator.label} - tempo trabalhado`}
+            suffix="%"
+            tone={productivityIndicator.tone}
+          />
+          <SummaryCard
+            title="Bloqueios"
+            value={summary.locks}
+            icon={Lock}
+            helper="session_locked"
+            tone={summary.locks > 0 ? "warning" : "neutral"}
+          />
+          <SummaryCard
+            title="Falhas de senha"
+            value={summary.reauth}
+            icon={ShieldAlert}
+            helper="reauth_failed"
+            tone={summary.reauth > 0 ? "danger" : "neutral"}
+          />
+          <SummaryCard
+            title="Saude (0-100)"
+            value={summary.health}
+            icon={Gauge}
+            helper={healthIndicator.label}
+            tone={summary.health < 50 ? "danger" : summary.health < 80 ? "warning" : "positive"}
+          />
+        </motion.div>
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <Card className={`${GLASS_PANEL_CLASS} lg:col-span-2`}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <BarChart3 className="h-5 w-5" />
@@ -732,36 +1008,38 @@ export default function TelemetriaPage() {
                 Total de eventos por {rangeKey === "24h" ? "hora" : "período"} + linhas de locks e falhas de senha.
               </CardDescription>
             </CardHeader>
-            <CardContent className="h-[320px]">
+            <CardContent style={{ minHeight: 320 }}>
               {loading ? (
                 <div className="h-full animate-pulse rounded-md bg-muted/40" />
               ) : timeSeries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sem dados suficientes no período.</p>
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <ComposedChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-                    <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
-                    <YAxis tick={{ fontSize: 12 }} />
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                      }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
-                    <Legend />
-                    <Bar dataKey="total" name="Eventos" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                    <Line dataKey="locks" name="Bloqueios" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
-                    <Line dataKey="reauth" name="Falhas senha" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <div className="w-full" style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <ComposedChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                      <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
+                      <YAxis tick={{ fontSize: 12 }} />
+                      <Tooltip
+                        contentStyle={{
+                          background: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                        }}
+                        labelStyle={{ color: "hsl(var(--foreground))" }}
+                      />
+                      <Legend />
+                      <Bar dataKey="total" name="Eventos" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                      <Line dataKey="locks" name="Bloqueios" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
+                      <Line dataKey="reauth" name="Falhas senha" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={GLASS_PANEL_CLASS}>
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <PieIcon className="h-5 w-5" />
@@ -769,36 +1047,38 @@ export default function TelemetriaPage() {
               </CardTitle>
               <CardDescription>Distribuição por Web / Tauri / Híbrido.</CardDescription>
             </CardHeader>
-            <CardContent className="h-[320px]">
+            <CardContent style={{ minHeight: 320 }}>
               {loading ? (
                 <div className="h-full animate-pulse rounded-md bg-muted/40" />
               ) : (
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Tooltip
-                      contentStyle={{
-                        background: "hsl(var(--popover))",
-                        border: "1px solid hsl(var(--border))",
-                        borderRadius: 8,
-                      }}
-                      itemStyle={{ color: "hsl(var(--foreground))" }}
-                      labelStyle={{ color: "hsl(var(--foreground))" }}
-                    />
-                    <Legend />
-                    <Pie data={sourcePie} dataKey="value" nameKey="label" innerRadius={55} outerRadius={90} paddingAngle={2}>
-                      {sourcePie.map((_, idx) => (
-                        <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
-                      ))}
-                    </Pie>
-                  </PieChart>
-                </ResponsiveContainer>
+                <div className="w-full" style={{ height: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Tooltip
+                        contentStyle={{
+                          background: "hsl(var(--popover))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: 8,
+                        }}
+                        itemStyle={{ color: "hsl(var(--foreground))" }}
+                        labelStyle={{ color: "hsl(var(--foreground))" }}
+                      />
+                      <Legend />
+                      <Pie data={sourcePie} dataKey="value" nameKey="label" innerRadius={55} outerRadius={90} paddingAngle={2}>
+                        {sourcePie.map((_, idx) => (
+                          <Cell key={idx} fill={pieColors[idx % pieColors.length]} />
+                        ))}
+                      </Pie>
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
               )}
             </CardContent>
           </Card>
         </div>
 
         <div className="grid gap-4 lg:grid-cols-3">
-          <Card className="lg:col-span-2">
+          <Card className={`${GLASS_PANEL_CLASS} lg:col-span-2`}>
             <CardHeader>
               <CardTitle>Top tipos de evento</CardTitle>
               <CardDescription>Os 10 tipos mais frequentes no período selecionado.</CardDescription>
@@ -828,12 +1108,41 @@ export default function TelemetriaPage() {
             </CardContent>
           </Card>
 
-          <Card>
+          <Card className={GLASS_PANEL_CLASS}>
             <CardHeader>
               <CardTitle>Análises do período</CardTitle>
               <CardDescription>Indicadores calculados por sessão (melhor esforço).</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3 text-sm">
+              <motion.div
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.25, ease: "easeOut" }}
+                className="rounded-lg border border-emerald-500/25 bg-emerald-500/5 p-3"
+              >
+                <div className="flex items-center justify-between">
+                  <span className="text-muted-foreground">Tempo trabalhado (total)</span>
+                  <span className="font-semibold tabular-nums text-emerald-600 dark:text-emerald-400">
+                    {formatDuration(summary.totalWorked)}
+                  </span>
+                </div>
+                <div className="mt-1 flex items-center justify-between">
+                  <span className="text-xs text-muted-foreground">Media trabalhada por sessao</span>
+                  <span className="text-xs font-medium tabular-nums">{formatDuration(summary.avgWorkedSession)}</span>
+                </div>
+                <div className="mt-2 h-2 overflow-hidden rounded-full bg-muted/60">
+                  <motion.div
+                    initial={{ width: 0 }}
+                    animate={{ width: `${summary.workRateGlobal}%` }}
+                    transition={{ duration: 0.55, ease: "easeOut" }}
+                    className="h-full rounded-full bg-emerald-500/90"
+                  />
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Produtividade: <span className="font-medium tabular-nums">{summary.workRateGlobal.toFixed(0)}%</span>
+                </div>
+              </motion.div>
+
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground">Sessão média</span>
                 <span className="font-semibold tabular-nums">{formatDuration(summary.avgSession)}</span>
@@ -868,51 +1177,109 @@ export default function TelemetriaPage() {
               <div className="rounded-lg border border-border/60 bg-muted/30 p-3">
                 <div className="flex items-center gap-2">
                   <Clock className="h-4 w-4 text-muted-foreground" />
-                  <div className="text-xs text-muted-foreground">Dica</div>
+                  <div className="text-xs text-muted-foreground">Regra de contagem</div>
                 </div>
                 <div className="mt-1 text-sm">
-                  Esta análise já usa paginação; para manter a precisão de duração, registre sempre{" "}
-                  <span className="font-medium">session_started/session_ended</span>.
+                  O tempo trabalhado conta enquanto a sessao esta ativa e para quando ocorre{" "}
+                  <span className="font-medium">inatividade (idle_started)</span> ou{" "}
+                  <span className="font-medium">desconexao (session_ended)</span>.
                 </div>
               </div>
             </CardContent>
           </Card>
         </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>Sessões recentes (com score)</CardTitle>
-            <CardDescription>
-              Duração, ociosidade, perda de foco, locks, falhas de senha e score de risco por sessão.
-            </CardDescription>
-          </CardHeader>
+        <Card className={GLASS_PANEL_CLASS}>
+            <CardHeader>
+              <CardTitle>Sessões recentes (com score)</CardTitle>
+              <CardDescription>
+                Duração total, tempo trabalhado, ociosidade, perda de foco, locks, falhas de senha e score de risco por sessão.
+              </CardDescription>
+            </CardHeader>
           <CardContent>
+            <div className="mb-4 grid gap-3 md:grid-cols-[1fr_200px_160px] md:items-end">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Buscar sessão</p>
+                <Input
+                  placeholder="Usuário, email ou ID da sessão..."
+                  value={sessionsSearchTerm}
+                  onChange={(e) => setSessionsSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Origem</p>
+                <Select
+                  value={sessionsSourceFilter}
+                  onValueChange={(value) =>
+                    setSessionsSourceFilter(value === "web" || value === "tauri" || value === "hybrid" ? value : "all")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Origem" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas</SelectItem>
+                    <SelectItem value="web">{SOURCE_LABELS.web}</SelectItem>
+                    <SelectItem value="tauri">{SOURCE_LABELS.tauri}</SelectItem>
+                    <SelectItem value="hybrid">{SOURCE_LABELS.hybrid}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Itens por página</p>
+                <Select
+                  value={String(sessionsPageSize)}
+                  onValueChange={(value) => {
+                    const parsed = Number(value)
+                    if (parsed === 10 || parsed === 20 || parsed === 50) {
+                      setSessionsPageSize(parsed)
+                      setSessionsPage(1)
+                    }
+                  }}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Itens por página" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SESSIONS_PAGE_SIZE_OPTIONS.map((size) => (
+                      <SelectItem key={size} value={String(size)}>
+                        {size}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
             {loading ? (
               <p className="text-sm text-muted-foreground">Carregando análises de sessão...</p>
-            ) : sessions.length === 0 ? (
+            ) : sessionsFiltered.length === 0 ? (
               <p className="text-sm text-muted-foreground">Sem sessões suficientes no período.</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full min-w-[1100px] text-sm">
+              <div className="space-y-3">
+                <div className="overflow-x-auto">
+                <table className="w-full min-w-[1200px] text-sm">
                   <thead>
-                    <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                    <tr className="sticky top-0 z-[1] border-b bg-background/95 text-left text-xs uppercase text-muted-foreground backdrop-blur">
                       <th className="px-2 py-3 font-medium">Fim</th>
                       <th className="px-2 py-3 font-medium">Usuário</th>
                       <th className="px-2 py-3 font-medium">Origem</th>
                       <th className="px-2 py-3 font-medium">Duração</th>
+                      <th className="px-2 py-3 font-medium">Trabalhado</th>
                       <th className="px-2 py-3 font-medium">Ocioso</th>
                       <th className="px-2 py-3 font-medium">Foco</th>
                       <th className="px-2 py-3 font-medium">Locks</th>
                       <th className="px-2 py-3 font-medium">Falhas</th>
                       <th className="px-2 py-3 font-medium">Risco</th>
                       <th className="px-2 py-3 font-medium">Sessão</th>
+                      <th className="px-2 py-3 font-medium">Ações</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sessions.slice(0, 12).map((s) => {
+                    {sessionsPageRows.map((s) => {
                       const risk = riskLabel(s.risk_score)
                       return (
-                        <tr key={s.session_id} className="border-b border-border/50 align-top">
+                        <tr key={s.session_id} className="border-b border-border/50 align-top transition-colors hover:bg-muted/20">
                           <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">
                             {new Date(s.ended_at_ms).toLocaleString("pt-BR")}
                           </td>
@@ -927,6 +1294,12 @@ export default function TelemetriaPage() {
                           </td>
                           <td className="px-2 py-3 font-medium tabular-nums">{formatDuration(s.duration_ms)}</td>
                           <td className="px-2 py-3">
+                            <div className="tabular-nums font-medium text-emerald-600 dark:text-emerald-400">
+                              {formatDuration(s.worked_ms)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">{s.worked_pct.toFixed(0)}%</div>
+                          </td>
+                          <td className="px-2 py-3">
                             <div className="tabular-nums font-medium">{s.idle_pct.toFixed(0)}%</div>
                             <div className="text-xs text-muted-foreground">{formatDuration(s.idle_ms)}</div>
                           </td>
@@ -935,17 +1308,55 @@ export default function TelemetriaPage() {
                           <td className="px-2 py-3 tabular-nums">{s.reauth_failed}</td>
                           <td className="px-2 py-3">
                             <Badge variant={risk.variant}>
-                              {risk.text} • {Math.round(s.risk_score)}
+                              {risk.text} - {Math.round(s.risk_score)}
                             </Badge>
                           </td>
                           <td className="px-2 py-3 font-mono text-xs text-muted-foreground">
-                            {s.session_id.length > 10 ? `${s.session_id.slice(0, 10)}…` : s.session_id}
+                            {s.session_id.length > 10 ? `${s.session_id.slice(0, 10)}...` : s.session_id}
+                          </td>
+                          <td className="px-2 py-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => {
+                                setEventSessionFilter(s.session_id)
+                                setRecentEventsPage(1)
+                              }}
+                              className="h-7 px-2 text-xs"
+                            >
+                              Ver eventos
+                            </Button>
                           </td>
                         </tr>
                       )
                     })}
                   </tbody>
                 </table>
+                </div>
+                <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-xs text-muted-foreground">Mostrando {sessionsRangeLabel}</p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSessionsPage((current) => Math.max(1, current - 1))}
+                    disabled={sessionsPage <= 1}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="text-xs text-muted-foreground">
+                    Pagina {sessionsPage} de {sessionsTotalPages}
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSessionsPage((current) => Math.min(sessionsTotalPages, current + 1))}
+                    disabled={sessionsPage >= sessionsTotalPages}
+                  >
+                    Proxima
+                  </Button>
+                </div>
+                </div>
               </div>
             )}
 
@@ -971,6 +1382,7 @@ export default function TelemetriaPage() {
                           <Badge variant="outline">Locks: {s.locks}</Badge>
                           <Badge variant="outline">Falhas: {s.reauth_failed}</Badge>
                           <Badge variant="outline">Foco: {s.focus_lost}</Badge>
+                          <Badge variant="outline">Trabalho: {s.worked_pct.toFixed(0)}%</Badge>
                           <Badge variant="outline">Ocioso: {s.idle_pct.toFixed(0)}%</Badge>
                         </div>
                       </div>
@@ -982,7 +1394,7 @@ export default function TelemetriaPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className={GLASS_PANEL_CLASS}>
           <CardHeader>
             <CardTitle>Eventos recentes</CardTitle>
             <CardDescription>
@@ -1045,8 +1457,76 @@ export default function TelemetriaPage() {
                 >
                   Limpar faixa
                 </Button>
+                <Button
+                  variant="outline"
+                  onClick={exportRecentEventsCsv}
+                  disabled={recentEventsFiltered.length === 0}
+                >
+                  Exportar CSV
+                </Button>
               </div>
             </div>
+
+            <div className="grid gap-3 md:grid-cols-[1fr_220px_220px] md:items-end">
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Busca rápida</p>
+                <Input
+                  placeholder="Usuário, sessão, payload..."
+                  value={eventSearchTerm}
+                  onChange={(e) => setEventSearchTerm(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Tipo de evento</p>
+                <Select value={eventTypeFilter} onValueChange={setEventTypeFilter}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todos os tipos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os tipos</SelectItem>
+                    {eventTypeOptions.map((eventType) => (
+                      <SelectItem key={eventType} value={eventType}>
+                        {formatEventLabel(eventType)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs font-medium text-muted-foreground">Origem</p>
+                <Select
+                  value={eventSourceFilter}
+                  onValueChange={(value) =>
+                    setEventSourceFilter(value === "web" || value === "tauri" || value === "hybrid" ? value : "all")
+                  }
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Todas as origens" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todas as origens</SelectItem>
+                    <SelectItem value="web">{SOURCE_LABELS.web}</SelectItem>
+                    <SelectItem value="tauri">{SOURCE_LABELS.tauri}</SelectItem>
+                    <SelectItem value="hybrid">{SOURCE_LABELS.hybrid}</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {eventSessionFilter ? (
+              <div className="flex flex-wrap items-center gap-2 rounded-md border border-primary/40 bg-primary/10 px-3 py-2 text-xs text-primary">
+                <span className="font-medium">Filtro de sessão ativo:</span>
+                <span className="font-mono">{eventSessionFilter}</span>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-7 px-2 text-xs border-primary/35 text-primary hover:bg-primary/10"
+                  onClick={() => setEventSessionFilter("")}
+                >
+                  Limpar sessão
+                </Button>
+              </div>
+            ) : null}
 
             {loading ? (
               <p className="text-sm text-muted-foreground">Carregando telemetria...</p>
@@ -1064,7 +1544,7 @@ export default function TelemetriaPage() {
               <div className="overflow-x-auto">
                 <table className="w-full min-w-[900px] text-sm">
                   <thead>
-                    <tr className="border-b text-left text-xs uppercase text-muted-foreground">
+                    <tr className="sticky top-0 z-[1] border-b bg-background/95 text-left text-xs uppercase text-muted-foreground backdrop-blur">
                       <th className="px-2 py-3 font-medium">Data/Hora</th>
                       <th className="px-2 py-3 font-medium">Usuário</th>
                       <th className="px-2 py-3 font-medium">Evento</th>
@@ -1074,7 +1554,7 @@ export default function TelemetriaPage() {
                   </thead>
                   <tbody>
                     {recentEventsPageRows.map((event) => (
-                      <tr key={event.id} className="border-b border-border/50 align-top">
+                      <tr key={event.id} className="border-b border-border/50 align-top transition-colors hover:bg-muted/20">
                         <td className="px-2 py-3 whitespace-nowrap text-muted-foreground">{formatDateTime(event.occurred_at)}</td>
                         <td className="px-2 py-3">
                           <div className="font-medium">{event.usuario?.nome || event.usuario?.email || event.user_id}</div>
@@ -1086,8 +1566,8 @@ export default function TelemetriaPage() {
                           <Badge variant={pickBadgeVariant(event.event_type)}>{formatEventLabel(event.event_type)}</Badge>
                         </td>
                         <td className="px-2 py-3">
-                          <Badge variant="outline" className="capitalize">
-                            {event.source}
+                          <Badge variant="outline">
+                            {SOURCE_LABELS[event.source]}
                           </Badge>
                         </td>
                         <td className="px-2 py-3 font-mono text-xs text-muted-foreground">{compactPayload(event.event_data)}</td>
@@ -1135,20 +1615,47 @@ function SummaryCard({
   title,
   value,
   icon: Icon,
+  helper,
+  suffix,
+  tone = "neutral",
 }: {
   title: string
   value: number
   icon: ComponentType<{ className?: string }>
+  helper?: string
+  suffix?: string
+  tone?: "neutral" | "positive" | "warning" | "danger"
 }) {
+  const toneClass =
+    tone === "positive"
+      ? "border-emerald-500/35"
+      : tone === "warning"
+        ? "border-amber-500/35"
+        : tone === "danger"
+          ? "border-destructive/35"
+          : "border-border/60"
+
   return (
-    <Card className="border-border/60">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-sm font-medium">{title}</CardTitle>
-        <Icon className="h-4 w-4 text-muted-foreground" />
-      </CardHeader>
-      <CardContent>
-        <div className="text-2xl font-semibold tabular-nums">{value}</div>
-      </CardContent>
-    </Card>
+    <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.18, ease: "easeOut" }}>
+      <Card className={`${GLASS_PANEL_CLASS} ${toneClass}`}>
+        <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
+          <div className="space-y-1">
+            <CardTitle className="text-sm font-medium">{title}</CardTitle>
+            {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
+          </div>
+          <div className="rounded-md border border-border/60 bg-background/60 p-1.5">
+            <Icon className="h-4 w-4 text-muted-foreground" />
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="text-2xl font-semibold tabular-nums">
+            {value}
+            {suffix ? <span className="ml-1 text-base text-muted-foreground">{suffix}</span> : null}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
   )
 }
+
+

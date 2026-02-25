@@ -4,7 +4,7 @@
 import { useCallback, useEffect, useRef, useState, type ReactNode } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
-import { Chip, ScrollShadow } from "@heroui/react"
+import { Chip, ScrollShadow } from "@/lib/heroui/compat"
 import { Button } from "@/components/ui/button"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { Input } from "@/components/ui/input"
@@ -41,7 +41,7 @@ import {
   Percent,
   Trash2,
   type LucideIcon,
-} from "lucide-react"
+} from "@/components/icons"
 import { createClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { maskProcesso } from "@/lib/masks"
@@ -53,6 +53,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { ChecklistDocumentos } from "@/components/kanban/checklist-documentos"
 import { ChecklistCertidoes } from "@/components/kanban/checklist-certidoes"
 import { AbaFechamento } from "@/components/kanban/aba-fechamento"
+import { AbaEscrituras } from "@/components/kanban/aba-escrituras"
 import { TimelineViewer } from "@/components/precatorios/timeline-viewer"
 import { FormSolicitarJuridico } from "@/components/kanban/form-solicitar-juridico"
 import { FormParecerJuridico } from "@/components/kanban/form-parecer-juridico"
@@ -64,6 +65,7 @@ import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-
 
 import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
+import { LegalOpinionPanel } from "@/features/legal-opinion/components/legal-opinion-panel"
 import { buscarCEP, formatarCEP } from "@/lib/utils/cep"
 import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { KANBAN_COLUMNS } from "../../kanban/columns"
@@ -176,8 +178,8 @@ function requireSupabase(): SupabaseClientType {
 }
 
 /**
- * âœ… Versão compatível com `output: "export"`:
- * - Remove rota dinâmica `/precatorios/[id]`
+ * -œ… Versão compatível com `output: "export"`:
+ * - Remove rota din-mica `/precatorios/[id]`
  * - Usa querystring: `/precatorios/detalhes?id=<UUID>`
  */
 export default function PrecatorioDetailPage() {
@@ -228,7 +230,7 @@ export default function PrecatorioDetailPage() {
   }
 
   const getEsferaDevedorLabel = (value?: string | null) => {
-    if (!value) return "â€”"
+    if (!value) return "-"
     const normalized = normalizeEsferaDevedor(value)
     const option = ESFERA_DEVEDOR_OPTIONS.find((opt) => opt.value === normalized)
     return option?.label || value
@@ -260,13 +262,21 @@ export default function PrecatorioDetailPage() {
   const [adminInterestModalOpen, setAdminInterestModalOpen] = useState(false)
   const [advancingStage, setAdvancingStage] = useState(false)
 
- 
+
 
   const roles = userRole
   const isAdmin = roles.includes("admin")
   const isOperadorCalculo = roles.includes("operador_calculo")
   const canEdit = roles.some((role) =>
-    ["admin", "operador_comercial", "operador_calculo", "gestor", "gestor_oficio", "gestor_certidoes"].includes(role)
+    [
+      "admin",
+      "operador_comercial",
+      "operador_calculo",
+      "gestor",
+      "gestor_oficio",
+      "gestor_certidoes",
+      "gestor_escrituras",
+    ].includes(role)
   )
   const canEditValorPrincipal = roles.some((role) =>
     ["admin", "operador_comercial", "operador", "gestor"].includes(role)
@@ -283,6 +293,7 @@ export default function PrecatorioDetailPage() {
       "gestor",
       "gestor_oficio",
       "gestor_certidoes",
+      "gestor_escrituras",
     ].includes(role)
   )
   const canEditFechamento = roles.some((role) => ["juridico", "admin"].includes(role))
@@ -299,7 +310,7 @@ export default function PrecatorioDetailPage() {
     (col) => col.id === statusAtual || col.statusIds?.includes(statusAtual)
   )
   const statusAtualLabel =
-    statusAtualColumn?.titulo || (statusAtual ? statusAtual.replace(/_/g, " ") : "â€”")
+    statusAtualColumn?.titulo || (statusAtual ? statusAtual.replace(/_/g, " ") : "-")
 
   const hasCalculoSalvo = (() => {
     if (!precatorio) return false
@@ -325,6 +336,7 @@ export default function PrecatorioDetailPage() {
     juridico: "juridico",
     proposta_negociacao: "propostas",
     certidoes: "certidoes",
+    escrituras: "escrituras",
     fechado: "timeline",
     encerrados: "timeline",
     reprovado: "timeline",
@@ -436,6 +448,7 @@ export default function PrecatorioDetailPage() {
       "oficio",
       "documentos",
       "certidoes",
+      "escrituras",
       "juridico",
       "fechamento",
       "calculo",
@@ -554,9 +567,9 @@ export default function PrecatorioDetailPage() {
         })
 
         if (rpcError) {
-          console.error("âŒ [Acesso Controlado] Erro na RPC:", rpcError)
+          console.error("-Œ [Acesso Controlado] Erro na RPC:", rpcError)
         } else if (rpcData && rpcData.length > 0) {
-          console.log("âœ… [Acesso Controlado] Dados recuperados via RPC")
+          console.log("-œ… [Acesso Controlado] Dados recuperados via RPC")
           forcedData = rpcData[0]
           // [CONTROLLED ACCESS] Fetch responsible name manually since RPC returns raw table
           if (forcedData.responsavel) {
@@ -583,9 +596,14 @@ export default function PrecatorioDetailPage() {
       }
 
       setPrecatorio(finalData)
+      const previsaoPagamentoRaw = finalData?.previsao_pagamento
+        ? String(finalData.previsao_pagamento).slice(0, 4)
+        : ""
+      const previsaoPagamentoAno = /^\d{4}$/.test(previsaoPagamentoRaw) ? previsaoPagamentoRaw : ""
       setEditData({
         ...finalData,
         esfera_devedor: normalizeEsferaDevedor(finalData?.esfera_devedor) || "",
+        previsao_pagamento: previsaoPagamentoAno,
       })
 
       setHerdeirosLoading(true)
@@ -696,6 +714,7 @@ export default function PrecatorioDetailPage() {
       { id: String(precatorio?.dono_usuario_id || ""), roleLabel: "Dono do credito" },
       { id: String(precatorio?.responsavel_oficio_id || ""), roleLabel: "Responsavel de oficio" },
       { id: String(precatorio?.responsavel_certidoes_id || ""), roleLabel: "Responsavel de certidoes" },
+      { id: String(precatorio?.responsavel_escrituras_id || ""), roleLabel: "Responsavel de escrituras" },
       { id: String(precatorio?.responsavel_juridico_id || ""), roleLabel: "Responsavel juridico" },
     ].filter((item) => item.id.length > 0)
 
@@ -759,6 +778,7 @@ export default function PrecatorioDetailPage() {
     precatorio?.responsavel,
     precatorio?.responsavel_calculo_id,
     precatorio?.responsavel_certidoes_id,
+    precatorio?.responsavel_escrituras_id,
     precatorio?.responsavel_juridico_id,
     precatorio?.responsavel_oficio_id,
   ])
@@ -875,10 +895,10 @@ export default function PrecatorioDetailPage() {
         destinoReprovacaoSelecionado
           ? "reprovado"
           : triagemStatusSelection === "TEM_INTERESSE"
-          ? "docs_credor"
-          : triagemStatusSelection === "SEM_INTERESSE"
-          ? "sem_interesse"
-          : "triagem_interesse"
+            ? "docs_credor"
+            : triagemStatusSelection === "SEM_INTERESSE"
+              ? "sem_interesse"
+              : "triagem_interesse"
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updatePayload: any = {
         interesse_status: triagemStatusSelection,
@@ -973,6 +993,14 @@ export default function PrecatorioDetailPage() {
         const parsed = Number(value)
         return Number.isFinite(parsed) ? parsed : null
       }
+      const normalizeYearToDate = (value: any) => {
+        const raw = String(value ?? "").trim()
+        if (!raw) return null
+        if (!/^\d{4}$/.test(raw)) return null
+        const year = Number(raw)
+        if (!Number.isInteger(year) || year < 1900 || year > 2999) return null
+        return `${year}-01-01`
+      }
 
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updateData: any = {
@@ -992,6 +1020,9 @@ export default function PrecatorioDetailPage() {
         credor_email: editData.credor_email, // Added
         data_base: editData.data_base,
         data_expedicao: editData.data_expedicao,
+        loa: editData.loa || null,
+        ano_orcamentario: toNumberOrNull(editData.ano_orcamentario),
+        previsao_pagamento: normalizeYearToDate(editData.previsao_pagamento),
         advogado_nome: editData.advogado_nome,
         advogado_cpf_cnpj: editData.advogado_cpf_cnpj,
         advogado_oab: editData.advogado_oab,
@@ -1156,14 +1187,28 @@ export default function PrecatorioDetailPage() {
   }
 
   // --- Logic to Advance Stage ---
-  const currentColumnIndex = KANBAN_COLUMNS.findIndex(col =>
-    col.id === precatorio?.status_kanban || col.statusIds?.includes(precatorio?.status_kanban)
+  const currentStatusKanban = String(precatorio?.status_kanban || precatorio?.localizacao_kanban || "")
+  const juridicoFoiAcionado = Boolean(
+    String(precatorio?.juridico_motivo || "").trim() ||
+    String(precatorio?.juridico_descricao_bloqueio || "").trim() ||
+    String(precatorio?.juridico_parecer_status || "").trim() ||
+    String(precatorio?.juridico_parecer_texto || "").trim() ||
+    currentStatusKanban === "juridico"
+  )
+
+  const currentColumnIndex = KANBAN_COLUMNS.findIndex(
+    (col) => col.id === currentStatusKanban || col.statusIds?.includes(currentStatusKanban)
   )
 
   const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex]?.id || null : null
-  const nextColumn = currentColumnIndex >= 0 && currentColumnIndex < KANBAN_COLUMNS.length - 1
-    ? KANBAN_COLUMNS[currentColumnIndex + 1]
-    : null
+  const nextColumn =
+    currentColumnId === "analise_processual_inicial" && !juridicoFoiAcionado
+      ? (KANBAN_COLUMNS.find((col) => col.id === "pronto_calculo") ?? null)
+      : currentColumnIndex >= 0 && currentColumnIndex < KANBAN_COLUMNS.length - 1
+        ? KANBAN_COLUMNS[currentColumnIndex + 1]
+        : null
+  const nextColumnIndex = nextColumn ? KANBAN_COLUMNS.findIndex((col) => col.id === nextColumn.id) : -1
+  const shouldSkipOptionalJuridico = !juridicoFoiAcionado && currentColumnId !== "juridico"
 
   const canAdvanceToNextColumn =
     canEdit &&
@@ -1205,6 +1250,9 @@ export default function PrecatorioDetailPage() {
 
       if (nextColumnId === "certidoes" && !precatorio?.status_certidoes) {
         updatePayload.status_certidoes = "nao_iniciado"
+      }
+      if (nextColumnId === "escrituras" && !precatorio?.status_escrituras) {
+        updatePayload.status_escrituras = "nao_iniciado"
       }
 
       const { error } = await supabase
@@ -1282,15 +1330,58 @@ export default function PrecatorioDetailPage() {
     }
   }
 
+  const maskCurrency = (value: number | null | undefined) => {
+    if (!hasValue(value)) return ""
+    return value!.toLocaleString("pt-BR", {
+      style: "currency",
+      currency: "BRL",
+    })
+  }
+
+  const parseCurrencyParams = (value: string) => {
+    const numericClean = value.replace(/[^\d]/g, "")
+    if (!numericClean) return 0
+    return parseFloat(numericClean) / 100
+  }
+
+  const renderAnaliseNumberField = (label: string, field: string, value: number | null | undefined) => {
+    const isCurrency = label.toLowerCase().includes("valor")
+    const displayValue = isCurrency
+      ? maskCurrency(value)
+      : (value != null && !isNaN(value) ? value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : "")
+
+    const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+      let numericVal = parseCurrencyParams(e.target.value)
+
+      if (!isCurrency && numericVal > 100) {
+        numericVal = 100
+      }
+
+      setEditData((prev: any) => ({ ...prev, [field]: numericVal }))
+    }
+
+    return (
+      <div className="space-y-2">
+        <Label>{label}</Label>
+        <Input
+          value={displayValue}
+          onChange={handleChange}
+          placeholder={isCurrency ? "R$ 0,00" : "0,00"}
+          className="h-10 px-3 w-full bg-transparent text-left font-mono"
+        />
+      </div>
+    )
+  }
+
   const formatCurrency = (value: number | null | undefined) => {
     if (!hasValue(value)) return "R$ 0,00"
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value!)
   }
 
   const formatDate = (date: string | null | undefined) => {
-    if (!date) return "â€”"
+    if (!date) return "-"
     const [y, m, d] = String(date).split("-")
-    if (!y || !m || !d) return "â€”"
+    if (!y || !m || !d) return "-"
     return `${d}/${m}/${y}`
   }
   const formatPercent = (value: number | null | undefined) => {
@@ -1504,9 +1595,9 @@ export default function PrecatorioDetailPage() {
   const dashboardCardClass =
     "group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
   const dashboardTabsListClass =
-    "h-auto w-full gap-1.5 rounded-2xl border border-border bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto pr-6 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-border dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
+    "h-auto w-full justify-start gap-1.5 rounded-2xl border border-border bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-border dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
   const dashboardTabsTriggerClass =
-    "rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-muted-foreground data-[state=active]:shadow-sm dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+    "shrink-0 rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-muted-foreground data-[state=active]:shadow-sm dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
 
   if (!id) {
     return (
@@ -1554,1935 +1645,1927 @@ export default function PrecatorioDetailPage() {
       <div className="pointer-events-none absolute bottom-10 left-[-8rem] -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-primary/10 via-rose-200/10 to-amber-200/10 blur-3xl dark:from-primary/12 dark:via-rose-400/8 dark:to-amber-400/10" />
 
       <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-      {/* Header */}
-      <motion.div
-        initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-        animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-        transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-        className="relative z-20 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-4 py-4 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
-      >
-        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.16),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.2),transparent_48%)]" />
-        <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
-        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
-          <div className="flex items-start gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.back()}
-              className="mt-1 -ml-2 rounded-xl border border-border bg-background/75 hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <h1 className="no-route-shiny text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-                  {precatorio.titulo}
-                </h1>
-                <span
-                  className={`${getPrioridadeColor(precatorio.prioridade)} inline-flex h-7 items-center justify-center whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
-                >
-                  {precatorio.prioridade?.toUpperCase() || "M?DIA"}
-                </span>
-                <span
-                  className={`${getStatusColor(precatorio.status)} inline-flex h-7 items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-2.5 py-0 text-[11px] font-semibold leading-none shadow-sm`}
-                >
-                  <span className="inline-flex items-center justify-center">
-                    {getStatusIcon(precatorio.status)}
-                  </span>
-                  <span className="inline-flex items-center font-semibold leading-none">
-                    {precatorio.status?.replace("_", " ").toUpperCase() || "NOVO"}
-                  </span>
-                </span>
-              </div>
-              <p className="mt-1 text-sm text-muted-foreground">Dados essenciais do precatório com visão completa do fluxo.</p>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {isAdmin && !isEditing && (
-              <Button
-                onClick={() => setAdminInterestModalOpen(true)}
-                variant="outline"
-                size="sm"
-                className="h-10 rounded-xl border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-              >
-                <AlertCircle className="h-4 w-4 mr-2" />
-                Sinalizar interesse
-              </Button>
-            )}
-            {canEdit && !isEditing && (
-              <Button
-                onClick={() => setIsEditing(true)}
-                variant="outline"
-                size="sm"
-                className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-              >
-                <Edit className="h-4 w-4 mr-2" />
-                Editar
-              </Button>
-            )}
-            {isEditing && (
-              <>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => setIsEditing(false)}
-                  disabled={saving}
-                  className="h-10 rounded-xl px-4"
-                >
-                  <X className="h-4 w-4 mr-2" />
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSaveEdit}
-                  disabled={saving}
-                  size="sm"
-                  className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
-                >
-                  <Save className="h-4 w-4 mr-2" />
-                  {saving ? "Salvando..." : "Salvar"}
-                </Button>
-              </>
-            )}
-          </div>
-        </div>
-      </motion.div>
-
-      {isAdmin && (
-        <Dialog open={adminInterestModalOpen} onOpenChange={setAdminInterestModalOpen}>
-          <DialogContent className="sm:max-w-2xl">
-            <DialogHeader>
-              <DialogTitle className="flex items-center gap-2">
-                <AlertCircle className="h-5 w-5 text-muted-foreground" />
-                Interesse do Admin no Crédito
-              </DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label>Operador destinatário</Label>
-                  <Select
-                    value={adminTargetUserId || "__none__"}
-                    onValueChange={(value) =>
-                      setAdminTargetUserId(value === "__none__" ? "" : value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o operador" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {adminRecipients.length === 0 ? (
-                        <SelectItem value="__none__">Nenhum operador vinculado</SelectItem>
-                      ) : (
-                        adminRecipients.map((recipient) => (
-                          <SelectItem key={recipient.id} value={recipient.id}>
-                            {recipient.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
-                  <p className="text-xs text-muted-foreground">
-                    Alertas individuais devem ser enviados na aba Comunicados, usando o escopo Individual.
-                  </p>
-                </div>
-                <div className="space-y-2">
-                  <Label>Crédito em foco</Label>
-                  <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-border dark:bg-muted">
-                    {precatorioAdminLabel}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="admin-interest-message">Mensagem de interesse (opcional)</Label>
-                <Textarea
-                  id="admin-interest-message"
-                  rows={4}
-                  value={adminInterestMessage}
-                  onChange={(e) => setAdminInterestMessage(e.target.value)}
-                  placeholder="Ex.: Preciso priorizar este crédito nesta semana."
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setAdminInterestModalOpen(false)}
-                  disabled={adminInterestSending}
-                >
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleSignalAdminInterest}
-                  disabled={adminInterestSending || !adminTargetUserId}
-                >
-                  {adminInterestSending ? "Enviando interesse..." : "Sinalizar interesse no crédito"}
-                </Button>
-              </div>
-            </div>
-          </DialogContent>
-        </Dialog>
-      )}
-
-      {/* Tabs Layout Consolidado */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="mb-6 rounded-2xl border border-border bg-background/45 p-1.5 backdrop-blur-xl dark:border-border dark:bg-muted">
-          <div className="relative">
-            <TabsList className={dashboardTabsListClass}>
-            <TabsTrigger
-              value="detalhes"
-              className={dashboardTabsTriggerClass}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Geral
-            </TabsTrigger>
-            <TabsTrigger
-              value="documentos"
-              className={dashboardTabsTriggerClass}
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Documentos
-            </TabsTrigger>
-            <TabsTrigger
-              value="oficio"
-              className={dashboardTabsTriggerClass}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Ofício
-              {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/15" />}
-            </TabsTrigger>
-            <TabsTrigger
-              value="certidoes"
-              className={dashboardTabsTriggerClass}
-            >
-              <CheckSquare className="h-4 w-4 mr-2" />
-              Certidões
-            </TabsTrigger>
-            <TabsTrigger
-              value="juridico"
-              className={dashboardTabsTriggerClass}
-            >
-              <Scale className="h-4 w-4 mr-2" />
-              Jurídico
-            </TabsTrigger>
-            {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
-              <TabsTrigger
-                value="fechamento"
-                className={dashboardTabsTriggerClass}
-              >
-                <Gavel className="h-4 w-4 mr-2" />
-                Fechamento
-              </TabsTrigger>
-            )}
-            <TabsTrigger
-              value="calculo"
-              className={dashboardTabsTriggerClass}
-            >
-              <Calculator className="h-4 w-4 mr-2" />
-              Cálculo
-            </TabsTrigger>
-            <TabsTrigger
-              value="propostas"
-              className={dashboardTabsTriggerClass}
-            >
-              <Percent className="h-4 w-4 mr-2" />
-              Propostas
-            </TabsTrigger>
-            <button
-              type="button"
-              className={`${dashboardTabsTriggerClass} inline-flex items-center whitespace-nowrap`}
-              onClick={openAgendaForPrecatorio}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Agenda
-            </button>
-            <TabsTrigger
-              value="timeline"
-              className={dashboardTabsTriggerClass}
-            >
-              <Clock className="h-4 w-4 mr-2" />
-              Timeline
-            </TabsTrigger>
-            </TabsList>
-            <div className="pointer-events-none absolute inset-y-0 left-0 w-6 bg-gradient-to-r from-background to-transparent" />
-            <div className="pointer-events-none absolute inset-y-0 right-0 w-6 bg-gradient-to-l from-background to-transparent" />
-          </div>
-        </div>
-
-        <AnimatePresence mode="wait" initial={false}>
+        {/* Header */}
         <motion.div
-          key={activeTab}
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-          exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
           transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+          className="relative z-20 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
         >
-        {/* Tab: Detalhes */}
-          <TabsContent value="detalhes" className="space-y-6">
+          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.16),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.2),transparent_48%)]" />
+          <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
+          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+            <div className="flex items-start gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => router.back()}
+                className="mt-1 -ml-2 rounded-xl border border-border bg-background/75 hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </Button>
+              <div>
+                <div className="flex flex-wrap items-center gap-3">
+                  <h1 className="no-route-shiny text-[2.25rem] font-semibold leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
+                    {precatorio.titulo}
+                  </h1>
+                  <span
+                    className={`${getPrioridadeColor(precatorio.prioridade)} inline-flex h-[2.1rem] items-center justify-center whitespace-nowrap rounded-full px-3 py-0 text-[13px] font-semibold leading-none shadow-sm`}
+                  >
+                    {precatorio.prioridade?.toUpperCase() || "M?DIA"}
+                  </span>
+                  <span
+                    className={`${getStatusColor(precatorio.status)} inline-flex h-[2.1rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-0 text-[13px] font-semibold leading-none shadow-sm`}
+                  >
+                    <span className="inline-flex items-center justify-center">
+                      {getStatusIcon(precatorio.status)}
+                    </span>
+                    <span className="inline-flex items-center font-semibold leading-none">
+                      {precatorio.status?.replace("_", " ").toUpperCase() || "NOVO"}
+                    </span>
+                  </span>
+                </div>
+                <p className="mt-1.5 text-[1.05rem] text-muted-foreground">Dados essenciais do precatório com visão completa do fluxo.</p>
+              </div>
+            </div>
+            <div className="flex flex-wrap items-center gap-2">
+              {isAdmin && !isEditing && (
+                <Button
+                  onClick={() => setAdminInterestModalOpen(true)}
+                  variant="outline"
+                  size="sm"
+                  className="h-10 rounded-xl border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+                >
+                  <AlertCircle className="h-4 w-4 mr-2" />
+                  Sinalizar interesse
+                </Button>
+              )}
+              {canEdit && !isEditing && (
+                <Button
+                  onClick={() => setIsEditing(true)}
+                  variant="outline"
+                  size="sm"
+                  className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+                >
+                  <Edit className="h-4 w-4 mr-2" />
+                  Editar
+                </Button>
+              )}
+              {isEditing && (
+                <>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsEditing(false)}
+                    disabled={saving}
+                    className="h-10 rounded-xl px-4"
+                  >
+                    <X className="h-4 w-4 mr-2" />
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSaveEdit}
+                    disabled={saving}
+                    size="sm"
+                    className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+                  >
+                    <Save className="h-4 w-4 mr-2" />
+                    {saving ? "Salvando..." : "Salvar"}
+                  </Button>
+                </>
+              )}
+            </div>
+          </div>
+        </motion.div>
 
-            {/* Barra de Status */}
-            <DetailSection className="relative overflow-hidden border-border bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
-              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_50%)]" />
-              <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                <div className="min-w-0">
-                  <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:text-muted-foreground">
-                    Status do crédito
-                  </p>
+        {isAdmin && (
+          <Dialog open={adminInterestModalOpen} onOpenChange={setAdminInterestModalOpen}>
+            <DialogContent className="sm:max-w-2xl">
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2">
+                  <AlertCircle className="h-5 w-5 text-muted-foreground" />
+                  Interesse do Admin no Crédito
+                </DialogTitle>
+              </DialogHeader>
 
-                  <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                    <Chip size="md" color="primary" variant="flat" radius="full" className="font-semibold">
-                      Atual: {statusAtualLabel}
-                    </Chip>
-                    {nextColumn ? (
-                      <Chip size="md" color="warning" variant="flat" radius="full">
-                        Próxima: {nextColumn.titulo}
-                      </Chip>
-                    ) : (
-                      <Chip size="md" variant="flat" radius="full">
-                        Fluxo finalizado
-                      </Chip>
-                    )}
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label>Operador destinatário</Label>
+                    <Select
+                      value={adminTargetUserId || "__none__"}
+                      onValueChange={(value) =>
+                        setAdminTargetUserId(value === "__none__" ? "" : value)
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Selecione o operador" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {adminRecipients.length === 0 ? (
+                          <SelectItem value="__none__">Nenhum operador vinculado</SelectItem>
+                        ) : (
+                          adminRecipients.map((recipient) => (
+                            <SelectItem key={recipient.id} value={recipient.id}>
+                              {recipient.label}
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Alertas individuais devem ser enviados na aba Comunicados, usando o escopo Individual.
+                    </p>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Crédito em foco</Label>
+                    <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-border dark:bg-muted">
+                      {precatorioAdminLabel}
+                    </div>
                   </div>
                 </div>
 
-                <div className="flex flex-wrap items-center gap-2">
-                  {canAdvanceToNextColumn ? (
-                    <Button
-                      size="sm"
-                      className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
-                      onClick={handleAdvanceToNextStage}
-                      disabled={advancingStage}
-                    >
-                      <ArrowRight className="h-4 w-4 mr-2" />
-                      {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
-                    </Button>
-                  ) : null}
+                <div className="space-y-2">
+                  <Label htmlFor="admin-interest-message">Mensagem de interesse (opcional)</Label>
+                  <Textarea
+                    id="admin-interest-message"
+                    rows={4}
+                    value={adminInterestMessage}
+                    onChange={(e) => setAdminInterestMessage(e.target.value)}
+                    placeholder="Ex.: Preciso priorizar este crédito nesta semana."
+                  />
+                </div>
+
+                <div className="flex items-center justify-end gap-2">
                   <Button
-                    size="sm"
-                    variant="secondary"
-                    className="h-10 rounded-xl border border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-                    onClick={() => {
-                      setActiveTab("timeline")
-                      syncTabToUrl("timeline")
-                    }}
+                    variant="ghost"
+                    onClick={() => setAdminInterestModalOpen(false)}
+                    disabled={adminInterestSending}
                   >
-                    Ver timeline
+                    Cancelar
+                  </Button>
+                  <Button
+                    onClick={handleSignalAdminInterest}
+                    disabled={adminInterestSending || !adminTargetUserId}
+                  >
+                    {adminInterestSending ? "Enviando interesse..." : "Sinalizar interesse no crédito"}
                   </Button>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        )}
 
-              <div className="mt-4 rounded-2xl border border-border bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-border dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
-                <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
-                  <div className="flex min-w-max items-center gap-2.5 pr-2">
-                    {KANBAN_COLUMNS.map((col, index) => {
-                      const hasCurrent = currentColumnIndex >= 0
-                      const isCurrent = hasCurrent && index === currentColumnIndex
-                      const isDone = hasCurrent && index < currentColumnIndex
-                      const isNext = hasCurrent && index === currentColumnIndex + 1
+        {/* Tabs Layout Consolidado */}
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+          <div className="mb-6 rounded-2xl border border-border bg-background/45 p-1.5 backdrop-blur-xl dark:border-border dark:bg-muted">
+            <div className="relative">
+              <TabsList className={dashboardTabsListClass}>
+                <TabsTrigger
+                  value="detalhes"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Geral
+                </TabsTrigger>
+                <TabsTrigger
+                  value="documentos"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Documentos
+                </TabsTrigger>
+                <TabsTrigger
+                  value="oficio"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Ofício
+                  {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/15" />}
+                </TabsTrigger>
+                <TabsTrigger
+                  value="certidoes"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <CheckSquare className="h-4 w-4 mr-2" />
+                  Certidões
+                </TabsTrigger>
+                <TabsTrigger
+                  value="escrituras"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <FileText className="h-4 w-4 mr-2" />
+                  Escrituras
+                </TabsTrigger>
+                <TabsTrigger
+                  value="juridico"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <Scale className="h-4 w-4 mr-2" />
+                  Parecer Jurídico
+                </TabsTrigger>
+                {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
+                  <TabsTrigger
+                    value="fechamento"
+                    className={dashboardTabsTriggerClass}
+                  >
+                    <Gavel className="h-4 w-4 mr-2" />
+                    Fechamento
+                  </TabsTrigger>
+                )}
+                <TabsTrigger
+                  value="calculo"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <Calculator className="h-4 w-4 mr-2" />
+                  Cálculo
+                </TabsTrigger>
+                <TabsTrigger
+                  value="propostas"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <Percent className="h-4 w-4 mr-2" />
+                  Propostas
+                </TabsTrigger>
+                <button
+                  type="button"
+                  className={`${dashboardTabsTriggerClass} inline-flex items-center whitespace-nowrap`}
+                  onClick={openAgendaForPrecatorio}
+                >
+                  <Calendar className="h-4 w-4 mr-2" />
+                  Agenda
+                </button>
+                <TabsTrigger
+                  value="timeline"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Timeline
+                </TabsTrigger>
+              </TabsList>
+            </div>
+          </div>
 
-                      let chipVariant: "solid" | "flat" | "bordered" = "bordered"
-                      let chipColor: "default" | "primary" | "secondary" | "success" | "warning" | "danger" = "default"
-                      let chipStartContent: ReactNode = null
+          <AnimatePresence mode="wait" initial={false}>
+            <motion.div
+              key={activeTab}
+              initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 10 }}
+              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
+              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, y: -8 }}
+              transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
+            >
+              {/* Tab: Detalhes */}
+              <TabsContent value="detalhes" className="space-y-6">
 
-                      if (isCurrent) {
-                        chipVariant = "solid"
-                        chipColor = "primary"
-                        chipStartContent = <span className="h-2 w-2 rounded-full bg-primary-foreground/80" />
-                      } else if (isDone) {
-                        chipVariant = "flat"
-                        chipColor = "success"
-                        chipStartContent = <CheckCircle2 className="h-3.5 w-3.5" />
-                      } else if (isNext) {
-                        chipVariant = "flat"
-                        chipColor = "warning"
-                        chipStartContent = <ArrowRight className="h-3.5 w-3.5" />
-                      }
+                {/* Barra de Status */}
+                <DetailSection className="relative overflow-hidden border-border bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
+                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_50%)]" />
+                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:text-muted-foreground">
+                        Status do crédito
+                      </p>
 
-                      return (
-                        <Chip
-                          key={col.id}
-                          size="lg"
-                          radius="full"
-                          variant={chipVariant}
-                          color={chipColor}
-                          startContent={chipStartContent}
-                          className={`whitespace-nowrap ${isCurrent ? "font-semibold ring-1 ring-primary/30" : "font-medium"} min-h-10`}
-                        >
-                          {col.titulo}
+                      <div className="mt-2 flex flex-wrap items-center gap-2.5">
+                        <Chip size="md" color="primary" variant="flat" radius="full" className="font-semibold">
+                          Atual: {statusAtualLabel}
                         </Chip>
-                      )
-                    })}
+                        {nextColumn ? (
+                          <Chip size="md" color="warning" variant="flat" radius="full">
+                            Próxima: {nextColumn.titulo}
+                          </Chip>
+                        ) : (
+                          <Chip size="md" variant="flat" radius="full">
+                            Fluxo finalizado
+                          </Chip>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      {canAdvanceToNextColumn ? (
+                        <Button
+                          size="sm"
+                          className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+                          onClick={handleAdvanceToNextStage}
+                          disabled={advancingStage}
+                        >
+                          <ArrowRight className="h-4 w-4 mr-2" />
+                          {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
+                        </Button>
+                      ) : null}
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        className="h-10 rounded-xl border border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+                        onClick={() => {
+                          setActiveTab("timeline")
+                          syncTabToUrl("timeline")
+                        }}
+                      >
+                        Ver timeline
+                      </Button>
+                    </div>
                   </div>
-                </ScrollShadow>
 
-                <p className="px-1 pt-2 text-xs text-muted-foreground">
-                  Dica: role lateralmente para ver todas as etapas.
-                </p>
-              </div>
-            </DetailSection>
+                  <div className="mt-4 rounded-2xl border border-border bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-border dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
+                    <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
+                      <div className="flex min-w-max items-center gap-2.5 pr-2">
+                        {KANBAN_COLUMNS.map((col, index) => {
+                          const hasCurrent = currentColumnIndex >= 0
+                          const isCurrent = hasCurrent && index === currentColumnIndex
+                          const isDoneBase = hasCurrent && index < currentColumnIndex
+                          const isSkippedJuridico =
+                            shouldSkipOptionalJuridico &&
+                            col.id === "juridico" &&
+                            currentColumnIndex > index
+                          const isDone = isDoneBase && !isSkippedJuridico
+                          const isNext = hasCurrent && nextColumnIndex >= 0 && index === nextColumnIndex
 
-          <ModalSemInteresse
-            open={semInteresseModalOpen}
-            onOpenChange={setSemInteresseModalOpen}
-            precatorioId={id}
-            onConfirm={handleConfirmSemInteresse}
-            initialMotivo={precatorio?.motivo_sem_interesse || ""}
-            initialDataRecontato={
-              precatorio?.data_recontato ? new Date(precatorio.data_recontato) : null
-            }
-          />
+                          let chipVariant: "solid" | "flat" | "bordered" = "bordered"
+                          let chipColor: "default" | "primary" | "secondary" | "success" | "warning" | "danger" = "default"
+                          let chipStartContent: ReactNode = null
 
-          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+                          if (isCurrent) {
+                            chipVariant = "solid"
+                            chipColor = "primary"
+                            chipStartContent = <span className="h-2 w-2 rounded-full bg-primary-foreground/80" />
+                          } else if (isDone) {
+                            chipVariant = "flat"
+                            chipColor = "success"
+                            chipStartContent = <CheckCircle2 className="h-3.5 w-3.5" />
+                          } else if (isNext) {
+                            chipVariant = "flat"
+                            chipColor = "warning"
+                            chipStartContent = <ArrowRight className="h-3.5 w-3.5" />
+                          }
 
-            {/* COLUNA 1: Dados Principais */}
-            <div className="flex flex-col gap-6">
-              {/* Identificação */}
-              <Card className={`${dashboardCardClass} order-1`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={FileText} title="Identificação" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0">
-                  {isEditing ? (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                          <Label>Título</Label>
-                          <Input value={editData.titulo || ""} onChange={(e) => setEditData({ ...editData, titulo: e.target.value })} />
+                          return (
+                            <Chip
+                              key={col.id}
+                              size="lg"
+                              radius="full"
+                              variant={chipVariant}
+                              color={chipColor}
+                              startContent={chipStartContent}
+                              className={`whitespace-nowrap ${isCurrent ? "font-semibold ring-1 ring-primary/30" : "font-medium"} min-h-10`}
+                            >
+                              {col.titulo}
+                            </Chip>
+                          )
+                        })}
+                      </div>
+                    </ScrollShadow>
+
+                    <p className="px-1 pt-2 text-xs text-muted-foreground">
+                      Dica: role lateralmente para ver todas as etapas.
+                    </p>
+                  </div>
+                </DetailSection>
+
+                <ModalSemInteresse
+                  open={semInteresseModalOpen}
+                  onOpenChange={setSemInteresseModalOpen}
+                  precatorioId={id}
+                  onConfirm={handleConfirmSemInteresse}
+                  initialMotivo={precatorio?.motivo_sem_interesse || ""}
+                  initialDataRecontato={
+                    precatorio?.data_recontato ? new Date(precatorio.data_recontato) : null
+                  }
+                />
+
+                <div className="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(0,0.85fr)]">
+
+                  {/* COLUNA 1: Dados Principais */}
+                  <div className="flex flex-col gap-6">
+                    {/* Identificação */}
+                    <Card className={`${dashboardCardClass} order-1`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={FileText} title="Identificação" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {isEditing ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="md:col-span-2">
+                                <Label>Título</Label>
+                                <Input value={editData.titulo || ""} onChange={(e) => setEditData({ ...editData, titulo: e.target.value })} />
+                              </div>
+                              <div>
+                                <Label>Número do Precatório</Label>
+                                <Input
+                                  value={editData.numero_precatorio || ""}
+                                  onChange={(e) => setEditData({ ...editData, numero_precatorio: maskProcesso(e.target.value) })}
+                                />
+                              </div>
+                              <div>
+                                <Label>Número do Processo</Label>
+                                <Input value={editData.numero_processo || ""} onChange={(e) => setEditData({ ...editData, numero_processo: maskProcesso(e.target.value) })} />
+                              </div>
+                              <div>
+                                <Label>Número do Ofício</Label>
+                                <Input value={editData.numero_oficio || ""} onChange={(e) => setEditData({ ...editData, numero_oficio: e.target.value })} />
+                              </div>
+                            </div>
+                            <Separator className="my-4" />
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Status</label>
+                                <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "-"}</p>
+                              </div>
+                            </div>
+                          </>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                            <InfoRow
+                              label="Número do Precatório"
+                              value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"}
+                              valueClassName="text-base font-semibold"
+                            />
+                            <InfoRow
+                              label="Número do Processo"
+                              value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
+                            />
+                            <InfoRow
+                              label="Número do Ofício"
+                              value={precatorio.numero_oficio || "-"}
+                            />
+                            <InfoRow
+                              label="Status"
+                              value={precatorio.status?.replace(/_/g, " ") || "-"}
+                            />
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Responsável</label>
+                              <div className="flex items-center gap-2 mt-1">
+                                <User className="h-4 w-4 text-muted-foreground" />
+                                <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "-"}</span>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Card className={`${dashboardCardClass} order-3`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={FileText} title="Gestão de Análise" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-4">
+                        {isEditing ? (
+                          <div className="space-y-4">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Penhora</Label>
+                                <Select
+                                  value={booleanSelectValue(editData.analise_penhora)}
+                                  onValueChange={(value) =>
+                                    setEditData({ ...editData, analise_penhora: selectValueToBoolean(value) })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="indefinido">Não informado</SelectItem>
+                                    <SelectItem value="true">Sim</SelectItem>
+                                    <SelectItem value="false">Não</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Cessão</Label>
+                                <Select
+                                  value={booleanSelectValue(editData.analise_cessao)}
+                                  onValueChange={(value) =>
+                                    setEditData({ ...editData, analise_cessao: selectValueToBoolean(value) })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="indefinido">Não informado</SelectItem>
+                                    <SelectItem value="true">Sim</SelectItem>
+                                    <SelectItem value="false">Não</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Herdeiros habilitados</Label>
+                                <Select
+                                  value={
+                                    editData.analise_herdeiros === true
+                                      ? "Sim"
+                                      : editData.analise_herdeiros === false
+                                        ? "Não"
+                                        : editData.analise_herdeiros || "indefinido"
+                                  }
+                                  onValueChange={(value) =>
+                                    setEditData({
+                                      ...editData,
+                                      analise_herdeiros: value === "indefinido" ? null : value,
+                                    })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="indefinido">Não informado</SelectItem>
+                                    <SelectItem value="Sim">Sim</SelectItem>
+                                    <SelectItem value="Não">Não</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>Viabilidade do crédito</Label>
+                                <Select
+                                  value={booleanSelectValue(editData.analise_viavel)}
+                                  onValueChange={(value) =>
+                                    setEditData({ ...editData, analise_viavel: selectValueToBoolean(value) })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="indefinido">Não informado</SelectItem>
+                                    <SelectItem value="true">Viável</SelectItem>
+                                    <SelectItem value="false">Não viável</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div className="space-y-2">
+                                <Label>ITCMD</Label>
+                                <Select
+                                  value={booleanSelectValue(editData.analise_itcmd)}
+                                  onValueChange={(value) =>
+                                    setEditData({ ...editData, analise_itcmd: selectValueToBoolean(value) })
+                                  }
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="indefinido">Não informado</SelectItem>
+                                    <SelectItem value="true">Sim</SelectItem>
+                                    <SelectItem value="false">Não</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {editData.analise_penhora === true && (
+                                <>
+                                  {renderAnaliseNumberField("Penhora valor (R$)", "analise_penhora_valor", editData.analise_penhora_valor)}
+                                  {renderAnaliseNumberField("Penhora percentual (%)", "analise_penhora_percentual", editData.analise_penhora_percentual)}
+                                </>
+                              )}
+                              {editData.analise_cessao === true && (
+                                <>
+                                  {renderAnaliseNumberField("Cessão valor (R$)", "analise_cessao_valor", editData.analise_cessao_valor)}
+                                  {renderAnaliseNumberField("Cessão percentual (%)", "analise_cessao_percentual", editData.analise_cessao_percentual)}
+                                </>
+                              )}
+                              {editData.analise_itcmd === true && (
+                                <>
+                                  {renderAnaliseNumberField("ITCMD valor (R$)", "analise_itcmd_valor", editData.analise_itcmd_valor)}
+                                  {renderAnaliseNumberField("ITCMD percentual (%)", "analise_itcmd_percentual", editData.analise_itcmd_percentual)}
+                                </>
+                              )}
+                              {renderAnaliseNumberField("Adiantamento recebido valor (R$)", "analise_adiantamento_valor", editData.analise_adiantamento_valor)}
+                              {renderAnaliseNumberField("Adiantamento recebido percentual (%)", "analise_adiantamento_percentual", editData.analise_adiantamento_percentual)}
+                              {renderAnaliseNumberField("Honorários contratuais valor (R$)", "analise_honorarios_valor", editData.analise_honorarios_valor)}
+                              {renderAnaliseNumberField("Honorários contratuais percentual (%)", "analise_honorarios_percentual", editData.analise_honorarios_percentual)}
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>Observações da análise</Label>
+                              <Textarea
+                                value={editData.analise_observacoes || ""}
+                                onChange={(e) =>
+                                  setEditData({ ...editData, analise_observacoes: e.target.value })
+                                }
+                                rows={4}
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Penhora</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatBoolean(precatorio.analise_penhora)}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Cessão</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatBoolean(precatorio.analise_cessao)}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Herdeiros habilitados</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatHerdeiros(precatorio.analise_herdeiros)}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Viabilidade do crédito</p>
+                                <p
+                                  className={`text-sm font-semibold ${precatorio.analise_viavel === true
+                                    ? "text-primary"
+                                    : precatorio.analise_viavel === false
+                                      ? "text-destructive"
+                                      : "text-muted-foreground"
+                                    }`}
+                                >
+                                  {precatorio.analise_viavel === true
+                                    ? "Viável"
+                                    : precatorio.analise_viavel === false
+                                      ? "Não viável"
+                                      : "Não informado"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">ITCMD</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatBoolean(precatorio.analise_itcmd)}
+                                </p>
+                              </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {precatorio.analise_penhora === true && (
+                                <>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">Penhora valor (R$)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {hasValue(precatorio.analise_penhora_valor)
+                                        ? formatCurrency(precatorio.analise_penhora_valor)
+                                        : "-"}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">Penhora percentual (%)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {formatPercent(precatorio.analise_penhora_percentual) || "-"}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
+                              {precatorio.analise_cessao === true && (
+                                <>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">Cessão valor (R$)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {hasValue(precatorio.analise_cessao_valor)
+                                        ? formatCurrency(precatorio.analise_cessao_valor)
+                                        : "-"}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">Cessão percentual (%)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {formatPercent(precatorio.analise_cessao_percentual) || "-"}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
+                              {precatorio.analise_itcmd === true && (
+                                <>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">ITCMD valor (R$)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {hasValue(precatorio.analise_itcmd_valor)
+                                        ? formatCurrency(precatorio.analise_itcmd_valor)
+                                        : "-"}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-1">
+                                    <p className="text-xs font-medium text-muted-foreground">ITCMD percentual (%)</p>
+                                    <p className="text-sm font-semibold text-foreground">
+                                      {formatPercent(precatorio.analise_itcmd_percentual) || "-"}
+                                    </p>
+                                  </div>
+                                </>
+                              )}
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Adiantamento recebido valor (R$)</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {hasValue(precatorio.analise_adiantamento_valor)
+                                    ? formatCurrency(precatorio.analise_adiantamento_valor)
+                                    : "-"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Adiantamento recebido percentual (%)</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatPercent(precatorio.analise_adiantamento_percentual) || "-"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Honorários contratuais valor (R$)</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {hasValue(precatorio.analise_honorarios_valor)
+                                    ? formatCurrency(precatorio.analise_honorarios_valor)
+                                    : "-"}
+                                </p>
+                              </div>
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Honorários contratuais percentual (%)</p>
+                                <p className="text-sm font-semibold text-foreground">
+                                  {formatPercent(precatorio.analise_honorarios_percentual) || "-"}
+                                </p>
+                              </div>
+                            </div>
+
+                            {precatorio.analise_observacoes && (
+                              <div className="space-y-1">
+                                <p className="text-xs font-medium text-muted-foreground">Observações da análise</p>
+                                <p className="text-sm text-foreground whitespace-pre-line">
+                                  {precatorio.analise_observacoes}
+                                </p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Vara de Origem e Devedor */}
+                    <Card className={`${dashboardCardClass} order-4`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={Gavel} title="Vara de Origem e Devedor" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {isEditing ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            {userRole?.includes("admin") && (
+                              <div className="md:col-span-2">
+                                <Label>Vara de Origem</Label>
+                                <Input
+                                  placeholder="Ex: 2ª Vara Cível, Vara do Trabalho, etc"
+                                  value={editData.tribunal || ""}
+                                  onChange={(e) => setEditData({ ...editData, tribunal: e.target.value })}
+                                />
+                              </div>
+                            )}
+                            <div>
+                              <Label>Devedor</Label>
+                              <Input value={editData.devedor || ""} onChange={(e) => setEditData({ ...editData, devedor: e.target.value })} />
+                            </div>
+                            <div>
+                              <Label>Esfera do Devedor</Label>
+                              <Select
+                                value={editData.esfera_devedor || ""}
+                                onValueChange={(value) => setEditData({ ...editData, esfera_devedor: value })}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione..." />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ESFERA_DEVEDOR_OPTIONS.map((option) => (
+                                    <SelectItem key={option.value} value={option.value}>
+                                      {option.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <InfoRow
+                              label="Vara de Origem"
+                              value={precatorio.tribunal || "-"}
+                              valueClassName="text-base font-semibold"
+                            />
+                            <InfoRow label="Devedor" value={precatorio.devedor || "-"} />
+                            <InfoRow label="Esfera do Devedor" value={getEsferaDevedorLabel(precatorio.esfera_devedor)} />
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* COLUNA 2: Financeiro e Datas */}
+                    {/* Valores */}
+                    <Card className={`${dashboardCardClass} order-2`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={DollarSign} title="Valores" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {isEditing && (canEditValorPrincipal || canEditValorAtualizado) && (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                            <div className="space-y-2">
+                              <Label>Valor Principal (R$)</Label>
+                              <CurrencyInput
+                                value={
+                                  hasValue(editData.valor_principal) && editData.valor_principal !== ""
+                                    ? Number(editData.valor_principal)
+                                    : undefined
+                                }
+                                onValueChange={(value) => setEditData({ ...editData, valor_principal: value })}
+                                disabled={!canEditValorPrincipal}
+                                placeholder="R$ 0,00"
+                              />
+                            </div>
+                            <div className="space-y-2">
+                              <Label>Valor Atualizado (R$)</Label>
+                              {canEditValorAtualizado ? (
+                                <CurrencyInput
+                                  value={
+                                    hasValue(editData.valor_atualizado) && editData.valor_atualizado !== ""
+                                      ? Number(editData.valor_atualizado)
+                                      : undefined
+                                  }
+                                  onValueChange={(value) => setEditData({ ...editData, valor_atualizado: value })}
+                                  placeholder="R$ 0,00"
+                                />
+                              ) : (
+                                <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                                  {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "-"}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Valor Principal</label>
+                            <p className="text-lg font-semibold text-foreground">
+                              {(() => {
+                                const valorPrincipal = isEditing ? editData.valor_principal : precatorio.valor_principal
+                                return hasValue(valorPrincipal) && valorPrincipal !== ""
+                                  ? formatCurrency(Number(valorPrincipal))
+                                  : "-"
+                              })()}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Valor Atualizado</label>
+                            <p className="text-2xl font-bold text-foreground">
+                              {(() => {
+                                const valorAtualizado = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
+                                return hasValue(valorAtualizado) && valorAtualizado !== ""
+                                  ? formatCurrency(Number(valorAtualizado))
+                                  : "-"
+                              })()}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Saldo Líquido</label>
+                            <p className="text-xl font-bold text-foreground">
+                              {hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "-"}
+                            </p>
+                          </div>
                         </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">PSS</label>
+                            <p className="text-base text-foreground">
+                              {hasValue(precatorio.pss_valor)
+                                ? precatorio.pss_valor === 0
+                                  ? "Isento"
+                                  : formatCurrency(precatorio.pss_valor)
+                                : "-"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">IRPF</label>
+                            <p className="text-base text-foreground">
+                              {hasValue(precatorio.irpf_valor)
+                                ? formatCurrency(precatorio.irpf_valor)
+                                : precatorio.irpf_isento
+                                  ? "Isento"
+                                  : "-"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Honorários</label>
+                            <p className="text-base text-foreground">
+                              {hasValue(precatorio.honorarios_valor)
+                                ? formatCurrency(precatorio.honorarios_valor)
+                                : "-"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Maior</label>
+                            <p className="text-xl font-bold text-destructive dark:text-destructive">
+                              {hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "-"}
+                            </p>
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Menor</label>
+                            <p className="text-xl font-bold text-primary dark:text-primary">
+                              {hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "-"}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+
+                    {/* Datas */}
+                    <Card className={`${dashboardCardClass} order-5`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={Calendar} title="Datas Importantes" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {isEditing ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                              <Label>Data Base</Label>
+                              <Input type="date" value={editData.data_base || ""} onChange={(e) => setEditData({ ...editData, data_base: e.target.value })} />
+                            </div>
+                            <div>
+                              <Label>Data de Expedição</Label>
+                              <Input type="date" value={editData.data_expedicao || ""} onChange={(e) => setEditData({ ...editData, data_expedicao: e.target.value })} />
+                            </div>
+                            <div>
+                              <Label>LOA (Lei Orcamentaria Anual)</Label>
+                              <Input
+                                value={editData.loa || ""}
+                                onChange={(e) => setEditData({ ...editData, loa: e.target.value })}
+                                placeholder="Ex: LOA 2026"
+                              />
+                            </div>
+                            <div>
+                              <Label>Ano Orcamentario</Label>
+                              <Input
+                                type="number"
+                                min={1900}
+                                max={2999}
+                                value={
+                                  hasValue(editData.ano_orcamentario) && editData.ano_orcamentario !== ""
+                                    ? String(editData.ano_orcamentario)
+                                    : ""
+                                }
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    ano_orcamentario: e.target.value === "" ? "" : Number(e.target.value),
+                                  })
+                                }
+                                placeholder="Ex: 2026"
+                              />
+                            </div>
+                            <div>
+                              <Label>Previsao de Pagamento (Ano)</Label>
+                              <Input
+                                type="number"
+                                min={1900}
+                                max={2999}
+                                step={1}
+                                inputMode="numeric"
+                                value={editData.previsao_pagamento || ""}
+                                onChange={(e) =>
+                                  setEditData({
+                                    ...editData,
+                                    previsao_pagamento: e.target.value.replace(/[^\d]/g, "").slice(0, 4),
+                                  })
+                                }
+                                placeholder="Ex: 2027"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Data Base</label>
+                              <p className="text-base">{precatorio.data_base ? formatDate(precatorio.data_base) : "Não informada"}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Data de Expedição</label>
+                              <p className="text-base">{precatorio.data_expedicao ? formatDate(precatorio.data_expedicao) : "Não informada"}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Data de Cálculo</label>
+                              <p className="text-base">{precatorio.data_calculo ? formatDate(precatorio.data_calculo) : "Não realizado"}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">LOA (Lei Orcamentaria Anual)</label>
+                              <p className="text-base">{precatorio.loa || "Nao informada"}</p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Ano Orcamentario</label>
+                              <p className="text-base">
+                                {hasValue(precatorio.ano_orcamentario) ? String(precatorio.ano_orcamentario) : "Nao informado"}
+                              </p>
+                            </div>
+                            <div>
+                              <label className="text-sm font-medium text-muted-foreground">Previsao de Pagamento (Ano)</label>
+                              <p className="text-base">
+                                {(() => {
+                                  const year = precatorio.previsao_pagamento
+                                    ? String(precatorio.previsao_pagamento).slice(0, 4)
+                                    : ""
+                                  return /^\d{4}$/.test(year) ? year : "Nao informada"
+                                })()}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+
+                  {/* COLUNA 3: Partes e Observações */}
+                  <div className="flex flex-col gap-6">
+                    {/* Triagem de Interesse */}
+                    <Card className={`${dashboardCardClass} order-1`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={Users} title="Triagem de Interesse" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-3">
+                        <div className="flex flex-wrap items-center gap-3">
+                          <span
+                            className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${triagemStatusMeta.badgeClass}`}
+                          >
+                            <span className={`h-2.5 w-2.5 rounded-full ${triagemStatusMeta.dotClass}`} />
+                            {triagemStatusMeta.label}
+                          </span>
+                          {semInteresseMotivo && (
+                            <p className="text-xs text-muted-foreground">{`Motivo: ${semInteresseMotivo}`}</p>
+                          )}
+                          {precatorio?.data_recontato && (
+                            <p className="text-xs text-muted-foreground">
+                              {`Recontato: ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap items-end gap-4">
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span className="font-semibold">Atualizar interesse</span>
+                            <Select
+                              value={triagemStatusSelection || "SEM_CONTATO"}
+                              onValueChange={(value) => setTriagemStatusSelection(value)}
+                            >
+                              <SelectTrigger className="min-w-[200px]">
+                                <SelectValue placeholder="Escolha o status" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TRIAGEM_STATUS_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <div className="flex flex-col gap-1 text-xs">
+                            <span className="font-semibold">Encaminhar para</span>
+                            <Select
+                              value={triagemDestinoReprovacao}
+                              onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
+                            >
+                              <SelectTrigger className="min-w-[220px]">
+                                <SelectValue placeholder="Escolha o destino" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {TRIAGEM_DESTINO_OPTIONS.map((option) => (
+                                  <SelectItem key={option.value} value={option.value}>
+                                    {option.label}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          <Button
+                            size="sm"
+                            onClick={handleSaveTriagemStatus}
+                            disabled={triagemSaving || !triagemStatusSelection}
+                          >
+                            {triagemSaving ? "Salvando..." : "Salvar"}
+                          </Button>
+                        </div>
+                        {interesseObservacao && (
+                          <div className="space-y-1">
+                            <p className="text-xs font-medium text-muted-foreground">Observação da triagem</p>
+                            <p className="text-sm leading-relaxed text-foreground">{interesseObservacao}</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Dados Bancários */}
+                    <Card className={`${dashboardCardClass} order-4`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={DollarSign} title="Dados Bancários" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-4">
+                        {isEditing ? (
+                          <>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>Banco</Label>
+                                <Input
+                                  placeholder="Ex: Banco do Brasil"
+                                  value={editData.banco || ""}
+                                  onChange={(e) => setEditData({ ...editData, banco: e.target.value })}
+                                />
+                              </div>
+                              <div>
+                                <Label>Tipo de Conta</Label>
+                                <Select
+                                  value={editData.tipo_conta || "corrente"}
+                                  onValueChange={(value) => setEditData({ ...editData, tipo_conta: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="corrente">Conta Corrente</SelectItem>
+                                    <SelectItem value="poupanca">Conta Poupança</SelectItem>
+                                    <SelectItem value="pagamento">Conta de Pagamento</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>Agência</Label>
+                                <Input
+                                  placeholder="Sem dígito"
+                                  value={editData.agencia || ""}
+                                  onChange={(e) => setEditData({ ...editData, agencia: e.target.value })}
+                                />
+                              </div>
+                              <div>
+                                <Label>Conta</Label>
+                                <Input
+                                  placeholder="Com dígito"
+                                  value={editData.conta || ""}
+                                  onChange={(e) => setEditData({ ...editData, conta: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <Separator className="my-2" />
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div>
+                                <Label>Tipo Chave PIX</Label>
+                                <Select
+                                  value={editData.tipo_chave_pix || "cpf"}
+                                  onValueChange={(value) => setEditData({ ...editData, tipo_chave_pix: value })}
+                                >
+                                  <SelectTrigger>
+                                    <SelectValue placeholder="Selecione..." />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="cpf">CPF/CNPJ</SelectItem>
+                                    <SelectItem value="email">E-mail</SelectItem>
+                                    <SelectItem value="telefone">Telefone</SelectItem>
+                                    <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <div>
+                                <Label>Chave PIX</Label>
+                                <Input
+                                  value={editData.chave_pix || ""}
+                                  onChange={(e) => setEditData({ ...editData, chave_pix: e.target.value })}
+                                />
+                              </div>
+                            </div>
+                            <div>
+                              <Label>Observações Bancárias</Label>
+                              <Textarea
+                                value={editData.observacoes_bancarias || ""}
+                                onChange={(e) => setEditData({ ...editData, observacoes_bancarias: e.target.value })}
+                                placeholder="Ex: Pagamento somente em nome do titular..."
+                              />
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Banco</label>
+                                <p className="text-base">{precatorio.banco || "-"}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Tipo</label>
+                                <p className="text-base capitalize">{precatorio.tipo_conta || "-"}</p>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Agência</label>
+                                <p className="text-base">{precatorio.agencia || "-"}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm font-medium text-muted-foreground">Conta</label>
+                                <p className="text-base">{precatorio.conta || "-"}</p>
+                              </div>
+                            </div>
+                            {precatorio.chave_pix && (
+                              <div className="bg-muted/30 p-3 rounded-md border mt-2">
+                                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                                  <ExternalLink className="h-3 w-3" /> PIX ({precatorio.tipo_chave_pix || "Chave"})
+                                </label>
+                                <p className="text-base font-mono mt-1 select-all">{precatorio.chave_pix}</p>
+                              </div>
+                            )}
+                            {precatorio.observacoes_bancarias && (
+                              <div className="mt-2">
+                                <label className="text-sm font-medium text-muted-foreground">Observações</label>
+                                <p className="text-sm mt-1">{precatorio.observacoes_bancarias}</p>
+                              </div>
+                            )}
+                          </>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Credor e Advogado - Compactados ou em Abas? Vou deixar em cards um abaixo do outro por enquanto */}
+                    <Card className={`${dashboardCardClass} order-2`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle icon={User} title="Partes (Credor/Adv)" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-6">
+                        {/* Renderiza Credor Form/View */}
+                        <div className="space-y-4">
+                          <h4 className="font-semibold text-sm uppercase text-muted-foreground">Credor</h4>
+                          {isEditing ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <div className="md:col-span-2">
+                                <Input value={editData.credor_nome || ""} onChange={(e) => setEditData({ ...editData, credor_nome: e.target.value })} placeholder="Nome do Credor" />
+                              </div>
+                              <div>
+                                <Input value={editData.credor_cpf_cnpj || ""} onChange={(e) => setEditData({ ...editData, credor_cpf_cnpj: e.target.value })} placeholder="CPF/CNPJ" />
+                              </div>
+                              <div>
+                                <Input value={editData.credor_telefone || ""} onChange={(e) => setEditData({ ...editData, credor_telefone: e.target.value })} placeholder="Telefone" />
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-2">
+                              <p className="font-medium text-base">{precatorio.credor_nome || "-"}</p>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                                <p className="text-sm text-muted-foreground">{precatorio.credor_cpf_cnpj || "-"}</p>
+                                <p className="text-sm text-muted-foreground">{precatorio.credor_telefone || "-"}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                        <Separator />
+                        <div className="space-y-4">
+                          <h4 className="font-semibold text-sm uppercase text-muted-foreground">Advogado</h4>
+                          {isEditing ? (
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              <Input value={editData.advogado_nome || ""} onChange={(e) => setEditData({ ...editData, advogado_nome: e.target.value })} placeholder="Nome do Advogado" />
+                              <Input value={editData.advogado_oab || ""} onChange={(e) => setEditData({ ...editData, advogado_oab: e.target.value })} placeholder="OAB" />
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              <p className="font-medium text-base">{precatorio.advogado_nome || "-"}</p>
+                              <p className="text-sm text-muted-foreground">{precatorio.advogado_oab || "-"}</p>
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+
+
+                    <Card className={`${dashboardCardClass} order-3`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="flex items-center gap-2">
+                          <SectionTitle icon={Users} title="Herdeiros" />
+                          {herdeiros.length > 0 && (
+                            <Badge variant="secondary" className="ml-auto">
+                              {herdeiros.length}
+                            </Badge>
+                          )}
+                        </CardTitle>
+                        {canEdit && (
+                          <div className="pt-2">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={handleAddHerdeiro}
+                              disabled={herdeiroSaving}
+                            >
+                              Adicionar herdeiro
+                            </Button>
+                          </div>
+                        )}
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {herdeirosLoading ? (
+                          <p className="text-sm text-muted-foreground">Carregando herdeiros...</p>
+                        ) : herdeiros.length === 0 ? (
+                          <p className="text-sm text-muted-foreground">Nenhum herdeiro informado.</p>
+                        ) : (
+                          <div className="space-y-3">
+                            {herdeiros.map((herdeiro) => (
+                              <button
+                                key={herdeiro.id}
+                                type="button"
+                                onClick={() => handleOpenHerdeiro(herdeiro)}
+                                className="w-full text-left rounded-md border bg-muted/20 p-3 transition hover:border-primary/50 hover:bg-muted/30"
+                              >
+                                <div className="flex items-start justify-between gap-3">
+                                  <div className="space-y-1">
+                                    <p className="font-medium">{herdeiro.nome_completo || "Herdeiro"}</p>
+                                    {herdeiro.cpf && (
+                                      <p className="text-xs text-muted-foreground">CPF: {herdeiro.cpf}</p>
+                                    )}
+                                    {herdeiro.telefone && (
+                                      <p className="text-xs text-muted-foreground">Telefone: {herdeiro.telefone}</p>
+                                    )}
+                                    {herdeiro.endereco && (
+                                      <p className="text-xs text-muted-foreground">Endereço: {herdeiro.endereco}</p>
+                                    )}
+                                    {herdeiro.email && (
+                                      <p className="text-xs text-muted-foreground">Email: {herdeiro.email}</p>
+                                    )}
+                                  </div>
+                                  {formatPercent(herdeiro.percentual_participacao) && (
+                                    <Badge variant="outline" className="text-xs">
+                                      {formatPercent(herdeiro.percentual_participacao)}
+                                    </Badge>
+                                  )}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    <Dialog
+                      open={herdeiroModalOpen}
+                      onOpenChange={(open) => {
+                        setHerdeiroModalOpen(open)
+                        if (!open) {
+                          setSelectedHerdeiro(null)
+                          setHerdeiroEdit(null)
+                          setHerdeiroEditMode(false)
+                        }
+                      }}
+                    >
+                      <DialogContent className="max-w-2xl">
+                        <DialogHeader>
+                          <DialogTitle>
+                            {selectedHerdeiro?.nome_completo || "Detalhes do Herdeiro"}
+                          </DialogTitle>
+                        </DialogHeader>
+                        {selectedHerdeiro ? (
+                          <div className="space-y-6">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">Nome</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.nome_completo || ""}
+                                    onChange={(e) => updateHerdeiroEdit("nome_completo", e.target.value)}
+                                  />
+                                ) : (
+                                  <p className="text-base">{selectedHerdeiro.nome_completo || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">CPF</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.cpf || ""}
+                                    onChange={(e) => updateHerdeiroEdit("cpf", e.target.value)}
+                                  />
+                                ) : (
+                                  <p className="text-base">{selectedHerdeiro.cpf || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">Telefone</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.telefone || ""}
+                                    onChange={(e) => updateHerdeiroEdit("telefone", e.target.value)}
+                                  />
+                                ) : (
+                                  <p className="text-base">{selectedHerdeiro.telefone || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">Email</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.email || ""}
+                                    onChange={(e) => updateHerdeiroEdit("email", e.target.value)}
+                                  />
+                                ) : (
+                                  <p className="text-base">{selectedHerdeiro.email || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-1">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">Participação</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.percentual_participacao?.toString() || ""}
+                                    onChange={(e) => {
+                                      const value = e.target.value.replace(",", ".")
+                                      const parsed = value === "" ? null : Number(value)
+                                      updateHerdeiroEdit("percentual_participacao", Number.isNaN(parsed) ? null : parsed)
+                                    }}
+                                  />
+                                ) : (
+                                  <p className="text-base">{formatPercent(selectedHerdeiro.percentual_participacao) || "-"}</p>
+                                )}
+                              </div>
+                              <div className="space-y-1 sm:col-span-2">
+                                <label className="text-xs font-medium text-muted-foreground uppercase">Endereço</label>
+                                {herdeiroEditMode ? (
+                                  <Input
+                                    value={herdeiroEdit?.endereco || ""}
+                                    onChange={(e) => updateHerdeiroEdit("endereco", e.target.value)}
+                                  />
+                                ) : (
+                                  <p className="text-base">{selectedHerdeiro.endereco || "-"}</p>
+                                )}
+                              </div>
+                            </div>
+
+                            <Separator />
+
+                            <div className="space-y-3">
+                              <h4 className="text-sm font-semibold uppercase text-muted-foreground">Dados Bancários</h4>
+                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium text-muted-foreground uppercase">Banco</label>
+                                  {herdeiroEditMode ? (
+                                    <Input
+                                      value={herdeiroEdit?.banco || ""}
+                                      onChange={(e) => updateHerdeiroEdit("banco", e.target.value)}
+                                    />
+                                  ) : (
+                                    <p className="text-base">{selectedHerdeiro.banco || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium text-muted-foreground uppercase">Tipo de Conta</label>
+                                  {herdeiroEditMode ? (
+                                    <Input
+                                      value={herdeiroEdit?.tipo_conta || ""}
+                                      onChange={(e) => updateHerdeiroEdit("tipo_conta", e.target.value)}
+                                    />
+                                  ) : (
+                                    <p className="text-base capitalize">{selectedHerdeiro.tipo_conta || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium text-muted-foreground uppercase">Agência</label>
+                                  {herdeiroEditMode ? (
+                                    <Input
+                                      value={herdeiroEdit?.agencia || ""}
+                                      onChange={(e) => updateHerdeiroEdit("agencia", e.target.value)}
+                                    />
+                                  ) : (
+                                    <p className="text-base">{selectedHerdeiro.agencia || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-1">
+                                  <label className="text-xs font-medium text-muted-foreground uppercase">Conta</label>
+                                  {herdeiroEditMode ? (
+                                    <Input
+                                      value={herdeiroEdit?.conta || ""}
+                                      onChange={(e) => updateHerdeiroEdit("conta", e.target.value)}
+                                    />
+                                  ) : (
+                                    <p className="text-base">{selectedHerdeiro.conta || "-"}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-1 sm:col-span-2">
+                                  <label className="text-xs font-medium text-muted-foreground uppercase">Chave PIX</label>
+                                  {herdeiroEditMode ? (
+                                    <Input
+                                      value={herdeiroEdit?.chave_pix || ""}
+                                      onChange={(e) => updateHerdeiroEdit("chave_pix", e.target.value)}
+                                    />
+                                  ) : (
+                                    <p className="text-base">{selectedHerdeiro.chave_pix || "-"}</p>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex justify-end gap-2 pt-2">
+                              <Button
+                                variant="destructive"
+                                onClick={() =>
+                                  void handleDeleteHerdeiro(
+                                    selectedHerdeiro.id,
+                                    selectedHerdeiro.nome_completo
+                                  )
+                                }
+                                disabled={herdeiroSaving}
+                              >
+                                {herdeiroSaving ? "Excluindo..." : "Excluir herdeiro"}
+                              </Button>
+                              {herdeiroEditMode ? (
+                                <>
+                                  <Button
+                                    variant="outline"
+                                    onClick={() => {
+                                      setHerdeiroEdit(selectedHerdeiro)
+                                      setHerdeiroEditMode(false)
+                                    }}
+                                    disabled={herdeiroSaving}
+                                  >
+                                    Cancelar
+                                  </Button>
+                                  <Button onClick={handleSaveHerdeiro} disabled={herdeiroSaving}>
+                                    {herdeiroSaving ? "Salvando..." : "Salvar"}
+                                  </Button>
+                                </>
+                              ) : (
+                                <Button onClick={() => setHerdeiroEditMode(true)}>Editar</Button>
+                              )}
+                            </div>
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground">Nenhum herdeiro selecionado.</p>
+                        )}
+                      </DialogContent>
+                    </Dialog>
+
+                    {/* Observações */}
+                    <Card className={`${dashboardCardClass} order-5`}>
+                      <CardHeader className="pb-3">
+                        <CardTitle>
+                          <SectionTitle title="Observações" />
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="pt-0">
+                        {isEditing ? (
+                          <Textarea value={editData.contatos || ""} onChange={(e) => setEditData({ ...editData, contatos: e.target.value })} rows={4} />
+                        ) : (
+                          <p className="text-sm whitespace-pre-wrap">{precatorio.contatos || "Nenhuma observação."}</p>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Tab: Documentos */}
+              <TabsContent value="documentos" className="mt-0">
+                <ChecklistDocumentos
+                  precatorioId={id}
+                  canEdit={canEdit}
+                  onUpdate={loadPrecatorio}
+                  pdfUrl={precatorio?.file_url || precatorio?.pdf_url} // Passando URL do Ofício para permitir visualização
+                />
+              </TabsContent>
+
+              {/* Tab: Ofício */}
+              <TabsContent value="oficio" className="space-y-6">
+                <OficioViewer
+                  precatorioId={precatorio.id}
+                  fileUrl={precatorio.file_url || precatorio.pdf_url}
+                  onFileUpdate={loadPrecatorio}
+                  readonly={!canManageOficio}
+                  currentStatus={precatorio.status_kanban || precatorio.localizacao_kanban || precatorio.status}
+                />
+              </TabsContent>
+
+              {/* Tab: Certidões */}
+              <TabsContent value="certidoes" className="mt-0">
+                <ChecklistCertidoes
+                  precatorioId={id}
+                  canEdit={canEdit}
+                  onUpdate={loadPrecatorio}
+                  initialStatus={precatorio?.status_certidoes}
+                />
+              </TabsContent>
+
+              {/* Tab: Escrituras */}
+              <TabsContent value="escrituras" className="mt-0">
+                <AbaEscrituras
+                  precatorioId={id}
+                  canEdit={
+                    userRole?.includes("admin") ||
+                    userRole?.includes("gestor") ||
+                    userRole?.includes("gestor_escrituras") ||
+                    false
+                  }
+                  onUpdate={loadPrecatorio}
+                  initialStatus={precatorio?.status_escrituras}
+                  initialObservacoes={precatorio?.observacoes_escrituras}
+                />
+              </TabsContent>
+
+              {/* Tab: Jurídico */}
+              <TabsContent value="juridico" className="mt-0 space-y-6">
+                <LegalOpinionPanel
+                  precatorioId={id}
+                  title="Parecer Juridico"
+                  subtitle="Modulo estruturado com status, checklist, anexos, comentarios e historico."
+                  canCreate={roles.some((role) =>
+                    ["admin", "juridico", "gestor", "operador_comercial", "operador_calculo"].includes(role)
+                  )}
+                  canEdit={roles.some((role) => ["admin", "juridico", "gestor"].includes(role))}
+                  showOpenModuleButton={false}
+                />
+                <div className="max-w-4xl">
+                  {precatorio.status_kanban === "proposta_aceita" && (
+                    <Card className={`${dashboardCardClass} mb-4 border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15`}>
+                      <CardContent className="py-4 flex items-start gap-3 text-primary">
+                        <CheckCircle2 className="h-5 w-5 mt-0.5" />
                         <div>
-                          <Label>Número do Precatório</Label>
-                          <Input
-                            value={editData.numero_precatorio || ""}
-                            onChange={(e) => setEditData({ ...editData, numero_precatorio: maskProcesso(e.target.value) })}
+                          <p className="font-semibold">Aceite confirmado</p>
+                          <p className="text-sm text-primary">
+                            Este precatório entrou em jurídico de fechamento e aguarda parecer do jurídico.
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+                  {precatorio.status_kanban === "proposta_aceita" ? (
+                    <Card className={`${dashboardCardClass} order-5`}>
+                      <CardHeader>
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <Gavel className="h-5 w-5" />
+                          Parecer Jurídico (Fechamento)
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Decisão do Jurídico</Label>
+                            <Select
+                              value={fechamentoData.liberado ? "aprovado" : "reprovado"}
+                              onValueChange={(value) =>
+                                setFechamentoData((prev) => ({
+                                  ...prev,
+                                  liberado: value === "aprovado",
+                                }))
+                              }
+                              disabled={!canEditFechamento}
+                            >
+                              <SelectTrigger>
+                                <SelectValue placeholder="Selecione a decisão" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="aprovado">Aprovar crédito</SelectItem>
+                                <SelectItem value="reprovado">Reprovar crédito</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                          {!fechamentoData.liberado && (
+                            <div className="space-y-2">
+                              <Label>Resultado final</Label>
+                              <Select
+                                value={fechamentoData.resultadoFinal}
+                                onValueChange={(value) =>
+                                  setFechamentoData((prev) => ({
+                                    ...prev,
+                                    resultadoFinal: value,
+                                  }))
+                                }
+                                disabled={!canEditFechamento}
+                              >
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Selecione o resultado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="reprovado">Reprovado</SelectItem>
+                                  <SelectItem value="nao_elegivel">Não elegível</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label>Observações do Jurídico</Label>
+                          <Textarea
+                            value={fechamentoData.pendencias}
+                            onChange={(e) =>
+                              setFechamentoData((prev) => ({
+                                ...prev,
+                                pendencias: e.target.value,
+                              }))
+                            }
+                            placeholder="Descreva o parecer e as observações do jurídico..."
+                            rows={6}
+                            disabled={!canEditFechamento}
                           />
+                          <p className="text-xs text-muted-foreground">
+                            Esse parecer ficará registrado como observação do fechamento jurídico.
+                          </p>
                         </div>
-                        <div>
-                          <Label>Número do Processo</Label>
-                          <Input value={editData.numero_processo || ""} onChange={(e) => setEditData({ ...editData, numero_processo: maskProcesso(e.target.value) })} />
+
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={handleSaveFechamento}
+                            disabled={fechamentoSaving || !canEditFechamento}
+                          >
+                            <Save className="h-4 w-4 mr-2" />
+                            {fechamentoSaving ? "Salvando..." : "Salvar Parecer"}
+                          </Button>
                         </div>
-                        <div>
-                          <Label>Número do Ofício</Label>
-                          <Input value={editData.numero_oficio || ""} onChange={(e) => setEditData({ ...editData, numero_oficio: e.target.value })} />
-                        </div>
-                      </div>
-                      <Separator className="my-4" />
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Status</label>
-                          <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "â€”"}</p>
-                        </div>
-                      </div>
-                    </>
+                      </CardContent>
+                    </Card>
+                  ) : precatorio.status_kanban === "juridico" ? (
+                    // Se está em análise: Jurídico/Admin vê formulário de parecer, Outros veem aviso
+                    (userRole?.includes('admin') || userRole?.includes('juridico')) ? (
+                      <FormParecerJuridico
+                        precatorioId={id}
+                        precatorio={precatorio}
+                        onUpdate={loadPrecatorio}
+                      />
+                    ) : (
+                      <Card className={dashboardCardClass}>
+                        <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
+                          <Scale className="h-12 w-12 mb-4 opacity-50" />
+                          <p className="font-medium">Precatório em Jurídico</p>
+                          <p className="text-sm mt-1">Aguardando emissão de parecer pelo setor responsável.</p>
+                        </CardContent>
+                      </Card>
+                    )
                   ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                      <InfoRow
-                        label="Número do Precatório"
-                        value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "â€”"}
-                        valueClassName="text-base font-semibold"
-                      />
-                      <InfoRow
-                        label="Número do Processo"
-                        value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "â€”"}
-                      />
-                      <InfoRow
-                        label="Número do Ofício"
-                        value={precatorio.numero_oficio || "â€”"}
-                      />
-                      <InfoRow
-                        label="Status"
-                        value={precatorio.status?.replace(/_/g, " ") || "â€”"}
-                      />
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Responsável</label>
-                        <div className="flex items-center gap-2 mt-1">
-                          <User className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "â€”"}</span>
-                        </div>
-                      </div>
+                    <div className="space-y-4">
+                      {hasFechamentoParecer && (
+                        <Card className={dashboardCardClass}>
+                          <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Gavel className="h-5 w-5" />
+                              Parecer Jurídico (Fechamento)
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <p className="text-sm font-semibold">
+                              {precatorio.juridico_liberou_fechamento ? "Crédito aprovado" : "Crédito reprovado"}
+                              {precatorio.juridico_resultado_final
+                                ? ` -€¢ ${precatorio.juridico_resultado_final === "nao_elegivel" ? "Não elegível" : "Reprovado"}`
+                                : ""}
+                            </p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-line">
+                              {precatorio.pendencias_fechamento || "Sem observações registradas."}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {precatorio.juridico_parecer_status && (
+                        <Card className={dashboardCardClass}>
+                          <CardHeader>
+                            <CardTitle className="text-base flex items-center gap-2">
+                              <Scale className="h-5 w-5" />
+                              Parecer Jurídico
+                            </CardTitle>
+                          </CardHeader>
+                          <CardContent className="space-y-2">
+                            <p className="text-sm font-semibold">Status: {precatorio.juridico_parecer_status}</p>
+                            <p className="text-sm text-muted-foreground whitespace-pre-line">
+                              {precatorio.juridico_parecer_texto || "Sem observações registradas."}
+                            </p>
+                          </CardContent>
+                        </Card>
+                      )}
+
+                      {!precatorio.juridico_parecer_status && !precatorio.pendencias_fechamento && (
+                        (userRole?.includes('juridico') && !userRole?.includes('admin')) ? (
+                          <Card className={dashboardCardClass}>
+                            <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
+                              <CheckSquare className="h-12 w-12 mb-4 opacity-50" />
+                              <p className="font-medium">Sem pendências jurídicas</p>
+                              <p className="text-sm mt-1">Nenhuma solicitação de análise em aberto para este precatório.</p>
+                            </CardContent>
+                          </Card>
+                        ) : (
+                          <FormSolicitarJuridico
+                            precatorioId={id}
+                            onUpdate={loadPrecatorio}
+                          />
+                        )
+                      )}
                     </div>
                   )}
-              </CardContent>
-            </Card>
+                </div>
+              </TabsContent>
 
-            <Card className={`${dashboardCardClass} order-3`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={FileText} title="Gestão de Análise" />
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0 space-y-4">
-                {isEditing ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-2">
-                        <Label>Penhora</Label>
-                        <Select
-                          value={booleanSelectValue(editData.analise_penhora)}
-                          onValueChange={(value) =>
-                            setEditData({ ...editData, analise_penhora: selectValueToBoolean(value) })
-                          }
+              {/* Tab: Cálculo */}
+              <TabsContent value="calculo" className="mt-0 space-y-6">
+                {isAdmin && hasCalculoSalvo && !adminRecalcular ? (
+                  <div className="space-y-6">
+                    <div className="flex flex-wrap items-center justify-between gap-3">
+                      <h3 className="text-lg font-semibold mb-0 flex items-center gap-2">
+                        <Calculator className="h-5 w-5" />
+                        Detalhamento do Cálculo
+                      </h3>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="secondary"
+                          className="h-9 rounded-xl px-4"
+                          onClick={() => setAdminRecalcular(true)}
                         >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="indefinido">Não informado</SelectItem>
-                            <SelectItem value="true">Sim</SelectItem>
-                            <SelectItem value="false">Não</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Cessão</Label>
-                        <Select
-                          value={booleanSelectValue(editData.analise_cessao)}
-                          onValueChange={(value) =>
-                            setEditData({ ...editData, analise_cessao: selectValueToBoolean(value) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="indefinido">Não informado</SelectItem>
-                            <SelectItem value="true">Sim</SelectItem>
-                            <SelectItem value="false">Não</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Herdeiros habilitados</Label>
-                        <Select
-                          value={
-                            editData.analise_herdeiros === true
-                              ? "Sim"
-                              : editData.analise_herdeiros === false
-                                ? "Não"
-                                : editData.analise_herdeiros || "indefinido"
-                          }
-                          onValueChange={(value) =>
-                            setEditData({
-                              ...editData,
-                              analise_herdeiros: value === "indefinido" ? null : value,
-                            })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="indefinido">Não informado</SelectItem>
-                            <SelectItem value="Sim">Sim</SelectItem>
-                            <SelectItem value="Não">Não</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Viabilidade do crédito</Label>
-                        <Select
-                          value={booleanSelectValue(editData.analise_viavel)}
-                          onValueChange={(value) =>
-                            setEditData({ ...editData, analise_viavel: selectValueToBoolean(value) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="indefinido">Não informado</SelectItem>
-                            <SelectItem value="true">Viável</SelectItem>
-                            <SelectItem value="false">Não viável</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                      <div className="space-y-2">
-                        <Label>ITCMD</Label>
-                        <Select
-                          value={booleanSelectValue(editData.analise_itcmd)}
-                          onValueChange={(value) =>
-                            setEditData({ ...editData, analise_itcmd: selectValueToBoolean(value) })
-                          }
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="indefinido">Não informado</SelectItem>
-                            <SelectItem value="true">Sim</SelectItem>
-                            <SelectItem value="false">Não</SelectItem>
-                          </SelectContent>
-                        </Select>
+                          <RotateCcw className="h-4 w-4 mr-2" />
+                          Realizar novo cálculo
+                        </Button>
                       </div>
                     </div>
+                    <ResumoCalculoDetalhado precatorio={precatorio} />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {editData.analise_penhora === true && (
-                        <>
-                          <div className="space-y-2">
-                            <Label>Penhora valor (R$)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_penhora_valor || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_penhora_valor: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Penhora percentual (%)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_penhora_percentual || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_penhora_percentual: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </>
-                      )}
-                      {editData.analise_cessao === true && (
-                        <>
-                          <div className="space-y-2">
-                            <Label>Cessão valor (R$)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_cessao_valor || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_cessao_valor: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>Cessão percentual (%)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_cessao_percentual || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_cessao_percentual: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </>
-                      )}
-                      {editData.analise_itcmd === true && (
-                        <>
-                          <div className="space-y-2">
-                            <Label>ITCMD valor (R$)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_itcmd_valor || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_itcmd_valor: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label>ITCMD percentual (%)</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={editData.analise_itcmd_percentual || ""}
-                              onChange={(e) =>
-                                setEditData({ ...editData, analise_itcmd_percentual: e.target.value })
-                              }
-                              placeholder="0,00"
-                            />
-                          </div>
-                        </>
-                      )}
-                      <div className="space-y-2">
-                        <Label>Adiantamento recebido valor (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editData.analise_adiantamento_valor || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, analise_adiantamento_valor: e.target.value })
-                          }
-                          placeholder="0,00"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Adiantamento recebido percentual (%)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editData.analise_adiantamento_percentual || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, analise_adiantamento_percentual: e.target.value })
-                          }
-                          placeholder="0,00"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Honorários contratuais valor (R$)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editData.analise_honorarios_valor || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, analise_honorarios_valor: e.target.value })
-                          }
-                          placeholder="0,00"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Honorários contratuais percentual (%)</Label>
-                        <Input
-                          type="number"
-                          step="0.01"
-                          value={editData.analise_honorarios_percentual || ""}
-                          onChange={(e) =>
-                            setEditData({ ...editData, analise_honorarios_percentual: e.target.value })
-                          }
-                          placeholder="0,00"
-                        />
-                      </div>
+                    <div className="mt-8 border-t pt-8">
+                      <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
+                      <HistoricoCalculos precatorioId={id} />
                     </div>
-
-                    <div className="space-y-2">
-                      <Label>Observações da análise</Label>
-                      <Textarea
-                        value={editData.analise_observacoes || ""}
-                        onChange={(e) =>
-                          setEditData({ ...editData, analise_observacoes: e.target.value })
-                        }
-                        rows={4}
-                      />
+                  </div>
+                ) : isAdmin || isOperadorCalculo ? (
+                  <div className="space-y-6">
+                    <CalculadoraPrecatorios precatorioId={id} onUpdate={loadPrecatorio} />
+                    <div className="mt-8 border-t pt-8">
+                      <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
+                      <HistoricoCalculos precatorioId={id} />
                     </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Penhora</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatBoolean(precatorio.analise_penhora)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Cessão</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatBoolean(precatorio.analise_cessao)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Herdeiros habilitados</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatHerdeiros(precatorio.analise_herdeiros)}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Viabilidade do crédito</p>
-                        <p
-                          className={`text-sm font-semibold ${
-                            precatorio.analise_viavel === true
-                              ? "text-primary"
-                              : precatorio.analise_viavel === false
-                                ? "text-destructive"
-                                : "text-muted-foreground"
-                          }`}
-                        >
-                          {precatorio.analise_viavel === true
-                            ? "Viável"
-                            : precatorio.analise_viavel === false
-                              ? "Não viável"
-                              : "Não informado"}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">ITCMD</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatBoolean(precatorio.analise_itcmd)}
-                        </p>
-                      </div>
-                    </div>
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                      <Calculator className="h-5 w-5" />
+                      Detalhamento do Cálculo
+                    </h3>
+                    <ResumoCalculoDetalhado precatorio={precatorio} />
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {precatorio.analise_penhora === true && (
-                        <>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Penhora valor (R$)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {hasValue(precatorio.analise_penhora_valor)
-                                ? formatCurrency(precatorio.analise_penhora_valor)
-                                : "â€”"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Penhora percentual (%)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_penhora_percentual) || "â€”"}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                      {precatorio.analise_cessao === true && (
-                        <>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Cessão valor (R$)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {hasValue(precatorio.analise_cessao_valor)
-                                ? formatCurrency(precatorio.analise_cessao_valor)
-                                : "â€”"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Cessão percentual (%)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_cessao_percentual) || "â€”"}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                      {precatorio.analise_itcmd === true && (
-                        <>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">ITCMD valor (R$)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {hasValue(precatorio.analise_itcmd_valor)
-                                ? formatCurrency(precatorio.analise_itcmd_valor)
-                                : "â€”"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">ITCMD percentual (%)</p>
-                            <p className="text-sm font-semibold text-foreground">
-                              {formatPercent(precatorio.analise_itcmd_percentual) || "â€”"}
-                            </p>
-                          </div>
-                        </>
-                      )}
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Adiantamento recebido valor (R$)</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {hasValue(precatorio.analise_adiantamento_valor)
-                            ? formatCurrency(precatorio.analise_adiantamento_valor)
-                            : "â€”"}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Adiantamento recebido percentual (%)</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatPercent(precatorio.analise_adiantamento_percentual) || "â€”"}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Honorários contratuais valor (R$)</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {hasValue(precatorio.analise_honorarios_valor)
-                            ? formatCurrency(precatorio.analise_honorarios_valor)
-                            : "â€”"}
-                        </p>
-                      </div>
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Honorários contratuais percentual (%)</p>
-                        <p className="text-sm font-semibold text-foreground">
-                          {formatPercent(precatorio.analise_honorarios_percentual) || "â€”"}
-                        </p>
-                      </div>
+                    <div className="mt-8 border-t pt-8">
+                      <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
+                      <HistoricoCalculos precatorioId={id} />
                     </div>
-
-                    {precatorio.analise_observacoes && (
-                      <div className="space-y-1">
-                        <p className="text-xs font-medium text-muted-foreground">Observações da análise</p>
-                        <p className="text-sm text-foreground whitespace-pre-line">
-                          {precatorio.analise_observacoes}
-                        </p>
-                      </div>
-                    )}
-                  </>
+                  </div>
                 )}
-              </CardContent>
-            </Card>
+              </TabsContent>
 
-            {/* Vara de Origem e Devedor */}
-            <Card className={`${dashboardCardClass} order-4`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={Gavel} title="Vara de Origem e Devedor" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0">
-                  {isEditing ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {userRole?.includes("admin") && (
-                        <div className="md:col-span-2">
-                          <Label>Vara de Origem</Label>
-                          <Input
-                            placeholder="Ex: 2ª Vara Cível, Vara do Trabalho, etc"
-                            value={editData.tribunal || ""}
-                            onChange={(e) => setEditData({ ...editData, tribunal: e.target.value })}
-                          />
-                        </div>
-                      )}
-                      <div>
-                        <Label>Devedor</Label>
-                        <Input value={editData.devedor || ""} onChange={(e) => setEditData({ ...editData, devedor: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label>Esfera do Devedor</Label>
-                        <Select
-                          value={editData.esfera_devedor || ""}
-                          onValueChange={(value) => setEditData({ ...editData, esfera_devedor: value })}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione..." />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {ESFERA_DEVEDOR_OPTIONS.map((option) => (
-                              <SelectItem key={option.value} value={option.value}>
-                                {option.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <InfoRow
-                        label="Vara de Origem"
-                        value={precatorio.tribunal || "â€”"}
-                        valueClassName="text-base font-semibold"
-                      />
-                      <InfoRow label="Devedor" value={precatorio.devedor || "â€”"} />
-                      <InfoRow label="Esfera do Devedor" value={getEsferaDevedorLabel(precatorio.esfera_devedor)} />
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-            {/* COLUNA 2: Financeiro e Datas */}
-              {/* Valores */}
-            <Card className={`${dashboardCardClass} order-2`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={DollarSign} title="Valores" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0">
-                  {isEditing && (canEditValorPrincipal || canEditValorAtualizado) && (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                      <div className="space-y-2">
-                        <Label>Valor Principal (R$)</Label>
-                        <CurrencyInput
-                          value={
-                            hasValue(editData.valor_principal) && editData.valor_principal !== ""
-                              ? Number(editData.valor_principal)
-                              : undefined
-                          }
-                          onValueChange={(value) => setEditData({ ...editData, valor_principal: value })}
-                          disabled={!canEditValorPrincipal}
-                          placeholder="R$ 0,00"
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <Label>Valor Atualizado (R$)</Label>
-                        {canEditValorAtualizado ? (
-                          <CurrencyInput
-                            value={
-                              hasValue(editData.valor_atualizado) && editData.valor_atualizado !== ""
-                                ? Number(editData.valor_atualizado)
-                                : undefined
-                            }
-                            onValueChange={(value) => setEditData({ ...editData, valor_atualizado: value })}
-                            placeholder="R$ 0,00"
-                          />
-                        ) : (
-                          <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
-                            {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "â€”"}
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Valor Principal</label>
-                      <p className="text-lg font-semibold text-foreground">
-                        {(() => {
-                          const valorPrincipal = isEditing ? editData.valor_principal : precatorio.valor_principal
-                          return hasValue(valorPrincipal) && valorPrincipal !== ""
-                            ? formatCurrency(Number(valorPrincipal))
-                            : "â€”"
-                        })()}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Valor Atualizado</label>
-                      <p className="text-2xl font-bold text-foreground">
-                        {(() => {
-                          const valorAtualizado = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
-                          return hasValue(valorAtualizado) && valorAtualizado !== ""
-                            ? formatCurrency(Number(valorAtualizado))
-                            : "â€”"
-                        })()}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Saldo Líquido</label>
-                      <p className="text-xl font-bold text-foreground">
-                        {hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "â€”"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">PSS</label>
-                      <p className="text-base text-foreground">
-                        {hasValue(precatorio.pss_valor)
-                          ? precatorio.pss_valor === 0
-                            ? "Isento"
-                            : formatCurrency(precatorio.pss_valor)
-                          : "â€”"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">IRPF</label>
-                      <p className="text-base text-foreground">
-                        {hasValue(precatorio.irpf_valor)
-                          ? formatCurrency(precatorio.irpf_valor)
-                          : precatorio.irpf_isento
-                            ? "Isento"
-                            : "â€”"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Honorários</label>
-                      <p className="text-base text-foreground">
-                        {hasValue(precatorio.honorarios_valor)
-                          ? formatCurrency(precatorio.honorarios_valor)
-                          : "â€”"}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Maior</label>
-                      <p className="text-xl font-bold text-destructive dark:text-destructive">
-                        {hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "â€”"}
-                      </p>
-                    </div>
-                    <div className="space-y-1">
-                      <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Menor</label>
-                      <p className="text-xl font-bold text-primary dark:text-primary">
-                        {hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "â€”"}
-                      </p>
-                    </div>
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Datas */}
-              <Card className={`${dashboardCardClass} order-5`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={Calendar} title="Datas Importantes" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0">
-                  {isEditing ? (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <Label>Data Base</Label>
-                        <Input type="date" value={editData.data_base || ""} onChange={(e) => setEditData({ ...editData, data_base: e.target.value })} />
-                      </div>
-                      <div>
-                        <Label>Data de Expedição</Label>
-                        <Input type="date" value={editData.data_expedicao || ""} onChange={(e) => setEditData({ ...editData, data_expedicao: e.target.value })} />
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Data Base</label>
-                        <p className="text-base">{precatorio.data_base ? formatDate(precatorio.data_base) : "Não informada"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Data de Expedição</label>
-                        <p className="text-base">{precatorio.data_expedicao ? formatDate(precatorio.data_expedicao) : "Não informada"}</p>
-                      </div>
-                      <div>
-                        <label className="text-sm font-medium text-muted-foreground">Data de Cálculo</label>
-                        <p className="text-base">{precatorio.data_calculo ? formatDate(precatorio.data_calculo) : "Não realizado"}</p>
-                      </div>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            {/* COLUNA 3: Partes e Observações */}
-            <div className="flex flex-col gap-6">
-              {/* Triagem de Interesse */}
-              <Card className={`${dashboardCardClass} order-1`}>
-                <CardHeader className="pb-3">
-                  <CardTitle>
-                    <SectionTitle icon={Users} title="Triagem de Interesse" />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0 space-y-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <span
-                      className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${triagemStatusMeta.badgeClass}`}
-                    >
-                      <span className={`h-2.5 w-2.5 rounded-full ${triagemStatusMeta.dotClass}`} />
-                      {triagemStatusMeta.label}
-                    </span>
-                    {semInteresseMotivo && (
-                      <p className="text-xs text-muted-foreground">{`Motivo: ${semInteresseMotivo}`}</p>
-                    )}
-                    {precatorio?.data_recontato && (
-                      <p className="text-xs text-muted-foreground">
-                        {`Recontato: ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`}
-                      </p>
-                    )}
-                  </div>
-                  <div className="flex flex-wrap items-end gap-4">
-                    <div className="flex flex-col gap-1 text-xs">
-                      <span className="font-semibold">Atualizar interesse</span>
-                      <Select
-                        value={triagemStatusSelection || "SEM_CONTATO"}
-                        onValueChange={(value) => setTriagemStatusSelection(value)}
-                      >
-                        <SelectTrigger className="min-w-[200px]">
-                          <SelectValue placeholder="Escolha o status" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TRIAGEM_STATUS_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="flex flex-col gap-1 text-xs">
-                      <span className="font-semibold">Encaminhar para</span>
-                      <Select
-                        value={triagemDestinoReprovacao}
-                        onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
-                      >
-                        <SelectTrigger className="min-w-[220px]">
-                          <SelectValue placeholder="Escolha o destino" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {TRIAGEM_DESTINO_OPTIONS.map((option) => (
-                            <SelectItem key={option.value} value={option.value}>
-                              {option.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={handleSaveTriagemStatus}
-                      disabled={triagemSaving || !triagemStatusSelection}
-                    >
-                      {triagemSaving ? "Salvando..." : "Salvar"}
-                    </Button>
-                  </div>
-                  {interesseObservacao && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-medium text-muted-foreground">Observação da triagem</p>
-                      <p className="text-sm leading-relaxed text-foreground">{interesseObservacao}</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Dados Bancários */}
-              <Card className={`${dashboardCardClass} order-4`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={DollarSign} title="Dados Bancários" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0 space-y-4">
-                  {isEditing ? (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Banco</Label>
-                          <Input
-                            placeholder="Ex: Banco do Brasil"
-                            value={editData.banco || ""}
-                            onChange={(e) => setEditData({ ...editData, banco: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Tipo de Conta</Label>
-                          <Select
-                            value={editData.tipo_conta || "corrente"}
-                            onValueChange={(value) => setEditData({ ...editData, tipo_conta: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="corrente">Conta Corrente</SelectItem>
-                              <SelectItem value="poupanca">Conta Poupança</SelectItem>
-                              <SelectItem value="pagamento">Conta de Pagamento</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Agência</Label>
-                          <Input
-                            placeholder="Sem dígito"
-                            value={editData.agencia || ""}
-                            onChange={(e) => setEditData({ ...editData, agencia: e.target.value })}
-                          />
-                        </div>
-                        <div>
-                          <Label>Conta</Label>
-                          <Input
-                            placeholder="Com dígito"
-                            value={editData.conta || ""}
-                            onChange={(e) => setEditData({ ...editData, conta: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <Separator className="my-2" />
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <Label>Tipo Chave PIX</Label>
-                          <Select
-                            value={editData.tipo_chave_pix || "cpf"}
-                            onValueChange={(value) => setEditData({ ...editData, tipo_chave_pix: value })}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Selecione..." />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cpf">CPF/CNPJ</SelectItem>
-                              <SelectItem value="email">E-mail</SelectItem>
-                              <SelectItem value="telefone">Telefone</SelectItem>
-                              <SelectItem value="aleatoria">Chave Aleatória</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                        <div>
-                          <Label>Chave PIX</Label>
-                          <Input
-                            value={editData.chave_pix || ""}
-                            onChange={(e) => setEditData({ ...editData, chave_pix: e.target.value })}
-                          />
-                        </div>
-                      </div>
-                      <div>
-                        <Label>Observações Bancárias</Label>
-                        <Textarea
-                          value={editData.observacoes_bancarias || ""}
-                          onChange={(e) => setEditData({ ...editData, observacoes_bancarias: e.target.value })}
-                          placeholder="Ex: Pagamento somente em nome do titular..."
-                        />
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Banco</label>
-                          <p className="text-base">{precatorio.banco || "â€”"}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Tipo</label>
-                          <p className="text-base capitalize">{precatorio.tipo_conta || "â€”"}</p>
-                        </div>
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Agência</label>
-                          <p className="text-base">{precatorio.agencia || "â€”"}</p>
-                        </div>
-                        <div>
-                          <label className="text-sm font-medium text-muted-foreground">Conta</label>
-                          <p className="text-base">{precatorio.conta || "â€”"}</p>
-                        </div>
-                      </div>
-                      {precatorio.chave_pix && (
-                        <div className="bg-muted/30 p-3 rounded-md border mt-2">
-                          <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                            <ExternalLink className="h-3 w-3" /> PIX ({precatorio.tipo_chave_pix || "Chave"})
-                          </label>
-                          <p className="text-base font-mono mt-1 select-all">{precatorio.chave_pix}</p>
-                        </div>
-                      )}
-                      {precatorio.observacoes_bancarias && (
-                        <div className="mt-2">
-                          <label className="text-sm font-medium text-muted-foreground">Observações</label>
-                          <p className="text-sm mt-1">{precatorio.observacoes_bancarias}</p>
-                        </div>
-                      )}
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-
-              {/* Credor e Advogado - Compactados ou em Abas? Vou deixar em cards um abaixo do outro por enquanto */}
-              <Card className={`${dashboardCardClass} order-2`}>
-              <CardHeader className="pb-3">
-                <CardTitle>
-                  <SectionTitle icon={User} title="Partes (Credor/Adv)" />
-                </CardTitle>
-              </CardHeader>
-                <CardContent className="pt-0 space-y-6">
-                  {/* Renderiza Credor Form/View */}
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-sm uppercase text-muted-foreground">Credor</h4>
-                    {isEditing ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="md:col-span-2">
-                          <Input value={editData.credor_nome || ""} onChange={(e) => setEditData({ ...editData, credor_nome: e.target.value })} placeholder="Nome do Credor" />
-                        </div>
-                        <div>
-                          <Input value={editData.credor_cpf_cnpj || ""} onChange={(e) => setEditData({ ...editData, credor_cpf_cnpj: e.target.value })} placeholder="CPF/CNPJ" />
-                        </div>
-                        <div>
-                          <Input value={editData.credor_telefone || ""} onChange={(e) => setEditData({ ...editData, credor_telefone: e.target.value })} placeholder="Telefone" />
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="space-y-2">
-                        <p className="font-medium text-base">{precatorio.credor_nome || "â€”"}</p>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          <p className="text-sm text-muted-foreground">{precatorio.credor_cpf_cnpj || "â€”"}</p>
-                          <p className="text-sm text-muted-foreground">{precatorio.credor_telefone || "â€”"}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                  <Separator />
-                  <div className="space-y-4">
-                    <h4 className="font-semibold text-sm uppercase text-muted-foreground">Advogado</h4>
-                    {isEditing ? (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input value={editData.advogado_nome || ""} onChange={(e) => setEditData({ ...editData, advogado_nome: e.target.value })} placeholder="Nome do Advogado" />
-                        <Input value={editData.advogado_oab || ""} onChange={(e) => setEditData({ ...editData, advogado_oab: e.target.value })} placeholder="OAB" />
-                      </div>
-                    ) : (
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                        <p className="font-medium text-base">{precatorio.advogado_nome || "â€”"}</p>
-                        <p className="text-sm text-muted-foreground">{precatorio.advogado_oab || "â€”"}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-
-
-              <Card className={`${dashboardCardClass} order-3`}>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <SectionTitle icon={Users} title="Herdeiros" />
-                    {herdeiros.length > 0 && (
-                      <Badge variant="secondary" className="ml-auto">
-                        {herdeiros.length}
-                      </Badge>
-                    )}
-                  </CardTitle>
-                  {canEdit && (
-                    <div className="pt-2">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={handleAddHerdeiro}
-                        disabled={herdeiroSaving}
-                      >
-                        Adicionar herdeiro
-                      </Button>
-                    </div>
-                  )}
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {herdeirosLoading ? (
-                    <p className="text-sm text-muted-foreground">Carregando herdeiros...</p>
-                  ) : herdeiros.length === 0 ? (
-                    <p className="text-sm text-muted-foreground">Nenhum herdeiro informado.</p>
-                  ) : (
-                    <div className="space-y-3">
-                      {herdeiros.map((herdeiro) => (
-                        <button
-                          key={herdeiro.id}
-                          type="button"
-                          onClick={() => handleOpenHerdeiro(herdeiro)}
-                          className="w-full text-left rounded-md border bg-muted/20 p-3 transition hover:border-primary/50 hover:bg-muted/30"
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div className="space-y-1">
-                              <p className="font-medium">{herdeiro.nome_completo || "Herdeiro"}</p>
-                              {herdeiro.cpf && (
-                                <p className="text-xs text-muted-foreground">CPF: {herdeiro.cpf}</p>
-                              )}
-                              {herdeiro.telefone && (
-                                <p className="text-xs text-muted-foreground">Telefone: {herdeiro.telefone}</p>
-                              )}
-                              {herdeiro.endereco && (
-                                <p className="text-xs text-muted-foreground">Endereço: {herdeiro.endereco}</p>
-                              )}
-                              {herdeiro.email && (
-                                <p className="text-xs text-muted-foreground">Email: {herdeiro.email}</p>
-                              )}
-                            </div>
-                            {formatPercent(herdeiro.percentual_participacao) && (
-                              <Badge variant="outline" className="text-xs">
-                                {formatPercent(herdeiro.percentual_participacao)}
-                              </Badge>
-                            )}
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Dialog
-                open={herdeiroModalOpen}
-                onOpenChange={(open) => {
-                  setHerdeiroModalOpen(open)
-                  if (!open) {
-                    setSelectedHerdeiro(null)
-                    setHerdeiroEdit(null)
-                    setHerdeiroEditMode(false)
-                  }
-                }}
-              >
-                <DialogContent className="max-w-2xl">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {selectedHerdeiro?.nome_completo || "Detalhes do Herdeiro"}
-                    </DialogTitle>
-                  </DialogHeader>
-                  {selectedHerdeiro ? (
-                    <div className="space-y-6">
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Nome</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.nome_completo || ""}
-                              onChange={(e) => updateHerdeiroEdit("nome_completo", e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-base">{selectedHerdeiro.nome_completo || "â€”"}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">CPF</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.cpf || ""}
-                              onChange={(e) => updateHerdeiroEdit("cpf", e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-base">{selectedHerdeiro.cpf || "â€”"}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Telefone</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.telefone || ""}
-                              onChange={(e) => updateHerdeiroEdit("telefone", e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-base">{selectedHerdeiro.telefone || "â€”"}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Email</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.email || ""}
-                              onChange={(e) => updateHerdeiroEdit("email", e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-base">{selectedHerdeiro.email || "â€”"}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Participação</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.percentual_participacao?.toString() || ""}
-                              onChange={(e) => {
-                                const value = e.target.value.replace(",", ".")
-                                const parsed = value === "" ? null : Number(value)
-                                updateHerdeiroEdit("percentual_participacao", Number.isNaN(parsed) ? null : parsed)
-                              }}
-                            />
-                          ) : (
-                            <p className="text-base">{formatPercent(selectedHerdeiro.percentual_participacao) || "â€”"}</p>
-                          )}
-                        </div>
-                        <div className="space-y-1 sm:col-span-2">
-                          <label className="text-xs font-medium text-muted-foreground uppercase">Endereço</label>
-                          {herdeiroEditMode ? (
-                            <Input
-                              value={herdeiroEdit?.endereco || ""}
-                              onChange={(e) => updateHerdeiroEdit("endereco", e.target.value)}
-                            />
-                          ) : (
-                            <p className="text-base">{selectedHerdeiro.endereco || "â€”"}</p>
-                          )}
-                        </div>
-                      </div>
-
-                      <Separator />
-
-                      <div className="space-y-3">
-                        <h4 className="text-sm font-semibold uppercase text-muted-foreground">Dados Bancários</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Banco</label>
-                            {herdeiroEditMode ? (
-                              <Input
-                                value={herdeiroEdit?.banco || ""}
-                                onChange={(e) => updateHerdeiroEdit("banco", e.target.value)}
-                              />
-                            ) : (
-                              <p className="text-base">{selectedHerdeiro.banco || "â€”"}</p>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Tipo de Conta</label>
-                            {herdeiroEditMode ? (
-                              <Input
-                                value={herdeiroEdit?.tipo_conta || ""}
-                                onChange={(e) => updateHerdeiroEdit("tipo_conta", e.target.value)}
-                              />
-                            ) : (
-                              <p className="text-base capitalize">{selectedHerdeiro.tipo_conta || "â€”"}</p>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Agência</label>
-                            {herdeiroEditMode ? (
-                              <Input
-                                value={herdeiroEdit?.agencia || ""}
-                                onChange={(e) => updateHerdeiroEdit("agencia", e.target.value)}
-                              />
-                            ) : (
-                              <p className="text-base">{selectedHerdeiro.agencia || "â€”"}</p>
-                            )}
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Conta</label>
-                            {herdeiroEditMode ? (
-                              <Input
-                                value={herdeiroEdit?.conta || ""}
-                                onChange={(e) => updateHerdeiroEdit("conta", e.target.value)}
-                              />
-                            ) : (
-                              <p className="text-base">{selectedHerdeiro.conta || "â€”"}</p>
-                            )}
-                          </div>
-                          <div className="space-y-1 sm:col-span-2">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Chave PIX</label>
-                            {herdeiroEditMode ? (
-                              <Input
-                                value={herdeiroEdit?.chave_pix || ""}
-                                onChange={(e) => updateHerdeiroEdit("chave_pix", e.target.value)}
-                              />
-                            ) : (
-                              <p className="text-base">{selectedHerdeiro.chave_pix || "â€”"}</p>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <div className="flex justify-end gap-2 pt-2">
-                        <Button
-                          variant="destructive"
-                          onClick={() =>
-                            void handleDeleteHerdeiro(
-                              selectedHerdeiro.id,
-                              selectedHerdeiro.nome_completo
-                            )
-                          }
-                          disabled={herdeiroSaving}
-                        >
-                          {herdeiroSaving ? "Excluindo..." : "Excluir herdeiro"}
-                        </Button>
-                        {herdeiroEditMode ? (
-                          <>
-                            <Button
-                              variant="outline"
-                              onClick={() => {
-                                setHerdeiroEdit(selectedHerdeiro)
-                                setHerdeiroEditMode(false)
-                              }}
-                              disabled={herdeiroSaving}
-                            >
-                              Cancelar
-                            </Button>
-                            <Button onClick={handleSaveHerdeiro} disabled={herdeiroSaving}>
-                              {herdeiroSaving ? "Salvando..." : "Salvar"}
-                            </Button>
-                          </>
-                        ) : (
-                          <Button onClick={() => setHerdeiroEditMode(true)}>Editar</Button>
-                        )}
-                      </div>
-                    </div>
-                  ) : (
-                    <p className="text-sm text-muted-foreground">Nenhum herdeiro selecionado.</p>
-                  )}
-                </DialogContent>
-              </Dialog>
-
-              {/* Observações */}
-              <Card className={`${dashboardCardClass} order-5`}>
-                <CardHeader className="pb-3">
-                  <CardTitle>
-                    <SectionTitle title="Observações" />
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  {isEditing ? (
-                    <Textarea value={editData.contatos || ""} onChange={(e) => setEditData({ ...editData, contatos: e.target.value })} rows={4} />
-                  ) : (
-                    <p className="text-sm whitespace-pre-wrap">{precatorio.contatos || "Nenhuma observação."}</p>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        </TabsContent>
-
-        {/* Tab: Documentos */}
-        <TabsContent value="documentos" className="mt-0">
-          <ChecklistDocumentos
-            precatorioId={id}
-            canEdit={canEdit}
-            onUpdate={loadPrecatorio}
-            pdfUrl={precatorio?.file_url || precatorio?.pdf_url} // Passando URL do Ofício para permitir visualização
-          />
-        </TabsContent>
-
-        {/* Tab: Ofício */}
-        <TabsContent value="oficio" className="space-y-6">
-          <OficioViewer
-            precatorioId={precatorio.id}
-            fileUrl={precatorio.file_url || precatorio.pdf_url}
-            onFileUpdate={loadPrecatorio}
-            readonly={!canManageOficio}
-            currentStatus={precatorio.status_kanban || precatorio.localizacao_kanban || precatorio.status}
-          />
-        </TabsContent>
-
-        {/* Tab: Certidões */}
-        <TabsContent value="certidoes" className="mt-0">
-          <ChecklistCertidoes
-            precatorioId={id}
-            canEdit={canEdit}
-            onUpdate={loadPrecatorio}
-            initialStatus={precatorio?.status_certidoes}
-          />
-        </TabsContent>
-
-        {/* Tab: Jurídico */}
-        <TabsContent value="juridico" className="mt-0 space-y-6">
-          <div className="max-w-4xl">
-            {precatorio.status_kanban === "proposta_aceita" && (
-              <Card className={`${dashboardCardClass} mb-4 border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15`}>
-                <CardContent className="py-4 flex items-start gap-3 text-primary">
-                  <CheckCircle2 className="h-5 w-5 mt-0.5" />
-                  <div>
-                    <p className="font-semibold">Aceite confirmado</p>
-                    <p className="text-sm text-primary">
-                      Este precatório entrou em jurídico de fechamento e aguarda parecer do jurídico.
-                    </p>
-                  </div>
-                </CardContent>
-              </Card>
-            )}
-            {precatorio.status_kanban === "proposta_aceita" ? (
-              <Card className={`${dashboardCardClass} order-5`}>
-                <CardHeader>
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Gavel className="h-5 w-5" />
-                    Parecer Jurídico (Fechamento)
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label>Decisão do Jurídico</Label>
-                      <Select
-                        value={fechamentoData.liberado ? "aprovado" : "reprovado"}
-                        onValueChange={(value) =>
-                          setFechamentoData((prev) => ({
-                            ...prev,
-                            liberado: value === "aprovado",
-                          }))
-                        }
-                        disabled={!canEditFechamento}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Selecione a decisão" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="aprovado">Aprovar crédito</SelectItem>
-                          <SelectItem value="reprovado">Reprovar crédito</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {!fechamentoData.liberado && (
-                      <div className="space-y-2">
-                        <Label>Resultado final</Label>
-                        <Select
-                          value={fechamentoData.resultadoFinal}
-                          onValueChange={(value) =>
-                            setFechamentoData((prev) => ({
-                              ...prev,
-                              resultadoFinal: value,
-                            }))
-                          }
-                          disabled={!canEditFechamento}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Selecione o resultado" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="reprovado">Reprovado</SelectItem>
-                            <SelectItem value="nao_elegivel">Não elegível</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label>Observações do Jurídico</Label>
-                    <Textarea
-                      value={fechamentoData.pendencias}
-                      onChange={(e) =>
-                        setFechamentoData((prev) => ({
-                          ...prev,
-                          pendencias: e.target.value,
-                        }))
-                      }
-                      placeholder="Descreva o parecer e as observações do jurídico..."
-                      rows={6}
-                      disabled={!canEditFechamento}
-                    />
-                    <p className="text-xs text-muted-foreground">
-                      Esse parecer ficará registrado como observação do fechamento jurídico.
-                    </p>
-                  </div>
-
-                  <div className="flex justify-end">
-                    <Button
-                      onClick={handleSaveFechamento}
-                      disabled={fechamentoSaving || !canEditFechamento}
-                    >
-                      <Save className="h-4 w-4 mr-2" />
-                      {fechamentoSaving ? "Salvando..." : "Salvar Parecer"}
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ) : precatorio.status_kanban === "juridico" ? (
-              // Se está em análise: Jurídico/Admin vê formulário de parecer, Outros veem aviso
-              (userRole?.includes('admin') || userRole?.includes('juridico')) ? (
-                <FormParecerJuridico
+              {/* Tab: Propostas */}
+              <TabsContent value="propostas" className="mt-0">
+                <AbaProposta
                   precatorioId={id}
                   precatorio={precatorio}
                   onUpdate={loadPrecatorio}
+                  userRole={userRole}
+                  currentUserId={profile?.id || null}
                 />
-              ) : (
+              </TabsContent>
+
+              {/* Tab: Fechamento */}
+              <TabsContent value="fechamento" className="mt-0">
+                <AbaFechamento
+                  precatorioId={id}
+                  precatorio={precatorio}
+                  onUpdate={loadPrecatorio}
+                  userRole={roles}
+                />
+              </TabsContent>
+
+              {/* Tab: Timeline */}
+              <TabsContent value="timeline" className="mt-0">
                 <Card className={dashboardCardClass}>
-                  <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
-                    <Scale className="h-12 w-12 mb-4 opacity-50" />
-                    <p className="font-medium">Precatório em Jurídico</p>
-                    <p className="text-sm mt-1">Aguardando emissão de parecer pelo setor responsável.</p>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Clock className="h-5 w-5" />
+                      Linha do Tempo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <Timeline precatorioId={id} />
                   </CardContent>
                 </Card>
-              )
-            ) : (
-              <div className="space-y-4">
-                {hasFechamentoParecer && (
-                  <Card className={dashboardCardClass}>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Gavel className="h-5 w-5" />
-                        Parecer Jurídico (Fechamento)
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <p className="text-sm font-semibold">
-                        {precatorio.juridico_liberou_fechamento ? "Crédito aprovado" : "Crédito reprovado"}
-                        {precatorio.juridico_resultado_final
-                          ? ` â€¢ ${precatorio.juridico_resultado_final === "nao_elegivel" ? "Não elegível" : "Reprovado"}`
-                          : ""}
-                      </p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                        {precatorio.pendencias_fechamento || "Sem observações registradas."}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
+              </TabsContent>
+            </motion.div>
+          </AnimatePresence>
+        </Tabs>
 
-                {precatorio.juridico_parecer_status && (
-                  <Card className={dashboardCardClass}>
-                    <CardHeader>
-                      <CardTitle className="text-base flex items-center gap-2">
-                        <Scale className="h-5 w-5" />
-                        Parecer Jurídico
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <p className="text-sm font-semibold">Status: {precatorio.juridico_parecer_status}</p>
-                      <p className="text-sm text-muted-foreground whitespace-pre-line">
-                        {precatorio.juridico_parecer_texto || "Sem observações registradas."}
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {!precatorio.juridico_parecer_status && !precatorio.pendencias_fechamento && (
-                  (userRole?.includes('juridico') && !userRole?.includes('admin')) ? (
-                    <Card className={dashboardCardClass}>
-                      <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
-                        <CheckSquare className="h-12 w-12 mb-4 opacity-50" />
-                        <p className="font-medium">Sem pendências jurídicas</p>
-                        <p className="text-sm mt-1">Nenhuma solicitação de análise em aberto para este precatório.</p>
-                      </CardContent>
-                    </Card>
-                  ) : (
-                    <FormSolicitarJuridico
-                      precatorioId={id}
-                      onUpdate={loadPrecatorio}
-                    />
-                  )
-                )}
-              </div>
-            )}
-          </div>
-        </TabsContent>
-
-        {/* Tab: Cálculo */}
-        <TabsContent value="calculo" className="mt-0 space-y-6">
-          {isAdmin && hasCalculoSalvo && !adminRecalcular ? (
-            <div className="space-y-6">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <h3 className="text-lg font-semibold mb-0 flex items-center gap-2">
-                  <Calculator className="h-5 w-5" />
-                  Detalhamento do Cálculo
-                </h3>
-                <div className="flex items-center gap-2">
-                  <Button
-                    variant="secondary"
-                    className="h-9 rounded-xl px-4"
-                    onClick={() => setAdminRecalcular(true)}
-                  >
-                    <RotateCcw className="h-4 w-4 mr-2" />
-                    Realizar novo cálculo
-                  </Button>
-                </div>
-              </div>
-              <ResumoCalculoDetalhado precatorio={precatorio} />
-
-              <div className="mt-8 border-t pt-8">
-                <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
-                <HistoricoCalculos precatorioId={id} />
-              </div>
-            </div>
-          ) : isAdmin || isOperadorCalculo ? (
-            <div className="space-y-6">
-              <CalculadoraPrecatorios precatorioId={id} onUpdate={loadPrecatorio} />
-              <div className="mt-8 border-t pt-8">
-                <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
-                <HistoricoCalculos precatorioId={id} />
-              </div>
-            </div>
-          ) : (
-            <div className="space-y-6">
-              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                <Calculator className="h-5 w-5" />
-                Detalhamento do Cálculo
-              </h3>
-              <ResumoCalculoDetalhado precatorio={precatorio} />
-
-              <div className="mt-8 border-t pt-8">
-                <h3 className="text-lg font-semibold mb-4">Histórico de Versões</h3>
-                <HistoricoCalculos precatorioId={id} />
-              </div>
-            </div>
-          )}
-        </TabsContent>
-
-        {/* Tab: Propostas */}
-        <TabsContent value="propostas" className="mt-0">
-          <AbaProposta
-            precatorioId={id}
-            precatorio={precatorio}
-            onUpdate={loadPrecatorio}
-            userRole={userRole}
-            currentUserId={profile?.id || null}
-          />
-        </TabsContent>
-
-        {/* Tab: Fechamento */}
-        <TabsContent value="fechamento" className="mt-0">
-          <AbaFechamento
-            precatorioId={id}
-            precatorio={precatorio}
-            onUpdate={loadPrecatorio}
-            userRole={roles}
-          />
-        </TabsContent>
-
-        {/* Tab: Timeline */}
-        <TabsContent value="timeline" className="mt-0">
-          <Card className={dashboardCardClass}>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Linha do Tempo
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <Timeline precatorioId={id} />
-            </CardContent>
-          </Card>
-        </TabsContent>
-        </motion.div>
-        </AnimatePresence>
-      </Tabs>
-
-      {/* Modal de PDF */}
-      <PdfViewerModal
-        open={showPdfModal}
-        onOpenChange={setShowPdfModal}
-        pdfUrl={precatorio?.pdf_url}
-        titulo={precatorio?.titulo}
-        precatorioId={id}
-        canCalculate={userRole ? !userRole.includes("operador_comercial") : false}
-      />
+        {/* Modal de PDF */}
+        <PdfViewerModal
+          open={showPdfModal}
+          onOpenChange={setShowPdfModal}
+          pdfUrl={precatorio?.pdf_url}
+          titulo={precatorio?.titulo}
+          precatorioId={id}
+          canCalculate={userRole ? !userRole.includes("operador_comercial") : false}
+        />
       </div>
     </div>
   )

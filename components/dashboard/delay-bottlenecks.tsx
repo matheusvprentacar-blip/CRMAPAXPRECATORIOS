@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { AlertTriangle } from "lucide-react"
+import { AlertTriangle } from "@/components/icons"
 import { DelayTypeBadge } from "@/components/ui/delay-type-badge"
 import type { BottleneckItem } from "@/lib/types/dashboard"
 
@@ -12,10 +12,14 @@ interface DelayBottlenecksProps {
   loading?: boolean
 }
 
+type DelayType = Parameters<typeof DelayTypeBadge>[0]["tipo"]
+
 export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
+  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
+
   if (loading) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Gargalos por Motivo de Atraso</CardTitle>
         </CardHeader>
@@ -28,7 +32,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Gargalos por Motivo de Atraso</CardTitle>
         </CardHeader>
@@ -43,7 +47,7 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
   }
 
   return (
-    <Card>
+    <Card className={surfaceClass}>
       <CardHeader>
         <CardTitle>Gargalos por Motivo de Atraso</CardTitle>
         <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Principais motivos que travam precatórios</p>
@@ -62,9 +66,9 @@ export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
             {data.map((item) => (
               <TableRow key={item.tipo_atraso}>
                 <TableCell>
-                  <DelayTypeBadge 
-                    tipo={item.tipo_atraso as any} 
-                    size="sm" 
+                  <DelayTypeBadge
+                    tipo={item.tipo_atraso as DelayType}
+                    size="sm"
                   />
                 </TableCell>
                 <TableCell className="text-right font-medium font-mono tabular-nums">{item.total}</TableCell>

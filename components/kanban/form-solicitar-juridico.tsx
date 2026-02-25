@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Send } from "lucide-react"
+import { Loader2, Send } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 
 interface FormSolicitarJuridicoProps {

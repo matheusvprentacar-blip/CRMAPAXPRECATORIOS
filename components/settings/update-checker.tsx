@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, Loader2, RotateCw, CheckCircle2 } from "lucide-react"
+import { Upload, Loader2, RotateCw, CheckCircle2 } from "@/components/icons"
 import { toast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
 

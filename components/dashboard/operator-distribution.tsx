@@ -3,7 +3,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Badge } from "@/components/ui/badge"
-import { Users } from "lucide-react"
+import { Users } from "@/components/icons"
 import type { OperatorMetrics } from "@/lib/types/dashboard"
 
 interface OperatorDistributionProps {
@@ -12,9 +12,11 @@ interface OperatorDistributionProps {
 }
 
 export function OperatorDistribution({ data, loading }: OperatorDistributionProps) {
+  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
+
   if (loading) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Distribuição por Operador</CardTitle>
         </CardHeader>
@@ -27,7 +29,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Distribuição por Operador</CardTitle>
         </CardHeader>
@@ -42,7 +44,7 @@ export function OperatorDistribution({ data, loading }: OperatorDistributionProp
   }
 
   return (
-    <Card>
+    <Card className={surfaceClass}>
       <CardHeader>
         <CardTitle>Distribuição por Operador</CardTitle>
         <p className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Carga de trabalho e performance</p>

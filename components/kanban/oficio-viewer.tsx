@@ -16,11 +16,11 @@ import {
   Send,
   Trash2,
   Upload,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
-import { downloadFileAsArrayBuffer, getFileDownloadUrl } from "@/lib/utils/file-upload"
+import { buildDownloadFileName, downloadFileWithMetadata, getFileDownloadUrl } from "@/lib/utils/file-upload"
 import { uploadAndAttachPdf } from "@/lib/utils/pdf-upload"
 import { listarDocumentos } from "@/lib/utils/documento-upload"
 import { TIPO_DOCUMENTO_LABELS } from "@/lib/types/documento"
@@ -228,13 +228,19 @@ export function OficioViewer({
 
       toast.info("Iniciando download...")
 
-      const buffer = await downloadFileAsArrayBuffer(doc.viewUrl, supabase, doc.titulo || "Documento")
-      if (!buffer) throw new Error("Falha ao baixar arquivo")
+      const downloaded = await downloadFileWithMetadata(doc.viewUrl, supabase, doc.titulo || "Documento")
+      if (!downloaded) throw new Error("Falha ao baixar arquivo")
 
-      const blob = new Blob([buffer])
+      const blob = new Blob([downloaded.buffer], {
+        type: downloaded.mimeType || "application/octet-stream",
+      })
 
-      let fileName = (doc.titulo || "Documento").replace(/[^\w.-]+/g, "_")
-      if (!fileName.toLowerCase().endsWith(".pdf")) fileName += ".pdf"
+      const fileName = buildDownloadFileName({
+        preferredName: doc.titulo || "Documento",
+        sourceFileName: downloaded.fileName,
+        sourceUrl: doc.viewUrl,
+        mimeType: downloaded.mimeType,
+      })
 
       await saveFileWithPicker(blob, fileName)
       toast.success("Download iniciado")

@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Save } from "lucide-react"
+import { Loader2, Save } from "@/components/icons"
 
 interface FormInteresseProps {
   precatorioId: string

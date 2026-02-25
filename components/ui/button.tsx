@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { Button as HeroButton } from "@heroui/react"
+import { Button as HeroButton } from "@/lib/heroui/compat"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"

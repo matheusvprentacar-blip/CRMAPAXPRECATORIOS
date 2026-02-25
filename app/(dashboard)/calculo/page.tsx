@@ -9,7 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
-import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star, RefreshCcw } from "lucide-react"
+import { User, Clock, Gavel, DollarSign, Calculator, AlertCircle, Search, Star, RefreshCcw } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import { ModalAtraso } from "@/components/calculo/modal-atraso"
 import { ModalEnviarJuridico } from "@/components/calculo/modal-enviar-juridico"
@@ -48,6 +48,12 @@ interface PrecatorioCalculo {
   proposta_maior_valor?: number | null
   proposta_menor_valor?: number | null
 }
+
+const calculoActionPrimaryClass =
+  "h-8 flex-1 min-w-[140px] border border-orange-400/65 bg-gradient-to-r from-orange-500 to-amber-500 text-white shadow-[0_0_0_1px_rgba(249,115,22,0.28),0_16px_28px_-18px_rgba(249,115,22,0.95)] transition-all duration-200 hover:-translate-y-[1px] hover:from-orange-500 hover:to-amber-500 hover:shadow-[0_0_0_1px_rgba(251,146,60,0.4),0_20px_34px_-18px_rgba(251,146,60,0.95)] focus-visible:ring-2 focus-visible:ring-orange-300/65 focus-visible:ring-offset-1 disabled:opacity-70 disabled:hover:translate-y-0 disabled:hover:shadow-[0_0_0_1px_rgba(249,115,22,0.28),0_16px_28px_-18px_rgba(249,115,22,0.95)]"
+
+const calculoActionManualClass =
+  "h-8 flex-1 min-w-[120px] border border-sky-400/65 bg-gradient-to-r from-blue-500 to-sky-500 text-white shadow-[0_0_0_1px_rgba(56,189,248,0.24),0_16px_28px_-18px_rgba(59,130,246,0.95)] transition-all duration-200 hover:-translate-y-[1px] hover:from-blue-500 hover:to-sky-500 hover:shadow-[0_0_0_1px_rgba(56,189,248,0.36),0_20px_34px_-18px_rgba(56,189,248,0.95)] focus-visible:ring-2 focus-visible:ring-sky-300/65 focus-visible:ring-offset-1"
 
 export default function FilaCalculoPage() {
   const router = useRouter()
@@ -639,7 +645,12 @@ export default function FilaCalculoPage() {
                                 </div>
                                 <div>
                                   <p className="text-xs text-muted-foreground">Valor atualizado</p>
-                                  <p className="font-semibold tabular-nums text-primary dark:text-primary">
+                                  <p
+                                    className={cn(
+                                      "font-semibold tabular-nums",
+                                      isConcluido ? "text-emerald-600 dark:text-emerald-400" : "text-primary dark:text-primary",
+                                    )}
+                                  >
                                     {formatCurrency(valorAtualizado)}
                                   </p>
                                 </div>
@@ -749,7 +760,7 @@ export default function FilaCalculoPage() {
                                   {!isConcluido && !isJuridico && (
                                     <Button
                                       size="sm"
-                                      className="h-8 flex-1 min-w-[140px] bg-primary/15 text-white hover:bg-primary/15"
+                                      className={calculoActionPrimaryClass}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         handleCalcular(precatorio.id)
@@ -778,7 +789,7 @@ export default function FilaCalculoPage() {
                                   {!isJuridico && !isConcluido && (
                                     <Button
                                       size="sm"
-                                      className="h-8 flex-1 min-w-[120px] bg-primary/15 text-white hover:bg-primary/15"
+                                      className={calculoActionManualClass}
                                       onClick={(e) => {
                                         e.stopPropagation()
                                         setPrecatorioParaManual(precatorio)

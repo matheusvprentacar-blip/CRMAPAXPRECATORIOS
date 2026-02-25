@@ -3,7 +3,7 @@
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, Calculator, Eye, User, Briefcase, UserCog, Clock, Scale } from "lucide-react"
+import { AlertCircle, Calculator, Eye, User, Briefcase, UserCog, Clock, Scale } from "@/components/icons"
 import { useRouter } from "next/navigation"
 import { ComplexityBadge } from "@/components/ui/complexity-badge"
 import { SLAIndicator } from "@/components/ui/sla-indicator"

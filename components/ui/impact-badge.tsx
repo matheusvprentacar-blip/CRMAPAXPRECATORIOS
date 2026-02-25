@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { TrendingDown, TrendingUp, AlertCircle } from "lucide-react"
+import { TrendingDown, TrendingUp, AlertCircle } from "@/components/icons"
 
 interface ImpactBadgeProps {
   impacto: "baixo" | "medio" | "alto"

@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
-import { Loader2, CheckCircle, Calculator, DollarSign } from "lucide-react"
+import { Loader2, CheckCircle, Calculator, DollarSign } from "@/components/icons"
 import { getMonthlyClosingSummary, createCommissionTransaction } from "@/services/finance-service"
 import { toast } from "sonner" // Assuming sonner or use-toast is available, otherwise alert
 

@@ -1,7 +1,7 @@
 import { useRef, useState } from "react"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Upload, FileText, Loader2 } from "lucide-react"
+import { Upload, FileText, Loader2 } from "@/components/icons"
 import { toast } from "sonner"
 import { Progress } from "@/components/ui/progress"
 import { createBrowserClient } from "@/lib/supabase/client"

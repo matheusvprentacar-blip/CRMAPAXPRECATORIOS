@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { Loader2, Plus } from "lucide-react"
+import { Loader2, Plus } from "@/components/icons"
 
 interface NewTransactionModalProps {
     onSuccess: () => void

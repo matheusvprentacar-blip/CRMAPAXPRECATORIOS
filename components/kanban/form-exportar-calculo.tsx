@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Save, Upload } from "lucide-react"
+import { Loader2, Save, Upload } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 
 interface FormExportarCalculoProps {

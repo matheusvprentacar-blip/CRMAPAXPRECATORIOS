@@ -51,7 +51,7 @@ import {
   Trash2,
   Shuffle,
   AlertTriangle,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { useAuth } from "@/lib/auth/auth-context"
@@ -76,6 +76,7 @@ const AVAILABLE_ROLES = [
   { value: "gestor", label: "Gestor" },
   { value: "gestor_certidoes", label: "Gestor de Certidões" },
   { value: "gestor_oficio", label: "Gestor de Ofícios" },
+  { value: "gestor_escrituras", label: "Gestor de Escrituras" },
   { value: "juridico", label: "Jurídico" },
 ]
 

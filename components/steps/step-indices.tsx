@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
-import { CalendarDays, Percent, Table as TableIcon, TrendingUp } from "lucide-react"
+import { CalendarDays, Percent, Table as TableIcon, TrendingUp } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { TABELA_IPCA_FATORES_EC113, TABELA_SELIC_PERCENTUAL_EC113, FATOR_TETO_DEZ21 } from "@/lib/calculos/dados-ec113"
 import { IPCA_E_MENSAL, TABELA_INDICES_COMPLETA } from "@/lib/calculos/indices"
@@ -258,27 +258,27 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
         >
           <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
             {dadosIpca ? (
-              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
-                <div className="flex items-center justify-between">
+              <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-primary/25 bg-primary/5 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2 max-w-full">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">1. IPCA-E</p>
-                    <p className="text-xs text-muted-foreground">Até Nov/2021</p>
+                    <p className="text-sm font-semibold text-foreground truncate">1. IPCA-E</p>
+                    <p className="text-xs text-muted-foreground break-words">Até Nov/2021</p>
                   </div>
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  <span className="shrink-0 rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Fatores
                   </span>
                 </div>
 
                 <div className="space-y-3">
                   <div>
-                    <p className="text-xs text-muted-foreground">Fator Data Base</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                    <p className="text-xs text-muted-foreground break-words">Fator Data Base</p>
+                    <p className="mt-1 text-xl lg:text-2xl font-semibold tabular-nums text-foreground break-all">
                       {dadosIpca.fatorNaData.toFixed(7)}
                     </p>
                   </div>
                   <div>
-                    <p className="text-xs text-muted-foreground">Fator Teto (Nov/21)</p>
-                    <p className="mt-1 text-2xl font-semibold tabular-nums text-foreground">
+                    <p className="text-xs text-muted-foreground break-words">Fator Teto (Nov/21)</p>
+                    <p className="mt-1 text-xl lg:text-2xl font-semibold tabular-nums text-foreground break-all">
                       {dadosIpca.fatorTeto.toFixed(7)}
                     </p>
                   </div>
@@ -295,20 +295,20 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
             )}
 
             {dadosSelic && (
-              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
-                <div className="flex items-center justify-between">
+              <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2 max-w-full">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">2. SELIC</p>
-                    <p className="text-xs text-muted-foreground">{dadosSelic.inicioPeriodo} a {dadosSelic.fimPeriodo}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">2. SELIC</p>
+                    <p className="text-xs text-muted-foreground break-words">{dadosSelic.inicioPeriodo} a {dadosSelic.fimPeriodo}</p>
                   </div>
-                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  <span className="shrink-0 rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Acumulada
                   </span>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Taxa acumulada no período</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
+                  <p className="text-xs text-muted-foreground break-words">Taxa acumulada no período</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-semibold tabular-nums text-foreground break-all">
                     {dadosSelic.taxaAcumulada.toFixed(2)}%
                   </p>
                 </div>
@@ -320,20 +320,20 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
             )}
 
             {dadosIpca2025 ? (
-              <div className="flex h-full flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
-                <div className="flex items-center justify-between">
+              <div className="flex h-full min-w-0 flex-col gap-4 rounded-2xl border border-primary/40 bg-primary/15 p-4">
+                <div className="flex flex-wrap items-start justify-between gap-2 max-w-full">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">3. IPCA-E 2025</p>
-                    <p className="text-xs text-muted-foreground">{dadosIpca2025.inicioPeriodo} a {dadosIpca2025.fimPeriodo}</p>
+                    <p className="text-sm font-semibold text-foreground truncate">3. IPCA-E 2025</p>
+                    <p className="text-xs text-muted-foreground break-words">{dadosIpca2025.inicioPeriodo} a {dadosIpca2025.fimPeriodo}</p>
                   </div>
-                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
+                  <span className="shrink-0 rounded-full border border-primary/40 bg-primary/15 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-primary">
                     Projeção
                   </span>
                 </div>
 
                 <div>
-                  <p className="text-xs text-muted-foreground">Soma acumulada no período</p>
-                  <p className="mt-1 text-3xl font-semibold tabular-nums text-foreground">
+                  <p className="text-xs text-muted-foreground break-words">Soma acumulada no período</p>
+                  <p className="mt-1 text-2xl lg:text-3xl font-semibold tabular-nums text-foreground break-all">
                     {dadosIpca2025.percentualAcumulado.toFixed(2)}%
                   </p>
                 </div>

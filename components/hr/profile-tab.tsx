@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { Loader2, Save } from "lucide-react"
+import { Loader2, Save } from "@/components/icons"
 
 const AVAILABLE_ROLES = [
     { value: "admin", label: "Administrador" },
@@ -20,6 +20,7 @@ const AVAILABLE_ROLES = [
     { value: "gestor", label: "Gestor" },
     { value: "gestor_certidoes", label: "Gestor de Certidões" },
     { value: "gestor_oficio", label: "Gestor de Ofícios" },
+    { value: "gestor_escrituras", label: "Gestor de Escrituras" },
     { value: "juridico", label: "Jurídico" },
 ]
 
@@ -186,3 +187,4 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
         </div>
     )
 }
+

@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Sparkles, Loader2 } from 'lucide-react'
+import { Sparkles, Loader2 } from "@/components/icons"
 import { toast } from 'sonner'
 
 interface BotaoProcessarProps {

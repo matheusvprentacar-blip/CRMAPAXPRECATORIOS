@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { useEffect, useState } from "react"
 import { NewTransactionModal } from "@/components/finance/new-transaction-modal"
-import { ArrowDown, ArrowUp, DollarSign, AlertCircle, Calendar as CalendarIcon } from "lucide-react"
+import { ArrowDown, ArrowUp, DollarSign, AlertCircle, Calendar as CalendarIcon } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"

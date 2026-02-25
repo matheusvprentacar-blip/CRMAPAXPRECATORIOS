@@ -16,7 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Switch } from "@/components/switch"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Save, RotateCcw } from "lucide-react"
+import { Loader2, Save, RotateCcw } from "@/components/icons"
 
 // Tipos da configuração
 export interface ProposalItemConfig {
@@ -138,7 +138,7 @@ export function ProposalConfigModal({
 
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col">
+            <DialogContent className="max-w-2xl max-h-[90vh] flex flex-col border border-border/80 !bg-[#fbf6ef] !text-[#22160e] shadow-[0_24px_56px_-34px_rgba(15,23,42,0.58)] dark:border-[#4c3729] dark:!bg-[#17120f] dark:!text-[#f5eee4]">
                 <DialogHeader>
                     <DialogTitle>Configurar Modelo de Proposta</DialogTitle>
                     <DialogDescription>
@@ -168,8 +168,8 @@ export function ProposalConfigModal({
                     </div>
 
                     {/* Lista de Campos */}
-                    <div className="bg-white rounded-md border flex flex-col shadow-sm">
-                        <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 bg-slate-100 border-b text-xs font-bold text-slate-600 uppercase tracking-wider">
+                    <div className="rounded-md border border-border/70 bg-[#fffaf5] dark:bg-[#1f1812] flex flex-col shadow-sm">
+                        <div className="grid grid-cols-[auto_1fr_auto] gap-4 p-3 bg-slate-100 border-b border-slate-200 text-xs font-bold text-slate-600 uppercase tracking-wider dark:bg-[#2a1f17] dark:border-[#3a2a20] dark:text-[#d9c7b7]">
                             <div className="w-8 text-center flex items-center justify-center" title="Visível no PDF">
                                 <span className="sr-only">Visível</span>
                                 <div className="h-4 w-4 rounded border border-slate-300 bg-white" />

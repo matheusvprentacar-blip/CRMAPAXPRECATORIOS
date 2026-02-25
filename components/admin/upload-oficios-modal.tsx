@@ -12,7 +12,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import { Upload, X, Loader2 } from "lucide-react"
+import { Upload, X, Loader2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { trackSupabaseError, trackStorageError, trackError } from "@/lib/utils/error-tracker"

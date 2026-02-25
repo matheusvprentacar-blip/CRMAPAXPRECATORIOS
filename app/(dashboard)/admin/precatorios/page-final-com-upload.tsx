@@ -40,7 +40,7 @@ import {
   Trash2,
   User,
   TrendingUp,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { toast } from "sonner"

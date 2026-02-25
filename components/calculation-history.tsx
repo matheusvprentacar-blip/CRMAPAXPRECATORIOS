@@ -2,7 +2,7 @@
 
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Trash2, Calendar, DollarSign, TrendingUp } from "lucide-react"
+import { Download, Trash2, Calendar, DollarSign, TrendingUp } from "@/components/icons"
 import type { CalculationResult } from "@/types/calculation"
 
 interface CalculationHistoryProps {

@@ -1,7 +1,7 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { DollarSign, TrendingUp, AlertCircle, Wallet } from "lucide-react"
+import { DollarSign, TrendingUp, AlertCircle, Wallet } from "@/components/icons"
 
 interface FinancialKPICardsProps {
     data: {

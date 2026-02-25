@@ -14,7 +14,7 @@ import {
   MessageSquare,
   Circle,
   Clock,
-} from "lucide-react"
+} from "@/components/icons"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 

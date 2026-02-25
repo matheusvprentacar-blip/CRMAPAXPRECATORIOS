@@ -2,7 +2,7 @@
 
 import React, { useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Printer, Download } from "lucide-react"
+import { Printer, Download } from "@/components/icons"
 
 interface TemplatePropostaProps {
     precatorio: any

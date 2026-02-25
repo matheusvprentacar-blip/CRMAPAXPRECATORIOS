@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { CheckCircle2, XCircle, Loader2 } from "lucide-react"
+import { CheckCircle2, XCircle, Loader2 } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 
 export default function TestConnectionPage() {

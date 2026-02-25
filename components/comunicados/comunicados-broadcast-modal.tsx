@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Megaphone, Download, CheckCircle2 } from "lucide-react"
+import { Megaphone, Download, CheckCircle2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Button } from "@/components/ui/button"
@@ -34,6 +34,10 @@ type AdminInterestAlertRow = {
   read_at: string | null
   precatorio_label?: string
   precatorio_valor?: number | null
+}
+
+type ComunicadosBroadcastModalProps = {
+  onComunicadoBlockingChange?: (isBlocking: boolean) => void
 }
 
 function readOptionalString(obj: Record<string, unknown>, key: string): string | null {
@@ -145,7 +149,7 @@ function formatCurrency(value?: number | null) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
 }
 
-export function ComunicadosBroadcastModal() {
+export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: ComunicadosBroadcastModalProps) {
   const router = useRouter()
   const { profile } = useAuth()
   const supabase = createBrowserClient()
@@ -343,16 +347,9 @@ export function ComunicadosBroadcastModal() {
     void fetchPending()
   }, [fetchPending, registerEvent])
 
-  const handleDismiss = useCallback(async () => {
-    setSaving(true)
-    const ok = await registerEvent("dispensado")
-    setSaving(false)
-    if (!ok) return
-
-    setOpen(false)
-    setPending(null)
-    void fetchPending()
-  }, [fetchPending, registerEvent])
+  const handleRequireRead = useCallback(() => {
+    toast.warning("Para dispensar este comunicado, clique em 'Li e entendi'.")
+  }, [])
 
   const handleMarkAlertRead = useCallback(async () => {
     if (!supabase || !pendingAdminAlert?.id) return
@@ -417,13 +414,14 @@ export function ComunicadosBroadcastModal() {
       }
 
       if (activeItem?.kind === "comunicado") {
-        void handleDismiss()
+        setOpen(true)
+        handleRequireRead()
         return
       }
 
       setOpen(false)
     },
-    [activeItem?.kind, handleDismiss]
+    [activeItem?.kind, handleRequireRead]
   )
 
   useEffect(() => {
@@ -439,6 +437,15 @@ export function ComunicadosBroadcastModal() {
     return () => window.removeEventListener("focus", onFocus)
   }, [fetchPending])
 
+  useEffect(() => {
+    const isBlocking = Boolean(open && activeItem?.kind === "comunicado")
+    onComunicadoBlockingChange?.(isBlocking)
+
+    return () => {
+      onComunicadoBlockingChange?.(false)
+    }
+  }, [activeItem?.kind, onComunicadoBlockingChange, open])
+
   if (!userId || loading || !activeItem) return null
 
   const comunicado = activeItem.kind === "comunicado" ? activeItem.comunicado?.comunicado : null
@@ -449,15 +456,29 @@ export function ComunicadosBroadcastModal() {
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogContent className="max-w-3xl max-h-[90vh] p-0 overflow-hidden border border-primary/20">
-        <div className="grid md:grid-cols-[220px_1fr] max-h-[90vh]">
-          <div className="bg-gradient-to-b from-orange-100 to-amber-50 dark:from-orange-950/40 dark:to-zinc-900 p-6 flex items-center justify-center">
-            <div className="rounded-2xl bg-background/80 dark:bg-muted p-6 shadow-sm">
+      <DialogContent
+        className={`max-w-3xl max-h-[90vh] p-0 overflow-hidden border border-border/70 bg-card text-card-foreground shadow-2xl ${activeItem.kind === "comunicado" ? "[&>button]:hidden" : ""}`}
+        onEscapeKeyDown={(event) => {
+          if (activeItem.kind === "comunicado") {
+            event.preventDefault()
+            handleRequireRead()
+          }
+        }}
+        onPointerDownOutside={(event) => {
+          if (activeItem.kind === "comunicado") {
+            event.preventDefault()
+            handleRequireRead()
+          }
+        }}
+      >
+        <div className="grid max-h-[90vh] bg-card md:grid-cols-[220px_1fr]">
+          <div className="flex items-center justify-center bg-gradient-to-b from-orange-100 to-amber-50 p-6 dark:from-orange-950 dark:to-zinc-900">
+            <div className="rounded-2xl border border-border/60 bg-card p-6 shadow-sm">
               <Megaphone className="w-16 h-16 text-primary" />
             </div>
           </div>
 
-          <div className="p-6 space-y-4 min-h-0 flex flex-col">
+          <div className="flex min-h-0 flex-col space-y-4 bg-card p-6 text-card-foreground">
             <DialogHeader className="space-y-2">
               <Badge variant="secondary" className="w-fit">
                 {activeItem.kind === "comunicado"
@@ -466,11 +487,11 @@ export function ComunicadosBroadcastModal() {
                     ? "Alerta da agenda"
                     : "Alerta direto da administracao"}
               </Badge>
-              <DialogTitle className="text-2xl leading-tight">
+              <DialogTitle className="text-2xl leading-tight text-card-foreground">
                 {activeItem.kind === "comunicado" ? comunicado?.titulo : alerta?.title}
               </DialogTitle>
               <div className="max-h-[45vh] md:max-h-[56vh] overflow-y-auto pr-2">
-                <DialogDescription className="text-base leading-relaxed whitespace-pre-line">
+                <DialogDescription className="whitespace-pre-line text-base leading-relaxed text-card-foreground/85">
                   {activeItem.kind === "comunicado" ? comunicado?.mensagem_publicada : alerta?.body}
                 </DialogDescription>
               </div>
@@ -512,30 +533,24 @@ export function ComunicadosBroadcastModal() {
                 )}
               </div>
 
-              <div className="flex justify-end gap-2 flex-nowrap">
-                <Button
-                  variant="secondary"
-                  onClick={
-                    activeItem.kind === "comunicado"
-                      ? () => void handleDismiss()
-                      : handleDismissAlert
-                  }
-                  disabled={saving}
-                >
-                  Agora nao
-                </Button>
-                <Button
-                  onClick={
-                    activeItem.kind === "comunicado"
-                      ? () => void handleMarkRead()
-                      : () => void handleMarkAlertRead()
-                  }
-                  disabled={saving}
-                >
-                  <CheckCircle2 className="w-4 h-4 mr-2" />
-                  Li e entendi
-                </Button>
-              </div>
+              {activeItem.kind === "comunicado" ? (
+                <div className="flex justify-end gap-2 flex-nowrap">
+                  <Button onClick={() => void handleMarkRead()} disabled={saving}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Li e entendi
+                  </Button>
+                </div>
+              ) : (
+                <div className="flex justify-end gap-2 flex-nowrap">
+                  <Button variant="secondary" onClick={handleDismissAlert} disabled={saving}>
+                    Agora nao
+                  </Button>
+                  <Button onClick={() => void handleMarkAlertRead()} disabled={saving}>
+                    <CheckCircle2 className="w-4 h-4 mr-2" />
+                    Li e entendi
+                  </Button>
+                </div>
+              )}
             </DialogFooter>
           </div>
         </div>

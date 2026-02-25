@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, FileText, Download } from "lucide-react"
+import { Loader2, FileText, Download } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 
 interface HistoricoCalculosProps {

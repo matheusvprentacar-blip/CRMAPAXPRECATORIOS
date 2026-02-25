@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { TimelineEvent } from "@/lib/types/database"
 import { TimelineEventItem } from "./timeline-event"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from "@/components/icons"
 
 interface TimelineProps {
   precatorioId: string

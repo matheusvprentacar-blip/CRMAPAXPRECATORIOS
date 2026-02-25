@@ -2,7 +2,7 @@
 
 import * as React from "react"
 import * as SheetPrimitive from "@radix-ui/react-dialog"
-import { X } from "lucide-react"
+import { X } from "@/components/icons"
 
 import { cn } from "@/lib/utils"
 
@@ -54,7 +54,7 @@ const SheetContent = React.forwardRef<
     <SheetPrimitive.Content
       ref={ref}
       className={cn(
-        "fixed z-50 gap-4 bg-background dark:bg-muted p-6 shadow-lg transition ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
+        "fixed z-50 gap-4 transition-all duration-500 ease-in-out data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:duration-300 data-[state=open]:duration-500",
         sheetVariants.side[side],
         className
       )}

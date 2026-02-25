@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge"
-import { AlertCircle, CheckCircle, AlertTriangle } from "lucide-react"
+import { AlertCircle, CheckCircle, AlertTriangle } from "@/components/icons"
 
 interface ComplexityBadgeProps {
   nivel: "baixa" | "media" | "alta"

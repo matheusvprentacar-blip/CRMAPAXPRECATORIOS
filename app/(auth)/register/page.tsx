@@ -5,7 +5,7 @@ import type React from "react"
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { Scale } from "lucide-react"
+import { Scale } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -49,15 +49,19 @@ export default function RegisterPage() {
       setTimeout(() => {
         router.push("/login")
       }, 2000)
-    } catch (err: any) {
-      setError(err.message || "Erro ao criar conta. Tente novamente.")
+    } catch (err: unknown) {
+      const message =
+        err instanceof Error && err.message
+          ? err.message
+          : "Erro ao criar conta. Tente novamente."
+      setError(message)
     } finally {
       setLoading(false)
     }
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-4">
@@ -96,7 +100,7 @@ export default function RegisterPage() {
             </div>
             <div className="space-y-2">
               <Label htmlFor="role">Tipo de Conta</Label>
-              <Select value={role} onValueChange={(value: any) => setRole(value)}>
+              <Select value={role} onValueChange={(value) => setRole(value as "operador_comercial" | "operador_calculo")}>
                 <SelectTrigger>
                   <SelectValue />
                 </SelectTrigger>

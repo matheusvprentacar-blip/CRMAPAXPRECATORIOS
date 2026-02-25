@@ -1,6 +1,6 @@
 ﻿"use client"
 
-import { Bell } from "lucide-react"
+import { Bell } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { cn } from "@/lib/utils"
 import { useNotifications } from "@/components/notifications/useNotifications"

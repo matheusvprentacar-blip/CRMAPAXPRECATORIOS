@@ -1,41 +1,77 @@
 import { saveAs } from "file-saver"
+import { getExtensionFromMimeType, getMimeTypeFromFileName } from "@/lib/utils/file-upload"
+
+type FilePickerOptions = {
+    suggestedName: string
+    types?: Array<{
+        description: string
+        accept: Record<string, string[]>
+    }>
+}
+
+type FileWriterHandle = {
+    write: (data: Blob) => Promise<void>
+    close: () => Promise<void>
+}
+
+type FileHandleWithWriter = {
+    createWritable: () => Promise<FileWriterHandle>
+}
+
+type WindowWithFilePicker = Window & {
+    showSaveFilePicker?: (options?: FilePickerOptions) => Promise<FileHandleWithWriter>
+}
+
+const getExtensionFromName = (value: string): string | null => {
+    const cleaned = value.trim()
+    const lastDot = cleaned.lastIndexOf(".")
+    if (lastDot <= 0 || lastDot >= cleaned.length - 1) return null
+    const extension = cleaned.slice(lastDot + 1).toLowerCase()
+    return /^[a-z0-9]{1,10}$/i.test(extension) ? extension : null
+}
 
 /**
- * Tenta salvar o arquivo usando a API `showSaveFilePicker` (se suportada)
- * para permitir que o usuário escolha o local.
- * Fallback para `file-saver` (download automático) se não suportado ou em caso de erro.
+ * Tries to save using showSaveFilePicker (when supported) so the user
+ * can choose destination path. Falls back to file-saver.
  */
 export async function saveFileWithPicker(blob: Blob, suggestedName: string) {
-    // Verifica se a API é suportada
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    if ("showSaveFilePicker" in window) {
+    const normalizedSuggestedName = (suggestedName || "arquivo").trim() || "arquivo"
+    const blobMimeType = blob.type || getMimeTypeFromFileName(normalizedSuggestedName) || "application/octet-stream"
+    const nameExtension = getExtensionFromName(normalizedSuggestedName) || getExtensionFromMimeType(blobMimeType)
+    const finalName = nameExtension && !getExtensionFromName(normalizedSuggestedName)
+        ? `${normalizedSuggestedName}.${nameExtension}`
+        : normalizedSuggestedName
+
+    const pickerWindow = window as WindowWithFilePicker
+    if (typeof pickerWindow.showSaveFilePicker === "function") {
         try {
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            const handle = await (window as any).showSaveFilePicker({
-                suggestedName,
-                types: [
+            const pickerOptions: FilePickerOptions = {
+                suggestedName: finalName,
+            }
+
+            if (nameExtension) {
+                pickerOptions.types = [
                     {
-                        description: "Arquivo",
+                        description: `Arquivo .${nameExtension}`,
                         accept: {
-                            "application/octet-stream": [],
+                            [blobMimeType]: [`.${nameExtension}`],
                         },
                     },
-                ],
-            })
+                ]
+            }
+
+            const handle = await pickerWindow.showSaveFilePicker(pickerOptions)
             const writable = await handle.createWritable()
             await writable.write(blob)
             await writable.close()
             return
-        } catch (err: any) {
-            // Se o usuário cancelar (AbortError), não fazemos nada (não fazemos fallback para saveAs)
-            if (err.name === "AbortError") {
+        } catch (err: unknown) {
+            if (err instanceof DOMException && err.name === "AbortError") {
                 return
             }
-            // Outros erros: loga e tenta o fallback
             console.warn("Erro ao usar showSaveFilePicker, tentando fallback:", err)
         }
     }
 
-    // Fallback: FileSaver
-    saveAs(blob, suggestedName)
+    saveAs(blob, finalName)
 }

@@ -7,7 +7,7 @@ import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
 import { Description, Label as FieldsetLabel } from "@/components/fieldset"
 import { Switch, SwitchField } from "@/components/switch"
-import { BadgePercent, Info } from "lucide-react"
+import { BadgePercent, Info } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { useEffect, useState } from "react"
 

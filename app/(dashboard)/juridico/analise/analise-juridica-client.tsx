@@ -1,11 +1,11 @@
-Ôªø"use client"
+"use client"
 /* eslint-disable */
 
 import { useEffect, useState, Suspense } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { ArrowLeft, Scale, FileText, AlertCircle } from "lucide-react"
+import { ArrowLeft, Scale, FileText, AlertCircle } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { FormParecerJuridico } from "@/components/kanban/form-parecer-juridico"
 import { Badge } from "@/components/ui/badge"
@@ -33,7 +33,7 @@ function AnaliseJuridicaContent() {
             .single()
 
         if (error || !data) {
-            console.error("Erro ao carregar precat√≥rio:", error)
+            console.error("Erro ao carregar precatÛrio:", error)
         } else {
             setPrecatorio(data)
         }
@@ -58,8 +58,8 @@ function AnaliseJuridicaContent() {
             <div className="container mx-auto p-6">
                 <Card>
                     <CardContent className="pt-6">
-                        <p>Precat√≥rio n√£o encontrado.</p>
-                        <Button onClick={() => router.push('/juridico')} variant="outline" className="mt-4">
+                        <p>PrecatÛrio n„o encontrado.</p>
+                        <Button onClick={() => router.push('/parecer-juridico')} variant="outline" className="mt-4">
                             Voltar
                         </Button>
                     </CardContent>
@@ -75,14 +75,14 @@ function AnaliseJuridicaContent() {
                     <Button
                         variant="ghost"
                         size="icon"
-                        onClick={() => router.push('/juridico')}
+                        onClick={() => router.push('/parecer-juridico')}
                         className="hover:bg-muted/50"
                     >
                         <ArrowLeft className="h-5 w-5" />
                     </Button>
                     <div>
                         <h1 className="text-2xl font-bold tracking-tight text-foreground flex items-center gap-3">
-                            Jur√≠dico
+                            JurÌdico
                             <Badge variant="outline">{precatorio.numero_processo}</Badge>
                         </h1>
                         <p className="text-muted-foreground">{precatorio.credor_nome} - {precatorio.tribunal}</p>
@@ -114,22 +114,22 @@ function AnaliseJuridicaContent() {
                         </CardContent>
                     </Card>
 
-                    {/* Formul√°rio de An√°lise */}
+                    {/* Formul·rio de An·lise */}
                     <Card className="border-l-4 border-l-primary">
                         <CardHeader>
                             <CardTitle className="flex items-center gap-2">
                                 <Scale className="h-5 w-5 text-primary" />
-                                Parecer Jur√≠dico
+                                Parecer JurÌdico
                             </CardTitle>
                             <CardDescription>
-                                Analise as informa√ß√µes e emita seu parecer t√©cnico.
+                                Analise as informaÁıes e emita seu parecer tÈcnico.
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             {/* 
                         Se estiver em 'juridico', mostra o form de parecer.
-                        Se n√£o, mostra alerta ou o form de solicita√ß√£o (caso queira re-solicitar? 
-                        Mas na p√°gina de an√°lise geralmente √© para DAR o parecer).
+                        Se n„o, mostra alerta ou o form de solicitaÁ„o (caso queira re-solicitar? 
+                        Mas na p·gina de an·lise geralmente È para DAR o parecer).
                      */}
                             {precatorio.status_kanban === "juridico" ? (
                                 <FormParecerJuridico
@@ -137,17 +137,17 @@ function AnaliseJuridicaContent() {
                                     precatorio={precatorio}
                                     onUpdate={() => {
                                         loadPrecatorio()
-                                        setTimeout(() => router.push('/juridico'), 1500) // Redirect after success?
+                                        setTimeout(() => router.push('/parecer-juridico'), 1500) // Redirect after success?
                                     }}
                                 />
                             ) : (
                                 <div className="flex flex-col items-center justify-center p-8 text-center bg-muted/20 rounded-lg">
                                     <AlertCircle className="h-10 w-10 text-muted-foreground mb-4" />
-                                    <h3 className="text-lg font-semibold">Este precat√≥rio n√£o est√° em Jur√≠dico</h3>
+                                    <h3 className="text-lg font-semibold">Este precatÛrio n„o est· em JurÌdico</h3>
                                     <p className="text-muted-foreground mt-2">
                                         Status atual: <span className="font-mono">{precatorio.status_kanban}</span>
                                     </p>
-                                    <Button variant="outline" className="mt-6" onClick={() => router.push('/juridico')}>
+                                    <Button variant="outline" className="mt-6" onClick={() => router.push('/parecer-juridico')}>
                                         Voltar para Painel
                                     </Button>
                                 </div>
@@ -167,4 +167,5 @@ export default function AnaliseJuridicaClient() {
         </Suspense>
     )
 }
+
 

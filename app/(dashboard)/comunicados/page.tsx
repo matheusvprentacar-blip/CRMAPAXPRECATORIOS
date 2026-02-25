@@ -1,7 +1,8 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Button as HeroButton, Spinner as HeroSpinner } from "@heroui/react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -21,10 +22,12 @@ import {
   FileText,
   Loader2,
   Megaphone,
+  Paperclip,
   Send,
   Sparkles,
   Trash2,
-} from "lucide-react"
+  X,
+} from "@/components/icons"
 import { toast } from "sonner"
 import type {
   AdminComunicadoRow,
@@ -124,6 +127,7 @@ const ROLE_LABELS: Record<string, string> = {
   gestor: "Gestor",
   gestor_certidoes: "Gestor de certidoes",
   gestor_oficio: "Gestor de oficio",
+  gestor_escrituras: "Gestor de escrituras",
   juridico: "Juridico",
   financeiro: "Financeiro",
 }
@@ -385,8 +389,8 @@ function normalizeComunicadoRow(input: unknown): ComunicadoRow | undefined {
       typeof obj.anexo_tamanho === "number"
         ? obj.anexo_tamanho
         : typeof obj.anexo_tamanho === "string"
-        ? Number(obj.anexo_tamanho)
-        : null,
+          ? Number(obj.anexo_tamanho)
+          : null,
     criado_por: criadoPor,
     ativo: typeof obj.ativo === "boolean" ? obj.ativo : true,
     publicado_em: readOptionalString(obj, "publicado_em") || new Date().toISOString(),
@@ -442,6 +446,9 @@ export default function ComunicadosPage() {
   const [escopo, setEscopo] = useState<ComunicadoTargetScope>("operadores")
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [aiDraft, setAiDraft] = useState<AiDraft | null>(null)
+
+  const fileInputRef = useRef<HTMLInputElement>(null) // Added this line
+
   const [recipientOptions, setRecipientOptions] = useState<RecipientOption[]>([])
   const [selectedIndividualRecipientId, setSelectedIndividualRecipientId] = useState("")
   const [loadingRecipients, setLoadingRecipients] = useState(false)
@@ -563,9 +570,9 @@ export default function ComunicadosPage() {
 
       const adminPromise = isAdmin
         ? supabase
-            .from("comunicados")
-            .select(
-              `
+          .from("comunicados")
+          .select(
+            `
               id,
               titulo,
               mensagem_original,
@@ -595,8 +602,8 @@ export default function ComunicadosPage() {
                 )
               )
             `
-            )
-            .order("publicado_em", { ascending: false })
+          )
+          .order("publicado_em", { ascending: false })
         : Promise.resolve({ data: [] as AdminComunicadoRow[], error: null })
 
       const alertsPromise = supabase
@@ -1119,16 +1126,50 @@ export default function ComunicadosPage() {
 
             <div className="space-y-2">
               <Label htmlFor="anexo-comunicado">Anexo opcional</Label>
-              <Input
-                id="anexo-comunicado"
-                type="file"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-              />
-              {selectedFile && (
-                <p className="text-xs text-muted-foreground">
-                  {selectedFile.name} ({formatBytes(selectedFile.size)})
-                </p>
-              )}
+              <div>
+                <input
+                  id="anexo-comunicado"
+                  type="file"
+                  className="hidden"
+                  ref={fileInputRef}
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                />
+
+                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
+                  <HeroButton
+                    variant="flat"
+                    onPress={() => fileInputRef.current?.click()}
+                  >
+                    <Paperclip className="w-4 h-4" />
+                    Escolher arquivo
+                  </HeroButton>
+
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground break-all">
+                      {selectedFile
+                        ? `${selectedFile.name} (${formatBytes(selectedFile.size)})`
+                        : "Nenhum arquivo escolhido"}
+                    </span>
+                    {selectedFile && (
+                      <HeroButton
+                        isIconOnly
+                        size="sm"
+                        variant="light"
+                        color="danger"
+                        onPress={() => {
+                          setSelectedFile(null)
+                          if (fileInputRef.current) {
+                            fileInputRef.current.value = ""
+                          }
+                        }}
+                        aria-label="Remover anexo"
+                      >
+                        <X className="w-4 h-4" />
+                      </HeroButton>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex flex-wrap gap-2">

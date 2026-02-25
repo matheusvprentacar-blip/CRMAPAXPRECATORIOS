@@ -101,6 +101,9 @@ export interface Precatorio {
   data_base?: string
   data_expedicao?: string
   data_calculo?: string
+  loa?: string | null
+  ano_orcamentario?: number | null
+  previsao_pagamento?: string | null
 
   // Descontos e Propostas
   pss_percentual: number
@@ -135,6 +138,11 @@ export interface Precatorio {
   criado_por?: string
   responsavel?: string
   responsavel_calculo_id?: string
+  responsavel_escrituras_id?: string
+
+  // Escrituras
+  status_escrituras?: "nao_iniciado" | "em_andamento" | "pendente_assinatura" | "concluido" | null
+  observacoes_escrituras?: string | null
 
   // Complexidade (FASE 1)
   score_complexidade: number

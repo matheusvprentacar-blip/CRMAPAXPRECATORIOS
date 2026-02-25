@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ShieldCheck } from "lucide-react"
+import { Search, ShieldCheck } from "@/components/icons"
 
 type ResultItem = {
     id: string
@@ -51,7 +51,11 @@ export default function AcessoControladoPage() {
                 .single()
 
             const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
-            const ok = roles.includes("admin") || roles.includes("gestor_certidoes") || roles.includes("juridico")
+            const ok =
+                roles.includes("admin") ||
+                roles.includes("gestor_certidoes") ||
+                roles.includes("gestor_escrituras") ||
+                roles.includes("juridico")
 
             setAllowed(ok)
             setLoading(false)

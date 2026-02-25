@@ -9,7 +9,7 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, FileText, CheckCircle2, Scale, Calculator, History, FileCheck } from "lucide-react"
+import { Loader2, FileText, CheckCircle2, Scale, Calculator, History, FileCheck, ScrollText } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
 import { FormInteresse } from "./form-interesse"
@@ -20,6 +20,7 @@ import { FormParecerJuridico } from "./form-parecer-juridico"
 import { FormExportarCalculo } from "./form-exportar-calculo"
 import { HistoricoCalculos } from "./historico-calculos"
 import { AbaProposta } from "./aba-proposta"
+import { AbaEscrituras } from "./aba-escrituras"
 
 interface ModalDetalhesKanbanProps {
   open: boolean
@@ -150,6 +151,7 @@ export function ModalDetalhesKanban({
   const podeSolicitarJuridico = ["admin", "operador_calculo"].some((role) => roles.includes(role))
   const podeDarParecer = ["admin", "juridico"].some((role) => roles.includes(role))
   const podeExportarCalculo = ["admin", "operador_calculo"].some((role) => roles.includes(role))
+  const podeEditarEscrituras = ["admin", "gestor", "gestor_escrituras"].some((role) => roles.includes(role))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,7 +164,7 @@ export function ModalDetalhesKanban({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-6">
+          <TabsList className="grid w-full grid-cols-7">
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="documentos">
               <FileText className="h-4 w-4 mr-1" />
@@ -171,6 +173,10 @@ export function ModalDetalhesKanban({
             <TabsTrigger value="certidoes">
               <FileText className="h-4 w-4 mr-1" />
               Certidões
+            </TabsTrigger>
+            <TabsTrigger value="escrituras">
+              <ScrollText className="h-4 w-4 mr-1" />
+              Escrituras
             </TabsTrigger>
             <TabsTrigger value="juridico">
               <Scale className="h-4 w-4 mr-1" />
@@ -302,6 +308,17 @@ export function ModalDetalhesKanban({
               precatorioId={precatorioId}
               canEdit={podeEditarItens}
               onUpdate={handleUpdate}
+            />
+          </TabsContent>
+
+          {/* Aba Escrituras */}
+          <TabsContent value="escrituras">
+            <AbaEscrituras
+              precatorioId={precatorioId}
+              canEdit={podeEditarEscrituras}
+              onUpdate={handleUpdate}
+              initialStatus={precatorio?.status_escrituras}
+              initialObservacoes={precatorio?.observacoes_escrituras}
             />
           </TabsContent>
 

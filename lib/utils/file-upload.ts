@@ -5,6 +5,196 @@ export interface UploadFileResult {
     publicUrl?: string
 }
 
+type SupabaseBrowserClient = NonNullable<ReturnType<typeof createBrowserClient>>
+
+const MIME_TO_EXTENSION: Record<string, string> = {
+    "application/pdf": "pdf",
+    "image/jpeg": "jpg",
+    "image/jpg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+    "image/gif": "gif",
+    "image/bmp": "bmp",
+    "image/tiff": "tiff",
+    "image/svg+xml": "svg",
+    "text/plain": "txt",
+    "text/csv": "csv",
+    "text/html": "html",
+    "application/json": "json",
+    "application/xml": "xml",
+    "application/zip": "zip",
+    "application/x-zip-compressed": "zip",
+    "application/msword": "doc",
+    "application/vnd.openxmlformats-officedocument.wordprocessingml.document": "docx",
+    "application/vnd.ms-excel": "xls",
+    "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": "xlsx",
+    "application/vnd.ms-powerpoint": "ppt",
+    "application/vnd.openxmlformats-officedocument.presentationml.presentation": "pptx",
+}
+
+const EXTENSION_TO_MIME: Record<string, string> = Object.fromEntries(
+    Object.entries(MIME_TO_EXTENSION).map(([mime, extension]) => [extension, mime])
+)
+
+const sanitizeFileName = (value: string): string => {
+    const cleaned = value
+        .replace(/[\\/:*?"<>|]/g, "_")
+        .replace(/\s+/g, " ")
+        .trim()
+    return cleaned || "arquivo"
+}
+
+const safeDecode = (value: string): string => {
+    try {
+        return decodeURIComponent(value)
+    } catch {
+        return value
+    }
+}
+
+const normalizeMimeType = (value?: string | null): string | null => {
+    if (!value) return null
+    const normalized = value.split(";")[0]?.trim().toLowerCase()
+    return normalized || null
+}
+
+const stripQueryAndHash = (value: string): string => value.split("#")[0].split("?")[0]
+
+const getBaseNameWithoutExtension = (value: string): string => {
+    const cleaned = stripQueryAndHash(value).trim()
+    const lastDot = cleaned.lastIndexOf(".")
+    if (lastDot <= 0) return cleaned
+    return cleaned.slice(0, lastDot)
+}
+
+const isValidExtension = (value: string): boolean => /^[a-z0-9]{1,10}$/i.test(value)
+
+export function getExtensionFromFileName(fileName?: string | null): string | null {
+    if (!fileName) return null
+    const cleaned = stripQueryAndHash(fileName.trim())
+    const lastDot = cleaned.lastIndexOf(".")
+    if (lastDot <= 0 || lastDot >= cleaned.length - 1) return null
+    const extension = cleaned.slice(lastDot + 1).toLowerCase()
+    if (!isValidExtension(extension)) return null
+    return extension
+}
+
+export function getExtensionFromMimeType(mimeType?: string | null): string | null {
+    const normalized = normalizeMimeType(mimeType)
+    if (!normalized) return null
+    return MIME_TO_EXTENSION[normalized] || null
+}
+
+export function getMimeTypeFromFileName(fileName?: string | null): string | null {
+    const extension = getExtensionFromFileName(fileName)
+    if (!extension) return null
+    return EXTENSION_TO_MIME[extension] || null
+}
+
+const parseContentDispositionFileName = (headerValue?: string | null): string | null => {
+    if (!headerValue) return null
+
+    const filenameStarMatch = headerValue.match(/filename\*\s*=\s*(?:UTF-8''|)([^;]+)/i)
+    if (filenameStarMatch?.[1]) {
+        const raw = filenameStarMatch[1].trim().replace(/^["']|["']$/g, "")
+        const decoded = safeDecode(raw)
+        return decoded ? sanitizeFileName(decoded) : null
+    }
+
+    const filenameMatch = headerValue.match(/filename\s*=\s*("?)([^";]+)\1/i)
+    if (filenameMatch?.[2]) {
+        const raw = filenameMatch[2].trim().replace(/^["']|["']$/g, "")
+        const decoded = safeDecode(raw)
+        return decoded ? sanitizeFileName(decoded) : null
+    }
+
+    return null
+}
+
+export function extractFileNameFromReference(reference?: string | null): string | null {
+    if (!reference) return null
+    const raw = reference.trim()
+    if (!raw) return null
+
+    if (raw.startsWith("storage:")) {
+        const match = raw.match(/^storage:[^/]+\/(.+)$/)
+        if (match?.[1]) {
+            const fileName = safeDecode(match[1].split("/").pop() || "")
+            return fileName ? sanitizeFileName(fileName) : null
+        }
+        return null
+    }
+
+    if (/^https?:\/\//i.test(raw)) {
+        try {
+            const parsed = new URL(raw)
+
+            const contentDispositionName = parseContentDispositionFileName(
+                parsed.searchParams.get("response-content-disposition")
+            )
+            if (contentDispositionName) return contentDispositionName
+
+            for (const key of ["filename", "fileName", "name", "download", "file"]) {
+                const candidate = parsed.searchParams.get(key)
+                if (!candidate) continue
+                const decoded = safeDecode(candidate.trim())
+                if (decoded) return sanitizeFileName(decoded)
+            }
+
+            const pathParts = parsed.pathname.split("/").filter(Boolean)
+            const lastSegment = pathParts.length > 0 ? safeDecode(pathParts[pathParts.length - 1]) : ""
+            if (lastSegment) return sanitizeFileName(lastSegment)
+            return null
+        } catch {
+            return null
+        }
+    }
+
+    const cleaned = stripQueryAndHash(raw)
+    const pathParts = cleaned.split("/").filter(Boolean)
+    const lastSegment = pathParts.length > 0 ? safeDecode(pathParts[pathParts.length - 1]) : safeDecode(cleaned)
+    return lastSegment ? sanitizeFileName(lastSegment) : null
+}
+
+export function buildDownloadFileName({
+    preferredName,
+    sourceFileName,
+    sourceUrl,
+    mimeType,
+    fallbackName = "arquivo",
+}: {
+    preferredName?: string | null
+    sourceFileName?: string | null
+    sourceUrl?: string | null
+    mimeType?: string | null
+    fallbackName?: string
+}): string {
+    const preferred = preferredName?.trim() || ""
+    const source = sourceFileName?.trim() || ""
+    const sourceFromUrl = extractFileNameFromReference(sourceUrl) || ""
+
+    const extension =
+        getExtensionFromFileName(source) ||
+        getExtensionFromFileName(sourceFromUrl) ||
+        getExtensionFromFileName(preferred) ||
+        getExtensionFromMimeType(mimeType)
+
+    const baseNameRaw =
+        getBaseNameWithoutExtension(preferred) ||
+        getBaseNameWithoutExtension(source) ||
+        getBaseNameWithoutExtension(sourceFromUrl) ||
+        fallbackName
+
+    const baseName = sanitizeFileName(baseNameRaw)
+    return extension ? `${baseName}.${extension}` : baseName
+}
+
+export interface DownloadFileMetadataResult {
+    buffer: ArrayBuffer
+    mimeType: string | null
+    fileName: string | null
+}
+
 export async function uploadFile({
     file,
     bucket = "precatorios-pdf",
@@ -84,7 +274,21 @@ export async function getFileDownloadUrl(storageUrl: string | null): Promise<str
 }
 
 // Helper robusto para baixar arquivos (tempa fetch normal, fallback para API do Supabase e Proxy se necessario)
-export async function downloadFileAsArrayBuffer(url: string, supabase: any, itemName: string = "arquivo"): Promise<ArrayBuffer | null> {
+export async function downloadFileAsArrayBuffer(
+    url: string,
+    supabase: SupabaseBrowserClient,
+    itemName: string = "arquivo"
+): Promise<ArrayBuffer | null> {
+    const downloaded = await downloadFileWithMetadata(url, supabase, itemName)
+    return downloaded?.buffer || null
+}
+
+// Helper robusto para baixar arquivos com metadados (nome e MIME do arquivo)
+export async function downloadFileWithMetadata(
+    url: string,
+    supabase: SupabaseBrowserClient,
+    itemName: string = "arquivo"
+): Promise<DownloadFileMetadataResult | null> {
     try {
         // 1. Tentar URL Storage direta
         if (url.startsWith("storage:")) {
@@ -92,7 +296,13 @@ export async function downloadFileAsArrayBuffer(url: string, supabase: any, item
             if (match) {
                 const [, bucket, path] = match
                 const { data, error } = await supabase.storage.from(bucket).download(path)
-                if (!error && data) return await data.arrayBuffer()
+                if (!error && data) {
+                    return {
+                        buffer: await data.arrayBuffer(),
+                        mimeType: normalizeMimeType(data.type),
+                        fileName: extractFileNameFromReference(url),
+                    }
+                }
             }
         }
 
@@ -107,7 +317,13 @@ export async function downloadFileAsArrayBuffer(url: string, supabase: any, item
         try {
             const response = await fetch(finalUrl)
             if (!response.ok) throw new Error(`HTTP ${response.status}`)
-            return await response.arrayBuffer()
+            return {
+                buffer: await response.arrayBuffer(),
+                mimeType: normalizeMimeType(response.headers.get("content-type")),
+                fileName:
+                    parseContentDispositionFileName(response.headers.get("content-disposition")) ||
+                    extractFileNameFromReference(response.url || finalUrl),
+            }
         } catch (fetchError) {
             console.warn(`Fetch falhou para ${itemName}, tentando fallback SDK...`, fetchError)
 
@@ -129,7 +345,13 @@ export async function downloadFileAsArrayBuffer(url: string, supabase: any, item
 
                         if (bucket && filePath) {
                             const { data, error } = await supabase.storage.from(bucket).download(decodeURIComponent(filePath))
-                            if (!error && data) return await data.arrayBuffer()
+                            if (!error && data) {
+                                return {
+                                    buffer: await data.arrayBuffer(),
+                                    mimeType: normalizeMimeType(data.type),
+                                    fileName: extractFileNameFromReference(filePath),
+                                }
+                            }
                         }
                     }
                 }

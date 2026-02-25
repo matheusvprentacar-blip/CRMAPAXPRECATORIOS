@@ -40,7 +40,7 @@ import {
   Trash2,
   User,
   TrendingUp,
-} from "lucide-react"
+} from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { toast } from "sonner"
@@ -74,11 +74,11 @@ interface PrecatorioAdmin {
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
   triagem_interesse: 15,
-  analise_processual_inicial: 25,
-  docs_credor: 35,
-  pronto_calculo: 45,
-  calculo_andamento: 55,
-  juridico: 65,
+  docs_credor: 25,
+  analise_processual_inicial: 35,
+  juridico: 45,
+  pronto_calculo: 55,
+  calculo_andamento: 65,
   calculo_concluido: 75,
   proposta_negociacao: 85,
   proposta_aceita: 90,

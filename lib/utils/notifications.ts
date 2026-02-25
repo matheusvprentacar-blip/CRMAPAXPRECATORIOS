@@ -34,6 +34,7 @@ const STATUS_LABELS: Record<string, string> = {
   proposta_negociacao: "Proposta / Negociacao",
   proposta_aceita: "Proposta aceita",
   certidoes: "Certidoes",
+  escrituras: "Escrituras",
   fechado: "Fechado",
   pos_fechamento: "Pos-fechamento",
   pausado_credor: "Pausado (credor)",
@@ -43,23 +44,24 @@ const STATUS_LABELS: Record<string, string> = {
 }
 
 const STATUS_TONES: Record<string, string> = {
-  entrada: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
-  triagem_interesse: "border-blue-200 text-blue-700 bg-blue-50/60 dark:border-blue-900/50 dark:text-blue-200 dark:bg-blue-950/40",
-  analise_processual_inicial: "border-amber-200 text-amber-700 bg-amber-50/60 dark:border-amber-900/50 dark:text-amber-200 dark:bg-amber-950/40",
-  docs_credor: "border-indigo-200 text-indigo-700 bg-indigo-50/60 dark:border-indigo-900/50 dark:text-indigo-200 dark:bg-indigo-950/40",
-  pronto_calculo: "border-cyan-200 text-cyan-700 bg-cyan-50/60 dark:border-cyan-900/50 dark:text-cyan-200 dark:bg-cyan-950/40",
-  calculo_andamento: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  juridico: "border-purple-200 text-purple-700 bg-purple-50/60 dark:border-purple-900/50 dark:text-purple-200 dark:bg-purple-950/40",
-  calculo_concluido: "border-emerald-200 text-emerald-700 bg-emerald-50/60 dark:border-emerald-900/50 dark:text-emerald-200 dark:bg-emerald-950/40",
-  proposta_negociacao: "border-yellow-200 text-yellow-700 bg-yellow-50/60 dark:border-yellow-900/50 dark:text-yellow-200 dark:bg-yellow-950/40",
-  proposta_aceita: "border-green-200 text-green-700 bg-green-50/60 dark:border-green-900/50 dark:text-green-200 dark:bg-green-950/40",
-  certidoes: "border-teal-200 text-teal-700 bg-teal-50/60 dark:border-teal-900/50 dark:text-teal-200 dark:bg-teal-950/40",
-  fechado: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
-  pos_fechamento: "border-emerald-200 text-emerald-800 bg-emerald-50/70 dark:border-emerald-900/60 dark:text-emerald-100 dark:bg-emerald-950/50",
-  pausado_credor: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  pausado_documentos: "border-orange-200 text-orange-700 bg-orange-50/60 dark:border-orange-900/50 dark:text-orange-200 dark:bg-orange-950/40",
-  sem_interesse: "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40",
-  reprovado: "border-red-200 text-red-700 bg-red-50/60 dark:border-red-900/50 dark:text-red-200 dark:bg-red-950/40",
+  entrada: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
+  triagem_interesse: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  analise_processual_inicial: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  docs_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pronto_calculo: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  calculo_andamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  juridico: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  calculo_concluido: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  proposta_negociacao: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  proposta_aceita: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  certidoes: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  escrituras: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  fechado: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pos_fechamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pausado_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  pausado_documentos: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
+  sem_interesse: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
+  reprovado: "border-destructive/40 text-destructive bg-destructive/15 dark:border-destructive/40 dark:text-destructive dark:bg-destructive/15",
 }
 
 const STATUS_TAB_MAP: Record<string, string> = {
@@ -70,6 +72,7 @@ const STATUS_TAB_MAP: Record<string, string> = {
   calculo_andamento: "calculo",
   pronto_calculo: "calculo",
   certidoes: "certidoes",
+  escrituras: "escrituras",
   docs_credor: "documentos",
   analise_processual_inicial: "oficio",
 }
@@ -82,6 +85,7 @@ const STATUS_NOTIFICATION_TITLES: Record<string, (nome: string) => string> = {
   proposta_negociacao: (nome) => (nome ? `Proposta em negociacao - ${nome}` : "Proposta em negociacao"),
   proposta_aceita: (nome) => (nome ? `Proposta aceita - ${nome}` : "Proposta aceita"),
   certidoes: (nome) => (nome ? `Certidoes em andamento - ${nome}` : "Certidoes em andamento"),
+  escrituras: (nome) => (nome ? `Escrituras em andamento - ${nome}` : "Escrituras em andamento"),
   analise_processual_inicial: (nome) => (nome ? `Análise Processual Inicial - ${nome}` : "Análise Processual Inicial"),
   docs_credor: (nome) => (nome ? `Documentos do credor - ${nome}` : "Documentos do credor"),
   fechado: (nome) => (nome ? `Precatorio fechado - ${nome}` : "Precatorio fechado"),
@@ -99,8 +103,8 @@ export const getStatusLabel = (status?: string | null) => {
 }
 
 export const getStatusTone = (status?: string | null) => {
-  if (!status) return "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40"
-  return STATUS_TONES[status] || "border-slate-200 text-slate-600 bg-slate-50/60 dark:border-slate-800 dark:text-slate-300 dark:bg-slate-900/40"
+  if (!status) return "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
+  return STATUS_TONES[status] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
 }
 
 export const getPrecatorioStatus = (prec?: NotificationPrecatorioInfo | null) => {
@@ -159,6 +163,7 @@ export const getNotificationTitle = (notification: NotificationItem) => {
   if (tipo.includes("mensagem")) return nome ? `Nova mensagem - ${nome}` : "Nova mensagem"
   if (tipo.includes("admin_aviso")) return nome ? `Aviso do administrador - ${nome}` : "Aviso do administrador"
   if (tipo.includes("certidao")) return nome ? `Atualizacao de certidoes - ${nome}` : "Atualizacao de certidoes"
+  if (tipo.includes("escritura")) return nome ? `Atualizacao de escrituras - ${nome}` : "Atualizacao de escrituras"
 
   return nome ? `Nova notificacao - ${nome}` : "Nova notificacao"
 }
@@ -179,6 +184,7 @@ export const resolveNotificationTab = (notification: NotificationItem) => {
   if (tipo.includes("calculo")) return "calculo"
   if (tipo.includes("proposta")) return "propostas"
   if (tipo.includes("certidao")) return "certidoes"
+  if (tipo.includes("escritura")) return "escrituras"
   if (tipo.includes("documento") || tipo.includes("doc")) return "documentos"
   if (tipo.includes("oficio")) return "oficio"
 
@@ -191,17 +197,19 @@ const resolveModuleRoute = (notification: NotificationItem) => {
   const status = getNotificationStatus(notification)
 
   if (status) {
-    if (status === "juridico" || status === "proposta_aceita") return "/juridico"
+    if (status === "juridico" || status === "proposta_aceita") return "/parecer-juridico"
     if (status === "proposta_negociacao") return "/propostas"
     if (status === "calculo_concluido" || status === "calculo_andamento" || status === "pronto_calculo") return "/calculo"
     if (status === "certidoes") return "/gestao-certidoes"
+    if (status === "escrituras") return "/gestao-escrituras"
     if (status === "analise_processual_inicial") return "/gestao-oficios"
   }
 
-  if (tipo.includes("juridico")) return "/juridico"
+  if (tipo.includes("juridico")) return "/parecer-juridico"
   if (tipo.includes("calculo")) return "/calculo"
   if (tipo.includes("proposta")) return "/propostas"
   if (tipo.includes("certidao")) return "/gestao-certidoes"
+  if (tipo.includes("escritura")) return "/gestao-escrituras"
   if (tipo.includes("oficio")) return "/gestao-oficios"
   if (isPrecatorioUpdate(notification.tipo)) return "/precatorios"
   return "/dashboard"

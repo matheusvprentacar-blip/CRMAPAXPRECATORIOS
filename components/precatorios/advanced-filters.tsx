@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Filter, X } from "lucide-react"
+import { Filter, X } from "@/components/icons"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { CurrencyInput } from "@/components/ui/currency-input"
@@ -96,13 +96,16 @@ export function AdvancedFilters({
       <SheetTrigger asChild>
         <Button
           variant="outline"
-          className="relative h-11 rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted text-muted-foreground dark:text-muted-foreground hover:bg-muted dark:hover:bg-muted"
+          className="relative h-11 rounded-xl border-border dark:border-border bg-background dark:bg-muted text-muted-foreground dark:text-muted-foreground hover:bg-muted dark:hover:bg-muted shadow-sm"
         >
           <Filter className="h-4 w-4 mr-2" />
           {totalFiltrosAtivos > 0 ? `Filtros (${totalFiltrosAtivos})` : "Filtros"}
         </Button>
       </SheetTrigger>
-      <SheetContent className="w-full sm:max-w-lg overflow-y-auto border-border dark:border-border bg-background/95 dark:bg-muted">
+      <SheetContent
+        className="w-full sm:max-w-lg overflow-y-auto border-border dark:border-border shadow-2xl !bg-[#FCF8F4] dark:!bg-[#161312] !opacity-100 !backdrop-blur-none supports-[backdrop-filter]:!backdrop-blur-none transition-colors duration-500 ease-in-out"
+        style={{ backdropFilter: 'none', WebkitBackdropFilter: 'none' }}
+      >
         <SheetHeader>
           <SheetTitle>Filtros Avançados</SheetTitle>
           <SheetDescription>
@@ -146,11 +149,14 @@ export function AdvancedFilters({
                         key={responsavel.id}
                         type="button"
                         onClick={() => applyResponsavel(responsavel.id)}
-                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${
-                          active
-                            ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
-                            : "border-border/60 bg-background hover:bg-muted/60 text-foreground"
-                        }`}
+                        className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm transition ${active
+                          ? "border-primary/40 bg-primary/10 text-foreground shadow-sm"
+                          : "border-border/60 hover:bg-muted/60 text-foreground"
+                          }`}
+                        style={{
+                          backgroundColor: active ? undefined : 'hsl(var(--background))',
+                          backdropFilter: 'none',
+                        }}
                       >
                         <span className="truncate">{responsavel.nome}</span>
                         {active && (
@@ -601,6 +607,6 @@ export function AdvancedFilters({
           </Button>
         </SheetFooter>
       </SheetContent>
-    </Sheet>
+    </Sheet >
   )
 }

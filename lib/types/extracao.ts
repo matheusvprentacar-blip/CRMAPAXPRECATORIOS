@@ -1,5 +1,5 @@
 // =====================================================
-// Types para Extração de IA de Documentos
+// Types para ExtraÃ§Ã£o de IA de Documentos
 // =====================================================
 
 export type StatusExtracao = 'processando' | 'concluido' | 'erro' | 'aplicado'
@@ -64,9 +64,9 @@ export interface ExtractionResult {
   status: 'success' | 'partial' | 'error'
   timestamp: string
   
-  // Campos extraídos
+  // Campos extraÃ­dos
   campos: {
-    // Identificação
+    // IdentificaÃ§Ã£o
     numero_precatorio?: FieldExtraction
     numero_processo?: FieldExtraction
     numero_oficio?: FieldExtraction
@@ -82,7 +82,7 @@ export interface ExtractionResult {
     credor_regime_casamento?: FieldExtraction
     credor_data_nascimento?: FieldExtraction
     
-    // Partes - Cônjuge
+    // Partes - CÃ´njuge
     conjuge_nome?: FieldExtraction
     conjuge_cpf_cnpj?: FieldExtraction
     
@@ -107,14 +107,14 @@ export interface ExtractionResult {
     data_expedicao?: FieldExtraction
     data_calculo?: FieldExtraction
     
-    // Dados bancários
+    // Dados bancÃ¡rios
     banco?: FieldExtraction
     agencia?: FieldExtraction
     conta?: FieldExtraction
     tipo_conta?: FieldExtraction
     titular_conta?: FieldExtraction
     
-    // Endereço
+    // EndereÃ§o
     endereco_completo?: FieldExtraction
     cep?: FieldExtraction
     cidade?: FieldExtraction
@@ -189,8 +189,8 @@ export interface DocumentoProcessado {
 
 export interface ProcessarDocumentosRequest {
   precatorio_id: string
-  documento_ids?: string[] // Se vazio, processa todos não processados
-  force_reprocess?: boolean // Reprocessar mesmo se já processado
+  documento_ids?: string[] // Se vazio, processa todos nÃ£o processados
+  force_reprocess?: boolean // Reprocessar mesmo se jÃ¡ processado
 }
 
 export interface ProcessarDocumentosResponse {
@@ -237,10 +237,10 @@ export interface CamposAgrupados {
 // =====================================================
 
 export const CAMPO_LABELS: Record<string, string> = {
-  // Identificação
-  numero_precatorio: 'Número do Precatório',
-  numero_processo: 'Número do Processo',
-  numero_oficio: 'Número do Ofício',
+  // IdentificaÃ§Ã£o
+  numero_precatorio: 'NÃºmero do PrecatÃ³rio',
+  numero_processo: 'NÃºmero do Processo',
+  numero_oficio: 'NÃºmero do OfÃ­cio',
   tribunal: 'Tribunal',
   devedor: 'Devedor',
   esfera_devedor: 'Esfera do Devedor',
@@ -248,14 +248,14 @@ export const CAMPO_LABELS: Record<string, string> = {
   // Credor
   credor_nome: 'Nome do Credor',
   credor_cpf_cnpj: 'CPF/CNPJ do Credor',
-  credor_profissao: 'Profissão do Credor',
+  credor_profissao: 'ProfissÃ£o do Credor',
   credor_estado_civil: 'Estado Civil do Credor',
   credor_regime_casamento: 'Regime de Casamento',
   credor_data_nascimento: 'Data de Nascimento do Credor',
   
-  // Cônjuge
-  conjuge_nome: 'Nome do Cônjuge',
-  conjuge_cpf_cnpj: 'CPF do Cônjuge',
+  // CÃ´njuge
+  conjuge_nome: 'Nome do CÃ´njuge',
+  conjuge_cpf_cnpj: 'CPF do CÃ´njuge',
   
   // Advogado
   advogado_nome: 'Nome do Advogado',
@@ -263,7 +263,7 @@ export const CAMPO_LABELS: Record<string, string> = {
   advogado_oab: 'OAB do Advogado',
   
   // Outros
-  cessionario: 'Cessionário',
+  cessionario: 'CessionÃ¡rio',
   titular_falecido: 'Titular Falecido',
   
   // Valores
@@ -271,22 +271,22 @@ export const CAMPO_LABELS: Record<string, string> = {
   valor_juros: 'Valor de Juros',
   valor_selic: 'Valor SELIC',
   valor_atualizado: 'Valor Atualizado',
-  saldo_liquido: 'Saldo Líquido',
+  saldo_liquido: 'Saldo LÃ­quido',
   
   // Datas
   data_base: 'Data Base',
-  data_expedicao: 'Data de Expedição',
-  data_calculo: 'Data do Cálculo',
+  data_expedicao: 'Data de ExpediÃ§Ã£o',
+  data_calculo: 'Data do CÃ¡lculo',
   
-  // Dados bancários
+  // Dados bancÃ¡rios
   banco: 'Banco',
-  agencia: 'Agência',
+  agencia: 'AgÃªncia',
   conta: 'Conta',
   tipo_conta: 'Tipo de Conta',
   titular_conta: 'Titular da Conta',
   
-  // Endereço
-  endereco_completo: 'Endereço Completo',
+  // EndereÃ§o
+  endereco_completo: 'EndereÃ§o Completo',
   cep: 'CEP',
   cidade: 'Cidade',
   estado: 'Estado',
@@ -325,7 +325,7 @@ export const CAMPO_TIPOS: Record<string, TipoCampo> = {
   // CEP
   cep: 'string',
   
-  // Números/Currency
+  // NÃºmeros/Currency
   valor_principal: 'currency',
   valor_juros: 'currency',
   valor_selic: 'currency',
@@ -347,9 +347,9 @@ export const CAMPO_TIPOS: Record<string, TipoCampo> = {
 // =====================================================
 
 export function getConfiancaColor(confianca: number): string {
-  if (confianca >= 80) return 'text-green-600'
-  if (confianca >= 50) return 'text-yellow-600'
-  return 'text-red-600'
+  if (confianca >= 80) return 'text-primary'
+  if (confianca >= 50) return 'text-primary'
+  return 'text-destructive'
 }
 
 export function getConfiancaBadgeVariant(nivel: NivelConfianca): 'default' | 'secondary' | 'destructive' {
@@ -366,11 +366,11 @@ export function getConfiancaBadgeVariant(nivel: NivelConfianca): 'default' | 'se
 export function getConfiancaIcon(nivel: NivelConfianca): string {
   switch (nivel) {
     case 'alta':
-      return '✓'
+      return 'âœ“'
     case 'media':
-      return '⚠'
+      return 'âš '
     case 'baixa':
-      return '❌'
+      return 'âŒ'
   }
 }
 
@@ -395,7 +395,7 @@ export function formatCampoValor(valor: string | null, tipo: TipoCampo): string 
       return valor.replace(/(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})/, '$1.$2.$3/$4-$5')
     
     case 'boolean':
-      return valor === 'true' ? 'Sim' : 'Não'
+      return valor === 'true' ? 'Sim' : 'NÃ£o'
     
     default:
       return valor

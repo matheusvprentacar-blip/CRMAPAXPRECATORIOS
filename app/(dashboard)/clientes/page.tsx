@@ -1,44 +1,37 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import React, { type ReactNode, createContext, useContext, useDeferredValue, useEffect, useMemo, useState } from "react"
+import { motion } from "framer-motion"
+import CountUp from "react-countup"
 import {
-  Accordion,
-  AccordionItem,
-  Button,
+  Accordion as HeroAccordion,
+  Button as HeroButton,
   Card,
-  CardBody,
+  CardContent as CardBody,
+  CardFooter,
   CardHeader,
-  Checkbox,
-  Chip,
-  Divider,
-  Dropdown,
-  DropdownItem,
-  DropdownMenu,
-  DropdownTrigger,
-  Input,
-  Modal,
-  ModalBody,
-  ModalContent,
-  ModalFooter,
-  ModalHeader,
+  Checkbox as HeroCheckbox,
+  Chip as HeroChip,
+  Dropdown as HeroDropdown,
+  DropdownItem as HeroDropdownItem,
+  DropdownMenu as HeroDropdownMenu,
+  DropdownPopover as HeroDropdownPopover,
+  DropdownTrigger as HeroDropdownTrigger,
+  Input as HeroInput,
+  Modal as HeroModal,
+  Separator,
   Skeleton,
-  Spinner,
-  Tab,
-  Table,
-  TableBody,
-  TableCell,
-  TableColumn,
-  TableHeader,
-  TableRow,
-  Tabs,
-  Tooltip,
+  Spinner as HeroSpinner,
+  Tabs as HeroTabs,
+  useOverlayState,
 } from "@heroui/react"
-import { Search, User, MapPin, Phone, Mail, FileText, ChevronRight, Clock, Filter, X, MoreVertical, RefreshCw, Users, Edit3 } from "@/components/icons"
+import { Search, User, Phone, Mail, FileText, ChevronRight, Clock, Filter, X, MoreVertical, RefreshCw, Users, Edit3 } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import { CredorView, Precatorio } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "sonner"
+import { SpotlightCard } from "@/components/ui/spotlight-card"
 
 type PrecatorioResumo = Precatorio & {
   status_kanban?: string | null
@@ -71,6 +64,884 @@ type ClienteFilterChip = {
   label: string
   value: string
 }
+
+const glassCard =
+  "rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
+  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] backdrop-blur-xl"
+
+const cardSoft =
+  "rounded-[1.25rem] border border-default-200/75 dark:border-border/75 " +
+  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(var(--primary)/0.35)]"
+
+const clientGridRows = "auto-rows-[minmax(430px,auto)]"
+const clientCardHeight = "min-h-[430px]"
+
+const modalWrapper = "z-[120] p-2 sm:p-4"
+const modalBackdrop = "bg-black/65"
+const modalBase =
+  "w-[min(96vw,72rem)] max-w-[96vw] rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
+  "bg-content1/95 dark:bg-content1 shadow-[0_30px_64px_-42px_hsl(var(--primary)/0.52)] backdrop-blur-xl"
+const modalContentBase =
+  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-[1.35rem] bg-content1 dark:bg-content1"
+
+const sheen = ""
+const carteiraAccentClass = "text-[#95c63d] dark:text-[#a7d75a] drop-shadow-[0_0_12px_rgba(149,198,61,0.16)]"
+
+const clienteModalInputClassNames =
+  "h-11 min-h-11 rounded-xl border border-default-200/70 bg-content2/40 px-3 " +
+  "text-foreground placeholder:text-foreground/55 hover:bg-content2/60"
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
+
+type LegacyButtonProps = {
+  children?: ReactNode
+  className?: string
+  startContent?: ReactNode
+  endContent?: ReactNode
+  isLoading?: boolean
+  isDisabled?: boolean
+  isIconOnly?: boolean
+  color?: "default" | "primary" | "success" | "warning" | "danger"
+  radius?: "none" | "sm" | "md" | "lg" | "full"
+  variant?: "solid" | "flat" | "light" | "bordered" | "ghost"
+  size?: "sm" | "md" | "lg"
+  onPress?: (event?: unknown) => void
+  type?: "button" | "submit" | "reset"
+  [key: string]: unknown
+}
+
+const mapButtonVariant = (variant: LegacyButtonProps["variant"]) => {
+  switch (variant) {
+    case "flat":
+      return "secondary"
+    case "light":
+      return "tertiary"
+    case "bordered":
+      return "outline"
+    case "ghost":
+      return "ghost"
+    default:
+      return "primary"
+  }
+}
+
+function Button({
+  children,
+  className,
+  startContent,
+  endContent,
+  isLoading,
+  isDisabled,
+  isIconOnly,
+  color = "default",
+  radius = "md",
+  variant = "solid",
+  onPress,
+  ...props
+}: LegacyButtonProps) {
+  const radiusClass =
+    radius === "none"
+      ? "rounded-none"
+      : radius === "sm"
+        ? "rounded-md"
+        : radius === "lg"
+          ? "rounded-xl"
+          : radius === "full"
+            ? "rounded-full"
+            : "rounded-lg"
+
+  const colorClass =
+    color === "primary"
+      ? variant === "solid"
+        ? "bg-primary text-primary-foreground"
+        : "text-primary"
+      : color === "success"
+        ? variant === "solid"
+          ? "bg-success text-success-foreground"
+          : "text-success"
+        : color === "warning"
+          ? variant === "solid"
+            ? "bg-warning text-warning-foreground"
+            : "text-warning"
+          : color === "danger"
+            ? variant === "solid"
+              ? "bg-danger text-danger-foreground"
+              : "text-danger"
+            : ""
+
+  return (
+    <HeroButton
+      {...(props as Record<string, unknown>)}
+      variant={mapButtonVariant(variant)}
+      isDisabled={Boolean(isDisabled || isLoading)}
+      isIconOnly={isIconOnly}
+      onPress={onPress as ((event: unknown) => void) | undefined}
+      className={cx(radiusClass, colorClass, className)}
+    >
+      <span className="inline-flex items-center gap-2">
+        {isLoading ? <HeroSpinner size="sm" /> : startContent}
+        {children}
+        {!isLoading ? endContent : null}
+      </span>
+    </HeroButton>
+  )
+}
+
+type LegacyInputClassNames = {
+  inputWrapper?: string
+  input?: string
+}
+
+type LegacyInputProps = {
+  className?: string
+  onValueChange?: (value: string) => void
+  isClearable?: boolean
+  onClear?: () => void
+  startContent?: ReactNode
+  classNames?: LegacyInputClassNames | string
+  value?: string
+  onChange?: (event: React.ChangeEvent<HTMLInputElement>) => void
+  size?: "sm" | "md" | "lg"
+  [key: string]: unknown
+}
+
+function Input({
+  className,
+  classNames,
+  onValueChange,
+  isClearable,
+  onClear,
+  startContent,
+  value,
+  onChange,
+  size = "md",
+  ...props
+}: LegacyInputProps) {
+  const sizeClass = size === "sm" ? "h-10 text-sm" : size === "lg" ? "h-12 text-base" : "h-11 text-sm"
+  const hasValue = typeof value === "string" ? value.length > 0 : Boolean(value)
+  const resolvedClassNames = typeof classNames === "string" ? { inputWrapper: classNames } : classNames
+  return (
+    <div className={cx("relative w-full", className)}>
+      {startContent ? <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-foreground/60">{startContent}</span> : null}
+      <HeroInput
+        {...(props as Record<string, unknown>)}
+        value={value}
+        className={cx(
+          sizeClass,
+          "w-full rounded-xl border border-default-200/70 bg-content2/50 px-3 text-foreground placeholder:text-foreground/55",
+          startContent ? "pl-10" : "",
+          resolvedClassNames?.inputWrapper,
+          resolvedClassNames?.input
+        )}
+        onChange={(event) => {
+          onValueChange?.(event.target.value)
+          onChange?.(event)
+        }}
+      />
+      {isClearable && hasValue ? (
+        <HeroButton
+          type="button"
+          isIconOnly
+          variant="tertiary"
+          className="absolute right-2 top-1/2 h-7 w-7 -translate-y-1/2 rounded-full"
+          onPress={() => {
+            onValueChange?.("")
+            onClear?.()
+          }}
+          aria-label="Limpar"
+        >
+          <X className="h-3.5 w-3.5" />
+        </HeroButton>
+      ) : null}
+    </div>
+  )
+}
+
+type LegacyChipProps = {
+  children?: ReactNode
+  className?: string
+  startContent?: ReactNode
+  onClose?: () => void
+  size?: "sm" | "md" | "lg"
+  variant?: "flat" | "solid" | "bordered"
+  [key: string]: unknown
+}
+
+const mapChipVariant = (variant: LegacyChipProps["variant"]) => {
+  switch (variant) {
+    case "solid":
+      return "primary"
+    case "bordered":
+      return "tertiary"
+    default:
+      return "secondary"
+  }
+}
+
+function Chip({ startContent, onClose, children, className, variant = "flat", ...props }: LegacyChipProps) {
+  return (
+    <HeroChip className={cx("inline-flex items-center gap-1.5", className)} variant={mapChipVariant(variant)} {...(props as Record<string, unknown>)}>
+      {startContent ? <span className="inline-flex items-center">{startContent}</span> : null}
+      <span className="inline-flex items-center gap-1">{children}</span>
+      {onClose ? (
+        <HeroButton
+          isIconOnly
+          variant="tertiary"
+          className="h-4 w-4 rounded-full p-0 text-[10px]"
+          onPress={onClose}
+          aria-label="Remover"
+        >
+          <X className="h-2.5 w-2.5" />
+        </HeroButton>
+      ) : null}
+    </HeroChip>
+  )
+}
+
+type LegacyDropdownProps = {
+  placement?: string
+  children?: ReactNode
+  [key: string]: unknown
+}
+
+const DropdownPlacementContext = createContext<string | undefined>(undefined)
+
+function Dropdown({ placement, children, ...props }: LegacyDropdownProps) {
+  return (
+    <DropdownPlacementContext.Provider value={placement}>
+      <HeroDropdown {...(props as Record<string, unknown>)}>{children}</HeroDropdown>
+    </DropdownPlacementContext.Provider>
+  )
+}
+
+const DropdownTrigger = HeroDropdownTrigger
+const DropdownMenu = HeroDropdownMenu
+
+function DropdownPopover({ placement, children, ...props }: { placement?: string; children?: ReactNode;[key: string]: unknown }) {
+  const placementFromContext = useContext(DropdownPlacementContext)
+  const normalized =
+    placement || (placementFromContext ? placementFromContext.replace("-", " ") : undefined)
+  return (
+    <HeroDropdownPopover {...(props as Record<string, unknown>)} placement={normalized as "bottom"}>
+      {children}
+    </HeroDropdownPopover>
+  )
+}
+
+type LegacyDropdownItemProps = {
+  startContent?: ReactNode
+  onPress?: () => void
+  children?: ReactNode
+  id?: string
+  [key: string]: unknown
+}
+
+function DropdownItem({ startContent, children, onPress, id, ...props }: LegacyDropdownItemProps) {
+  return (
+    <HeroDropdownItem
+      {...(props as Record<string, unknown>)}
+      id={id}
+      onAction={() => {
+        onPress?.()
+      }}
+    >
+      <span className="inline-flex items-center gap-2">
+        {startContent}
+        {children}
+      </span>
+    </HeroDropdownItem>
+  )
+}
+
+type LegacyCheckboxProps = {
+  onValueChange?: (checked: boolean) => void
+  className?: string
+  children?: ReactNode
+  isSelected?: boolean
+  size?: "sm" | "md" | "lg"
+  classNames?: { base?: string; label?: string }
+  [key: string]: unknown
+}
+
+function Checkbox({ onValueChange, classNames, className, children, ...props }: LegacyCheckboxProps) {
+  return (
+    <HeroCheckbox
+      {...(props as Record<string, unknown>)}
+      className={cx(classNames?.base, className)}
+      onChange={(checked: unknown) => onValueChange?.(Boolean((checked as { target?: { checked?: boolean } })?.target?.checked ?? checked))}
+    >
+      <span className={classNames?.label}>{children}</span>
+    </HeroCheckbox>
+  )
+}
+
+const Divider = Separator
+
+function Tooltip({ content, children }: { content: ReactNode; children: ReactNode }) {
+  if (typeof content !== "string") return <>{children}</>
+  return <span title={content}>{children}</span>
+}
+
+type LegacyModalProps = {
+  isOpen?: boolean
+  onOpenChange?: (open: boolean) => void
+  size?: "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl" | "5xl"
+  scrollBehavior?: "inside" | "outside"
+  backdrop?: string
+  classNames?: {
+    wrapper?: string
+    backdrop?: string
+    base?: string
+  }
+  children?: ReactNode
+}
+
+const mapModalSize = (size?: LegacyModalProps["size"]): "sm" | "md" | "lg" => {
+  if (!size) return "lg"
+  if (size === "sm" || size === "md" || size === "lg") return size
+  return "lg"
+}
+
+const ModalContentContext = createContext<Record<string, never>>({})
+
+function Modal({ isOpen = false, onOpenChange, size, scrollBehavior, backdrop, classNames, children }: LegacyModalProps) {
+  const state = useOverlayState({ isOpen, onOpenChange })
+  const backdropClass = backdrop === "blur" ? "bg-black/35 backdrop-blur-sm" : classNames?.backdrop
+  return (
+    <HeroModal state={state}>
+      <HeroModal.Trigger className="hidden">
+        <span />
+      </HeroModal.Trigger>
+      <HeroModal.Backdrop className={backdropClass}>
+        <HeroModal.Container size={mapModalSize(size)} scroll={scrollBehavior === "inside" ? "inside" : "outside"} className={classNames?.wrapper}>
+          <HeroModal.Dialog className={classNames?.base}>
+            <ModalContentContext.Provider value={{}}>
+              {children}
+            </ModalContentContext.Provider>
+          </HeroModal.Dialog>
+        </HeroModal.Container>
+      </HeroModal.Backdrop>
+    </HeroModal>
+  )
+}
+
+function ModalContent({ className, children }: { className?: string; children?: ReactNode }) {
+  return <div className={className}>{children}</div>
+}
+
+function ModalHeader({ className, children }: { className?: string; children?: ReactNode }) {
+  return <HeroModal.Header className={className}>{children}</HeroModal.Header>
+}
+
+function ModalBody({ className, children }: { className?: string; children?: ReactNode }) {
+  return <HeroModal.Body className={className}>{children}</HeroModal.Body>
+}
+
+function ModalFooter({ className, children }: { className?: string; children?: ReactNode }) {
+  return <HeroModal.Footer className={className}>{children}</HeroModal.Footer>
+}
+
+type LegacyTabsClassNames = {
+  base?: string
+  tabList?: string
+  tab?: string
+  panel?: string
+}
+
+type LegacyTabsProps = {
+  selectedKey?: React.Key
+  onSelectionChange?: (key: React.Key) => void
+  variant?: string
+  color?: string
+  classNames?: LegacyTabsClassNames
+  children?: ReactNode
+}
+
+type LegacyTabProps = {
+  title?: ReactNode
+  children?: ReactNode
+}
+
+const Tab: React.FC<LegacyTabProps> = () => null
+
+function Tabs({ selectedKey, onSelectionChange, classNames, children }: LegacyTabsProps) {
+  const tabs = React.Children.toArray(children).reduce<Array<{ key: string; title: ReactNode; content: ReactNode }>>(
+    (acc, child, index) => {
+      if (!React.isValidElement<LegacyTabProps>(child)) return acc
+      const keyValue = child.key ? String(child.key).replace(/^\.\$?/, "") : `tab-${index}`
+      acc.push({
+        key: keyValue,
+        title: child.props.title ?? keyValue,
+        content: child.props.children,
+      })
+      return acc
+    },
+    []
+  )
+
+  const activeKey = selectedKey ? String(selectedKey) : tabs[0]?.key
+
+  return (
+    <HeroTabs selectedKey={activeKey as string | undefined} onSelectionChange={onSelectionChange as ((key: React.Key) => void) | undefined} className={classNames?.base}>
+      <HeroTabs.List className={classNames?.tabList}>
+        {tabs.map((tab) => (
+          <HeroTabs.Tab key={tab.key} id={tab.key} className={classNames?.tab}>
+            {tab.title}
+          </HeroTabs.Tab>
+        ))}
+      </HeroTabs.List>
+      {tabs.map((tab) => (
+        <HeroTabs.Panel key={`${tab.key}-panel`} id={tab.key} className={classNames?.panel}>
+          {tab.content}
+        </HeroTabs.Panel>
+      ))}
+    </HeroTabs>
+  )
+}
+
+type LegacyAccordionItemClasses = {
+  base?: string
+  title?: string
+  trigger?: string
+  content?: string
+}
+
+const AccordionClassesContext = createContext<LegacyAccordionItemClasses | undefined>(undefined)
+
+function Accordion({
+  children,
+  selectionMode,
+  defaultExpandedKeys,
+  className,
+  itemClasses,
+}: {
+  children?: ReactNode
+  selectionMode?: "single" | "multiple"
+  defaultExpandedKeys?: Iterable<React.Key>
+  className?: string
+  itemClasses?: LegacyAccordionItemClasses
+}) {
+  return (
+    <AccordionClassesContext.Provider value={itemClasses}>
+      <HeroAccordion
+        allowsMultipleExpanded={selectionMode === "multiple"}
+        defaultExpandedKeys={defaultExpandedKeys as Iterable<string> | undefined}
+        className={className}
+      >
+        {children}
+      </HeroAccordion>
+    </AccordionClassesContext.Provider>
+  )
+}
+
+function AccordionItem({
+  title,
+  children,
+  ...props
+}: {
+  title: ReactNode
+  children?: ReactNode
+  [key: string]: unknown
+}) {
+  const itemClasses = useContext(AccordionClassesContext)
+  const defaultId = useMemo(
+    () =>
+      (typeof title === "string" ? title : "item")
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, ""),
+    [title]
+  )
+  return (
+    <HeroAccordion.Item id={(props["aria-label"] as string | undefined) || defaultId || "item"} className={itemClasses?.base}>
+      <HeroAccordion.Heading>
+        <HeroAccordion.Trigger className={cx("flex w-full items-center justify-between", itemClasses?.trigger)}>
+          <span className={itemClasses?.title}>{title}</span>
+          <HeroAccordion.Indicator />
+        </HeroAccordion.Trigger>
+      </HeroAccordion.Heading>
+      <HeroAccordion.Panel>
+        <HeroAccordion.Body className={itemClasses?.content}>{children}</HeroAccordion.Body>
+      </HeroAccordion.Panel>
+    </HeroAccordion.Item>
+  )
+}
+
+type TableClassNames = {
+  wrapper?: string
+  table?: string
+  th?: string
+  td?: string
+}
+
+const TableStylesContext = createContext<TableClassNames | undefined>(undefined)
+
+function Table({
+  classNames,
+  children,
+  removeWrapper,
+}: {
+  classNames?: TableClassNames
+  children?: ReactNode
+  removeWrapper?: boolean
+  [key: string]: unknown
+}) {
+  const table = <table className={cx("w-full text-left text-sm", classNames?.table)}>{children}</table>
+  return (
+    <TableStylesContext.Provider value={classNames}>
+      {removeWrapper ? table : <div className={classNames?.wrapper}>{table}</div>}
+    </TableStylesContext.Provider>
+  )
+}
+
+function TableHeader({ children }: { children?: ReactNode }) {
+  return (
+    <thead>
+      <tr>{children}</tr>
+    </thead>
+  )
+}
+
+function TableColumn({ className, children }: { className?: string; children?: ReactNode }) {
+  const classNames = useContext(TableStylesContext)
+  return (
+    <th scope="col" className={cx("px-3 py-2 font-semibold text-foreground/75", classNames?.th, className)}>
+      {children}
+    </th>
+  )
+}
+
+function TableBody({
+  children,
+  isLoading,
+  loadingContent,
+  emptyContent,
+}: {
+  children?: ReactNode
+  isLoading?: boolean
+  loadingContent?: ReactNode
+  emptyContent?: ReactNode
+}) {
+  const rows = React.Children.toArray(children)
+  return (
+    <tbody>
+      {isLoading && rows.length === 0 ? (
+        <tr>
+          <td className="px-3 py-6 text-center text-foreground/70" colSpan={5}>
+            {loadingContent || "Carregando..."}
+          </td>
+        </tr>
+      ) : rows.length === 0 ? (
+        <tr>
+          <td className="px-3 py-6 text-center text-foreground/70" colSpan={5}>
+            {emptyContent || "Sem dados"}
+          </td>
+        </tr>
+      ) : (
+        rows
+      )}
+    </tbody>
+  )
+}
+
+function TableRow({ className, children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr className={cx("border-t border-default-200/60", className)} {...props}>
+      {children}
+    </tr>
+  )
+}
+
+function TableCell({ className, children, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
+  const classNames = useContext(TableStylesContext)
+  return (
+    <td className={cx("px-3 py-2 align-middle", classNames?.td, className)} {...props}>
+      {children}
+    </td>
+  )
+}
+
+function KpiCard({
+  title,
+  value,
+  subtitle,
+  icon,
+  tone = "default",
+  isLoading,
+  prefix,
+  decimals = 0,
+}: {
+  title: string
+  value: number
+  subtitle: string
+  icon: ReactNode
+  tone?: "default" | "success" | "primary"
+  isLoading?: boolean
+  prefix?: string
+  decimals?: number
+}) {
+  const toneClasses =
+    tone === "success"
+      ? carteiraAccentClass
+      : tone === "primary"
+        ? "text-primary"
+        : "text-foreground"
+  const formattedPrefix = prefix ? prefix.replace(/\s+$/, "\u00A0") : undefined
+  const numberFormatter = useMemo(
+    () =>
+      new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+      }),
+    [decimals]
+  )
+  const valueClassName = prefix
+    ? "text-[clamp(1.35rem,1.65vw,2.05rem)] leading-tight tracking-tight"
+    : "text-3xl"
+
+  return (
+    <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 260, damping: 22 }}>
+      <Card
+        className="relative h-full overflow-hidden rounded-[1.15rem] border border-default-200/80 bg-content1 shadow-[0_18px_36px_-26px_hsl(222_35%_22%/0.26)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_22px_44px_-32px_hsl(var(--primary)/0.44)]"
+      >
+        <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
+          <div className="absolute -left-12 -bottom-10 h-28 w-28 rounded-full bg-gradient-to-br from-primary/28 to-transparent blur-2xl" />
+          <div className="absolute -right-12 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/22 to-transparent blur-2xl" />
+          <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+        </div>
+        <CardBody className="relative z-10 p-4">
+          <div className="flex items-start justify-between gap-3">
+            <div className="space-y-1">
+              <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">{title}</div>
+              <div className={`${valueClassName} font-semibold tabular-nums ${toneClasses}`}>
+                {isLoading ? (
+                  <span className="inline-block h-8 w-24 animate-pulse rounded-lg bg-default-200/40" />
+                ) : (
+                  <CountUp
+                    end={Number.isFinite(value) ? value : 0}
+                    duration={0.9}
+                    decimals={decimals}
+                    prefix={formattedPrefix}
+                    formattingFn={(currentValue) => numberFormatter.format(currentValue)}
+                  />
+                )}
+              </div>
+              <div className="text-xs text-foreground/60">{subtitle}</div>
+            </div>
+            <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
+              {icon}
+            </div>
+          </div>
+        </CardBody>
+      </Card>
+    </motion.div>
+  )
+}
+
+function ClienteGridCard({
+  credor,
+  onOpen,
+  formatCurrency,
+  formatStatus,
+  statusClass,
+}: {
+  credor: CredorResumo
+  onOpen: () => void
+  formatCurrency: (n: number) => string
+  formatStatus: (s?: string | null) => string
+  statusClass: (s?: string | null) => string
+}) {
+  const nome = credor.credor_nome || "Cliente"
+  const cpf =
+    credor.credor_cpf_cnpj && !credor.credor_cpf_cnpj.startsWith("SEM_CPF") ? credor.credor_cpf_cnpj : null
+  const cidadeUf = credor.cidade ? `${credor.cidade}/${credor.uf || "--"}` : null
+  const status = credor.ultimo_status
+  const dt = credor.ultimo_precatorio_data
+    ? new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
+    : null
+
+  const carteira = Number(credor.valor_total_atualizado || credor.valor_total_principal || 0)
+  const ultimo = Number(credor.ultimo_precatorio_valor || 0)
+  const descricaoPrincipal = cidadeUf || "Cidade/UF nao informado"
+  const descricaoSecundaria = dt ? `Ultima mov.: ${dt}` : "Sem movimentacao"
+
+  return (
+    <motion.div
+      whileHover={{ y: -3 }}
+      whileTap={{ scale: 0.99 }}
+      transition={{ type: "spring", stiffness: 260, damping: 22 }}
+      className="h-full w-full min-w-0"
+    >
+      <SpotlightCard className="h-full w-full rounded-[1.2rem]" spotlightColor="hsl(var(--primary) / 0.26)">
+        <Card
+          role="button"
+          tabIndex={0}
+          onClick={onOpen}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") {
+              event.preventDefault()
+              onOpen()
+            }
+          }}
+          className={[
+            `${clientCardHeight} w-full min-w-0 rounded-[1.2rem] border border-default-200/80 bg-content1 shadow-[0_20px_40px_-30px_hsl(222_35%_22%/0.24)] dark:border-primary/22 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_26px_52px_-36px_hsl(var(--primary)/0.5)]`,
+            "flex flex-col",
+            "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
+            "hover:border-primary/38 transition",
+            "relative overflow-hidden",
+          ].join(" ")}
+        >
+          <div className="pointer-events-none absolute inset-0 hidden opacity-78 dark:block">
+            <div className="absolute -left-16 -bottom-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/24 to-transparent blur-2xl" />
+            <div className="absolute -right-14 -top-14 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/20 to-transparent blur-2xl" />
+            <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+          </div>
+          <div className="flex items-center justify-between px-4 pt-4">
+            <div className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-primary">
+              <FileText className="h-4 w-4" />
+            </div>
+            <div
+              onClick={(event) => event.stopPropagation()}
+              onMouseDown={(event) => event.stopPropagation()}
+            >
+              <Dropdown>
+                <DropdownTrigger>
+                  <Button isIconOnly size="sm" variant="light" aria-label={`Acoes de ${nome}`} className="rounded-full">
+                    <MoreVertical className="h-4 w-4" />
+                  </Button>
+                </DropdownTrigger>
+                <DropdownPopover placement="bottom end">
+                  <DropdownMenu
+                    aria-label={`Acoes para ${nome}`}
+                    onAction={(key) => {
+                      if (String(key) === "detalhes") onOpen()
+                    }}
+                  >
+                    <DropdownItem id="detalhes">
+                      <span className="inline-flex items-center gap-2">
+                        <ChevronRight className="h-4 w-4" />
+                        Ver detalhes
+                      </span>
+                    </DropdownItem>
+                  </DropdownMenu>
+                </DropdownPopover>
+              </Dropdown>
+            </div>
+          </div>
+
+          <CardHeader className="flex min-h-[92px] flex-col items-start gap-1 px-4 pb-3 pt-3">
+            <p
+              title={nome}
+              className="w-full break-words text-sm font-semibold leading-5 text-foreground"
+            >
+              {nome}
+            </p>
+            <p title={cpf ?? "CPF/CNPJ nao informado"} className="w-full break-words text-[12px] leading-4 text-foreground/60">
+              {cpf ?? "CPF/CNPJ nao informado"}
+            </p>
+            <p title={descricaoPrincipal} className="w-full break-words text-[12px] leading-4 text-foreground/60">
+              {descricaoPrincipal}
+            </p>
+            <p title={descricaoSecundaria} className="w-full break-words text-[12px] leading-4 text-foreground/50">
+              {descricaoSecundaria}
+            </p>
+          </CardHeader>
+
+          <Separator className="opacity-60" />
+
+          <CardBody className="flex-1 space-y-3 px-4 py-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <Chip size="sm" variant="flat" className={`max-w-[64%] border ${statusClass(status)}`}>
+                <span className="truncate">{formatStatus(status)}</span>
+              </Chip>
+              <Chip
+                size="sm"
+                variant="flat"
+                color="default"
+                className="max-w-[36%] rounded-full border border-default-200/65 bg-content2/55 font-mono tabular-nums"
+              >
+                <span className="truncate">{credor.total_precatorios ?? 0} proc.</span>
+              </Chip>
+            </div>
+
+            <div
+              className="rounded-xl border border-default-200/80 bg-content1/95 p-3 shadow-[0_12px_26px_-22px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/95 dark:via-background/84 dark:to-primary/12 dark:shadow-none"
+            >
+              <p className="text-[11px] uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
+              <p className={`truncate text-base font-semibold tabular-nums ${carteiraAccentClass}`}>
+                {carteira ? `R$ ${formatCurrency(carteira)}` : "R$ 0,00"}
+              </p>
+              <p className="truncate text-[11px] text-foreground/60">
+                {ultimo ? `Ultimo: R$ ${formatCurrency(ultimo)}` : "Sem ultimo valor"}
+              </p>
+            </div>
+
+            <div className="min-h-[42px] space-y-1 text-xs text-foreground/70">
+              {credor.telefone || credor.email ? (
+                <>
+                  {credor.telefone ? (
+                    <div className="inline-flex max-w-full items-center gap-1">
+                      <Phone className="h-3 w-3" />
+                      <span className="break-words">{credor.telefone}</span>
+                    </div>
+                  ) : null}
+                  {credor.email ? (
+                    <div className="inline-flex max-w-full items-center gap-1">
+                      <Mail className="h-3 w-3" />
+                      <span className="break-all">{credor.email}</span>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <div className="text-foreground/60">Sem contato</div>
+              )}
+            </div>
+          </CardBody>
+
+          <Separator className="opacity-60" />
+
+          <CardFooter className="mt-auto p-3">
+            <Button
+              size="sm"
+              variant="flat"
+              className="w-full rounded-full font-medium"
+              onPress={(event) => {
+                ; (event as { stopPropagation?: () => void } | undefined)?.stopPropagation?.()
+                onOpen()
+              }}
+            >
+              <span className="inline-flex items-center gap-2">
+                Abrir detalhes
+                <ChevronRight className="h-4 w-4" />
+              </span>
+            </Button>
+          </CardFooter>
+        </Card>
+      </SpotlightCard>
+    </motion.div>
+  )
+}
+
+const toNumber = (value: unknown) => {
+  const parsed = Number(value ?? 0)
+  return Number.isFinite(parsed) ? parsed : 0
+}
+
+const normalizeCredorResumo = (item: Partial<CredorResumo>): CredorResumo => ({
+  id_unico: String(item.id_unico || ""),
+  credor_nome: item.credor_nome || "Credor sem nome",
+  credor_cpf_cnpj: item.credor_cpf_cnpj || null,
+  cidade: item.cidade || null,
+  uf: item.uf || null,
+  telefone: item.telefone || null,
+  email: item.email || null,
+  total_precatorios: Math.trunc(toNumber(item.total_precatorios)),
+  valor_total_principal: toNumber(item.valor_total_principal),
+  valor_total_atualizado: toNumber(item.valor_total_atualizado),
+  ultimo_precatorio_data: item.ultimo_precatorio_data || null,
+  ultimo_status: item.ultimo_status || null,
+  ultimo_precatorio_valor: toNumber(item.ultimo_precatorio_valor),
+})
 
 const normalizeText = (value?: string | null) =>
   (value || "")
@@ -203,9 +1074,8 @@ const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[]
     chips.push({
       key: "carteira",
       label: "Carteira",
-      value: `${filters.carteiraMin !== undefined ? `R$ ${filters.carteiraMin.toLocaleString("pt-BR")}` : "..."} até ${
-        filters.carteiraMax !== undefined ? `R$ ${filters.carteiraMax.toLocaleString("pt-BR")}` : "..."
-      }`,
+      value: `${filters.carteiraMin !== undefined ? `R$ ${filters.carteiraMin.toLocaleString("pt-BR")}` : "..."} até ${filters.carteiraMax !== undefined ? `R$ ${filters.carteiraMax.toLocaleString("pt-BR")}` : "..."
+        }`,
     })
   }
 
@@ -220,10 +1090,9 @@ const getAdminFilterChips = (filters: ClientesAdminFilters): ClienteFilterChip[]
   if (filters.ultimaMovInicio || filters.ultimaMovFim) {
     chips.push({
       key: "ultimaMov",
-      label: "Òšltima mov.",
-      value: `${filters.ultimaMovInicio ? new Date(`${filters.ultimaMovInicio}T00:00:00`).toLocaleDateString("pt-BR") : "..."} até ${
-        filters.ultimaMovFim ? new Date(`${filters.ultimaMovFim}T00:00:00`).toLocaleDateString("pt-BR") : "..."
-      }`,
+      label: "Ultima mov.",
+      value: `${filters.ultimaMovInicio ? new Date(`${filters.ultimaMovInicio}T00:00:00`).toLocaleDateString("pt-BR") : "..."} até ${filters.ultimaMovFim ? new Date(`${filters.ultimaMovFim}T00:00:00`).toLocaleDateString("pt-BR") : "..."
+        }`,
     })
   }
 
@@ -281,7 +1150,7 @@ const mergeCredorFormWithImportedData = (
     if (!overwrite && currentValue) continue
     if (currentValue === importedValue) continue
 
-    ;(next as Record<string, string | undefined>)[field] = importedValue
+      ; (next as Record<string, string | undefined>)[field] = importedValue
     updatedCount += 1
   }
 
@@ -294,6 +1163,7 @@ export default function ClientsPage() {
   const [loading, setLoading] = useState(true)
   const [credores, setCredores] = useState<CredorResumo[]>([])
   const [searchTerm, setSearchTerm] = useState("")
+  const deferredSearchTerm = useDeferredValue(searchTerm)
 
   // role pode vir como string ou array (evita includes quebrar)
   const roles = useMemo(() => {
@@ -310,11 +1180,13 @@ export default function ClientsPage() {
   const [loadingDetails, setLoadingDetails] = useState(false)
   const [modalOpen, setModalOpen] = useState(false)
   const [editingCredor, setEditingCredor] = useState(false)
+  const [detailsTab, setDetailsTab] = useState<"dados" | "processos" | "historico">("dados")
   const [savingCredor, setSavingCredor] = useState(false)
-  const [detailsTab, setDetailsTab] = useState("resumo")
   const [advancedFiltersOpen, setAdvancedFiltersOpen] = useState(false)
   const [adminFilters, setAdminFilters] = useState<ClientesAdminFilters>({})
   const [adminFiltersDraft, setAdminFiltersDraft] = useState<ClientesAdminFilters>({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(24)
 
   const makeCredorForm = (credor: CredorResumo | null): Partial<CredorResumo> => ({
     credor_nome: credor?.credor_nome || "",
@@ -327,7 +1199,6 @@ export default function ClientsPage() {
 
   const startCredorEditing = () => {
     setEditingCredor(true)
-    setDetailsTab("dados")
   }
 
   const cancelCredorEditing = () => {
@@ -419,26 +1290,38 @@ export default function ClientsPage() {
         return
       }
 
-      let query = supabase
+      const { data: rpcData, error: rpcError } = await supabase.rpc("listar_clientes_resumo")
+
+      if (!rpcError && Array.isArray(rpcData)) {
+        setCredores((rpcData as Partial<CredorResumo>[]).map(normalizeCredorResumo))
+        return
+      }
+
+      if (rpcError) {
+        console.warn("RPC listar_clientes_resumo indisponivel, usando fallback local.", rpcError.message)
+      }
+
+      let fallbackQuery = supabase
         .from("precatorios")
         .select(
           "id, credor_nome, credor_cpf_cnpj, credor_cidade, credor_uf, credor_telefone, credor_email, valor_principal, valor_atualizado, status, status_kanban, localizacao_kanban, created_at, updated_at, dono_usuario_id, responsavel"
         )
+        .is("deleted_at", null)
         .order("updated_at", { ascending: false })
 
       if (!isAdmin && profile?.id) {
-        query = query.or(`dono_usuario_id.eq.${profile.id},responsavel.eq.${profile.id}`)
+        fallbackQuery = fallbackQuery.or(`dono_usuario_id.eq.${profile.id},responsavel.eq.${profile.id}`)
       }
 
-      const { data, error } = await query
+      const { data: fallbackData, error: fallbackError } = await fallbackQuery
 
-      if (error) {
-        console.error("Erro ao carregar credores:", error)
+      if (fallbackError) {
+        console.error("Erro ao carregar credores:", fallbackError)
         setCredores([])
         return
       }
 
-      setCredores(aggregateCredores((data || []) as PrecatorioResumo[]))
+      setCredores(aggregateCredores((fallbackData || []) as PrecatorioResumo[]))
     } catch (error) {
       console.error("Erro:", error)
     } finally {
@@ -450,7 +1333,7 @@ export default function ClientsPage() {
     setSelectedCredor(credor)
     setCredorForm(makeCredorForm(credor))
     setEditingCredor(false)
-    setDetailsTab("resumo")
+    setDetailsTab("dados")
     setModalOpen(true)
     setLoadingDetails(true)
 
@@ -461,7 +1344,13 @@ export default function ClientsPage() {
         return
       }
 
-      let query = supabase.from("precatorios").select("*").order("created_at", { ascending: false })
+      let query = supabase
+        .from("precatorios")
+        .select(
+          "id, numero_processo, numero_precatorio, status, status_kanban, localizacao_kanban, valor_principal, valor_atualizado, created_at, updated_at, credor_nome, credor_cpf_cnpj, credor_telefone, credor_email, credor_cidade, credor_uf, dono_usuario_id, responsavel"
+        )
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
 
       if (!isAdmin && profile?.id) {
         query = query.or(`dono_usuario_id.eq.${profile.id},responsavel.eq.${profile.id}`)
@@ -476,7 +1365,7 @@ export default function ClientsPage() {
       const { data, error } = await query
       if (error) throw error
 
-      const fetchedPrecatorios = (data || []) as Precatorio[]
+      const fetchedPrecatorios = (data || []) as unknown as Precatorio[]
       setCredorPrecatorios(fetchedPrecatorios)
 
       if (fetchedPrecatorios.length > 0) {
@@ -592,19 +1481,19 @@ export default function ClientsPage() {
   )
 
   const searchedCredores = useMemo(() => {
-    const term = normalizeText(searchTerm)
+    const term = normalizeText(deferredSearchTerm)
     if (!term) return credores
 
     return credores.filter((credor) => {
       const matchesNome = normalizeText(credor.credor_nome).includes(term)
-      const matchesCpf = (credor.credor_cpf_cnpj || "").includes(searchTerm.trim())
+      const matchesCpf = (credor.credor_cpf_cnpj || "").includes(deferredSearchTerm.trim())
       const matchesCidade = normalizeText(credor.cidade).includes(term)
       const matchesStatus = normalizeText(credor.ultimo_status).includes(term)
       const matchesEmail = normalizeText(credor.email).includes(term)
       const matchesTelefone = normalizeText(credor.telefone).includes(term)
       return matchesNome || matchesCpf || matchesCidade || matchesStatus || matchesEmail || matchesTelefone
     })
-  }, [credores, searchTerm])
+  }, [credores, deferredSearchTerm])
 
   const filteredCredores = useMemo(
     () =>
@@ -614,6 +1503,24 @@ export default function ClientsPage() {
 
   const adminFilterChips = useMemo(() => getAdminFilterChips(adminFilters), [adminFilters])
   const totalAdminFilters = adminFilterChips.length
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(filteredCredores.length / pageSize)), [filteredCredores.length, pageSize])
+
+  const paginatedCredores = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return filteredCredores.slice(start, start + pageSize)
+  }, [filteredCredores, currentPage, pageSize])
+
+  const rangeStart = filteredCredores.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = Math.min(currentPage * pageSize, filteredCredores.length)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [deferredSearchTerm, adminFilters, isAdmin])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
   const updateDraftNumberFilter = (key: keyof ClientesAdminFilters, rawValue: string) => {
     const normalized = rawValue.replace(",", ".")
@@ -735,22 +1642,52 @@ export default function ClientsPage() {
     : "Sem movimentacao recente"
 
   return (
-    <div className="w-full max-w-[100vw] px-4 py-6 lg:px-6">
+    <div className="clients-revamp relative w-full max-w-[100vw] px-4 py-6 lg:px-6">
       <div className="space-y-6">
-        <Card shadow="sm" className="border border-default-200/80 bg-content1/95">
-          <CardBody className="gap-5 p-5 lg:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2">
-                <h1 className="text-3xl font-bold tracking-tight text-foreground">Clientes</h1>
-                <p className="text-sm text-foreground/70">Gerencie clientes, contatos e historico de processos.</p>
+        <Card
+          className={`${glassCard} ${sheen} clients-hero-card relative overflow-hidden border-default-200/80 bg-content1 shadow-[0_24px_50px_-34px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_34px_72px_-50px_hsl(var(--primary)/0.48)]`}
+        >
+          <div className="pointer-events-none absolute inset-0 hidden opacity-85 dark:block">
+            <div className="absolute -left-20 -bottom-16 h-44 w-44 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl" />
+            <div className="absolute -right-24 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-orange-400/24 to-transparent blur-3xl" />
+            <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+          </div>
+          <CardBody className="relative gap-5 p-5 lg:p-6">
+            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+              <div className="space-y-2.5">
+                <div className="flex items-center gap-3">
+                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
+                    <Users className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Clientes</h1>
+                    <span className="text-xs uppercase tracking-[0.16em] text-foreground/60">CRM operacional</span>
+                  </div>
+                </div>
+                <p className="text-sm text-foreground/70">Gerencie clientes, contatos e historico de processos de ponta a ponta.</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip variant="flat" color="primary" startContent={<Users className="h-4 w-4" />}>
+                  <Chip
+                    variant="flat"
+                    color="default"
+                    className="border border-default-200/65 bg-content2/55"
+                    startContent={<Users className="h-4 w-4" />}
+                  >
                     {credores.length} clientes
                   </Chip>
-                  <Chip variant="flat" color="default" startContent={<FileText className="h-4 w-4" />}>
-                    {resumo.totalPrecatorios} precatorios
+                  <Chip
+                    variant="flat"
+                    color="default"
+                    className="border border-default-200/65 bg-content2/55"
+                    startContent={<FileText className="h-4 w-4" />}
+                  >
+                    {resumo.totalPrecatorios} processos
                   </Chip>
-                  <Chip variant="flat" color="success" startContent={<Clock className="h-4 w-4" />}>
+                  <Chip
+                    variant="flat"
+                    color="default"
+                    className="border border-default-200/65 bg-content2/55"
+                    startContent={<Clock className="h-4 w-4" />}
+                  >
                     Atualizado em {ultimaAtualizacaoLabel}
                   </Chip>
                 </div>
@@ -764,6 +1701,7 @@ export default function ClientsPage() {
                     startContent={<X className="h-4 w-4" />}
                     isDisabled={!searchTerm}
                     onPress={() => setSearchTerm("")}
+                    className="h-11 rounded-xl border border-default-200/65 bg-content2/55"
                   >
                     Limpar busca
                   </Button>
@@ -775,6 +1713,7 @@ export default function ClientsPage() {
                     startContent={<RefreshCw className="h-4 w-4" />}
                     isLoading={loading}
                     onPress={() => loadCredores()}
+                    className="h-11 rounded-xl shadow-lg shadow-primary/20"
                   >
                     Atualizar
                   </Button>
@@ -785,6 +1724,7 @@ export default function ClientsPage() {
                     color="default"
                     startContent={<Filter className="h-4 w-4" />}
                     onPress={() => setAdvancedFiltersOpen(true)}
+                    className="h-11 rounded-xl border-default-200/70 bg-content2/35"
                   >
                     {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avancados"}
                   </Button>
@@ -793,55 +1733,47 @@ export default function ClientsPage() {
             </div>
 
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {loading ? (
-                Array.from({ length: 4 }).map((_, idx) => (
-                  <Card key={`kpi-skeleton-${idx}`} shadow="none" className="border border-default-200/70 bg-content2/60">
-                    <CardBody className="space-y-3 p-4">
-                      <Skeleton className="h-3 w-24 rounded-md" />
-                      <Skeleton className="h-8 w-32 rounded-md" />
-                      <Skeleton className="h-3 w-20 rounded-md" />
-                    </CardBody>
-                  </Card>
-                ))
-              ) : (
-                <>
-                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
-                    <CardBody className="space-y-1 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total de clientes</div>
-                      <div className="text-3xl font-semibold tabular-nums text-foreground">{credores.length}</div>
-                      <div className="text-xs text-foreground/60">Base consolidada</div>
-                    </CardBody>
-                  </Card>
-                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
-                    <CardBody className="space-y-1 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</div>
-                      <div className="text-3xl font-semibold tabular-nums text-success">R$ {formatCurrency(resumo.totalCarteira)}</div>
-                      <div className="text-xs text-foreground/60">Media de R$ {formatCurrency(carteiraMedia)} por cliente</div>
-                    </CardBody>
-                  </Card>
-                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
-                    <CardBody className="space-y-1 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Clientes com contato</div>
-                      <div className="text-3xl font-semibold tabular-nums text-foreground">{clientesComContato}</div>
-                      <div className="text-xs text-foreground/60">{clientesSemContato} sem telefone/e-mail</div>
-                    </CardBody>
-                  </Card>
-                  <Card shadow="none" className="border border-default-200/70 bg-content2/60">
-                    <CardBody className="space-y-1 p-4">
-                      <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Clientes com status</div>
-                      <div className="text-3xl font-semibold tabular-nums text-foreground">{clientesComStatus}</div>
-                      <div className="text-xs text-foreground/60">{statusOptions.length} status distintos</div>
-                    </CardBody>
-                  </Card>
-                </>
-              )}
+              <KpiCard
+                title="Total de clientes"
+                value={credores.length}
+                subtitle="Base consolidada"
+                icon={<Users className="h-5 w-5" />}
+                tone="primary"
+                isLoading={loading}
+              />
+              <KpiCard
+                title="Carteira atualizada"
+                value={resumo.totalCarteira}
+                subtitle={`Media de R$ ${formatCurrency(carteiraMedia)} por cliente`}
+                icon={<FileText className="h-5 w-5" />}
+                tone="success"
+                isLoading={loading}
+                prefix={"R$\u00A0"}
+                decimals={2}
+              />
+              <KpiCard
+                title="Clientes com contato"
+                value={clientesComContato}
+                subtitle={`${clientesSemContato} sem telefone/e-mail`}
+                icon={<Users className="h-5 w-5" />}
+                tone="default"
+                isLoading={loading}
+              />
+              <KpiCard
+                title="Clientes com status"
+                value={clientesComStatus}
+                subtitle={`${statusOptions.length} status distintos`}
+                icon={<Clock className="h-5 w-5" />}
+                tone="default"
+                isLoading={loading}
+              />
             </div>
           </CardBody>
         </Card>
 
-        <Card shadow="sm" className="border border-default-200/80 bg-content1/95">
-          <CardBody className="space-y-4 p-4 lg:p-5">
-            <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+        <Card className={`${glassCard} clients-search-card`}>
+          <CardBody className="space-y-4 p-5 lg:p-6">
+            <div className="sticky top-2 z-10 flex flex-col gap-3 rounded-2xl border border-default-200/65 bg-content1/86 dark:bg-black/80 p-3 backdrop-blur xl:flex-row xl:items-center xl:justify-between">
               <div className="w-full xl:max-w-2xl">
                 <Input
                   aria-label="Buscar clientes"
@@ -852,16 +1784,17 @@ export default function ClientsPage() {
                   onClear={() => setSearchTerm("")}
                   startContent={<Search className="h-4 w-4 text-foreground/50" />}
                   classNames={{
-                    inputWrapper: "border border-default-200/80 bg-content2/60 shadow-sm",
+                    inputWrapper:
+                      "h-11 min-h-11 rounded-xl border border-default-200/70 bg-content2/65 hover:bg-content2/80 transition shadow-[0_10px_22px_-18px_hsl(var(--primary)/0.35)]",
                   }}
                 />
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Chip variant="flat" color="default">
+                <Chip variant="flat" color="default" className="rounded-full border border-default-200/65 bg-content2/55">
                   {filteredCredores.length} exibidos
                 </Chip>
-                <Chip variant="flat" color="default">
+                <Chip variant="flat" color="default" className="rounded-full border border-default-200/65 bg-content2/55">
                   {resumo.totalPrecatorios} processos
                 </Chip>
                 {isAdmin ? (
@@ -870,6 +1803,7 @@ export default function ClientsPage() {
                     color="default"
                     startContent={<Filter className="h-4 w-4" />}
                     onPress={() => setAdvancedFiltersOpen(true)}
+                    className="h-11 rounded-xl border-default-200/70 bg-content2/40"
                   >
                     Filtros avancados
                   </Button>
@@ -898,151 +1832,80 @@ export default function ClientsPage() {
               </div>
             ) : null}
 
-            <Divider />
+            <Divider className="opacity-60" />
 
-            <div className="w-full overflow-x-auto [scrollbar-gutter:stable]">
-              <Table
-                aria-label="Tabela de clientes"
-                removeWrapper
-                isHeaderSticky
-                onRowAction={(key) => {
-                  const credor = filteredCredores.find((item) => item.id_unico === String(key))
-                  if (credor) openCredorDetails(credor)
-                }}
-                classNames={{
-                  table: "w-full min-w-[760px] lg:min-w-0 table-fixed",
-                  th: "bg-default-100/70 text-foreground/70 text-xs uppercase tracking-wide",
-                  td: "align-top py-3",
-                }}
-              >
-                <TableHeader>
-                  <TableColumn className="w-[34%]">Credor</TableColumn>
-                  <TableColumn className="w-[14%]">Status</TableColumn>
-                  <TableColumn className="hidden 2xl:table-cell w-[16%]">Contatos</TableColumn>
-                  <TableColumn className="hidden xl:table-cell w-[12%]">Ultima movimentacao</TableColumn>
-                  <TableColumn className="hidden lg:table-cell w-[10%] text-center">Qtd. processos</TableColumn>
-                  <TableColumn className="w-[18%] text-right">Carteira atualizada</TableColumn>
-                  <TableColumn className="w-[6%] text-right">Acoes</TableColumn>
-                </TableHeader>
-                <TableBody
-                  isLoading={loading}
-                  loadingContent={<Spinner color="primary" label="Carregando clientes..." />}
-                  emptyContent={
-                    <div className="py-8 text-center">
-                      <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
-                      <p className="mt-1 text-xs text-foreground/60">Ajuste a busca ou remova filtros para visualizar resultados.</p>
-                    </div>
-                  }
+            <div className={`grid grid-cols-1 ${clientGridRows} gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`}>
+              {loading ? (
+                Array.from({ length: 8 }).map((_, idx) => (
+                  <Card
+                    key={`cliente-skeleton-${idx}`}
+
+                    className={`${clientCardHeight} w-full min-w-0 ${cardSoft}`}
+                  >
+                    <CardBody className="space-y-3 p-4">
+                      <Skeleton className="h-5 w-3/4 rounded-lg" />
+                      <Skeleton className="h-3 w-1/2 rounded-lg" />
+                      <div className="flex gap-2">
+                        <Skeleton className="h-6 w-20 rounded-full" />
+                        <Skeleton className="h-6 w-24 rounded-full" />
+                      </div>
+                      <Skeleton className="h-10 w-full rounded-xl" />
+                    </CardBody>
+                  </Card>
+                ))
+              ) : filteredCredores.length === 0 ? (
+                <Card
+
+                  className={`${cardSoft} min-h-[320px] sm:col-span-2 xl:col-span-3 2xl:col-span-4`}
                 >
-                  {filteredCredores.map((credor) => (
-                    <TableRow key={credor.id_unico} className="cursor-pointer">
-                      <TableCell>
-                        <div className="max-w-full space-y-1">
-                          <Tooltip content={credor.credor_nome}>
-                            <p className="truncate text-sm font-semibold text-foreground">{credor.credor_nome}</p>
-                          </Tooltip>
-                          <p className="truncate text-xs text-foreground/60">
-                            {credor.credor_cpf_cnpj && !credor.credor_cpf_cnpj.startsWith("SEM_CPF")
-                              ? credor.credor_cpf_cnpj
-                              : "CPF/CNPJ nao informado"}
-                          </p>
-                          {credor.cidade ? (
-                            <p className="inline-flex max-w-full items-center gap-1 truncate text-xs text-foreground/60">
-                              <MapPin className="h-3 w-3" />
-                              {credor.cidade}/{credor.uf || "--"}
-                            </p>
-                          ) : null}
-                          <div className="flex flex-col gap-0.5 xl:hidden">
-                            {credor.ultimo_precatorio_data ? (
-                              <p className="inline-flex items-center gap-1 text-xs text-foreground/60">
-                                <Clock className="h-3 w-3" />
-                                {new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")}
-                              </p>
-                            ) : null}
-                            {credor.telefone || credor.email ? (
-                              <p className="truncate text-xs text-foreground/60">
-                                {[credor.telefone, credor.email].filter(Boolean).join(" | ")}
-                              </p>
-                            ) : null}
-                          </div>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Chip size="sm" variant="flat" className={`border ${statusClass(credor.ultimo_status)}`}>
-                          {formatStatus(credor.ultimo_status)}
-                        </Chip>
-                      </TableCell>
-                      <TableCell className="hidden 2xl:table-cell">
-                        <div className="min-w-[210px] space-y-1">
-                          {credor.telefone ? (
-                            <p className="flex items-center gap-1 text-xs text-foreground/70">
-                              <Phone className="h-3 w-3" />
-                              <span className="truncate">{credor.telefone}</span>
-                            </p>
-                          ) : null}
-                          {credor.email ? (
-                            <p className="flex items-center gap-1 text-xs text-foreground/70">
-                              <Mail className="h-3 w-3" />
-                              <span className="truncate">{credor.email}</span>
-                            </p>
-                          ) : null}
-                          {!credor.telefone && !credor.email ? <span className="text-xs text-foreground/60">Sem contato</span> : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden xl:table-cell">
-                        {credor.ultimo_precatorio_data ? (
-                          <p className="inline-flex items-center gap-1 whitespace-nowrap text-xs text-foreground/70">
-                            <Clock className="h-3 w-3" />
-                            {new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")}
-                          </p>
-                        ) : (
-                          <span className="text-xs text-foreground/60">Sem movimentacao</span>
-                        )}
-                      </TableCell>
-                      <TableCell className="hidden lg:table-cell text-center">
-                        <Chip size="sm" variant="flat" color="default" className="font-mono tabular-nums">
-                          {credor.total_precatorios}
-                        </Chip>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="space-y-1">
-                          <p className="truncate font-semibold tabular-nums text-success">
-                            {credor.valor_total_atualizado ? `R$ ${formatCurrency(credor.valor_total_atualizado)}` : "R$ 0,00"}
-                          </p>
-                          {credor.ultimo_precatorio_valor ? (
-                            <p className="truncate text-[11px] text-foreground/60">Ultimo: R$ {formatCurrency(credor.ultimo_precatorio_valor)}</p>
-                          ) : null}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div
-                          className="flex justify-end"
-                          onClick={(event) => event.stopPropagation()}
-                          onMouseDown={(event) => event.stopPropagation()}
-                        >
-                          <Dropdown placement="bottom-end">
-                            <DropdownTrigger>
-                              <Button isIconOnly size="sm" variant="light" aria-label={`Acoes de ${credor.credor_nome}`}>
-                                <MoreVertical className="h-4 w-4" />
-                              </Button>
-                            </DropdownTrigger>
-                            <DropdownMenu aria-label={`Acoes para ${credor.credor_nome}`}>
-                              <DropdownItem
-                                key="detalhes"
-                                startContent={<ChevronRight className="h-4 w-4" />}
-                                onPress={() => openCredorDetails(credor)}
-                              >
-                                Ver detalhes
-                              </DropdownItem>
-                            </DropdownMenu>
-                          </Dropdown>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
+                  <CardBody className="py-10 text-center">
+                    <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
+                    <p className="mt-1 text-xs text-foreground/60">
+                      Ajuste a busca ou remova filtros para visualizar resultados.
+                    </p>
+                  </CardBody>
+                </Card>
+              ) : (
+                paginatedCredores.map((credor) => (
+                  <ClienteGridCard
+                    key={credor.id_unico}
+                    credor={credor}
+                    formatCurrency={formatCurrency}
+                    formatStatus={formatStatus}
+                    statusClass={statusClass}
+                    onOpen={() => openCredorDetails(credor)}
+                  />
+                ))
+              )}
             </div>
+            {!loading && filteredCredores.length > 0 ? (
+              <div className="flex flex-col gap-3 border-t border-default-200/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-foreground/70">
+                  Exibindo {rangeStart}-{rangeEnd} de {filteredCredores.length} clientes
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="sm"
+                    variant="bordered"
+                    isDisabled={currentPage <= 1}
+                    onPress={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  >
+                    Anterior
+                  </Button>
+                  <span className="min-w-[120px] text-center text-xs font-medium text-foreground/70">
+                    Pagina {currentPage} de {totalPages}
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="bordered"
+                    isDisabled={currentPage >= totalPages}
+                    onPress={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  >
+                    Proxima
+                  </Button>
+                </div>
+              </div>
+            ) : null}
           </CardBody>
         </Card>
       </div>
@@ -1050,72 +1913,163 @@ export default function ClientsPage() {
         <Modal
           isOpen={advancedFiltersOpen}
           onOpenChange={setAdvancedFiltersOpen}
-          size="3xl"
+          size="5xl"
           scrollBehavior="inside"
           backdrop="opaque"
           classNames={{
-            wrapper: "z-[120]",
-            backdrop: "bg-black/45",
-            base: "border border-default-200/80 dark:border-border bg-background dark:bg-muted shadow-2xl",
+            wrapper: modalWrapper,
+            backdrop: modalBackdrop,
+            base: modalBase,
           }}
         >
-          <ModalContent className="bg-background dark:bg-muted">
+          <ModalContent className={modalContentBase}>
             <>
-              <ModalHeader className="flex flex-col gap-1">
+              <ModalHeader className="shrink-0 flex flex-col gap-1 border-b border-default-200/70 dark:border-border px-6 pb-4 pt-5">
                 <h2 className="text-xl font-semibold tracking-tight">Filtros avancados de clientes</h2>
-                <p className="text-sm text-foreground/70">Refine a lista por status, periodo, faixa de carteira e contato.</p>
+                <p className="text-sm text-foreground/70">
+                  Refine a lista por status, periodo, faixa de carteira e contato.
+                </p>
               </ModalHeader>
-              <ModalBody className="pb-1">
-                <Accordion selectionMode="multiple" defaultExpandedKeys={["status", "periodo", "financeiro", "outros"]}>
+
+              <ModalBody className="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-4">
+                <Accordion
+                  selectionMode="multiple"
+                  defaultExpandedKeys={["status", "periodo", "financeiro", "outros"]}
+                  className="gap-3"
+                  itemClasses={{
+                    base:
+                      "rounded-2xl border border-default-200/70 dark:border-border " +
+                      "bg-content1 dark:bg-content1 shadow-[0_12px_26px_-20px_hsl(var(--primary)/0.32)]",
+                    title: "text-base font-semibold text-left",
+                    trigger: "py-3 px-3",
+                    content: "px-3 pb-4 pt-1",
+                  }}
+                >
                   <AccordionItem key="status" aria-label="Status e segmento" title="Status e segmento">
-                    <div className="space-y-4 pb-1">
+                    <div className="space-y-5">
                       <div className="space-y-2">
-                        <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Status atual</p>
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Status atual</p>
+
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="light"
+                              onPress={() =>
+                                setAdminFiltersDraft((prev) => ({
+                                  ...prev,
+                                  status: statusOptions.length ? [...statusOptions] : undefined,
+                                }))
+                              }
+                              isDisabled={statusOptions.length === 0}
+                            >
+                              Marcar todos
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="light"
+                              onPress={() =>
+                                setAdminFiltersDraft((prev) => ({
+                                  ...prev,
+                                  status: undefined,
+                                }))
+                              }
+                              isDisabled={!adminFiltersDraft.status?.length}
+                            >
+                              Limpar
+                            </Button>
+                            <Chip size="sm" variant="flat" color="primary">
+                              {adminFiltersDraft.status?.length ?? 0} selecionados
+                            </Chip>
+                          </div>
+                        </div>
+
                         {statusOptions.length === 0 ? (
                           <p className="text-sm text-foreground/60">Sem status disponiveis.</p>
                         ) : (
-                          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-                            {statusOptions.map((status) => (
-                              <Checkbox
-                                key={status}
-                                isSelected={adminFiltersDraft.status?.includes(status) || false}
-                                onValueChange={() => toggleDraftStatus(status)}
-                                size="sm"
-                              >
-                                {formatStatus(status)}
-                              </Checkbox>
-                            ))}
+                          <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                            {statusOptions.map((status) => {
+                              const selected = adminFiltersDraft.status?.includes(status) || false
+                              return (
+                                <Button
+                                  key={status}
+                                  size="sm"
+                                  radius="lg"
+                                  variant={selected ? "flat" : "bordered"}
+                                  color={selected ? "primary" : "default"}
+                                  className={[
+                                    "w-full justify-between border-default-200/70",
+                                    "bg-content2/50 hover:bg-content2/70",
+                                    "transition",
+                                    selected ? "border-primary/40" : "",
+                                  ].join(" ")}
+                                  onPress={() => toggleDraftStatus(status)}
+                                  endContent={
+                                    <span
+                                      className={[
+                                        "h-2.5 w-2.5 rounded-full",
+                                        selected ? "bg-primary" : "bg-default-300 dark:bg-default-200/40",
+                                      ].join(" ")}
+                                    />
+                                  }
+                                >
+                                  <span className="truncate">{formatStatus(status)}</span>
+                                </Button>
+                              )
+                            })}
                           </div>
                         )}
                       </div>
 
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Input
-                          label="Cidade"
-                          labelPlacement="outside"
-                          placeholder="Ex.: Curitiba"
-                          value={adminFiltersDraft.cidade || ""}
-                          onValueChange={(value) =>
-                            setAdminFiltersDraft((prev) => ({
-                              ...prev,
-                              cidade: value || undefined,
-                            }))
-                          }
-                        />
-                        <Input
-                          label="UF"
-                          labelPlacement="outside"
-                          placeholder="Ex.: PR"
-                          maxLength={2}
-                          value={adminFiltersDraft.uf || ""}
-                          onValueChange={(value) =>
-                            setAdminFiltersDraft((prev) => ({
-                              ...prev,
-                              uf: value.toUpperCase() || undefined,
-                            }))
-                          }
-                        />
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold tracking-wide text-foreground/70">Cidade</p>
+                          <Input
+                            aria-label="Cidade"
+                            placeholder="Ex.: Curitiba"
+                            variant="bordered"
+                            size="sm"
+                            classNames={{
+                              inputWrapper:
+                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                                "bg-content2/50 hover:bg-content2/70 transition",
+                              input: "text-sm text-foreground",
+                            }}
+                            value={adminFiltersDraft.cidade || ""}
+                            onValueChange={(value) =>
+                              setAdminFiltersDraft((prev) => ({
+                                ...prev,
+                                cidade: value || undefined,
+                              }))
+                            }
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold tracking-wide text-foreground/70">UF</p>
+                          <Input
+                            aria-label="UF"
+                            placeholder="Ex.: PR"
+                            maxLength={2}
+                            variant="bordered"
+                            size="sm"
+                            classNames={{
+                              inputWrapper:
+                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                                "bg-content2/50 hover:bg-content2/70 transition",
+                              input: "text-sm text-foreground",
+                            }}
+                            value={adminFiltersDraft.uf || ""}
+                            onValueChange={(value) =>
+                              setAdminFiltersDraft((prev) => ({
+                                ...prev,
+                                uf: value.toUpperCase() || undefined,
+                              }))
+                            }
+                          />
+                        </div>
                       </div>
+
                       {ufOptions.length > 0 ? (
                         <div className="flex flex-wrap gap-2">
                           {ufOptions.map((uf) => {
@@ -1124,8 +2078,14 @@ export default function ClientsPage() {
                               <Button
                                 key={uf}
                                 size="sm"
+                                radius="full"
                                 variant={isSelected ? "flat" : "bordered"}
                                 color={isSelected ? "primary" : "default"}
+                                className={[
+                                  "min-w-[48px] border-default-200/70",
+                                  "bg-content2/30 hover:bg-content2/60 transition",
+                                  isSelected ? "border-primary/40" : "",
+                                ].join(" ")}
                                 onPress={() =>
                                   setAdminFiltersDraft((prev) => ({
                                     ...prev,
@@ -1143,83 +2103,147 @@ export default function ClientsPage() {
                   </AccordionItem>
 
                   <AccordionItem key="periodo" aria-label="Periodo e datas" title="Periodo e datas">
-                    <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
-                      <Input
-                        type="date"
-                        label="Ultima movimentacao (de)"
-                        labelPlacement="outside"
-                        value={adminFiltersDraft.ultimaMovInicio || ""}
-                        onChange={(event) =>
-                          setAdminFiltersDraft((prev) => ({
-                            ...prev,
-                            ultimaMovInicio: event.target.value || undefined,
-                          }))
-                        }
-                      />
-                      <Input
-                        type="date"
-                        label="Ultima movimentacao (ate)"
-                        labelPlacement="outside"
-                        value={adminFiltersDraft.ultimaMovFim || ""}
-                        onChange={(event) =>
-                          setAdminFiltersDraft((prev) => ({
-                            ...prev,
-                            ultimaMovFim: event.target.value || undefined,
-                          }))
-                        }
-                      />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold tracking-wide text-foreground/70">Ultima movimentacao (de)</p>
+                        <Input
+                          aria-label="Ultima movimentacao (de)"
+                          type="date"
+                          variant="bordered"
+                          size="sm"
+                          classNames={{
+                            inputWrapper:
+                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                              "bg-content2/50 hover:bg-content2/70 transition",
+                            input: "text-sm text-foreground",
+                          }}
+                          value={adminFiltersDraft.ultimaMovInicio || ""}
+                          onChange={(event) =>
+                            setAdminFiltersDraft((prev) => ({
+                              ...prev,
+                              ultimaMovInicio: event.target.value || undefined,
+                            }))
+                          }
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold tracking-wide text-foreground/70">Ultima movimentacao (ate)</p>
+                        <Input
+                          aria-label="Ultima movimentacao (ate)"
+                          type="date"
+                          variant="bordered"
+                          size="sm"
+                          classNames={{
+                            inputWrapper:
+                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                              "bg-content2/50 hover:bg-content2/70 transition",
+                            input: "text-sm text-foreground",
+                          }}
+                          value={adminFiltersDraft.ultimaMovFim || ""}
+                          onChange={(event) =>
+                            setAdminFiltersDraft((prev) => ({
+                              ...prev,
+                              ultimaMovFim: event.target.value || undefined,
+                            }))
+                          }
+                        />
+                      </div>
                     </div>
                   </AccordionItem>
 
                   <AccordionItem key="financeiro" aria-label="Financeiro" title="Financeiro">
-                    <div className="grid grid-cols-1 gap-3 pb-1 sm:grid-cols-2">
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        label="Carteira minima"
-                        labelPlacement="outside"
-                        placeholder="0,00"
-                        value={adminFiltersDraft.carteiraMin?.toString() ?? ""}
-                        onValueChange={(value) => updateDraftNumberFilter("carteiraMin", value)}
-                      />
-                      <Input
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        label="Carteira maxima"
-                        labelPlacement="outside"
-                        placeholder="9999999,99"
-                        value={adminFiltersDraft.carteiraMax?.toString() ?? ""}
-                        onValueChange={(value) => updateDraftNumberFilter("carteiraMax", value)}
-                      />
+                    <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold tracking-wide text-foreground/70">Carteira minima</p>
+                        <Input
+                          aria-label="Carteira minima"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="0,00"
+                          variant="bordered"
+                          size="sm"
+                          classNames={{
+                            inputWrapper:
+                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                              "bg-content2/50 hover:bg-content2/70 transition",
+                            input: "text-sm text-foreground",
+                          }}
+                          value={adminFiltersDraft.carteiraMin?.toString() ?? ""}
+                          onValueChange={(value) => updateDraftNumberFilter("carteiraMin", value)}
+                        />
+                      </div>
+
+                      <div className="space-y-1">
+                        <p className="text-xs font-semibold tracking-wide text-foreground/70">Carteira maxima</p>
+                        <Input
+                          aria-label="Carteira maxima"
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="9999999,99"
+                          variant="bordered"
+                          size="sm"
+                          classNames={{
+                            inputWrapper:
+                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                              "bg-content2/50 hover:bg-content2/70 transition",
+                            input: "text-sm text-foreground",
+                          }}
+                          value={adminFiltersDraft.carteiraMax?.toString() ?? ""}
+                          onValueChange={(value) => updateDraftNumberFilter("carteiraMax", value)}
+                        />
+                      </div>
                     </div>
                   </AccordionItem>
 
                   <AccordionItem key="outros" aria-label="Outros filtros" title="Outros">
-                    <div className="space-y-3 pb-1">
-                      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          label="Qtd. minima de precatorios"
-                          labelPlacement="outside"
-                          placeholder="0"
-                          value={adminFiltersDraft.qtdMin?.toString() ?? ""}
-                          onValueChange={(value) => updateDraftNumberFilter("qtdMin", value)}
-                        />
-                        <Input
-                          type="number"
-                          min="0"
-                          step="1"
-                          label="Qtd. maxima de precatorios"
-                          labelPlacement="outside"
-                          placeholder="999"
-                          value={adminFiltersDraft.qtdMax?.toString() ?? ""}
-                          onValueChange={(value) => updateDraftNumberFilter("qtdMax", value)}
-                        />
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold tracking-wide text-foreground/70">Qtd. minima de precatorios</p>
+                          <Input
+                            aria-label="Qtd. minima de precatorios"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="0"
+                            variant="bordered"
+                            size="sm"
+                            classNames={{
+                              inputWrapper:
+                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                                "bg-content2/50 hover:bg-content2/70 transition",
+                              input: "text-sm text-foreground",
+                            }}
+                            value={adminFiltersDraft.qtdMin?.toString() ?? ""}
+                            onValueChange={(value) => updateDraftNumberFilter("qtdMin", value)}
+                          />
+                        </div>
+
+                        <div className="space-y-1">
+                          <p className="text-xs font-semibold tracking-wide text-foreground/70">Qtd. maxima de precatorios</p>
+                          <Input
+                            aria-label="Qtd. maxima de precatorios"
+                            type="number"
+                            min="0"
+                            step="1"
+                            placeholder="999"
+                            variant="bordered"
+                            size="sm"
+                            classNames={{
+                              inputWrapper:
+                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
+                                "bg-content2/50 hover:bg-content2/70 transition",
+                              input: "text-sm text-foreground",
+                            }}
+                            value={adminFiltersDraft.qtdMax?.toString() ?? ""}
+                            onValueChange={(value) => updateDraftNumberFilter("qtdMax", value)}
+                          />
+                        </div>
                       </div>
+
                       <Checkbox
                         isSelected={adminFiltersDraft.apenasComContato || false}
                         onValueChange={(checked) =>
@@ -1228,6 +2252,12 @@ export default function ClientsPage() {
                             apenasComContato: checked ? true : undefined,
                           }))
                         }
+                        classNames={{
+                          base:
+                            "w-full max-w-full rounded-xl border border-default-200/70 " +
+                            "bg-content2/40 hover:bg-content2/60 transition px-3 py-3",
+                          label: "text-sm text-foreground/90",
+                        }}
                       >
                         Mostrar somente clientes com telefone ou e-mail
                       </Checkbox>
@@ -1235,7 +2265,8 @@ export default function ClientsPage() {
                   </AccordionItem>
                 </Accordion>
               </ModalBody>
-              <ModalFooter>
+
+              <ModalFooter className="shrink-0 border-t border-default-200/70 dark:border-border bg-content1 dark:bg-content1 px-6 py-4">
                 <Button variant="light" color="default" onPress={clearAdminFilters}>
                   Limpar
                 </Button>
@@ -1254,7 +2285,7 @@ export default function ClientsPage() {
           setModalOpen(open)
           if (!open) {
             setEditingCredor(false)
-            setDetailsTab("resumo")
+            setDetailsTab("dados")
             setCredorForm(makeCredorForm(selectedCredor))
           }
         }}
@@ -1262,21 +2293,21 @@ export default function ClientsPage() {
         scrollBehavior="inside"
         backdrop="opaque"
         classNames={{
-          wrapper: "z-[120]",
-          backdrop: "bg-black/45",
-          base: "border border-default-200/80 dark:border-border bg-background dark:bg-muted shadow-2xl",
+          wrapper: modalWrapper,
+          backdrop: modalBackdrop,
+          base: modalBase,
         }}
       >
-        <ModalContent className="bg-background dark:bg-muted">
+        <ModalContent className={modalContentBase}>
           <>
-            <ModalHeader className="border-b border-default-200/70 pb-4">
+            <ModalHeader className="shrink-0 border-b border-default-200/50 px-6 pb-4 pt-5">
               <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2.5 text-primary">
                     <User className="h-6 w-6" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="text-2xl font-semibold tracking-tight text-foreground">
+                    <h2 className="break-words text-2xl font-semibold tracking-tight text-foreground">
                       {selectedCredor?.credor_nome || "Cliente"}
                     </h2>
                     <p className="text-sm text-foreground/70">
@@ -1312,250 +2343,232 @@ export default function ClientsPage() {
                   )}
                   <Dropdown placement="bottom-end">
                     <DropdownTrigger>
-                      <Button isIconOnly variant="light" aria-label="Mais acoes">
+                      <Button as="div" isIconOnly variant="light" aria-label="Mais acoes">
                         <MoreVertical className="h-5 w-5" />
                       </Button>
                     </DropdownTrigger>
-                    <DropdownMenu aria-label="Acoes do cliente">
-                      <DropdownItem key="editar" onPress={editingCredor ? cancelCredorEditing : startCredorEditing}>
-                        {editingCredor ? "Cancelar edicao" : "Editar dados"}
-                      </DropdownItem>
-                      <DropdownItem key="fechar" onPress={() => setModalOpen(false)}>
-                        Fechar
-                      </DropdownItem>
-                    </DropdownMenu>
+                    <DropdownPopover>
+                      <DropdownMenu aria-label="Acoes do cliente">
+                        <DropdownItem key="editar" onPress={editingCredor ? cancelCredorEditing : startCredorEditing}>
+                          {editingCredor ? "Cancelar edicao" : "Editar dados"}
+                        </DropdownItem>
+                        <DropdownItem key="fechar" onPress={() => setModalOpen(false)}>
+                          Fechar
+                        </DropdownItem>
+                      </DropdownMenu>
+                    </DropdownPopover>
                   </Dropdown>
                 </div>
               </div>
             </ModalHeader>
 
-            <ModalBody className="py-4">
+            <ModalBody className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-6 py-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
+                <Card className="border border-default-200/70">
+                  <CardBody className="space-y-1 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total processos</p>
+                    <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
+                  </CardBody>
+                </Card>
+                <Card className="border border-default-200/70">
+                  <CardBody className="space-y-1 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
+                    <p className="text-2xl font-semibold tabular-nums text-success">
+                      {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
+                        ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
+                        : "R$ 0,00"}
+                    </p>
+                  </CardBody>
+                </Card>
+                <Card className="border border-default-200/70">
+                  <CardBody className="space-y-1 p-4">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Ultimo status</p>
+                    <Chip size="sm" variant="flat" className={`w-fit border ${statusClass(selectedCredor?.ultimo_status)}`}>
+                      {formatStatus(selectedCredor?.ultimo_status)}
+                    </Chip>
+                    <p className="text-xs text-foreground/60">
+                      {selectedCredor?.ultimo_precatorio_data
+                        ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
+                        : "Sem movimentacao"}
+                    </p>
+                  </CardBody>
+                </Card>
+              </div>
+
               <Tabs
-                aria-label="Detalhes do cliente"
-                variant="underlined"
                 selectedKey={detailsTab}
-                onSelectionChange={(key) => setDetailsTab(String(key))}
-                classNames={{ panel: "px-0 pb-0" }}
+                onSelectionChange={(key) =>
+                  setDetailsTab(String(key) as "dados" | "processos" | "historico")
+                }
+                variant="underlined"
+                color="primary"
+                classNames={{
+                  base: "w-full",
+                  tabList: "w-full gap-2 border-b border-default-200/60 px-1",
+                  tab: "h-10 px-3 data-[selected=true]:text-primary",
+                  panel: "pt-4",
+                }}
               >
-                <Tab key="resumo" title="Resumo">
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                      <Card shadow="none" className="border border-default-200/70">
-                        <CardBody className="space-y-1 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total processos</p>
-                          <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
-                        </CardBody>
-                      </Card>
-                      <Card shadow="none" className="border border-default-200/70">
-                        <CardBody className="space-y-1 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
-                          <p className="text-2xl font-semibold tabular-nums text-success">
-                            {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
-                              ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
-                              : "R$ 0,00"}
-                          </p>
-                        </CardBody>
-                      </Card>
-                      <Card shadow="none" className="border border-default-200/70">
-                        <CardBody className="space-y-1 p-4">
-                          <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Ultimo status</p>
-                          <Chip size="sm" variant="flat" className={`w-fit border ${statusClass(selectedCredor?.ultimo_status)}`}>
-                            {formatStatus(selectedCredor?.ultimo_status)}
-                          </Chip>
-                          <p className="text-xs text-foreground/60">
-                            {selectedCredor?.ultimo_precatorio_data
-                              ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
-                              : "Sem movimentacao"}
-                          </p>
-                        </CardBody>
-                      </Card>
-                    </div>
-
-                    <Card shadow="none" className="border border-default-200/70">
-                      <CardHeader className="pb-2">
-                        <h3 className="text-base font-semibold tracking-tight">Contato e localizacao</h3>
-                      </CardHeader>
-                      <CardBody className="grid grid-cols-1 gap-3 pt-0 text-sm md:grid-cols-2">
-                        <div>
-                          <p className="text-xs text-foreground/60">Telefone</p>
-                          <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
+                <Tab key="dados" title="Dados do cliente">
+                  <Card className="border border-default-200/70">
+                    <CardHeader className="flex items-center justify-between gap-3 pb-2">
+                      <h3 className="text-base font-semibold tracking-tight">Dados do cliente</h3>
+                      {editingCredor ? (
+                        <Button
+                          size="sm"
+                          variant="flat"
+                          color="primary"
+                          onPress={() => importCredorDataFromPrecatorios(true)}
+                          isDisabled={loadingDetails || credorPrecatorios.length === 0}
+                        >
+                          Importar do precatorio
+                        </Button>
+                      ) : null}
+                    </CardHeader>
+                    <CardBody className="space-y-4 pt-0">
+                      {editingCredor ? (
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Nome</p>
+                            <Input
+                              aria-label="Nome"
+                              placeholder=""
+                              value={credorForm.credor_nome || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, credor_nome: value })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">CPF/CNPJ</p>
+                            <Input
+                              aria-label="CPF/CNPJ"
+                              placeholder=""
+                              value={credorForm.credor_cpf_cnpj || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, credor_cpf_cnpj: value })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Telefone</p>
+                            <Input
+                              aria-label="Telefone"
+                              placeholder=""
+                              value={credorForm.telefone || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, telefone: value })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Email</p>
+                            <Input
+                              type="email"
+                              aria-label="Email"
+                              placeholder=""
+                              value={credorForm.email || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, email: value })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Cidade</p>
+                            <Input
+                              aria-label="Cidade"
+                              placeholder=""
+                              value={credorForm.cidade || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, cidade: value })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">UF</p>
+                            <Input
+                              aria-label="UF"
+                              placeholder=""
+                              value={credorForm.uf || ""}
+                              onValueChange={(value) => setCredorForm({ ...credorForm, uf: value.toUpperCase() })}
+                              classNames={clienteModalInputClassNames}
+                            />
+                          </div>
                         </div>
-                        <div>
-                          <p className="text-xs text-foreground/60">Email</p>
-                          <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-foreground/60">Cidade</p>
-                          <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
-                        </div>
-                        <div>
-                          <p className="text-xs text-foreground/60">UF</p>
-                          <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
-                        </div>
-                      </CardBody>
-                    </Card>
-                  </div>
-                </Tab>
-
-                <Tab key="dados" title="Dados">
-                  <div className="space-y-4">
-                    {editingCredor && (
-                      <Card shadow="none" className="border border-primary/20 bg-primary/5">
-                        <CardBody className="flex flex-col gap-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      ) : (
+                        <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
                           <div>
-                            <p className="text-sm font-medium text-foreground">Modo de edicao ativo</p>
-                            <p className="text-xs text-foreground/70">
-                              Altere os campos abaixo ou importe os dados existentes dos precatorios vinculados.
+                            <p className="text-xs text-foreground/60">Nome</p>
+                            <p className="font-medium">{selectedCredor?.credor_nome || "-"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/60">CPF/CNPJ</p>
+                            <p className="font-medium">
+                              {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
+                                ? selectedCredor.credor_cpf_cnpj
+                                : "Nao informado"}
                             </p>
                           </div>
-                          <Button
-                            size="sm"
-                            variant="flat"
-                            color="primary"
-                            onPress={() => importCredorDataFromPrecatorios(true)}
-                            isDisabled={loadingDetails || credorPrecatorios.length === 0}
-                          >
-                            Importar do precatorio
-                          </Button>
-                        </CardBody>
-                      </Card>
-                    )}
-
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                      <Card shadow="none" className="border border-default-200/70">
-                        <CardHeader className="pb-2">
-                          <h3 className="text-base font-semibold tracking-tight">Dados cadastrais</h3>
-                        </CardHeader>
-                        <CardBody className="space-y-4 pt-0">
-                          {editingCredor ? (
-                            <>
-                              <Input
-                                label="Nome"
-                                labelPlacement="outside"
-                                value={credorForm.credor_nome || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, credor_nome: value })}
-                              />
-                              <Input
-                                label="CPF/CNPJ"
-                                labelPlacement="outside"
-                                value={credorForm.credor_cpf_cnpj || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, credor_cpf_cnpj: value })}
-                              />
-                            </>
-                          ) : (
-                            <div className="space-y-3 text-sm">
-                              <div>
-                                <p className="text-xs text-foreground/60">Nome</p>
-                                <p className="font-medium">{selectedCredor?.credor_nome || "-"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-foreground/60">CPF/CNPJ</p>
-                                <p className="font-medium">
-                                  {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
-                                    ? selectedCredor.credor_cpf_cnpj
-                                    : "Nao informado"}
-                                </p>
-                              </div>
-                            </div>
-                          )}
-                        </CardBody>
-                      </Card>
-
-                      <Card shadow="none" className="border border-default-200/70">
-                        <CardHeader className="pb-2">
-                          <h3 className="text-base font-semibold tracking-tight">Contato e localizacao</h3>
-                        </CardHeader>
-                        <CardBody className="space-y-4 pt-0">
-                          {editingCredor ? (
-                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                              <Input
-                                label="Telefone"
-                                labelPlacement="outside"
-                                value={credorForm.telefone || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, telefone: value })}
-                              />
-                              <Input
-                                label="Email"
-                                labelPlacement="outside"
-                                value={credorForm.email || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, email: value })}
-                              />
-                              <Input
-                                label="Cidade"
-                                labelPlacement="outside"
-                                value={credorForm.cidade || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, cidade: value })}
-                              />
-                              <Input
-                                label="UF"
-                                labelPlacement="outside"
-                                value={credorForm.uf || ""}
-                                onValueChange={(value) => setCredorForm({ ...credorForm, uf: value })}
-                              />
-                            </div>
-                          ) : (
-                            <div className="grid grid-cols-1 gap-3 text-sm sm:grid-cols-2">
-                              <div>
-                                <p className="text-xs text-foreground/60">Telefone</p>
-                                <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-foreground/60">Email</p>
-                                <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-foreground/60">Cidade</p>
-                                <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-foreground/60">UF</p>
-                                <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
-                              </div>
-                            </div>
-                          )}
-                        </CardBody>
-                      </Card>
-                    </div>
-                  </div>
+                          <div>
+                            <p className="text-xs text-foreground/60">Telefone</p>
+                            <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/60">Email</p>
+                            <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/60">Cidade</p>
+                            <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
+                          </div>
+                          <div>
+                            <p className="text-xs text-foreground/60">UF</p>
+                            <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
+                          </div>
+                        </div>
+                      )}
+                    </CardBody>
+                  </Card>
                 </Tab>
-                <Tab key="processos" title="Processos">
-                  <Card shadow="none" className="border border-default-200/70">
-                    <CardHeader className="pb-2">
-                      <h3 className="text-base font-semibold tracking-tight">Historico de processos vinculados</h3>
-                    </CardHeader>
-                    <CardBody className="pt-0">
+
+                <Tab key="processos" title={`Processos vinculados (${credorPrecatorios.length})`}>
+                  <Card className="border border-default-200/70">
+                    <CardBody className="p-0">
                       <Table
                         aria-label="Tabela de processos do cliente"
-                        removeWrapper
                         isHeaderSticky
-                        onRowAction={(key) => {
-                          setModalOpen(false)
-                          router.push(`/precatorios/detalhes?id=${String(key)}`)
-                        }}
                         classNames={{
-                          table: "min-w-[900px]",
+                          wrapper: "w-full overflow-x-hidden rounded-xl border border-default-200/60 shadow-none",
+                          table: "w-full table-fixed",
                           th: "bg-default-100/70 text-xs uppercase tracking-wide text-foreground/70",
+                          td: "align-top",
                         }}
                       >
                         <TableHeader>
                           <TableColumn>Processo</TableColumn>
-                          <TableColumn>Precatório</TableColumn>
+                          <TableColumn>Precatorio</TableColumn>
                           <TableColumn>Status</TableColumn>
                           <TableColumn>Valor</TableColumn>
                           <TableColumn className="text-right">Criado em</TableColumn>
                         </TableHeader>
                         <TableBody
                           isLoading={loadingDetails}
-                          loadingContent={<Spinner color="primary" label="Carregando processos..." />}
+                          loadingContent={
+                            <div className="flex items-center justify-center py-6">
+                              <HeroSpinner size="sm" />
+                            </div>
+                          }
                           emptyContent="Nenhum processo encontrado para este cliente."
                         >
                           {credorPrecatorios.map((precatorio) => (
-                            <TableRow key={precatorio.id} className="cursor-pointer">
+                            <TableRow
+                              key={precatorio.id}
+                              className="cursor-pointer hover:bg-default-100/50"
+                              onClick={() => {
+                                setModalOpen(false)
+                                router.push(`/precatorios/detalhes?id=${precatorio.id}`)
+                              }}
+                            >
                               <TableCell>
-                                <div className="max-w-[280px] truncate font-mono text-sm">{precatorio.numero_processo || "N/A"}</div>
+                                <div className="max-w-0 truncate font-mono text-sm">{precatorio.numero_processo || "N/A"}</div>
                               </TableCell>
                               <TableCell>
-                                <div className="max-w-[260px] truncate text-sm">{precatorio.numero_precatorio || "N/A"}</div>
+                                <div className="max-w-0 truncate text-sm">{precatorio.numero_precatorio || "N/A"}</div>
                               </TableCell>
                               <TableCell>
                                 <Chip size="sm" variant="flat" className={`border ${statusClass(precatorio.status || null)}`}>
@@ -1580,12 +2593,9 @@ export default function ClientsPage() {
                   </Card>
                 </Tab>
 
-                <Tab key="historico" title="Historico">
-                  <Card shadow="none" className="border border-default-200/70">
-                    <CardHeader className="pb-2">
-                      <h3 className="text-base font-semibold tracking-tight">Linha do tempo de atualizacoes</h3>
-                    </CardHeader>
-                    <CardBody className="space-y-3 pt-0">
+                <Tab key="historico" title="Historico de atualizacoes">
+                  <Card className="border border-default-200/70">
+                    <CardBody className="space-y-3 p-4">
                       {loadingDetails ? (
                         <div className="space-y-2">
                           <Skeleton className="h-14 w-full rounded-lg" />
@@ -1620,15 +2630,13 @@ export default function ClientsPage() {
                 </Tab>
               </Tabs>
             </ModalBody>
-
-            <ModalFooter className="border-t border-default-200/70">
+            <ModalFooter className="shrink-0 border-t border-default-200/50 px-6 py-4">
               <Button
                 variant="light"
                 color="default"
                 onPress={() => {
                   setModalOpen(false)
                   setEditingCredor(false)
-                  setDetailsTab("resumo")
                 }}
               >
                 Fechar
@@ -1650,3 +2658,4 @@ export default function ClientsPage() {
     </div>
   )
 }
+

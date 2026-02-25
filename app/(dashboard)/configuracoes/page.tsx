@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Upload, Loader2, Image as ImageIcon, Save, X, Palette, Check } from "lucide-react"
+import { Upload, Loader2, Image as ImageIcon, Save, X, Palette, Check } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { RoleGuard } from "@/lib/auth/role-guard"

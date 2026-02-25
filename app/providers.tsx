@@ -2,7 +2,7 @@
 
 import type React from "react"
 import { useEffect } from "react"
-import { HeroUIProvider } from "@heroui/react"
+import { HeroUIProvider } from "@/lib/heroui/compat"
 import { usePathname, useRouter } from "next/navigation"
 import { getSupabase } from "@/lib/supabase/client"
 import {

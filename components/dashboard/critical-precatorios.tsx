@@ -1,9 +1,8 @@
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { AlertTriangle, ExternalLink, Clock, User } from "lucide-react"
+import { AlertTriangle, ExternalLink, Clock, User } from "@/components/icons"
 import { useRouter } from "next/navigation"
 import { ComplexityBadge } from "@/components/ui/complexity-badge"
 import { SLAIndicator } from "@/components/ui/sla-indicator"
@@ -16,12 +15,15 @@ interface CriticalPrecatoriosProps {
   loading?: boolean
 }
 
+type DelayType = Parameters<typeof DelayTypeBadge>[0]["tipo"]
+
 export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps) {
   const router = useRouter()
+  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
 
   if (loading) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Precatórios Críticos</CardTitle>
         </CardHeader>
@@ -38,7 +40,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
 
   if (data.length === 0) {
     return (
-      <Card>
+      <Card className={surfaceClass}>
         <CardHeader>
           <CardTitle>Precatórios Críticos</CardTitle>
         </CardHeader>
@@ -56,9 +58,13 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
   }
 
   const getCriticalityColor = (score: number) => {
-    if (score >= 70) return "border-destructive/40 bg-destructive/15 dark:bg-destructive/15"
-    if (score >= 40) return "border-primary/40 bg-primary/15 dark:bg-primary/15"
-    return "border-primary/40 bg-primary/15 dark:bg-primary/15"
+    if (score >= 70) {
+      return "border-destructive/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-destructive/24 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
+    }
+    if (score >= 40) {
+      return "border-primary/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-primary/24 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
+    }
+    return "border-primary/35 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-primary/20 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
   }
 
   const getCriticalityIcon = (score: number) => {
@@ -68,7 +74,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
   }
 
   return (
-    <Card>
+    <Card className={surfaceClass}>
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <AlertTriangle className="h-5 w-5 text-primary" />
@@ -83,7 +89,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
           {data.map((precatorio) => (
             <Card
               key={precatorio.id}
-              className={`${getCriticalityColor(precatorio.score_criticidade)} border-2 transition-all hover:shadow-md`}
+              className={`${getCriticalityColor(precatorio.score_criticidade)} border-2 backdrop-blur-md transition-all hover:shadow-md`}
             >
               <CardContent className="p-4">
                 <div className="space-y-3">
@@ -129,7 +135,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
                     )}
 
                     {precatorio.tipo_atraso && (
-                      <DelayTypeBadge tipo={precatorio.tipo_atraso as any} size="sm" />
+                      <DelayTypeBadge tipo={precatorio.tipo_atraso as DelayType} size="sm" />
                     )}
 
                     {precatorio.impacto_atraso && (

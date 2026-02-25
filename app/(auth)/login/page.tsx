@@ -2,7 +2,6 @@
 
 import type React from "react"
 import { useState } from "react"
-import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,7 +37,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 via-background to-orange-100 dark:from-background dark:via-background dark:to-orange-950/20 p-4">
+    <div className="min-h-screen flex items-center justify-center bg-transparent p-4">
       <Card className="w-full max-w-md shadow-xl border-primary/40 dark:border-border">
         <CardHeader className="text-center">
           <div className="flex justify-center mb-6">
@@ -74,7 +73,7 @@ export default function LoginPage() {
               <Input
                 id="password"
                 type="password"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="********"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
@@ -105,10 +104,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-6 text-center">
             <p className="text-sm text-muted-foreground">
-              Não tem uma conta?{" "}
-              <Link href="/register" className="text-primary hover:underline font-medium">
-                Criar conta
-              </Link>
+              Contas são criadas exclusivamente pelo administrador ou T.I.
             </p>
           </div>
         </CardContent>

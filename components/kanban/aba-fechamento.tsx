@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, DollarSign, CheckCircle2, Lock } from "lucide-react"
+import { Loader2, DollarSign, CheckCircle2, Lock } from "@/components/icons"
 
 interface AbaFechamentoProps {
     precatorioId: string

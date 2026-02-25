@@ -1,11 +1,14 @@
-/* eslint-disable */
-import { Suspense } from "react"
-import AnaliseJuridicaClient from "./analise-juridica-client"
+import { redirect } from "next/navigation"
 
-export default function AnaliseJuridicaPage() {
-    return (
-        <Suspense fallback={<div>Carregando...</div>}>
-            <AnaliseJuridicaClient />
-        </Suspense>
-    )
+export default async function JuridicoAnaliseLegacyRedirect({
+  searchParams,
+}: {
+  searchParams: Promise<{ id?: string }>
+}) {
+  const params = await searchParams
+  const id = params.id
+  if (id) {
+    redirect(`/parecer-juridico?precatorioId=${id}`)
+  }
+  redirect("/parecer-juridico")
 }

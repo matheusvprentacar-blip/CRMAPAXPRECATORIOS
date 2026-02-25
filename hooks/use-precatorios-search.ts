@@ -34,6 +34,35 @@ const RANGE_FILTER_PAIRS: Array<[keyof FiltrosPrecatorios, keyof FiltrosPrecator
   ["valor_sem_atualizacao_min", "valor_sem_atualizacao_max"],
 ]
 
+const QUICK_SEARCH_ALLOWED_FIELDS = [
+  "titulo",
+  "numero_precatorio",
+  "numero_processo",
+  "numero_oficio",
+  "credor_nome",
+  "credor_cpf_cnpj",
+  "devedor",
+] as const
+
+function normalizeSearchTerm(value: unknown): string {
+  if (typeof value !== "string") return ""
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .trim()
+}
+
+function matchesQuickSearch(item: Record<string, unknown>, rawTerm: string): boolean {
+  const term = normalizeSearchTerm(rawTerm)
+  if (!term) return true
+
+  return QUICK_SEARCH_ALLOWED_FIELDS.some((field) => {
+    const value = normalizeSearchTerm(item[field])
+    return value.includes(term)
+  })
+}
+
 function normalizeString(value: unknown): string | undefined {
   if (typeof value !== "string") return undefined
   const trimmed = value.trim()
@@ -145,9 +174,15 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
       if (rpcError) throw rpcError
       if (requestId !== activeRequestRef.current) return
 
-      const list = data || []
-      setResultados(list)
-      setTotal(list.length)
+      const list = (data || []) as Array<Record<string, unknown>>
+      const termoRapido = filtrosNormalizados.termo
+      const filteredList =
+        termoRapido && termoRapido.length > 0
+          ? list.filter((item) => matchesQuickSearch(item, termoRapido))
+          : list
+
+      setResultados(filteredList)
+      setTotal(filteredList.length)
     } catch (err) {
       if (requestId !== activeRequestRef.current) return
 

@@ -3,7 +3,7 @@
 import type { ReactNode } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Download, Info, Landmark, ShieldCheck, TrendingDown, Trophy } from "lucide-react"
+import { Download, Info, Landmark, ShieldCheck, TrendingDown, Trophy } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { calcularSalariosMinimosJuros } from "@/lib/calculos/indices"
 
@@ -122,8 +122,6 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
   const totalDescontos = irpfValor + pssValor + honorariosValor + adiantamentoValor
   const menorProposta = resumo.menor_proposta ?? resumo.menorProposta ?? 0
   const maiorProposta = resumo.maior_proposta ?? resumo.maiorProposta ?? 0
-  const faixaPropostasLabel =
-    menorProposta > 0 && maiorProposta > 0 ? `${formatarMoeda(menorProposta)} â€¢ ${formatarMoeda(maiorProposta)}` : "â€”"
   const principalOriginal = dados.valor_principal_original ?? 0
   const correcaoMonetaria = etapaAtualizacao.memoriaCalculo?.ipca?.resultado ?? 0
   const jurosPre22 = etapaAtualizacao.memoriaCalculo?.juros?.resultado ?? 0
@@ -182,11 +180,10 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
               {etapasConcluidas}/8
             </span>
             <span
-              className={`rounded-full border px-2.5 py-1 font-semibold ${
-                canFinalizar
-                  ? "border-primary/40 bg-primary/15 text-primary"
-                  : "border-primary/40 bg-primary/15 text-primary"
-              }`}
+              className={`rounded-full border px-2.5 py-1 font-semibold ${canFinalizar
+                ? "border-primary/40 bg-primary/15 text-primary"
+                : "border-primary/40 bg-primary/15 text-primary"
+                }`}
             >
               {canFinalizar ? "Pronto para finalizar" : "Em revisão"}
             </span>
@@ -195,215 +192,222 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-        {!resumo || Object.keys(resumo).length === 0 ? (
-          <div className="rounded-2xl border border-primary/40 bg-primary/15 p-4 text-sm text-muted-foreground">
-            <p className="text-foreground font-semibold">Resumo indisponível</p>
-            <p>Complete todas as etapas anteriores.</p>
-          </div>
-        ) : null}
+          {!resumo || Object.keys(resumo).length === 0 ? (
+            <div className="rounded-2xl border border-primary/40 bg-primary/15 p-4 text-sm text-muted-foreground">
+              <p className="text-foreground font-semibold">Resumo indisponível</p>
+              <p>Complete todas as etapas anteriores.</p>
+            </div>
+          ) : null}
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          <SummaryKpiCard
-            label="Valor atualizado (bruto)"
-            value={formatarMoeda(valorAtualizado)}
-            helper="Bruto"
-            tone="primary"
-            icon={<Landmark className="h-4 w-4" />}
-          />
-          <SummaryKpiCard
-            label="Total descontos"
-            value={formatarMoeda(totalDescontos)}
-            helper="IRPF + PSS + Honorários"
-            tone="rose"
-            icon={<TrendingDown className="h-4 w-4" />}
-          />
-          <SummaryKpiCard
-            label="Base líquida final"
-            value={formatarMoeda(baseLiquidaFinal)}
-            helper="Resultado final"
-            tone="emerald"
-            icon={<Trophy className="h-4 w-4" />}
-          />
-          <SummaryKpiCard
-            label="Faixa propostas"
-            value={faixaPropostasLabel}
-            helper="Min â€¢ Max"
-            tone="indigo"
-            icon={<ShieldCheck className="h-4 w-4" />}
-          />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
           <div className="space-y-4">
-            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Composição do cálculo</p>
-                  <p className="text-xs text-muted-foreground">Bruto, descontos e resultado final.</p>
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <SummaryKpiCard
+                label="Valor atualizado (bruto)"
+                value={formatarMoeda(valorAtualizado)}
+                helper="Bruto"
+                tone="primary"
+                icon={<Landmark className="h-4 w-4" />}
+              />
+              <SummaryKpiCard
+                label="Total descontos"
+                value={formatarMoeda(totalDescontos)}
+                helper="IRPF + PSS + Honorários"
+                tone="rose"
+                icon={<TrendingDown className="h-4 w-4" />}
+              />
+              <SummaryKpiCard
+                label="Base líquida final"
+                value={formatarMoeda(baseLiquidaFinal)}
+                helper="Resultado final"
+                tone="emerald"
+                icon={<Trophy className="h-4 w-4" />}
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <SummaryKpiCard
+                label="Menor proposta"
+                value={formatarMoeda(menorProposta)}
+                helper="Mínima"
+                tone="indigo"
+                icon={<ShieldCheck className="h-4 w-4" />}
+              />
+              <SummaryKpiCard
+                label="Maior proposta"
+                value={formatarMoeda(maiorProposta)}
+                helper="Máxima"
+                tone="indigo"
+                icon={<ShieldCheck className="h-4 w-4" />}
+              />
+            </div>
+          </div>
+
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.25fr)_minmax(0,0.75fr)]">
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Composição do cálculo</p>
+                    <p className="text-xs text-muted-foreground">Bruto, descontos e resultado final.</p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
+                    Fechamento
+                  </span>
                 </div>
-                <span className="inline-flex items-center rounded-full border border-primary/25 bg-primary/10 px-2 py-1 text-[11px] font-semibold text-primary">
-                  Fechamento
-                </span>
+
+                <div className="mt-4 space-y-4 text-sm">
+                  <div>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Bruto</p>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Principal</span>
+                        <span className={`tabular-nums ${principalOriginal ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatarMoeda(principalOriginal)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Correção (IPCA)</span>
+                        <span className={`tabular-nums ${correcaoMonetaria ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatarMoeda(correcaoMonetaria)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Juros pré-22</span>
+                        <span className={`tabular-nums ${jurosPre22 ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatarMoeda(jurosPre22)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>SELIC (pós-22)</span>
+                        <span className={`tabular-nums ${selic ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatarMoeda(selic)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>EC 136/2025 (IPCA 2025)</span>
+                        <span className={`tabular-nums ${ec136 ? "text-primary" : "text-muted-foreground"}`}>
+                          {formatarMoeda(ec136)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-foreground font-semibold">
+                        <span>Total bruto</span>
+                        <span className="tabular-nums">{formatarMoeda(valorAtualizado)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border/60 pt-3">
+                    <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
+                    <div className="mt-2 space-y-1">
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>PSS</span>
+                        <span className={`tabular-nums ${pssValor ? "text-destructive" : "text-muted-foreground"}`}>
+                          {isentoPss ? "Isento" : formatarMoeda(pssValor)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>IRPF</span>
+                        <span className={`tabular-nums ${irpfValor ? "text-destructive" : "text-muted-foreground"}`}>
+                          {formatarMoeda(irpfValor)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Honorários</span>
+                        <span className={`tabular-nums ${honorariosValor ? "text-destructive" : "text-muted-foreground"}`}>
+                          {formatarMoeda(honorariosValor)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between text-muted-foreground">
+                        <span>Adiantamento</span>
+                        <span className={`tabular-nums ${adiantamentoValor ? "text-destructive" : "text-muted-foreground"}`}>
+                          {formatarMoeda(adiantamentoValor)}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="border-t border-border/60 pt-3">
+                    <p className="text-xs uppercase tracking-wide text-primary">Resultado final</p>
+                    <div className="mt-2 flex items-center justify-between">
+                      <span className="text-sm text-muted-foreground">Base líquida final</span>
+                      <span className="text-xl font-semibold tabular-nums text-primary">{formatarMoeda(baseLiquidaFinal)}</span>
+                    </div>
+                    <div className="mt-2 flex items-start justify-between gap-4 text-sm">
+                      <span className="text-muted-foreground">Base pré-descontos</span>
+                      <span className="tabular-nums text-primary text-right">{formatarMoeda(basePreDescontos)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4">
+              <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+                <p className="text-sm font-semibold text-foreground">Descontos e status</p>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${pssValor
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
+                      : "border-border/60 bg-muted/20 text-muted-foreground"
+                      }`}
+                  >
+                    PSS {isentoPss ? "(Isento)" : formatarMoeda(pssValor)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${irpfValor
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
+                      : "border-border/60 bg-muted/20 text-muted-foreground"
+                      }`}
+                  >
+                    IRPF {formatarMoeda(irpfValor)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${honorariosValor
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
+                      : "border-border/60 bg-muted/20 text-muted-foreground"
+                      }`}
+                  >
+                    Honorários {formatarMoeda(honorariosValor)}
+                  </span>
+                  <span
+                    className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${adiantamentoValor
+                      ? "border-destructive/40 bg-destructive/15 text-destructive"
+                      : "border-border/60 bg-muted/20 text-muted-foreground"
+                      }`}
+                  >
+                    Adiantamento {formatarMoeda(adiantamentoValor)}
+                  </span>
+                </div>
               </div>
 
-              <div className="mt-4 space-y-4 text-sm">
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Bruto</p>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Principal</span>
-                      <span className={`tabular-nums ${principalOriginal ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatarMoeda(principalOriginal)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Correção (IPCA)</span>
-                      <span className={`tabular-nums ${correcaoMonetaria ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatarMoeda(correcaoMonetaria)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Juros pré-22</span>
-                      <span className={`tabular-nums ${jurosPre22 ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatarMoeda(jurosPre22)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>SELIC (pós-22)</span>
-                      <span className={`tabular-nums ${selic ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatarMoeda(selic)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>EC 136/2025 (IPCA 2025)</span>
-                      <span className={`tabular-nums ${ec136 ? "text-primary" : "text-muted-foreground"}`}>
-                        {formatarMoeda(ec136)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-foreground font-semibold">
-                      <span>Total bruto</span>
-                      <span className="tabular-nums">{formatarMoeda(valorAtualizado)}</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-border/60 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>PSS</span>
-                      <span className={`tabular-nums ${pssValor ? "text-destructive" : "text-muted-foreground"}`}>
-                        {isentoPss ? "Isento" : formatarMoeda(pssValor)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>IRPF</span>
-                      <span className={`tabular-nums ${irpfValor ? "text-destructive" : "text-muted-foreground"}`}>
-                        {formatarMoeda(irpfValor)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Honorários</span>
-                      <span className={`tabular-nums ${honorariosValor ? "text-destructive" : "text-muted-foreground"}`}>
-                        {formatarMoeda(honorariosValor)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-muted-foreground">
-                      <span>Adiantamento</span>
-                      <span className={`tabular-nums ${adiantamentoValor ? "text-destructive" : "text-muted-foreground"}`}>
-                        {formatarMoeda(adiantamentoValor)}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="border-t border-border/60 pt-3">
-                  <p className="text-xs uppercase tracking-wide text-primary">Resultado final</p>
-                  <div className="mt-2 flex items-center justify-between">
-                    <span className="text-sm text-muted-foreground">Base líquida final</span>
-                    <span className="text-xl font-semibold tabular-nums text-primary">{formatarMoeda(baseLiquidaFinal)}</span>
-                  </div>
-                  <div className="mt-2 flex items-center justify-between text-sm">
+              <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+                <p className="text-sm font-semibold text-foreground">Informações adicionais</p>
+                <div className="mt-3 space-y-2 text-sm">
+                  <div className="flex items-start justify-between gap-4">
                     <span className="text-muted-foreground">Base pré-descontos</span>
-                    <span className="tabular-nums text-primary">{formatarMoeda(basePreDescontos)}</span>
+                    <span className="tabular-nums text-foreground text-right">{formatarMoeda(basePreDescontos)}</span>
+                  </div>
+                  <div className="flex items-start justify-between gap-4">
+                    <span className="text-muted-foreground">Salários mínimos</span>
+                    <span className="tabular-nums text-foreground text-right">{qtdSalariosMinimos.toLocaleString("pt-BR")}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+                <div className="flex items-start gap-3">
+                  <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
+                    <Info className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Observações</p>
+                    <p className="text-xs text-muted-foreground">
+                      As propostas são calculadas sobre a base líquida final (após descontar PSS, IRPF, honorários e adiantamento).
+                    </p>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-
-          <div className="space-y-4">
-            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
-              <p className="text-sm font-semibold text-foreground">Descontos e status</p>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                    pssValor
-                      ? "border-destructive/40 bg-destructive/15 text-destructive"
-                      : "border-border/60 bg-muted/20 text-muted-foreground"
-                  }`}
-                >
-                  PSS {isentoPss ? "(Isento)" : formatarMoeda(pssValor)}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                    irpfValor
-                      ? "border-destructive/40 bg-destructive/15 text-destructive"
-                      : "border-border/60 bg-muted/20 text-muted-foreground"
-                  }`}
-                >
-                  IRPF {formatarMoeda(irpfValor)}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                    honorariosValor
-                      ? "border-destructive/40 bg-destructive/15 text-destructive"
-                      : "border-border/60 bg-muted/20 text-muted-foreground"
-                  }`}
-                >
-                  Honorários {formatarMoeda(honorariosValor)}
-                </span>
-                <span
-                  className={`inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold ${
-                    adiantamentoValor
-                      ? "border-destructive/40 bg-destructive/15 text-destructive"
-                      : "border-border/60 bg-muted/20 text-muted-foreground"
-                  }`}
-                >
-                  Adiantamento {formatarMoeda(adiantamentoValor)}
-                </span>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
-              <p className="text-sm font-semibold text-foreground">Informações adicionais</p>
-              <div className="mt-3 space-y-2 text-sm">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Base pré-descontos</span>
-                  <span className="tabular-nums text-foreground">{formatarMoeda(basePreDescontos)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Salários mínimos</span>
-                  <span className="tabular-nums text-foreground">{qtdSalariosMinimos.toLocaleString("pt-BR")}</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-              <div className="flex items-start gap-3">
-                <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
-                  <Info className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-sm font-semibold text-foreground">Observações</p>
-                  <p className="text-xs text-muted-foreground">
-                    As propostas são calculadas sobre a base líquida final (após descontar PSS, IRPF, honorários e adiantamento).
-                  </p>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         </div>
         <StepFooter

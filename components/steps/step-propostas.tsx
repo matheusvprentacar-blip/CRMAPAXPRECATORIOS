@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
-import { BadgePercent, Info, Lock, Scale, Users } from "lucide-react"
+import { BadgePercent, Info, Lock, Scale, Users } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { calcularSalariosMinimosJuros } from "@/lib/calculos/indices"
@@ -409,270 +409,251 @@ export function StepPropostas({
       </CardHeader>
       <CardContent>
         <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <ProposalKpiCard
-            label="Base líquida final"
-            value={formatarMoeda(baseLiquidaValor)}
-            helper="Base p/ propostas"
-            tone="brand"
-            icon={<Scale className="h-4 w-4" />}
-            chip="Base p/ propostas"
-          />
-          <ProposalKpiCard
-            label="Menor proposta"
-            value={formatarMoeda(menorPropostaValor)}
-            helper={`${percentualMenorProposta || 0}%`}
-            tone="amber"
-            icon={<BadgePercent className="h-4 w-4" />}
-            chip="Mínimo"
-          />
-          <ProposalKpiCard
-            label="Maior proposta"
-            value={formatarMoeda(maiorPropostaValor)}
-            helper={`${percentualMaiorProposta || 0}%`}
-            tone="emerald"
-            icon={<BadgePercent className="h-4 w-4" />}
-            chip="Máximo"
-          />
-        </div>
-
-        <div className="grid gap-6 lg:grid-cols-2">
-          <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
-            <div className="flex items-center justify-between gap-3">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Ajuste de percentuais</p>
-                <p className="text-xs text-muted-foreground">Defina as faixas percentuais para as propostas.</p>
-              </div>
-              {isManual && (
-                <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">
-                  <Lock className="h-3 w-3" />
-                  Percentuais bloqueados
-                </span>
-              )}
-            </div>
-
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Percentual da menor proposta (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={percentualMenorProposta}
-                  onChange={(e) => handleMinPercentChange(Number(e.target.value) || 0)}
-                  disabled={isManual}
-                  className="rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60 disabled:bg-muted/40"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground">Percentual da maior proposta (%)</Label>
-                <Input
-                  type="number"
-                  step="0.01"
-                  min="0"
-                  max="100"
-                  value={percentualMaiorProposta}
-                  onChange={(e) => handleMaxPercentChange(Number(e.target.value) || 0)}
-                  disabled={isManual}
-                  className="rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60 disabled:bg-muted/40"
-                />
-              </div>
-            </div>
-
-            <p className="mt-3 text-xs text-muted-foreground">
-              {isManual
-                ? "Modo manual ativo: os percentuais ficam bloqueados e os valores são definidos diretamente."
-                : "Ajuste os percentuais para simular propostas automáticas com base na base líquida."}
-            </p>
+          <div className="grid gap-4 md:grid-cols-3">
+            <ProposalKpiCard
+              label="Base líquida final"
+              value={formatarMoeda(baseLiquidaValor)}
+              helper="Base p/ propostas"
+              tone="brand"
+              icon={<Scale className="h-4 w-4" />}
+              chip="Base p/ propostas"
+            />
+            <ProposalKpiCard
+              label="Menor proposta"
+              value={formatarMoeda(menorPropostaValor)}
+              helper={`${percentualMenorProposta || 0}%`}
+              tone="amber"
+              icon={<BadgePercent className="h-4 w-4" />}
+              chip="Mínimo"
+            />
+            <ProposalKpiCard
+              label="Maior proposta"
+              value={formatarMoeda(maiorPropostaValor)}
+              helper={`${percentualMaiorProposta || 0}%`}
+              tone="emerald"
+              icon={<BadgePercent className="h-4 w-4" />}
+              chip="Máximo"
+            />
           </div>
 
-          <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-semibold text-foreground">Resumo das propostas</p>
-                <p className="text-xs text-muted-foreground">Base líquida e valores resultantes.</p>
+          <div className="space-y-6">
+            <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-semibold text-foreground">Ajuste de percentuais</p>
+                  <p className="text-xs text-muted-foreground">Defina as faixas percentuais para as propostas.</p>
+                </div>
+                {isManual && (
+                  <span className="inline-flex items-center gap-1 rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">
+                    <Lock className="h-3 w-3" />
+                    Percentuais bloqueados
+                  </span>
+                )}
               </div>
-              {isManual && (
-                <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">
-                  Manual ativo
-                </span>
-              )}
-            </div>
 
-            <div className="mt-4 rounded-xl border border-border/60 bg-muted/20 p-4">
-              <p className="text-xs text-muted-foreground">Base líquida final</p>
-              <p className="text-xl font-semibold tabular-nums text-primary group-data-[pdf=open]:text-lg">{formatarMoeda(baseLiquidaValor)}</p>
-            </div>
-
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              <div className="rounded-xl border border-primary/40 bg-primary/15 p-3">
-                <p className="text-xs text-primary">Menor proposta</p>
-              <p className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(menorPropostaValor)}</p>
-              </div>
-              <div className="rounded-xl border border-primary/40 bg-primary/15 p-3">
-                <p className="text-xs text-primary">Maior proposta</p>
-              <p className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(maiorPropostaValor)}</p>
-              </div>
-            </div>
-
-            {isManual && (
-              <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              <div className="mt-4 grid gap-4 sm:grid-cols-2">
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Valor manual da menor proposta</Label>
+                  <Label className="text-xs text-muted-foreground">Percentual da menor proposta (%)</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    className="h-10 rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40"
-                    value={manualMenor}
-                    onChange={(e) => setManualMenor(Number(e.target.value) || 0)}
+                    min="0"
+                    max="100"
+                    value={percentualMenorProposta}
+                    onChange={(e) => handleMinPercentChange(Number(e.target.value) || 0)}
+                    disabled={isManual}
+                    className="rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60 disabled:bg-muted/40"
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label className="text-xs text-muted-foreground">Valor manual da maior proposta</Label>
+                  <Label className="text-xs text-muted-foreground">Percentual da maior proposta (%)</Label>
                   <Input
                     type="number"
                     step="0.01"
-                    className="h-10 rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40"
-                    value={manualMaior}
-                    onChange={(e) => setManualMaior(Number(e.target.value) || 0)}
+                    min="0"
+                    max="100"
+                    value={percentualMaiorProposta}
+                    onChange={(e) => handleMaxPercentChange(Number(e.target.value) || 0)}
+                    disabled={isManual}
+                    className="rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40 disabled:opacity-60 disabled:bg-muted/40"
                   />
+                </div>
+              </div>
+
+              <p className="mt-3 text-xs text-muted-foreground">
+                {isManual
+                  ? "Modo manual ativo: os percentuais ficam bloqueados e os valores são definidos diretamente."
+                  : "Ajuste os percentuais para simular propostas automáticas com base na base líquida."}
+              </p>
+            </div>
+
+            {isManual && (
+              <div className="rounded-2xl border border-border/60 bg-card/60 p-5 backdrop-blur">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Ajuste manual</p>
+                    <p className="text-xs text-muted-foreground">Insira diretamente os valores das propostas.</p>
+                  </div>
+                  <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">
+                    Manual ativo
+                  </span>
+                </div>
+                <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Valor manual da menor proposta</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-10 rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40"
+                      value={manualMenor}
+                      onChange={(e) => setManualMenor(Number(e.target.value) || 0)}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label className="text-xs text-muted-foreground">Valor manual da maior proposta</Label>
+                    <Input
+                      type="number"
+                      step="0.01"
+                      className="h-10 rounded-lg text-base transition focus-visible:ring-2 focus-visible:ring-primary/40"
+                      value={manualMaior}
+                      onChange={(e) => setManualMaior(Number(e.target.value) || 0)}
+                    />
+                  </div>
                 </div>
               </div>
             )}
           </div>
-        </div>
 
-        {loadingHerdeiros && (
-          <div className="text-xs text-muted-foreground">Carregando herdeiros...</div>
-        )}
+          {loadingHerdeiros && (
+            <div className="text-xs text-muted-foreground">Carregando herdeiros...</div>
+          )}
 
-        {hasHerdeiros && (
-          <SectionPanel
-            title="Herdeiros"
-            description="Defina a cota de cada herdeiro (total 100%)."
-            tone="info"
-          >
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <Users className="h-4 w-4 text-muted-foreground" />
-                <p className="text-sm font-medium">Distribuição de cotas</p>
+          {hasHerdeiros && (
+            <SectionPanel
+              title="Herdeiros"
+              description="Defina a cota de cada herdeiro (total 100%)."
+              tone="info"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <p className="text-sm font-medium">Distribuição de cotas</p>
+                </div>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  onClick={salvarCotas}
+                  disabled={savingHerdeiros || !cotasOk}
+                >
+                  {savingHerdeiros ? "Salvando..." : "Salvar cotas"}
+                </Button>
               </div>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                onClick={salvarCotas}
-                disabled={savingHerdeiros || !cotasOk}
-              >
-                {savingHerdeiros ? "Salvando..." : "Salvar cotas"}
-              </Button>
-            </div>
 
-            <div className="space-y-2">
-              {herdeiros.map((h) => (
-                <div key={h.id} className="flex items-center gap-3">
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{h.nome_completo}</p>
-                    <p className="text-xs text-muted-foreground truncate">{h.cpf || "CPF N/I"}</p>
+              <div className="space-y-2">
+                {herdeiros.map((h) => (
+                  <div key={h.id} className="flex items-center gap-3">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{h.nome_completo}</p>
+                      <p className="text-xs text-muted-foreground truncate">{h.cpf || "CPF N/I"}</p>
+                    </div>
+                    <div className="w-32">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        max="100"
+                        value={Number(h.percentual_participacao || 0)}
+                        onChange={(e) => handleHerdeiroPercentualChange(h.id, e.target.value)}
+                      />
+                    </div>
                   </div>
-                  <div className="w-32">
-                    <Input
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      max="100"
-                      value={Number(h.percentual_participacao || 0)}
-                      onChange={(e) => handleHerdeiroPercentualChange(h.id, e.target.value)}
-                    />
+                ))}
+              </div>
+
+              <div className="flex items-center justify-between text-xs">
+                <span className="text-muted-foreground">Total: {totalCotas.toFixed(2)}%</span>
+                {cotasOk ? <span className="value-main">Cotas OK</span> : <span className="value-negative">Deve somar 100%</span>}
+              </div>
+            </SectionPanel>
+          )}
+
+          {calculoFinal && (
+            <SectionPanel title="Preview do cálculo final" description="Detalhamento completo da base líquida." tone="primary">
+              <div className="grid gap-4">
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <div className="flex items-center justify-between">
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor bruto</p>
+                    <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Total</span>
                   </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="flex items-center justify-between text-xs">
-              <span className="text-muted-foreground">Total: {totalCotas.toFixed(2)}%</span>
-              {cotasOk ? <span className="value-main">Cotas OK</span> : <span className="value-negative">Deve somar 100%</span>}
-            </div>
-          </SectionPanel>
-        )}
-
-        {calculoFinal && (
-          <SectionPanel title="Preview do cálculo final" description="Detalhamento completo da base líquida." tone="primary">
-            <div className="grid gap-4">
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-                <div className="flex items-center justify-between">
-                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Valor bruto</p>
-                  <span className="rounded-full border border-primary/40 bg-primary/15 px-2 py-1 text-[11px] font-semibold text-primary">Total</span>
-                </div>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between text-muted-foreground"><span>Principal Original</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.principal_original || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>Correção (IPCA-E/IPCA)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.correcao_monetaria || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>Juros Pré-22</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_pre_22 || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>SELIC (Pós-22)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.selic || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground"><span>EC 136/2025 (IPCA 2025)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.ec136_2025 || 0)}</span></div>
-                  <div className="flex justify-between text-muted-foreground border-t border-border/60 pt-2"><span>Juros Originais</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_moratorios_originais || 0)}</span></div>
-                  <div className="flex justify-between text-sm font-semibold text-foreground"><span>Total Bruto</span><span className="tabular-nums">{formatarMoeda(calculoFinal.valor_atualizado)}</span></div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-destructive/40 bg-destructive/15 p-4">
-                <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
-                <div className="mt-3 space-y-2 text-sm">
-                  <div className="flex justify-between text-destructive"><span>(-) PSS</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.pss_valor)}</span></div>
-                  <div className="flex justify-between text-destructive"><span>(-) IRPF ({calculoFinal.breakdown?.descricao_faixa || "N/A"})</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.irpf_valor)}</span></div>
-                  <div className="flex justify-between text-destructive"><span>(-) Honorários ({calculoFinal.honorarios_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.honorarios_valor)}</span></div>
-                  <div className="flex justify-between text-destructive"><span>(-) Adiantamento ({calculoFinal.adiantamento_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.adiantamento_valor)}</span></div>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-primary/40 bg-primary/15 p-4">
-                <p className="text-xs uppercase tracking-wide text-primary">Base líquida final</p>
-                <div className="mt-3 flex items-center justify-between">
-                  <span className="text-sm text-primary">Base para propostas</span>
-                  <span className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(calculoFinal.base_liquida_final)}</span>
-                </div>
-                <div className="mt-2 flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Base pré-descontos</span>
-                  <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.base_liquida_pre_descontos)}</span>
-                </div>
-              </div>
-
-              <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Propostas</p>
-                <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
-                    <span className="text-primary">Menor</span>
-                    <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.menor_proposta)}</span>
-                  </div>
-                  <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
-                    <span className="text-primary">Maior</span>
-                    <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.maior_proposta)}</span>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between text-muted-foreground"><span>Principal Original</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.principal_original || 0)}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>Correção (IPCA-E/IPCA)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.correcao_monetaria || 0)}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>Juros Pré-22</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_pre_22 || 0)}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>SELIC (Pós-22)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.selic || 0)}</span></div>
+                    <div className="flex justify-between text-muted-foreground"><span>EC 136/2025 (IPCA 2025)</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.ec136_2025 || 0)}</span></div>
+                    <div className="flex justify-between text-muted-foreground border-t border-border/60 pt-2"><span>Juros Originais</span><span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.breakdown?.juros_moratorios_originais || 0)}</span></div>
+                    <div className="flex justify-between text-sm font-semibold text-foreground"><span>Total Bruto</span><span className="tabular-nums">{formatarMoeda(calculoFinal.valor_atualizado)}</span></div>
                   </div>
                 </div>
-              </div>
-            </div>
-          </SectionPanel>
-        )}
 
-        <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
-          <div className="flex items-start gap-3">
-            <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
-              <Info className="h-4 w-4" />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">Observação</p>
-              <p className="text-xs text-muted-foreground">
-                As propostas são calculadas sobre a base líquida final (após descontar PSS, IRPF, honorários e adiantamento).
-              </p>
+                <div className="rounded-xl border border-destructive/40 bg-destructive/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-destructive">Descontos</p>
+                  <div className="mt-3 space-y-2 text-sm">
+                    <div className="flex justify-between text-destructive"><span>(-) PSS</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.pss_valor)}</span></div>
+                    <div className="flex justify-between text-destructive"><span>(-) IRPF ({calculoFinal.breakdown?.descricao_faixa || "N/A"})</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.irpf_valor)}</span></div>
+                    <div className="flex justify-between text-destructive"><span>(-) Honorários ({calculoFinal.honorarios_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.honorarios_valor)}</span></div>
+                    <div className="flex justify-between text-destructive"><span>(-) Adiantamento ({calculoFinal.adiantamento_percentual?.toFixed(2) || "0.00"}%)</span><span className="tabular-nums text-destructive">{formatarMoeda(calculoFinal.adiantamento_valor)}</span></div>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-primary/40 bg-primary/15 p-4">
+                  <p className="text-xs uppercase tracking-wide text-primary">Base líquida final</p>
+                  <div className="mt-3 flex items-center justify-between">
+                    <span className="text-sm text-primary">Base para propostas</span>
+                    <span className="text-lg font-semibold tabular-nums text-primary group-data-[pdf=open]:text-base">{formatarMoeda(calculoFinal.base_liquida_final)}</span>
+                  </div>
+                  <div className="mt-2 flex items-center justify-between text-sm">
+                    <span className="text-muted-foreground">Base pré-descontos</span>
+                    <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.base_liquida_pre_descontos)}</span>
+                  </div>
+                </div>
+
+                <div className="rounded-xl border border-border/60 bg-muted/20 p-4">
+                  <p className="text-xs uppercase tracking-wide text-muted-foreground">Propostas</p>
+                  <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                    <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
+                      <span className="text-primary">Menor</span>
+                      <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.menor_proposta)}</span>
+                    </div>
+                    <div className="flex items-center justify-between rounded-lg border border-primary/40 bg-primary/15 px-3 py-2 text-sm">
+                      <span className="text-primary">Maior</span>
+                      <span className="tabular-nums text-primary">{formatarMoeda(calculoFinal.maior_proposta)}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </SectionPanel>
+          )}
+
+          <div className="rounded-2xl border border-primary/20 bg-primary/10 p-4">
+            <div className="flex items-start gap-3">
+              <div className="mt-1 flex h-7 w-7 items-center justify-center rounded-full bg-primary/20 text-primary">
+                <Info className="h-4 w-4" />
+              </div>
+              <div>
+                <p className="text-sm font-semibold text-foreground">Observação</p>
+                <p className="text-xs text-muted-foreground">
+                  As propostas são calculadas sobre a base líquida final (após descontar PSS, IRPF, honorários e adiantamento).
+                </p>
+              </div>
             </div>
           </div>
-        </div>
 
         </div>
         <StepFooter onBack={voltar} onNext={handleAvancar} />
       </CardContent>
-    </Card>
+    </Card >
   )
 
 }

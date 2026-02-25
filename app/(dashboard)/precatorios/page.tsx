@@ -1,40 +1,213 @@
 "use client"
 /* eslint-disable */
 
-import { useEffect, useMemo, useState, type ReactNode } from "react"
+import React, { useEffect, useMemo, useState, type ReactNode } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Card, CardContent } from "@/components/ui/card"
-import { Plus, Trash2, X, FileJson, Loader2, Filter, FileText, MoreVertical, LayoutGrid, List } from "lucide-react"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import {
+  AlertDialog,
+  Button as HeroButton,
+  Card as HeroCard,
+  Checkbox as HeroCheckbox,
+  Chip as HeroChip,
+  Dropdown as HeroDropdown,
+  DropdownPopover as HeroDropdownPopover,
+  DropdownItem as HeroDropdownItem,
+  DropdownMenu as HeroDropdownMenu,
+  DropdownTrigger as HeroDropdownTrigger,
+  Modal as HeroModal,
+  Spinner as HeroSpinner,
+} from "@heroui/react"
+import { Plus, Trash2, X, FileJson, Loader2, Filter, FileText, MoreVertical, LayoutGrid, List } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import type { Precatorio } from "@/lib/types/database"
 import { maskProcesso } from "@/lib/masks"
 import { useToast } from "@/hooks/use-toast"
 import { ImportJsonModal } from "@/components/import/import-json-modal"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog"
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
 import { usePrecatoriosSearch } from "@/hooks/use-precatorios-search"
 import { STATUS_LABELS, STATUS_OPTIONS } from "@/lib/types/filtros"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
+
+const precatorioCardGradientStyle: React.CSSProperties = {
+  backgroundImage:
+    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 56%, hsl(var(--primary) / 0.24) 100%)",
+}
+
+const deleteActionPopoverClassName =
+  "w-fit !min-w-0 md:!min-w-0 overflow-hidden rounded-xl border border-white/15 !bg-black/75 p-0 text-white shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)] backdrop-blur-md"
+const deleteActionMenuClassName = "w-auto min-w-0 bg-transparent !p-0 !gap-0 text-white"
+const deleteActionItemClassName =
+  "!m-0 !h-auto !min-h-0 !rounded-none !bg-transparent !px-0 !py-0 text-white outline-none transition-colors data-[focus=true]:!bg-black/40 data-[focus-visible=true]:!bg-black/40 data-[hover=true]:!bg-black/40 data-[hovered=true]:!bg-black/40"
+const deleteActionItemStyle: React.CSSProperties = { padding: 0, minHeight: 0 }
+const deleteActionContentClassName =
+  "group flex w-full select-none items-center gap-3 rounded-lg border border-white/15 bg-black/55 p-2 shadow-sm"
+
+type ButtonVariant = "default" | "outline" | "ghost" | "destructive" | "secondary"
+
+function Button({
+  children,
+  variant = "default",
+  className,
+  disabled,
+  isLoading,
+  size = "md",
+  ...props
+}: {
+  children?: ReactNode
+  variant?: ButtonVariant
+  className?: string
+  disabled?: boolean
+  isLoading?: boolean
+  size?: "sm" | "md" | "lg"
+  [key: string]: unknown
+}) {
+  const heroVariant =
+    variant === "outline"
+      ? "outline"
+      : variant === "ghost"
+        ? "tertiary"
+        : variant === "destructive"
+          ? "danger"
+          : "primary"
+  const sizeClass = size === "sm" ? "h-9 px-3 text-sm" : size === "lg" ? "h-12 px-5 text-base" : "h-10 px-4 text-sm"
+  return (
+    <HeroButton
+      {...(props as Record<string, unknown>)}
+      variant={heroVariant}
+      isDisabled={disabled || isLoading}
+      className={cx(sizeClass, className)}
+    >
+      <span className="inline-flex items-center gap-2">
+        {isLoading ? <HeroSpinner size="sm" /> : null}
+        {children}
+      </span>
+    </HeroButton>
+  )
+}
+
+function Badge({ children, className, variant }: { children?: ReactNode; className?: string; variant?: string }) {
+  const colorClass =
+    variant === "destructive"
+      ? "bg-danger/15 text-danger border-danger/40"
+      : "bg-default-100 text-foreground border-default-200/80"
+  return (
+    <HeroChip size="sm" className={cx("rounded-full px-2 py-1 text-xs font-semibold", colorClass, className)}>
+      {children}
+    </HeroChip>
+  )
+}
+
+function Card({ children, className, ...props }: { children?: ReactNode; className?: string;[key: string]: unknown }) {
+  return (
+    <HeroCard {...(props as Record<string, unknown>)} className={cx("border border-default-200/60 shadow-sm", className)}>
+      {children}
+    </HeroCard>
+  )
+}
+
+function CardContent({ children, className }: { children?: ReactNode; className?: string }) {
+  return <div className={className}>{children}</div>
+}
+
+function Checkbox({
+  checked,
+  onCheckedChange,
+  className,
+  ...props
+}: {
+  checked?: boolean
+  onCheckedChange?: (value: boolean) => void
+  className?: string
+  [key: string]: unknown
+}) {
+  return (
+    <HeroCheckbox
+      {...(props as Record<string, unknown>)}
+      isSelected={Boolean(checked)}
+      onChange={(v: boolean | undefined) => onCheckedChange?.(Boolean(v))}
+      className={className}
+    />
+  )
+}
+
+type SelectContextType = {
+  value?: string
+  onChange?: (value: string) => void
+}
+const SelectContext = React.createContext<SelectContextType>({})
+
+function Table({ children }: { children?: ReactNode }) {
+  return (
+    <div className="overflow-x-auto rounded-xl border border-default-200/60">
+      <table className="w-full text-left text-sm">{children}</table>
+    </div>
+  )
+}
+function TableHeader({ children }: { children?: ReactNode }) {
+  return <thead>{children}</thead>
+}
+function TableBody({ children }: { children?: ReactNode }) {
+  return <tbody>{children}</tbody>
+}
+function TableRow({ children, className, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
+  return (
+    <tr className={cx("border-t border-default-200/60", className)} {...props}>
+      {children}
+    </tr>
+  )
+}
+function TableHead({ children, className }: { children?: ReactNode; className?: string }) {
+  return <th className={cx("px-3 py-2 font-semibold text-foreground/70", className)}>{children}</th>
+}
+function TableCell({ children, className, ...props }: React.TdHTMLAttributes<HTMLTableCellElement>) {
+  return (
+    <td className={cx("px-3 py-2 align-middle text-sm text-foreground", className)} {...props}>
+      {children}
+    </td>
+  )
+}
+
+function Dialog({
+  open,
+  onOpenChange,
+  children,
+}: {
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  children: ReactNode
+}) {
+  return (
+    <HeroModal isOpen={open} onOpenChange={onOpenChange}>
+      <HeroModal.Trigger className="hidden">
+        <span />
+      </HeroModal.Trigger>
+      <HeroModal.Backdrop className="bg-black/60" />
+      <HeroModal.Container className="p-3">
+        <HeroModal.Dialog className="w-[min(90vw,32rem)] rounded-2xl border border-default-200/70 bg-content1 shadow-xl">
+          {children}
+        </HeroModal.Dialog>
+      </HeroModal.Container>
+    </HeroModal>
+  )
+}
+
+function DialogContent({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-4 p-6">{children}</div>
+}
+function DialogHeader({ children }: { children: ReactNode }) {
+  return <div className="flex flex-col gap-2">{children}</div>
+}
+function DialogTitle({ children }: { children: ReactNode }) {
+  return <h3 className="text-lg font-semibold">{children}</h3>
+}
+function DialogDescription({ children }: { children: ReactNode }) {
+  return <p className="text-sm text-foreground/70">{children}</p>
+}
+function DialogFooter({ children }: { children: ReactNode }) {
+  return <div className="flex flex-wrap justify-end gap-3 pt-2">{children}</div>
+}
 
 function AnimatedListItem({
   children,
@@ -75,6 +248,8 @@ export default function PrecatoriosPage() {
   const [deletingBatch, setDeletingBatch] = useState(false)
 
   const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize] = useState(20)
 
   // Filtrar precatórios em cálculo para operador de cálculo (exceto se for admin ou gestor)
   const isCalculoOnly = userRole?.includes("operador_calculo") && !userRole?.includes("admin") && !userRole?.includes("gestor")
@@ -107,12 +282,27 @@ export default function PrecatoriosPage() {
     return match?.nome || filtros.responsavel_id
   }, [filtros.responsavel_id, responsaveis])
 
-  const statusSelectValue = filtros.status?.length === 1 ? filtros.status[0] : "todos"
+  const statusValues = useMemo(() => new Set(STATUS_OPTIONS.map((option) => option.value)), [])
+  const statusSelectValue =
+    filtros.status?.length === 1 && statusValues.has(filtros.status[0]) ? filtros.status[0] : "todos"
 
-  const handleStatusFilterChange = (value: string) => {
+  useEffect(() => {
+    if (!filtros.status || filtros.status.length === 0) return
+
+    const validStatus = filtros.status.filter((value) => statusValues.has(value))
+    if (validStatus.length === filtros.status.length) return
+
     updateFiltros({
       ...filtros,
-      status: value === "todos" ? undefined : [value],
+      status: validStatus.length > 0 ? validStatus : undefined,
+    })
+  }, [filtros, statusValues, updateFiltros])
+
+  const handleStatusFilterChange = (value: string) => {
+    const nextStatus = value === "todos" || !statusValues.has(value) ? undefined : [value]
+    updateFiltros({
+      ...filtros,
+      status: nextStatus,
     })
   }
 
@@ -152,7 +342,7 @@ export default function PrecatoriosPage() {
       return
     }
 
-    ;(async () => {
+    ; (async () => {
       try {
         const supabase = getSupabase()
         if (!supabase) return
@@ -170,6 +360,7 @@ export default function PrecatoriosPage() {
           "gestor",
           "gestor_oficio",
           "gestor_certidoes",
+          "gestor_escrituras",
           "operador",
           "operador_comercial",
           "operador_calculo",
@@ -214,6 +405,22 @@ export default function PrecatoriosPage() {
     setSearchInput("")
     clearFiltros()
   }
+
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(precatorios.length / pageSize)), [precatorios.length, pageSize])
+  const paginatedPrecatorios = useMemo(() => {
+    const start = (currentPage - 1) * pageSize
+    return precatorios.slice(start, start + pageSize)
+  }, [precatorios, currentPage, pageSize])
+  const rangeStart = precatorios.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = Math.min(currentPage * pageSize, precatorios.length)
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchInput, filtros, precatorios.length])
+
+  useEffect(() => {
+    setCurrentPage((prev) => Math.min(prev, totalPages))
+  }, [totalPages])
 
 
   async function handleDeletePrecatorio() {
@@ -381,9 +588,9 @@ export default function PrecatoriosPage() {
               <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground dark:text-muted-foreground">Total</p>
               <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-muted-foreground dark:text-muted-foreground">{totalPrecatorios}</p>
             </div>
-            <div className="rounded-2xl border border-primary/40 dark:border-primary/40 bg-primary/15 dark:bg-primary/15 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-primary dark:text-primary">Calculados</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-primary dark:text-primary">{calculadosCount}</p>
+            <div className="rounded-2xl border border-emerald-500/35 dark:border-emerald-400/35 bg-emerald-500/12 dark:bg-emerald-400/12 px-4 py-3">
+              <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Calculados</p>
+              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-300">{calculadosCount}</p>
             </div>
             <div className="rounded-2xl border border-primary/40 dark:border-primary/40 bg-primary/15 dark:bg-primary/15 px-4 py-3">
               <p className="text-[10px] uppercase tracking-[0.2em] text-primary dark:text-primary">Em cálculo / Novo</p>
@@ -413,19 +620,37 @@ export default function PrecatoriosPage() {
               />
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Select value={statusSelectValue} onValueChange={handleStatusFilterChange}>
-                <SelectTrigger className="h-11 w-[190px] rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted">
-                  <SelectValue placeholder="Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="todos">Todos</SelectItem>
-                  {STATUS_OPTIONS.map((option) => (
-                    <SelectItem key={option.value} value={option.value}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <HeroDropdown>
+                <HeroDropdownTrigger>
+                  <span
+                    role="button"
+                    tabIndex={0}
+                    className="inline-flex h-11 w-[190px] items-center justify-between rounded-xl border border-default-200/70 bg-content1 px-3 text-sm font-medium text-foreground shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                  >
+                    {statusSelectValue === "todos"
+                      ? "Todos os status"
+                      : STATUS_OPTIONS.find((o) => o.value === statusSelectValue)?.label || "Status"}
+                  </span>
+                </HeroDropdownTrigger>
+                <HeroDropdownPopover>
+                  <HeroDropdownMenu aria-label="Filtro status">
+                    <HeroDropdownItem
+                      key="todos"
+                      onPress={() => handleStatusFilterChange("todos")}
+                    >
+                      Todos
+                    </HeroDropdownItem>
+                    {STATUS_OPTIONS.map((option) => (
+                      <HeroDropdownItem
+                        key={option.value}
+                        onPress={() => handleStatusFilterChange(option.value)}
+                      >
+                        {option.label}
+                      </HeroDropdownItem>
+                    ))}
+                  </HeroDropdownMenu>
+                </HeroDropdownPopover>
+              </HeroDropdown>
               <AdvancedFilters
                 filtros={filtros}
                 onFilterChange={updateFiltros}
@@ -449,11 +674,10 @@ export default function PrecatoriosPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode("cards")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    viewMode === "cards"
-                      ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                      : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${viewMode === "cards"
+                    ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
+                    : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
+                    }`}
                 >
                   <LayoutGrid className="h-3.5 w-3.5" />
                   Cards
@@ -461,11 +685,10 @@ export default function PrecatoriosPage() {
                 <button
                   type="button"
                   onClick={() => setViewMode("table")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${
-                    viewMode === "table"
-                      ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                      : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
-                  }`}
+                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${viewMode === "table"
+                    ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
+                    : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
+                    }`}
                 >
                   <List className="h-3.5 w-3.5" />
                   Tabela
@@ -565,145 +788,164 @@ export default function PrecatoriosPage() {
 
             {/* Cards sempre no mobile */}
             <div className="grid gap-4 md:hidden">
-              {precatorios.map((precatorio, index) => {
+              {paginatedPrecatorios.map((precatorio, index) => {
                 const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                 const valorPrincipal = Number(precatorio.valor_principal || 0)
                 const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                 const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
-                const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
+                const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
                 const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
                 const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                 return (
                   <AnimatedListItem key={precatorio.id} index={index}>
                     <Card
-                      className="group cursor-pointer rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                      style={precatorioCardGradientStyle}
                       onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                     >
-                    <CardContent className="p-5">
-                      <div className="flex gap-4">
-                        {canDelete(precatorio) && (
-                          <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                            <Checkbox
-                              checked={selectedIds.has(precatorio.id)}
-                              onCheckedChange={() => toggleSelection(precatorio.id)}
-                              className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                            />
-                          </div>
-                        )}
+                      <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+                        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
+                        <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/30 to-transparent blur-3xl" />
+                        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+                      </div>
+                      <CardContent className="relative z-10 p-5">
+                        <div className="flex gap-4">
+                          {canDelete(precatorio) && (
+                            <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                              <Checkbox
+                                checked={selectedIds.has(precatorio.id)}
+                                onCheckedChange={() => toggleSelection(precatorio.id)}
+                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                              />
+                            </div>
+                          )}
 
-                        <div className="flex-1 space-y-4">
-                          <div className="flex flex-col gap-3">
-                            <div className="flex items-start justify-between gap-4">
-                              <div className="space-y-1">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h3 className="text-base font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
-                                    {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
-                                  </h3>
-                                  <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                    {statusLabel}
-                                  </Badge>
-                                  {precatorio.urgente && (
-                                    <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                      Urgente
+                          <div className="flex-1 space-y-4">
+                            <div className="flex flex-col gap-3">
+                              <div className="flex items-start justify-between gap-4">
+                                <div className="space-y-1">
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                    <h3 className="text-base font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
+                                      {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
+                                    </h3>
+                                    <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
+                                      {statusLabel}
+                                    </Badge>
+                                    {precatorio.urgente && (
+                                      <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                                        Urgente
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  {precatorio.titulo && (
+                                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
+                                  )}
+                                  {responsavelNome && (
+                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                      Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
+                                    </p>
+                                  )}
+                                </div>
+                                <div className="text-right">
+                                  <div className={`text-xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
+                                    {valorExibido > 0
+                                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
+                                      : "Aguardando"}
+                                  </div>
+                                  <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
+                                    {valorExibido > 0 ? valorLabel : "Valor"}
+                                  </div>
+                                </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border !bg-background/95 dark:!bg-muted/95 p-3">
+                                {precatorio.tribunal && (
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
+                                  </div>
+                                )}
+                                {precatorio.numero_precatorio && (
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Precatório</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
+                                  </div>
+                                )}
+                                {precatorio.numero_processo && (
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Processo</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
+                                  </div>
+                                )}
+                                {precatorio.devedor && (
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
+                                  </div>
+                                )}
+                                {precatorio.data_base && (
+                                  <div>
+                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
+                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">
+                                      {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+
+                              <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
+                                <div className="flex flex-wrap gap-2 text-xs">
+                                  {precatorio.prioridade && (
+                                    <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
+                                      Prioridade {precatorio.prioridade}
                                     </Badge>
                                   )}
                                 </div>
-                                {precatorio.titulo && (
-                                  <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
-                                )}
-                                {responsavelNome && (
-                                  <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                    Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
-                                  </p>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className={`text-xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
-                                  {valorExibido > 0
-                                    ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
-                                    : "Aguardando"}
+                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                  {canDelete(precatorio) && (
+                                    <HeroDropdown placement="bottom-end" disableAnimation>
+                                      <HeroDropdownTrigger>
+                                        <span
+                                          role="button"
+                                          tabIndex={0}
+                                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                        >
+                                          <MoreVertical className="h-4 w-4" />
+                                        </span>
+                                      </HeroDropdownTrigger>
+                                      <HeroDropdownPopover className={deleteActionPopoverClassName}>
+                                        <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
+                                          <HeroDropdownItem
+                                            key="delete"
+                                            className={deleteActionItemClassName}
+                                            style={deleteActionItemStyle}
+                                            textValue="Excluir item"
+                                            onPress={() => {
+                                              setPrecatorioToDelete(precatorio)
+                                              setDeleteDialogOpen(true)
+                                            }}
+                                          >
+                                            <div className={deleteActionContentClassName}>
+                                              <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
+                                                <Trash2 className="w-4 h-4" />
+                                              </div>
+                                              <div className="flex flex-1 flex-col justify-center">
+                                                <p className="text-sm font-semibold text-white">Excluir item</p>
+                                              </div>
+                                            </div>
+                                          </HeroDropdownItem>
+                                        </HeroDropdownMenu>
+                                      </HeroDropdownPopover>
+                                    </HeroDropdown>
+                                  )}
                                 </div>
-                                <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
-                                  {valorExibido > 0 ? valorLabel : "Valor"}
-                                </div>
-                              </div>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted p-3">
-                              {precatorio.tribunal && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
-                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
-                                </div>
-                              )}
-                              {precatorio.numero_precatorio && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Precatório</div>
-                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
-                                </div>
-                              )}
-                              {precatorio.numero_processo && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Processo</div>
-                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
-                                </div>
-                              )}
-                              {precatorio.devedor && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
-                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
-                                </div>
-                              )}
-                              {precatorio.data_base && (
-                                <div>
-                                  <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
-                                  <div className="font-medium text-muted-foreground dark:text-muted-foreground">
-                                    {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
-                                  </div>
-                                </div>
-                              )}
-                            </div>
-
-                            <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
-                              <div className="flex flex-wrap gap-2 text-xs">
-                                {precatorio.prioridade && (
-                                  <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                    Prioridade {precatorio.prioridade}
-                                  </Badge>
-                                )}
-                              </div>
-                              <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                {canDelete(precatorio) && (
-                                  <DropdownMenu>
-                                    <DropdownMenuTrigger asChild>
-                                      <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
-                                        <MoreVertical className="h-4 w-4" />
-                                      </Button>
-                                    </DropdownMenuTrigger>
-                                    <DropdownMenuContent align="end">
-                                      <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                      <DropdownMenuSeparator />
-                                      <DropdownMenuItem
-                                        className="text-destructive focus:text-destructive cursor-pointer"
-                                        onClick={() => {
-                                          setPrecatorioToDelete(precatorio)
-                                          setDeleteDialogOpen(true)
-                                        }}
-                                      >
-                                        <Trash2 className="h-4 w-4 mr-2" />
-                                        Excluir Precatório
-                                      </DropdownMenuItem>
-                                    </DropdownMenuContent>
-                                  </DropdownMenu>
-                                )}
                               </div>
                             </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
+                      </CardContent>
                     </Card>
                   </AnimatedListItem>
                 )
@@ -728,13 +970,13 @@ export default function PrecatoriosPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {precatorios.map((precatorio) => {
+                      {paginatedPrecatorios.map((precatorio) => {
                         const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                         const valorPrincipal = Number(precatorio.valor_principal || 0)
                         const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                         const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                        const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
-                        const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                        const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
+                        const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
                         const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
 
                         return (
@@ -780,27 +1022,40 @@ export default function PrecatoriosPage() {
                             </TableCell>
                             <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
                               {canDelete(precatorio) && (
-                                <DropdownMenu>
-                                  <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
-                                      <MoreVertical className="h-4 w-4" />
-                                    </Button>
-                                  </DropdownMenuTrigger>
-                                  <DropdownMenuContent align="end">
-                                    <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                    <DropdownMenuSeparator />
-                                    <DropdownMenuItem
-                                      className="text-destructive focus:text-destructive cursor-pointer"
-                                      onClick={() => {
-                                        setPrecatorioToDelete(precatorio)
-                                        setDeleteDialogOpen(true)
-                                      }}
+                                <HeroDropdown placement="bottom-end" disableAnimation>
+                                  <HeroDropdownTrigger>
+                                    <span
+                                      role="button"
+                                      tabIndex={0}
+                                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
                                     >
-                                      <Trash2 className="h-4 w-4 mr-2" />
-                                      Excluir Precatório
-                                    </DropdownMenuItem>
-                                  </DropdownMenuContent>
-                                </DropdownMenu>
+                                      <MoreVertical className="h-4 w-4" />
+                                    </span>
+                                  </HeroDropdownTrigger>
+                                  <HeroDropdownPopover className={deleteActionPopoverClassName}>
+                                    <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
+                                      <HeroDropdownItem
+                                        key="delete"
+                                        className={deleteActionItemClassName}
+                                        style={deleteActionItemStyle}
+                                        textValue="Excluir item"
+                                        onPress={() => {
+                                          setPrecatorioToDelete(precatorio)
+                                          setDeleteDialogOpen(true)
+                                        }}
+                                      >
+                                        <div className={deleteActionContentClassName}>
+                                          <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
+                                            <Trash2 className="w-4 h-4" />
+                                          </div>
+                                          <div className="flex flex-1 flex-col justify-center">
+                                            <p className="text-sm font-semibold text-white">Excluir item</p>
+                                          </div>
+                                        </div>
+                                      </HeroDropdownItem>
+                                    </HeroDropdownMenu>
+                                  </HeroDropdownPopover>
+                                </HeroDropdown>
                               )}
                             </TableCell>
                           </TableRow>
@@ -811,150 +1066,191 @@ export default function PrecatoriosPage() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {precatorios.map((precatorio, index) => {
+                  {paginatedPrecatorios.map((precatorio, index) => {
                     const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                     const valorPrincipal = Number(precatorio.valor_principal || 0)
                     const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
                     const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                    const valorColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
-                    const valorLabelColorClass = valorAtualizado > 0 ? "text-primary dark:text-primary" : "text-primary dark:text-primary"
+                    const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
+                    const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
                     const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
                     const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
 
                     return (
                       <AnimatedListItem key={precatorio.id} index={index}>
                         <Card
-                          className="group cursor-pointer rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
+                          style={precatorioCardGradientStyle}
                           onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         >
-                        <CardContent className="p-5">
-                          <div className="flex gap-4">
-                            {canDelete(precatorio) && (
-                              <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                                <Checkbox
-                                  checked={selectedIds.has(precatorio.id)}
-                                  onCheckedChange={() => toggleSelection(precatorio.id)}
-                                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                />
-                              </div>
-                            )}
+                          <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+                            <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
+                            <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/30 to-transparent blur-3xl" />
+                            <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+                          </div>
+                          <CardContent className="relative z-10 p-5">
+                            <div className="flex gap-4">
+                              {canDelete(precatorio) && (
+                                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
+                                  <Checkbox
+                                    checked={selectedIds.has(precatorio.id)}
+                                    onCheckedChange={() => toggleSelection(precatorio.id)}
+                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                                  />
+                                </div>
+                              )}
 
-                            <div className="flex-1 space-y-4">
-                              <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="text-lg font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
-                                      {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
-                                    </h3>
-                                    <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                      {statusLabel}
-                                    </Badge>
-                                    {precatorio.urgente && (
-                                      <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                        Urgente
+                              <div className="flex-1 space-y-4">
+                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
+                                  <div className="space-y-1">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h3 className="text-lg font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
+                                        {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
+                                      </h3>
+                                      <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
+                                        {statusLabel}
+                                      </Badge>
+                                      {precatorio.urgente && (
+                                        <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
+                                          Urgente
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {precatorio.titulo && (
+                                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
+                                    )}
+                                    {responsavelNome && (
+                                      <p className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                        Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
+                                      </p>
+                                    )}
+                                  </div>
+
+                                  <div className="text-left md:text-right">
+                                    <div className={`text-2xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
+                                      {valorExibido > 0
+                                        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
+                                        : "Aguardando"}
+                                    </div>
+                                    <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
+                                      {valorExibido > 0 ? valorLabel : "Valor"}
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border !bg-background/95 dark:!bg-muted/95 p-3">
+                                  {precatorio.tribunal && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
+                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
+                                    </div>
+                                  )}
+                                  {precatorio.numero_precatorio && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Precatório</div>
+                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
+                                    </div>
+                                  )}
+                                  {precatorio.numero_processo && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Processo</div>
+                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
+                                    </div>
+                                  )}
+                                  {precatorio.devedor && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
+                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
+                                    </div>
+                                  )}
+                                  {precatorio.data_base && (
+                                    <div>
+                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
+                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">
+                                        {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
+                                      </div>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
+                                  <div className="flex flex-wrap gap-2 text-xs">
+                                    {precatorio.prioridade && (
+                                      <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
+                                        Prioridade {precatorio.prioridade}
                                       </Badge>
                                     )}
                                   </div>
-                                  {precatorio.titulo && (
-                                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
-                                  )}
-                                  {responsavelNome && (
-                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                      Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
-                                    </p>
-                                  )}
-                                </div>
-
-                                <div className="text-left md:text-right">
-                                  <div className={`text-2xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
-                                    {valorExibido > 0
-                                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
-                                      : "Aguardando"}
+                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                    {canDelete(precatorio) && (
+                                      <HeroDropdown placement="bottom-end" disableAnimation>
+                                        <HeroDropdownTrigger>
+                                          <span
+                                            role="button"
+                                            tabIndex={0}
+                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+                                          >
+                                            <MoreVertical className="h-4 w-4" />
+                                          </span>
+                                        </HeroDropdownTrigger>
+                                        <HeroDropdownPopover className={deleteActionPopoverClassName}>
+                                          <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
+                                            <HeroDropdownItem
+                                              key="delete"
+                                              className={deleteActionItemClassName}
+                                              style={deleteActionItemStyle}
+                                              textValue="Excluir item"
+                                              onPress={() => {
+                                                setPrecatorioToDelete(precatorio)
+                                                setDeleteDialogOpen(true)
+                                              }}
+                                            >
+                                              <div className={deleteActionContentClassName}>
+                                                <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
+                                                  <Trash2 className="w-4 h-4" />
+                                                </div>
+                                                <div className="flex flex-1 flex-col justify-center">
+                                                  <p className="text-sm font-semibold text-white">Excluir item</p>
+                                                </div>
+                                              </div>
+                                            </HeroDropdownItem>
+                                          </HeroDropdownMenu>
+                                        </HeroDropdownPopover>
+                                      </HeroDropdown>
+                                    )}
                                   </div>
-                                  <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
-                                    {valorExibido > 0 ? valorLabel : "Valor"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted p-3">
-                                {precatorio.tribunal && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
-                                  </div>
-                                )}
-                                {precatorio.numero_precatorio && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Precatório</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
-                                  </div>
-                                )}
-                                {precatorio.numero_processo && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">N? Processo</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
-                                  </div>
-                                )}
-                                {precatorio.devedor && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
-                                  </div>
-                                )}
-                                {precatorio.data_base && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">
-                                      {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  {precatorio.prioridade && (
-                                    <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                      Prioridade {precatorio.prioridade}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  {canDelete(precatorio) && (
-                                    <DropdownMenu>
-                                      <DropdownMenuTrigger asChild>
-                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:text-muted-foreground">
-                                          <MoreVertical className="h-4 w-4" />
-                                        </Button>
-                                      </DropdownMenuTrigger>
-                                      <DropdownMenuContent align="end">
-                                        <DropdownMenuLabel>Ações</DropdownMenuLabel>
-                                        <DropdownMenuSeparator />
-                                        <DropdownMenuItem
-                                          className="text-destructive focus:text-destructive cursor-pointer"
-                                          onClick={() => {
-                                            setPrecatorioToDelete(precatorio)
-                                            setDeleteDialogOpen(true)
-                                          }}
-                                        >
-                                          <Trash2 className="h-4 w-4 mr-2" />
-                                          Excluir Precatório
-                                        </DropdownMenuItem>
-                                      </DropdownMenuContent>
-                                    </DropdownMenu>
-                                  )}
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        </CardContent>
+                          </CardContent>
                         </Card>
                       </AnimatedListItem>
                     )
                   })}
                 </div>
               )}
+            </div>
+
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-default-200/70 bg-content1 px-4 py-3">
+              <span className="text-sm text-foreground/70">
+                Exibindo {rangeStart}-{rangeEnd} de {precatorios.length} precatórios
+              </span>
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+                  Anterior
+                </Button>
+                <span className="min-w-[110px] text-center text-xs font-medium text-foreground/70">
+                  Página {currentPage} de {totalPages}
+                </span>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage >= totalPages}
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                >
+                  Próxima
+                </Button>
+              </div>
             </div>
           </>
         )
@@ -995,27 +1291,34 @@ export default function PrecatoriosPage() {
         )
       }
 
-      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Confirmar Exclusão</DialogTitle>
-            <DialogDescription>
-              Tem certeza que deseja excluir o precatório &quot;
-              {precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}&quot;? Esta ação não pode ser
-              desfeita.
-            </DialogDescription>
-          </DialogHeader>
-
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
-              Cancelar
-            </Button>
-            <Button variant="destructive" onClick={handleDeletePrecatorio} disabled={deleting}>
-              {deleting ? "Excluindo..." : "Excluir Precatório"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      <AlertDialog isOpen={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialog.Backdrop>
+          <AlertDialog.Container>
+            <AlertDialog.Dialog className="sm:max-w-[400px]">
+              <AlertDialog.CloseTrigger />
+              <AlertDialog.Header>
+                <AlertDialog.Icon status="danger">
+                  <Trash2 className="w-5 h-5" />
+                </AlertDialog.Icon>
+                <AlertDialog.Heading>Excluir este item?</AlertDialog.Heading>
+              </AlertDialog.Header>
+              <AlertDialog.Body>
+                <p>
+                  Tem certeza que deseja remover permanentemente o precatório <strong>{precatorioToDelete?.titulo || precatorioToDelete?.numero_precatorio}</strong>? Esta ação não pode ser desfeita.
+                </p>
+              </AlertDialog.Body>
+              <AlertDialog.Footer>
+                <HeroButton slot="close" variant="tertiary" onPress={() => setDeleteDialogOpen(false)}>
+                  Cancelar
+                </HeroButton>
+                <HeroButton slot="close" variant="danger" onPress={handleDeletePrecatorio} isLoading={deleting}>
+                  Excluir item
+                </HeroButton>
+              </AlertDialog.Footer>
+            </AlertDialog.Dialog>
+          </AlertDialog.Container>
+        </AlertDialog.Backdrop>
+      </AlertDialog>
 
       <Dialog open={batchDeleteDialogOpen} onOpenChange={setBatchDeleteDialogOpen}>
         <DialogContent>

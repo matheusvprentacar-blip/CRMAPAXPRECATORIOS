@@ -38,9 +38,9 @@ interface TelemetryContextValue {
 
 const TelemetryContext = createContext<TelemetryContextValue | undefined>(undefined)
 
-const IDLE_EVENT_THRESHOLD_MS = readEnvMs("NEXT_PUBLIC_TELEMETRY_IDLE_EVENT_MS", 1_200_000, 15_000)
-const LOCK_AFTER_IDLE_MS = readEnvMs("NEXT_PUBLIC_TELEMETRY_IDLE_LOCK_MS", 1_200_000, IDLE_EVENT_THRESHOLD_MS + 5_000)
-const ACTIVITY_PING_INTERVAL_MS = readEnvMs("NEXT_PUBLIC_TELEMETRY_PING_MS", 60_000, 15_000)
+const IDLE_EVENT_THRESHOLD_MS = 15 * 60 * 1000 // 15 min
+const LOCK_AFTER_IDLE_MS = 20 * 60 * 1000 // 20 min
+const ACTIVITY_PING_INTERVAL_MS = 15_000 // 15s for more frequent pings during testing
 const CHECK_INTERVAL_MS = 5_000
 const MOUSEMOVE_SAMPLE_MS = 5_000
 const TAURI_MINIMIZE_CHECK_MS = 3_000
@@ -256,14 +256,14 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.id) {
       endedSessionIdsRef.current.clear()
-        lockedRef.current = false
-        idleRef.current = false
-        minimizedRef.current = false
-        visibleRef.current = true
-        setLocked(false)
-        setLockReason(null)
-        setUnlockError(null)
-        return
+      lockedRef.current = false
+      idleRef.current = false
+      minimizedRef.current = false
+      visibleRef.current = true
+      setLocked(false)
+      setLockReason(null)
+      setUnlockError(null)
+      return
     }
 
     const newSessionId = generateSessionId()
@@ -416,7 +416,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     const tauriUnlisteners: Array<() => void> = []
 
     if (isTauri) {
-      ;(async () => {
+      ; (async () => {
         try {
           const { getCurrentWindow } = await import("@tauri-apps/api/window")
           if (disposed) return

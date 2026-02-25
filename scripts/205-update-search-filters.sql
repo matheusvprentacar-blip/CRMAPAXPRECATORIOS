@@ -149,8 +149,7 @@ BEGIN
       unaccent(p.numero_processo) ILIKE '%' || unaccent(p_termo) || '%' OR
       unaccent(p.credor_nome) ILIKE '%' || unaccent(p_termo) || '%' OR
       unaccent(p.credor_cpf_cnpj) ILIKE '%' || unaccent(p_termo) || '%' OR
-      unaccent(p.devedor) ILIKE '%' || unaccent(p_termo) || '%' OR
-      unaccent(u_criador.nome) ILIKE '%' || unaccent(p_termo) || '%'
+      unaccent(p.devedor) ILIKE '%' || unaccent(p_termo) || '%'
     )
     AND (p_tribunal IS NULL OR unaccent(p.tribunal) ILIKE '%' || unaccent(p_tribunal) || '%')
     AND (p_status IS NULL OR p.status = ANY(p_status))
@@ -195,6 +194,6 @@ END;
 $$;
 
 COMMENT ON FUNCTION public.buscar_precatorios_global IS 
-'Busca global de precatorios com filtros avancados (tribunal, calculo e valores).';
+'Busca global de precatorios com filtros avancados, sem busca por operador no termo rapido.';
 
 GRANT EXECUTE ON FUNCTION public.buscar_precatorios_global TO authenticated;

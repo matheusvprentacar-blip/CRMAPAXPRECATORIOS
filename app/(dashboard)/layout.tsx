@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable */
 import type React from "react"
@@ -23,14 +23,15 @@ import {
   User,
   FileCheck,
   Scroll,
+  ScrollText,
   MessageSquare,
   DollarSign,
   FileSearch,
   Megaphone,
   CalendarDays,
   Activity,
-} from "lucide-react"
-import { Avatar, AvatarIcon, Slider } from "@heroui/react"
+} from "@/components/icons"
+import { Avatar, AvatarIcon, Slider } from "@/lib/heroui/compat"
 import { Button } from "@/components/ui/button"
 import {
   DropdownMenu,
@@ -76,7 +77,7 @@ const navigation = [
     name: "Kanban",
     href: "/kanban",
     icon: Kanban,
-    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor"],
+    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor", "gestor_escrituras"],
   },
   {
     name: "Chat",
@@ -97,6 +98,7 @@ const navigation = [
       "juridico",
       "gestor_certidoes",
       "gestor_oficio",
+      "gestor_escrituras",
       "financeiro",
       "analista",
     ],
@@ -114,6 +116,7 @@ const navigation = [
       "juridico",
       "gestor_certidoes",
       "gestor_oficio",
+      "gestor_escrituras",
       "financeiro",
       "analista",
     ],
@@ -125,8 +128,8 @@ const navigation = [
     roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor"],
   },
   {
-    name: "Jurídico",
-    href: "/juridico",
+    name: "Parecer Jurídico",
+    href: "/parecer-juridico",
     icon: Scale,
     roles: ["admin", "juridico", "gestor"],
   },
@@ -150,6 +153,12 @@ const navigation = [
     roles: ["admin", "gestor_oficio", "gestor"]
   },
   {
+    name: "Gestão de Escrituras",
+    href: "/gestao-escrituras",
+    icon: ScrollText,
+    roles: ["admin", "gestor_escrituras", "gestor"]
+  },
+  {
     name: "Acesso Controlado",
     href: "/acesso-controlado",
     icon: (props: any) => (
@@ -169,7 +178,7 @@ const navigation = [
         <path d="m9 12 2 2 4-4" />
       </svg>
     ),
-    roles: ["admin", "gestor_certidoes", "juridico"],
+    roles: ["admin", "gestor_certidoes", "gestor_escrituras", "juridico"],
   },
   { name: "Telemetria", href: "/admin/telemetria", icon: Activity, roles: ["admin"] },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
@@ -184,6 +193,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const pathname = usePathname()
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  const [hideMenuForComunicado, setHideMenuForComunicado] = useState(false)
   const { profile, signOut } = useAuth()
   const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
   const [uiZoomPreview, setUiZoomPreview] = useState(DEFAULT_UI_ZOOM)
@@ -288,6 +298,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.dispatchEvent(new CustomEvent("ui-zoom:changed", { detail: uiZoom }))
   }, [uiZoom])
 
+  useEffect(() => {
+    if (!hideMenuForComunicado) return
+    setSidebarOpen(false)
+  }, [hideMenuForComunicado])
+
   async function loadConfig() {
     try {
       const supabase = getSupabase()
@@ -344,7 +359,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
           <span className="text-sm hidden sm:inline">{profile?.nome}</span>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-60" forceMount>
+      <DropdownMenuContent
+        align="end"
+        className="w-60 border border-border/90 !bg-[#f7f4ef] dark:!bg-[#151922] text-foreground shadow-xl !opacity-100 backdrop-blur-none supports-[backdrop-filter]:!backdrop-blur-none"
+        style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
             <p className="text-sm font-medium leading-none">{profile?.nome}</p>
@@ -389,6 +409,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             minValue={ZOOM_MIN}
             maxValue={ZOOM_MAX}
             step={0.01}
+            color="primary"
+            size="sm"
             onChange={handleZoomPreviewChange}
             onChangeEnd={handleZoomCommit}
             aria-label="Zoom da interface"
@@ -411,131 +433,145 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   return (
     <ProtectedRoute>
       <TelemetryProvider>
-      <NotificationsProvider>
-      <div className="min-h-screen bg-gradient-to-b from-stone-100 to-stone-200/70 dark:from-black dark:to-zinc-950">
-        {/* Mobile sidebar backdrop */}
-        {sidebarOpen && (
-          <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-        )}
+        <NotificationsProvider>
+          <div className="min-h-screen bg-transparent">
+            {/* Mobile sidebar backdrop */}
+            {sidebarOpen && !hideMenuForComunicado && (
+              <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
+            )}
 
-        {/* Global Watermark/Timbrado - BRANDING */}
-        <div
-          className="global-watermark fixed inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03] mix-blend-multiply blur-[1px] select-none"
-          aria-hidden="true"
-        >
-          <div className="relative w-[500px] h-[500px]">
-            <Image
-              src="/logo-apax.png"
-              alt="Watermark"
-              fill
-              className="object-contain grayscale"
-            />
-          </div>
-        </div>
-
-        {/* Sidebar - Premium Glassmorphism Look */}
-        <aside
-          className={cn(
-            "fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
-            "bg-muted text-muted-foreground border-border shadow-xl dark:bg-black dark:text-muted-foreground dark:border-border",
-            sidebarOpen ? "translate-x-0" : "-translate-x-full",
-          )}
-        >
-          <div className="flex flex-col h-full relative z-10">
-            {/* Gradient Accent Top */}
-            <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-500" />
-
-            {/* Logo Area */}
-            <div className="flex items-center gap-3 p-6 border-b border-border/50">
-              <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-primary/40">
+            {/* Global Watermark/Timbrado - BRANDING */}
+            <div
+              className="global-watermark fixed inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03] mix-blend-multiply blur-[1px] select-none"
+              aria-hidden="true"
+            >
+              <div className="relative w-[500px] h-[500px]">
                 <Image
-                  src={logoUrl || "/logo-apax.png"}
-                  alt="Logo"
-                  width={40}
-                  height={40}
-                  className="object-contain w-10 h-10"
+                  src="/logo-apax.png"
+                  alt="Watermark"
+                  fill
+                  className="object-contain grayscale"
                 />
               </div>
-              <div className="flex flex-col">
-                <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">{nomeEmpresa}</h1>
-                <p className="text-xs text-muted-foreground mt-1 font-medium">{subtituloEmpresa}</p>
-              </div>
             </div>
 
-            {/* Navigation */}
-            <nav className="flex-1 p-4 space-y-1">
-              {filteredNavigation.reduce((acc: React.ReactNode[], item, index) => {
-                // Logic to add separators if needed, for now just the items
-                // You can group them here if the `roles` or `category` was more explicit in the `navigation` array
+            {/* Sidebar */}
+            <aside
+              className={cn(
+                "fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
+                "bg-zinc-100 text-zinc-900 border-zinc-300/70 shadow-xl dark:bg-zinc-950/40 dark:text-zinc-100 dark:border-zinc-800/60",
+                hideMenuForComunicado && "pointer-events-none -translate-x-full opacity-0 lg:-translate-x-full",
+                sidebarOpen ? "translate-x-0" : "-translate-x-full",
+              )}
+            >
+              <div className="flex flex-col h-full relative z-10">
+                {/* Gradient Accent Top */}
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-500" />
 
-                const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-                const Icon = item.icon
+                {/* Logo Area */}
+                <div className="flex items-center gap-3 p-6 border-b border-border/50">
+                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-primary/40">
+                    <Image
+                      src={logoUrl || "/logo-apax.png"}
+                      alt="Logo"
+                      width={40}
+                      height={40}
+                      priority
+                      className="object-contain w-10 h-10"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">{nomeEmpresa}</h1>
+                    <p className="text-xs text-muted-foreground mt-1 font-medium">{subtituloEmpresa}</p>
+                  </div>
+                </div>
 
-                const link = (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    className={cn(
-                      "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
-                      isActive
-                        ? "bg-primary/15 text-muted-foreground font-semibold dark:bg-primary/15 dark:text-muted-foreground"
-                        : "text-muted-foreground hover:bg-muted hover:text-muted-foreground dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-muted-foreground",
-                    )}
-                    onClick={() => setSidebarOpen(false)}
-                  >
-                    {isActive && (
-                      <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-primary/15 rounded-r-full" />
-                    )}
-                    <Icon className={cn("w-5 h-5 transition-colors", isActive ? "text-primary" : "text-muted-foreground group-hover:text-muted-foreground dark:text-muted-foreground dark:group-hover:text-muted-foreground")} />
-                    {item.name}
-                  </Link>
-                )
+                {/* Navigation */}
+                <nav className="flex-1 p-4 space-y-1">
+                  {filteredNavigation.reduce((acc: React.ReactNode[], item) => {
+                    // Logic to add separators if needed, for now just the items
+                    // You can group them here if the `roles` or `category` was more explicit in the `navigation` array
 
-                return [...acc, link]
-              }, [])}
-            </nav>
+                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+                    const Icon = item.icon
 
-            {/* User section removed as per request to move to top header */}
-            <div className="p-4 border-t border-border/50 bg-muted/5">
-              <p className="text-[10px] text-center text-muted-foreground">v{appVersion}</p>
+                    const link = (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        className={cn(
+                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
+                          isActive
+                            ? "bg-amber-50 text-zinc-900 font-semibold dark:bg-amber-900/20 dark:text-zinc-100"
+                            : "text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900/60 dark:hover:text-zinc-100",
+                        )}
+                        onClick={() => setSidebarOpen(false)}
+                      >
+                        {isActive && (
+                          <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-amber-500 rounded-r-full" />
+                        )}
+                        <Icon
+                          className={cn(
+                            "w-5 h-5 transition-colors",
+                            isActive
+                              ? "text-amber-600"
+                              : "text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100"
+                          )}
+                        />
+                        {item.name}
+                      </Link>
+                    )
+
+                    return [...acc, link]
+                  }, [])}
+                </nav>
+
+                {/* User section removed as per request to move to top header */}
+                <div className="p-4 border-t border-border/50 bg-muted/5">
+                  <p className="text-[10px] text-center text-muted-foreground">v{appVersion}</p>
+                </div>
+              </div>
+            </aside>
+
+            {/* Main content */}
+            <div
+              className={cn(
+                "transition-[padding] duration-500 ease-out",
+                hideMenuForComunicado ? "lg:pl-0" : "lg:pl-64"
+              )}
+            >
+              {/* Mobile header */}
+              <header className={cn("sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border lg:hidden", hideMenuForComunicado && "invisible pointer-events-none")}>
+                <div className="flex items-center justify-between p-4">
+                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
+                    {sidebarOpen ? <X /> : <Menu />}
+                  </Button>
+                  <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
+                  <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
+                    {profileMenu}
+                  </div>
+                </div>
+              </header>
+
+              {/* Desktop header */}
+              <header className={cn("hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border", hideMenuForComunicado && "invisible pointer-events-none")}>
+                {/* Subtle noise texture or gradient could be added here via pseudo-element if desired, for now keeping it clean/glassy */}
+                <div className="flex items-center justify-end p-4 gap-2">
+                  <NotificationBell />
+                  <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
+                  {profileMenu}
+                </div>
+              </header>
+
+              {/* Page content */}
+              <main className="min-h-[calc(100vh-4rem)] p-6 transition-all duration-500 ease-out">{children}</main>
             </div>
           </div>
-        </aside>
-
-        {/* Main content */}
-        <div className="lg:pl-64">
-          {/* Mobile header */}
-          <header className="sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border lg:hidden">
-            <div className="flex items-center justify-between p-4">
-              <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                {sidebarOpen ? <X /> : <Menu />}
-              </Button>
-              <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
-              <div className="flex items-center gap-2">
-                <NotificationBell />
-                <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
-                {profileMenu}
-              </div>
-            </div>
-          </header>
-
-          {/* Desktop header */}
-          <header className="hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border">
-            {/* Subtle noise texture or gradient could be added here via pseudo-element if desired, for now keeping it clean/glassy */}
-            <div className="flex items-center justify-end p-4 gap-2">
-              <NotificationBell />
-              <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
-              {profileMenu}
-            </div>
-          </header>
-
-          {/* Page content */}
-          <main className="p-6">{children}</main>
-        </div>
-      </div>
-      <NotificationsModal />
-      <ComunicadosBroadcastModal />
-      </NotificationsProvider>
+          <NotificationsModal />
+          <ComunicadosBroadcastModal onComunicadoBlockingChange={setHideMenuForComunicado} />
+        </NotificationsProvider>
       </TelemetryProvider>
     </ProtectedRoute>
   )

@@ -9,7 +9,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Textarea } from "@/components/ui/textarea"
 import { getSupabase } from "@/lib/supabase/client"
 import { Precatorio } from "@/lib/types/database"
-import { Loader2, Calculator, Upload } from "lucide-react"
+import { Loader2, Calculator, Upload } from "@/components/icons"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { toast } from "@/components/ui/use-toast"
 

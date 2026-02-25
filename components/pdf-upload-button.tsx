@@ -4,7 +4,7 @@ import type React from "react"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
-import { Upload, FileText, Loader2 } from "lucide-react"
+import { Upload, FileText, Loader2 } from "@/components/icons"
 import { uploadAndAttachPdf } from "@/lib/utils/pdf-upload"
 import { toast } from "sonner"
 

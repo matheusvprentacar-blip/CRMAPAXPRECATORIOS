@@ -2,7 +2,7 @@
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2, FileSpreadsheet } from 'lucide-react'
+import { Upload, Loader2, FileSpreadsheet } from "@/components/icons"
 import { toast } from 'sonner'
 
 interface UploadExcelButtonProps {

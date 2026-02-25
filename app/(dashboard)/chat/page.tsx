@@ -2,9 +2,15 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { downloadFileAsArrayBuffer, getFileDownloadUrl, uploadFile } from "@/lib/utils/file-upload"
+import {
+  buildDownloadFileName,
+  downloadFileAsArrayBuffer,
+  downloadFileWithMetadata,
+  getFileDownloadUrl,
+  uploadFile,
+} from "@/lib/utils/file-upload"
 import { useAuth } from "@/lib/auth/auth-context"
-import { Avatar, AvatarGroup, AvatarIcon } from "@heroui/react"
+import { Avatar, AvatarGroup, AvatarIcon } from "@/lib/heroui/compat"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { ScrollArea } from "@/components/ui/scroll-area"
@@ -32,7 +38,7 @@ import {
   Send,
   Trash2,
   X,
-} from "lucide-react"
+} from "@/components/icons"
 
 interface Usuario {
   id: string
@@ -292,7 +298,7 @@ export default function ChatPage() {
         .order("nome", { ascending: true })
 
       if (error) {
-        console.error("Erro ao carregar usuários:", error)
+        console.error("Erro ao carregar usuÃ¡rios:", error)
         return
       }
 
@@ -415,7 +421,7 @@ export default function ChatPage() {
       setMensagens((prev) => [...prev, data as ChatMensagem])
     }
     if (data && selectedUser?.id && selectedUser.id !== senderId) {
-      const senderName = profile?.nome || "Usuário"
+      const senderName = profile?.nome || "UsuÃ¡rio"
       const bodyText = data.arquivo_nome
         ? `?? ${data.arquivo_nome}`
         : data.texto || "Nova mensagem"
@@ -430,7 +436,7 @@ export default function ChatPage() {
         event_type: "mensagem",
       })
       if (notifyError) {
-        console.warn("Erro ao criar notificação de mensagem:", notifyError)
+        console.warn("Erro ao criar notificaÃ§Ã£o de mensagem:", notifyError)
       }
     }
     setMessageText("")
@@ -457,7 +463,7 @@ export default function ChatPage() {
     if (isDeletedMessage(msg)) return
 
     const ok = window.confirm(
-      "Deseja apagar esta mensagem? Ela será substituída por ?Mensagem apagada?."
+      "Deseja apagar esta mensagem? Ela serÃ¡ substituÃ­da por ?Mensagem apagada?."
     )
     if (!ok) return
 
@@ -486,7 +492,7 @@ export default function ChatPage() {
       }
       if (!persistedRow) {
         throw new Error(
-          "A exclusão não foi persistida no banco (provável bloqueio de RLS). Execute o script 192-chat-permitir-apagar-mensagem.sql."
+          "A exclusÃ£o nÃ£o foi persistida no banco (provÃ¡vel bloqueio de RLS). Execute o script 192-chat-permitir-apagar-mensagem.sql."
         )
       }
 
@@ -519,7 +525,7 @@ export default function ChatPage() {
       toast.success("Mensagem apagada")
     } catch (error: unknown) {
       console.error("Erro ao apagar mensagem:", error)
-      toast.error(getErrorMessage(error) || "Não foi possível apagar a mensagem")
+      toast.error(getErrorMessage(error) || "NÃ£o foi possÃ­vel apagar a mensagem")
     } finally {
       setDeletingMessageId(null)
     }
@@ -534,17 +540,24 @@ export default function ChatPage() {
     const name = msg.arquivo_nome || getFileNameFromUrl(msg.arquivo_url)
 
     try {
-      const buffer = await downloadFileAsArrayBuffer(msg.arquivo_url, supabase, name)
-      if (!buffer) throw new Error("Falha ao baixar arquivo")
+      const downloaded = await downloadFileWithMetadata(msg.arquivo_url, supabase, name)
+      if (!downloaded) throw new Error("Falha ao baixar arquivo")
 
-      const blob = new Blob([buffer], {
-        type: msg.arquivo_tipo || "application/octet-stream",
+      const blob = new Blob([downloaded.buffer], {
+        type: downloaded.mimeType || msg.arquivo_tipo || "application/octet-stream",
       })
 
-      await saveFileWithPicker(blob, name)
+      const fileName = buildDownloadFileName({
+        preferredName: msg.arquivo_nome || name,
+        sourceFileName: downloaded.fileName,
+        sourceUrl: msg.arquivo_url,
+        mimeType: downloaded.mimeType || msg.arquivo_tipo,
+      })
+
+      await saveFileWithPicker(blob, fileName)
     } catch (error: unknown) {
       console.error("Erro ao baixar anexo:", error)
-      toast.error(getErrorMessage(error) || "Não foi possível baixar o anexo")
+      toast.error(getErrorMessage(error) || "NÃ£o foi possÃ­vel baixar o anexo")
     }
   }
 
@@ -635,11 +648,11 @@ export default function ChatPage() {
     const diffMs = Date.now() - new Date(date).getTime()
     const minutes = Math.floor(diffMs / 60000)
     if (minutes <= 2) return "online"
-    if (minutes < 60) return `há ${minutes} min`
+    if (minutes < 60) return `hÃ¡ ${minutes} min`
     const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `há ${hours}h`
+    if (hours < 24) return `hÃ¡ ${hours}h`
     const days = Math.floor(hours / 24)
-    return `há ${days}d`
+    return `hÃ¡ ${days}d`
   }
 
   const isRecent = (date?: string | null) => {
@@ -747,7 +760,7 @@ export default function ChatPage() {
 
                 {!loadingUsuarios && filteredUsuarios.length === 0 && (
                   <div className="px-4 py-3 text-xs text-muted-foreground">
-                    Nenhum usuário encontrado.
+                    Nenhum usuÃ¡rio encontrado.
                   </div>
                 )}
 
@@ -905,7 +918,7 @@ export default function ChatPage() {
                       </AvatarGroup>
                     </div>
                     <p className="text-xs text-muted-foreground truncate">
-                      {selectedUser.email || "Usuário interno"} ?{" "}
+                      {selectedUser.email || "UsuÃ¡rio interno"} ?{" "}
                       {formatRelative(userMeta[selectedUser.id]?.lastAt)}
                     </p>
                   </div>
@@ -937,7 +950,7 @@ export default function ChatPage() {
               <div className="px-4 py-4">
                 <h3 className="text-sm font-semibold">Selecione uma conversa</h3>
                 <p className="text-xs text-muted-foreground">
-                  Escolha um contato ? esquerda para começar.
+                  Escolha um contato ? esquerda para comeÃ§ar.
                 </p>
               </div>
             )}
@@ -975,7 +988,7 @@ export default function ChatPage() {
                     <div className="h-12 w-12 rounded-full bg-muted flex items-center justify-center">
                       <Search className="h-5 w-5" />
                     </div>
-                    <p className="mt-3 text-sm font-medium text-foreground">Selecione um usuário</p>
+                    <p className="mt-3 text-sm font-medium text-foreground">Selecione um usuÃ¡rio</p>
                     <p className="text-xs">Escolha um contato para iniciar a conversa.</p>
                   </div>
                 )}
@@ -986,7 +999,7 @@ export default function ChatPage() {
                       <Send className="h-5 w-5" />
                     </div>
                     <p className="mt-3 text-sm font-medium text-foreground">Nenhuma mensagem ainda</p>
-                    <p className="text-xs">Envie a primeira mensagem para começar.</p>
+                    <p className="text-xs">Envie a primeira mensagem para comeÃ§ar.</p>
                   </div>
                 )}
 
@@ -1091,7 +1104,7 @@ export default function ChatPage() {
                                           "hover:bg-muted/60 text-muted-foreground hover:text-foreground"
                                         )}
                                         onClick={(e) => e.stopPropagation()}
-                                        title="Opções"
+                                        title="OpÃ§Ãµes"
                                       >
                                         <MoreVertical className="h-4 w-4" />
                                       </Button>
@@ -1356,3 +1369,4 @@ export default function ChatPage() {
     </div>
   )
 }
+

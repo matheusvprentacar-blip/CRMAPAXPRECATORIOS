@@ -1,6 +1,6 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "@heroui/styles";
+@import "./theme.css";
+@config "../tailwind.config.js";
 
 :root {
   /* Premium Orange Palette - Light Mode */
@@ -59,6 +59,7 @@
   --route-shiny-shine: #fff6e9;
   --route-shiny-accent: #ff8a00;
   --route-shiny-spread: 120deg;
+  --font-weight-body: 450;
 }
 
 .dark {
@@ -114,6 +115,13 @@ body {
   background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-family: inherit;
+  font-weight: var(--font-weight-body);
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
+}
+
+:is(h1, h2, h3, h4, h5, h6, .title-font, .calc-title, [data-title-font="adam"], [data-shiny="title"]) {
+  font-family: var(--font-title), var(--font-sans), system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-synthesis: none;
 }
 
 @layer base {
@@ -128,59 +136,6 @@ body {
     background-color: hsl(24 10% 8%);
     background-color: hsl(var(--background));
   }
-  :root {
-    --background: 0 0% 100%;
-    --foreground: 0 0% 3.9%;
-    --card: 0 0% 100%;
-    --card-foreground: 0 0% 3.9%;
-    --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 3.9%;
-    --primary: 0 0% 9%;
-    --primary-foreground: 0 0% 98%;
-    --secondary: 0 0% 96.1%;
-    --secondary-foreground: 0 0% 9%;
-    --muted: 0 0% 96.1%;
-    --muted-foreground: 0 0% 45.1%;
-    --accent: 0 0% 96.1%;
-    --accent-foreground: 0 0% 9%;
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 89.8%;
-    --input: 0 0% 89.8%;
-    --ring: 0 0% 3.9%;
-    --chart-1: 12 76% 61%;
-    --chart-2: 173 58% 39%;
-    --chart-3: 197 37% 24%;
-    --chart-4: 43 74% 66%;
-    --chart-5: 27 87% 67%;
-    --radius: 0.5rem;
-  }
-  .dark {
-    --background: 0 0% 3.9%;
-    --foreground: 0 0% 98%;
-    --card: 0 0% 3.9%;
-    --card-foreground: 0 0% 98%;
-    --popover: 0 0% 3.9%;
-    --popover-foreground: 0 0% 98%;
-    --primary: 0 0% 98%;
-    --primary-foreground: 0 0% 9%;
-    --secondary: 0 0% 14.9%;
-    --secondary-foreground: 0 0% 98%;
-    --muted: 0 0% 14.9%;
-    --muted-foreground: 0 0% 63.9%;
-    --accent: 0 0% 14.9%;
-    --accent-foreground: 0 0% 98%;
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 0 0% 98%;
-    --border: 0 0% 14.9%;
-    --input: 0 0% 14.9%;
-    --ring: 0 0% 83.1%;
-    --chart-1: 220 70% 50%;
-    --chart-2: 160 60% 45%;
-    --chart-3: 30 80% 55%;
-    --chart-4: 280 65% 60%;
-    --chart-5: 340 75% 55%;
-  }
 }
 
 input,
@@ -188,6 +143,8 @@ textarea,
 select,
 button {
   font-family: inherit;
+  font-weight: inherit;
+  transition: background-color 0.4s ease, color 0.4s ease, border-color 0.4s ease;
 }
 
 code,
@@ -215,14 +172,14 @@ body.hide-global-watermark .global-watermark {
     border: 1px solid hsl(var(--border) / 0.6);
     background: hsl(var(--card) / 0.7);
     color: hsl(var(--card-foreground));
-    box-shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+    box-shadow: none;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
-    transition: box-shadow 0.2s ease, border-color 0.2s ease;
+    transition: border-color 0.2s ease;
   }
 
   .calc-card:hover {
-    box-shadow: 0 16px 32px rgba(15, 23, 42, 0.12);
+    box-shadow: none;
   }
 
   .calc-title {
@@ -376,9 +333,61 @@ main .route-shiny-important {
   }
 }
 
+@media (hover: hover) and (pointer: fine) {
+  .app-icon,
+  .lucide {
+    transition: transform 180ms ease, filter 180ms ease;
+    transform-origin: center;
+    will-change: transform;
+  }
+
+  .app-icon:hover,
+  .lucide:hover,
+  button:hover .app-icon,
+  button:hover .lucide,
+  a:hover .app-icon,
+  a:hover .lucide,
+  [role="button"]:hover .app-icon,
+  [role="button"]:hover .lucide {
+    transform: translateY(-1px) scale(1.08);
+    filter: drop-shadow(0 4px 8px hsl(var(--primary) / 0.25));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .app-icon,
+  .lucide {
+    transition: none;
+  }
+
+  .app-icon:hover,
+  .lucide:hover,
+  button:hover .app-icon,
+  button:hover .lucide,
+  a:hover .app-icon,
+  a:hover .lucide,
+  [role="button"]:hover .app-icon,
+  [role="button"]:hover .lucide {
+    transform: none;
+    filter: none;
+  }
+}
+
 @keyframes recalc-border-spin {
   to {
     transform: rotate(1turn);
+  }
+}
+
+@keyframes title-aurora-drift {
+  0% {
+    transform: translate3d(-6%, -5%, 0) scale(1);
+  }
+  50% {
+    transform: translate3d(7%, 4%, 0) scale(1.04);
+  }
+  100% {
+    transform: translate3d(-4%, 8%, 0) scale(1.02);
   }
 }
 
@@ -410,4 +419,426 @@ main .route-shiny-important {
 .recalc-shine-border:hover::before,
 .recalc-shine-border:focus-visible::before {
   opacity: 1;
+}
+
+@layer components {
+  .dashboard-revamp .dashboard-command-card,
+  .clients-revamp .clients-hero-card,
+  .escrituras-revamp .escrituras-hero-card,
+  .oficios-revamp .oficios-hero-card,
+  .certidoes-revamp .certidoes-hero-card,
+  .analise-revamp .analise-hero-card {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .dashboard-revamp .dashboard-command-card > *,
+  .clients-revamp .clients-hero-card > *,
+  .escrituras-revamp .escrituras-hero-card > *,
+  .oficios-revamp .oficios-hero-card > *,
+  .certidoes-revamp .certidoes-hero-card > *,
+  .analise-revamp .analise-hero-card > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .dashboard-revamp .dashboard-command-card::before,
+  .clients-revamp .clients-hero-card::before,
+  .escrituras-revamp .escrituras-hero-card::before,
+  .oficios-revamp .oficios-hero-card::before,
+  .certidoes-revamp .certidoes-hero-card::before,
+  .analise-revamp .analise-hero-card::before {
+    content: "";
+    position: absolute;
+    inset: -40% -14%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58% 46% at 18% 24%, rgb(230 181 132 / 0.34), transparent 68%),
+      radial-gradient(48% 40% at 50% 68%, rgb(249 107 6 / 0.3), transparent 70%),
+      radial-gradient(44% 36% at 84% 30%, rgb(255 159 26 / 0.26), transparent 74%);
+    filter: blur(24px) saturate(1.08);
+    opacity: 0.9;
+    animation: title-aurora-drift 16s ease-in-out infinite alternate;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .dashboard-revamp .dashboard-command-card::before,
+    .clients-revamp .clients-hero-card::before,
+    .escrituras-revamp .escrituras-hero-card::before,
+    .oficios-revamp .oficios-hero-card::before,
+    .certidoes-revamp .certidoes-hero-card::before,
+    .analise-revamp .analise-hero-card::before {
+      animation: none;
+    }
+  }
+
+  .dashboard-revamp .dashboard-command-card {
+    box-shadow: 0 34px 70px -48px hsl(var(--primary) / 0.5);
+  }
+
+  .dashboard-revamp .dashboard-metric-tile {
+    transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+  }
+
+  .dashboard-revamp .dashboard-metric-tile:hover {
+    transform: translateY(-2px);
+    border-color: hsl(var(--primary) / 0.35);
+    box-shadow: 0 22px 48px -36px hsl(var(--primary) / 0.55);
+  }
+
+  .dashboard-revamp .dashboard-tab-shell {
+    display: block;
+  }
+
+  .clients-revamp .clients-hero-card {
+    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+  }
+
+  .clients-revamp .clients-search-card {
+    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+  }
+
+  .clients-revamp .card-spotlight {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .clients-revamp .card-spotlight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .clients-revamp .card-spotlight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    background: radial-gradient(
+      260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      transparent 62%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .clients-revamp .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .escrituras-revamp .escrituras-hero-card {
+    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+  }
+
+  .escrituras-revamp .escrituras-search-card {
+    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+  }
+
+  .escrituras-revamp .card-spotlight {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .escrituras-revamp .card-spotlight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .escrituras-revamp .card-spotlight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    background: radial-gradient(
+      260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      transparent 62%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .escrituras-revamp .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .escrituras-revamp .escrituras-attach-btn {
+    border-color: rgb(249 115 22 / 0.58);
+    background: linear-gradient(135deg, rgb(249 115 22 / 0.26), rgb(251 146 60 / 0.16));
+    color: rgb(255 237 213);
+    box-shadow:
+      0 0 0 1px rgb(249 115 22 / 0.22),
+      0 0 24px -8px rgb(249 115 22 / 0.95),
+      inset 0 0 14px rgb(251 146 60 / 0.2);
+    transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+  }
+
+  .escrituras-revamp .escrituras-attach-btn:hover {
+    border-color: rgb(251 146 60 / 0.78);
+    box-shadow:
+      0 0 0 1px rgb(251 146 60 / 0.3),
+      0 0 34px -8px rgb(251 146 60 / 0.95),
+      inset 0 0 18px rgb(251 146 60 / 0.26);
+    transform: translateY(-1px);
+  }
+
+  .escrituras-revamp .escrituras-attach-btn:focus-visible {
+    box-shadow:
+      0 0 0 2px rgb(255 237 213 / 0.45),
+      0 0 0 4px rgb(249 115 22 / 0.45),
+      0 0 30px -6px rgb(249 115 22 / 0.95);
+  }
+
+  .oficios-revamp .oficios-hero-card {
+    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+  }
+
+  .oficios-revamp .oficios-search-card {
+    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+  }
+
+  .oficios-revamp .card-spotlight {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .oficios-revamp .card-spotlight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .oficios-revamp .card-spotlight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    background: radial-gradient(
+      260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      transparent 62%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .oficios-revamp .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .oficios-revamp .oficios-attach-btn {
+    border-color: rgb(249 115 22 / 0.58);
+    background: linear-gradient(135deg, rgb(249 115 22 / 0.26), rgb(251 146 60 / 0.16));
+    color: rgb(255 237 213);
+    box-shadow:
+      0 0 0 1px rgb(249 115 22 / 0.22),
+      0 0 24px -8px rgb(249 115 22 / 0.95),
+      inset 0 0 14px rgb(251 146 60 / 0.2);
+    transition: box-shadow 180ms ease, transform 180ms ease, border-color 180ms ease;
+  }
+
+  .oficios-revamp .oficios-attach-btn:hover {
+    border-color: rgb(251 146 60 / 0.78);
+    box-shadow:
+      0 0 0 1px rgb(251 146 60 / 0.3),
+      0 0 34px -8px rgb(251 146 60 / 0.95),
+      inset 0 0 18px rgb(251 146 60 / 0.26);
+    transform: translateY(-1px);
+  }
+
+  .oficios-revamp .oficios-attach-btn:focus-visible {
+    box-shadow:
+      0 0 0 2px rgb(255 237 213 / 0.45),
+      0 0 0 4px rgb(249 115 22 / 0.45),
+      0 0 30px -6px rgb(249 115 22 / 0.95);
+  }
+
+  .certidoes-revamp .certidoes-hero-card {
+    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+  }
+
+  .certidoes-revamp .certidoes-search-card {
+    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+  }
+
+  .certidoes-revamp .card-spotlight {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .certidoes-revamp .card-spotlight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .certidoes-revamp .card-spotlight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    background: radial-gradient(
+      260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      transparent 62%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .certidoes-revamp .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  .analise-revamp .analise-hero-card {
+    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+  }
+
+  .analise-revamp .analise-search-card {
+    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+  }
+
+  .analise-revamp .card-spotlight {
+    position: relative;
+    overflow: hidden;
+    isolation: isolate;
+  }
+
+  .analise-revamp .card-spotlight > * {
+    position: relative;
+    z-index: 1;
+  }
+
+  .analise-revamp .card-spotlight::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    z-index: 2;
+    opacity: 0;
+    transition: opacity 180ms ease;
+    background: radial-gradient(
+      260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
+      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      transparent 62%
+    );
+    mix-blend-mode: screen;
+  }
+
+  .analise-revamp .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  /* Light mode policy (system-wide): no gradient inside cards/KPIs/charts, stronger separation via shadow */
+  :where(html, :root):not(.dark):not([data-theme="dark"]) :is(
+    [data-slot="card"],
+    .card,
+    .dashboard-metric-tile,
+    [class*="metric-card"],
+    [class*="kpi-card"],
+    [class*="kpiCard"],
+    [class*="chart-card"],
+    [class*="chartCard"]
+  ):not(.keep-light-gradient):is([class*="bg-gradient"], [style*="linear-gradient"], [style*="radial-gradient"]) {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+    box-shadow: 0 18px 40px -28px rgb(15 23 42 / 0.22) !important;
+  }
+
+  :where(html, :root):not(.dark):not([data-theme="dark"])
+    :is(div, section, article, aside, li)[class*="rounded-"][class*="border"]:not(.keep-light-gradient):is(
+      [class*="bg-gradient"],
+      [style*="linear-gradient"],
+      [style*="radial-gradient"]
+    ) {
+    background-image: none !important;
+    background-color: var(--surface) !important;
+    box-shadow: 0 18px 40px -28px rgb(15 23 42 / 0.2) !important;
+  }
+
+  :where(html, :root):not(.dark):not([data-theme="dark"]) :is(
+    [data-slot="card"],
+    .card,
+    .dashboard-metric-tile,
+    [class*="metric-card"],
+    [class*="kpi-card"],
+    [class*="kpiCard"],
+    [class*="chart-card"],
+    [class*="chartCard"],
+    div[class*="rounded-"][class*="border"]:not(.keep-light-gradient),
+    section[class*="rounded-"][class*="border"]:not(.keep-light-gradient),
+    article[class*="rounded-"][class*="border"]:not(.keep-light-gradient),
+    aside[class*="rounded-"][class*="border"]:not(.keep-light-gradient),
+    li[class*="rounded-"][class*="border"]:not(.keep-light-gradient)
+  ) :is(
+      [class*="absolute"][class*="bg-gradient"],
+      [class*="absolute"][style*="linear-gradient"],
+      [class*="absolute"][style*="radial-gradient"],
+      [class*="pointer-events-none"][class*="absolute"] [class*="bg-gradient"],
+      [class*="pointer-events-none"][class*="absolute"] [style*="linear-gradient"],
+      [class*="pointer-events-none"][class*="absolute"] [style*="radial-gradient"]
+    ) {
+    display: none !important;
+  }
+
+  :where(html, :root):not(.dark):not([data-theme="dark"])
+    :is(
+      .dashboard-revamp .dashboard-command-card,
+      .clients-revamp .clients-hero-card,
+      .escrituras-revamp .escrituras-hero-card,
+      .oficios-revamp .oficios-hero-card,
+      .certidoes-revamp .certidoes-hero-card,
+      .analise-revamp .analise-hero-card
+    )::before {
+    opacity: 0 !important;
+    animation: none !important;
+  }
+
+  :is(.clients-revamp, .escrituras-revamp, .oficios-revamp, .certidoes-revamp, .analise-revamp) .card-spotlight:hover::after {
+    opacity: 0;
+  }
+
+  .dark :is(.clients-revamp, .escrituras-revamp, .oficios-revamp, .certidoes-revamp, .analise-revamp) .card-spotlight:hover::after,
+  [data-theme="dark"] :is(.clients-revamp, .escrituras-revamp, .oficios-revamp, .certidoes-revamp, .analise-revamp) .card-spotlight:hover::after {
+    opacity: 1;
+  }
+
+  @media (hover: none), (pointer: coarse) {
+    .clients-revamp .card-spotlight::after {
+      display: none;
+    }
+
+    .escrituras-revamp .card-spotlight::after {
+      display: none;
+    }
+
+    .oficios-revamp .card-spotlight::after {
+      display: none;
+    }
+
+    .certidoes-revamp .card-spotlight::after {
+      display: none;
+    }
+
+    .analise-revamp .card-spotlight::after {
+      display: none;
+    }
+  }
+}
+
+::view-transition-old(root), ::view-transition-new(root) {
+    animation: none;
+    mix-blend-mode: normal;
 }

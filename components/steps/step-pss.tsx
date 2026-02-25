@@ -2,13 +2,14 @@
 
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
+import { CurrencyInput } from "@/components/ui/currency-input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
 import { Description, Label as FieldsetLabel } from "@/components/fieldset"
 import { Switch, SwitchField } from "@/components/switch"
-import { BadgePercent, Calculator, CircleSlash, ShieldCheck } from "lucide-react"
+import { BadgePercent, Calculator, CircleSlash, ShieldCheck } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 
 interface StepPSSProps {
@@ -168,120 +169,117 @@ export function StepPSS({ dados, setDados, onCompletar, voltar, resultadosEtapas
 
       <CardContent>
         <div className="space-y-6">
-        <div className="grid gap-4 md:grid-cols-3">
-          <KpiCard
-            label="PSS do Ofício"
-            value={formatarMoeda(pssOficio)}
-            helper="Base informada"
-            tone="info"
-            icon={<BadgePercent className="h-4 w-4" />}
-          />
-          <KpiCard
-            label="Total PSS"
-            value={formatarMoeda(totalExibido)}
-            helper={isManual ? "Manual" : "Automático"}
-            tone={isento ? "neutral" : "primary"}
-            icon={<Calculator className="h-4 w-4" />}
-          />
-          <KpiCard
-            label="Status"
-            value={isento ? "Isento" : isManual ? "Manual" : "Automático"}
-            helper={isento ? "Sem desconto" : "Com desconto"}
-            tone={isento ? "warning" : "success"}
-            icon={<CircleSlash className="h-4 w-4" />}
-          />
-        </div>
+          <div className="grid gap-4 md:grid-cols-3">
+            <KpiCard
+              label="PSS do Ofício"
+              value={formatarMoeda(pssOficio)}
+              helper="Base informada"
+              tone="info"
+              icon={<BadgePercent className="h-4 w-4" />}
+            />
+            <KpiCard
+              label="Total PSS"
+              value={formatarMoeda(totalExibido)}
+              helper={isManual ? "Manual" : "Automático"}
+              tone={isento ? "neutral" : "primary"}
+              icon={<Calculator className="h-4 w-4" />}
+            />
+            <KpiCard
+              label="Status"
+              value={isento ? "Isento" : isManual ? "Manual" : "Automático"}
+              helper={isento ? "Sem desconto" : "Com desconto"}
+              tone={isento ? "warning" : "success"}
+              icon={<CircleSlash className="h-4 w-4" />}
+            />
+          </div>
 
-        {!isento ? (
-          <div className="space-y-6">
-            <SectionPanel
-              title="Base e total do PSS"
-              description="Informe o valor do ofício ou utilize o cálculo automático."
-              tone="primary"
-            >
-              <div className="grid grid-cols-12 gap-6">
-                <div className="col-span-12 space-y-2 md:col-span-8">
-                  <Label className="text-sm text-muted-foreground">Valor do PSS no Ofício (R$)</Label>
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder="0,00"
-                    value={pssOficio}
-                    onChange={(e) => setPssOficio(Number.parseFloat(e.target.value) || 0)}
-                    className="rounded-md text-base"
-                  />
-                  <p className="text-xs text-muted-foreground">Base informada no ofício para cálculo de PSS.</p>
-                </div>
+          {!isento ? (
+            <div className="space-y-6">
+              <SectionPanel
+                title="Base e total do PSS"
+                description="Informe o valor do ofício ou utilize o cálculo automático."
+                tone="primary"
+              >
+                <div className="grid grid-cols-12 gap-6">
+                  <div className="col-span-12 space-y-2 md:col-span-8">
+                    <Label className="text-sm text-muted-foreground">Valor do PSS no Ofício (R$)</Label>
+                    <CurrencyInput
+                      placeholder="R$ 0,00"
+                      value={pssOficio}
+                      onValueChange={(value) => setPssOficio(value || 0)}
+                      className="rounded-md text-base"
+                    />
+                    <p className="text-xs text-muted-foreground">Base informada no ofício para cálculo de PSS.</p>
+                  </div>
 
-                <div className="col-span-12 rounded-2xl border border-border/60 bg-muted/20 p-4 md:col-span-4">
-                  <p className="text-sm text-muted-foreground">Total PSS atualizado</p>
-                  <p className="mt-2 text-2xl font-semibold tabular-nums value-total">{formatarMoeda(totalExibido)}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {isManual ? "Valor definido manualmente." : "Cálculo automático com índices oficiais."}
-                  </p>
+                  <div className="col-span-12 rounded-2xl border border-border/60 bg-muted/20 p-4 md:col-span-4">
+                    <p className="text-sm text-muted-foreground">Total PSS atualizado</p>
+                    <p className="mt-2 text-2xl font-semibold tabular-nums value-total">{formatarMoeda(totalExibido)}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {isManual ? "Valor definido manualmente." : "Cálculo automático com índices oficiais."}
+                    </p>
+                  </div>
                 </div>
+              </SectionPanel>
+
+              {!isManual ? (
+                <SectionPanel
+                  title="Memória de cálculo (automático)"
+                  description="Resumo dos fatores aplicados ao valor do ofício."
+                  tone="info"
+                >
+                  <div className="space-y-3">
+                    <div className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">1. Correção (IPCA-E)</p>
+                        <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorIPCA.toFixed(6)}</p>
+                      </div>
+                      <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssIPCA)}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">2. SELIC (Proporcional)</p>
+                        <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorSelic.toFixed(6)}</p>
+                      </div>
+                      <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssSelic)}</span>
+                    </div>
+
+                    <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
+                      <div>
+                        <p className="text-xs text-muted-foreground">3. EC 136/2025 (IPCA 2025)</p>
+                        <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorIpca2025.toFixed(6)}</p>
+                      </div>
+                      <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssIpca2025)}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/20 p-3">
+                      <span className="text-sm text-muted-foreground">Total PSS atualizado</span>
+                      <span className="text-lg font-semibold tabular-nums value-total">{formatarMoeda(pssTotalAuto)}</span>
+                    </div>
+                  </div>
+                </SectionPanel>
+              ) : (
+                <SectionPanel title="Valor PSS Manual" description="Você está definindo o valor final manualmente." tone="warning">
+                  <div className="space-y-2">
+                    <Label className="text-sm font-semibold text-foreground">Valor PSS Manual (Total)</Label>
+                    <CurrencyInput
+                      className="rounded-md text-base"
+                      value={pssManualValor}
+                      onValueChange={(value) => setPssManualValor(value || 0)}
+                    />
+                  </div>
+                </SectionPanel>
+              )}
+            </div>
+          ) : (
+            <SectionPanel title="Isenção" description="Sem desconto de PSS aplicado." tone="warning">
+              <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-8 text-center text-muted-foreground">
+                <p className="text-sm font-semibold">Isento de PSS</p>
+                <p className="text-xs">Valor final: R$ 0,00.</p>
               </div>
             </SectionPanel>
-
-            {!isManual ? (
-              <SectionPanel
-                title="Memória de cálculo (automático)"
-                description="Resumo dos fatores aplicados ao valor do ofício."
-                tone="info"
-              >
-                <div className="space-y-3">
-                  <div className="flex flex-col gap-2 rounded-2xl border border-primary/20 bg-primary/5 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">1. Correção (IPCA-E)</p>
-                      <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorIPCA.toFixed(6)}</p>
-                    </div>
-                    <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssIPCA)}</span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">2. SELIC (Proporcional)</p>
-                      <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorSelic.toFixed(6)}</p>
-                    </div>
-                    <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssSelic)}</span>
-                  </div>
-
-                  <div className="flex flex-col gap-2 rounded-2xl border border-primary/40 bg-primary/15 p-3 text-sm sm:flex-row sm:items-center sm:justify-between">
-                    <div>
-                      <p className="text-xs text-muted-foreground">3. EC 136/2025 (IPCA 2025)</p>
-                      <p className="text-xs text-muted-foreground">{formatarMoeda(pssOficio)} x {fatorIpca2025.toFixed(6)}</p>
-                    </div>
-                    <span className="font-semibold tabular-nums value-main">{formatarMoeda(pssIpca2025)}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between rounded-2xl border border-border/60 bg-muted/20 p-3">
-                    <span className="text-sm text-muted-foreground">Total PSS atualizado</span>
-                    <span className="text-lg font-semibold tabular-nums value-total">{formatarMoeda(pssTotalAuto)}</span>
-                  </div>
-                </div>
-              </SectionPanel>
-            ) : (
-              <SectionPanel title="Valor PSS Manual" description="Você está definindo o valor final manualmente." tone="warning">
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold text-foreground">Valor PSS Manual (Total)</Label>
-                  <Input
-                    type="number"
-                    className="rounded-md text-base"
-                    value={pssManualValor}
-                    onChange={(e) => setPssManualValor(Number.parseFloat(e.target.value) || 0)}
-                  />
-                </div>
-              </SectionPanel>
-            )}
-          </div>
-        ) : (
-          <SectionPanel title="Isenção" description="Sem desconto de PSS aplicado." tone="warning">
-            <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-border/60 bg-muted/20 p-8 text-center text-muted-foreground">
-              <p className="text-sm font-semibold">Isento de PSS</p>
-              <p className="text-xs">Valor final: R$ 0,00.</p>
-            </div>
-          </SectionPanel>
-        )}
+          )}
 
         </div>
         <StepFooter onBack={voltar} onNext={handleAvancar} />

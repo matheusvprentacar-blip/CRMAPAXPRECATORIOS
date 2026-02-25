@@ -115,8 +115,8 @@ function extractDateFromExtenso(rawText: string): string | undefined {
 
 function extractDateByLabel(rawText: string): string | undefined {
   const patterns = [
-    /\btrans\.?\s*requisi[cÃƒÂ§][aÃƒÂ£]o\s*:\s*([^\n]+)/i,
-    /\bdata\s+de\s+expedi[cÃƒÂ§][aÃƒÂ£]o\s*:\s*([^\n]+)/i,
+    /\btrans\.?\s*requisi[cç][aã]o\s*:\s*([^\n]+)/i,
+    /\bdata\s+de\s+expedi[cç][aã]o\s*:\s*([^\n]+)/i,
     /\bexpedido\s+em\s*:\s*([^\n]+)/i,
     /\bmambore,\s*([^\n]+)/i,
   ]
@@ -140,7 +140,7 @@ function extractLabeledCnj(rawText: string, labels: RegExp[]): string | undefine
 }
 
 function hasTipoPrecatorio(rawText: string): boolean {
-  return /\btipo\s*:\s*precat[oÃƒÂ³]rio\b/i.test(rawText)
+  return /\btipo\s*:\s*precat[oó]rio\b/i.test(rawText)
 }
 
 function isMainBeneficiaryContext(rawText: string): boolean {
@@ -460,7 +460,7 @@ function extractStructuredCandidates(rawText: string | undefined): CandidateFiel
   const credorPatterns = [
     /\bnome\s+do\s+requerente\s*-\s*cpf\/cnpj\s*:\s*([^\n]+)/i,
     /\brequerente\s*:\s*([^\n]+)/i,
-    /\bbenefici[aÃƒÂ¡]rio\s*:\s*([^\n]+)/i,
+    /\bbenefici[aá]rio\s*:\s*([^\n]+)/i,
     /\bcredor(?:\(a\))?\s*:\s*([^\n]+)/i,
   ]
 
@@ -503,16 +503,16 @@ function extractStructuredCandidates(rawText: string | undefined): CandidateFiel
   result.credor_cpf_cnpj = normalizeCpfCnpj(cpfByLabel)
 
   result.numero_processo = extractLabeledCnj(normalizedText, [
-    /\bprocesso\s+origin[ÃƒÂ¡a]rio\s*:\s*([^\n]+)/i,
-    /\borigin[ÃƒÂ¡a]rio\s*:\s*([^\n]+)/i,
-    /\bn[uÃƒÂº]mero\s+da\s+a[cÃƒÂ§][aÃƒÂ£]o\s*:\s*([^\n]+)/i,
-    /\ba[cÃƒÂ§][aÃƒÂ£]o\s+origin[ÃƒÂ¡a]ria\s*:\s*([^\n]+)/i,
-    /\bn[uÃƒÂº]mero\s+do\s+processo\s+de\s+conhecimento\s*\/\s*execu[cÃƒÂ§][aÃƒÂ£]o\s*:\s*([^\n]+)/i,
+    /\bprocesso\s+origin[áa]rio\s*:\s*([^\n]+)/i,
+    /\borigin[áa]rio\s*:\s*([^\n]+)/i,
+    /\bn[uú]mero\s+da\s+a[cç][aã]o\s*:\s*([^\n]+)/i,
+    /\ba[cç][aã]o\s+origin[áa]ria\s*:\s*([^\n]+)/i,
+    /\bn[uú]mero\s+do\s+processo\s+de\s+conhecimento\s*\/\s*execu[cç][aã]o\s*:\s*([^\n]+)/i,
   ])
 
   result.numero_precatorio = extractLabeledCnj(normalizedText, [
     /\bprojudi\s*-\s*processo\s*:\s*([^\n]+)/i,
-    /\bprecat[oÃƒÂ³]rio\s*:\s*([^\n]+)/i,
+    /\bprecat[oó]rio\s*:\s*([^\n]+)/i,
   ])
 
   if (!result.numero_precatorio && hasTipoPrecatorio(normalizedText)) {
@@ -520,8 +520,8 @@ function extractStructuredCandidates(rawText: string | undefined): CandidateFiel
   }
 
   const oficioByLabel =
-    normalizedText.match(/\bof[iÃƒÂ­]cio(?:\s+requisit[oÃƒÂ³]rio(?:\s+judicial)?)?\s*[:nÃ‚ÂºÃ‚Â°\.\-\s]*([A-Z0-9.\-\/]{4,})/i)?.[1] ||
-    normalizedText.match(/\brequisi[cÃƒÂ§][aÃƒÂ£]o\s*:\s*([A-Z0-9.\-\/]{4,})/i)?.[1]
+    normalizedText.match(/\bof[ií]cio(?:\s+requisit[oó]rio(?:\s+judicial)?)?\s*[:nº°\.\-\s]*([A-Z0-9.\-\/]{4,})/i)?.[1] ||
+    normalizedText.match(/\brequisi[cç][aã]o\s*:\s*([A-Z0-9.\-\/]{4,})/i)?.[1]
   result.numero_oficio = cleanText(oficioByLabel)
 
   return result
@@ -580,7 +580,7 @@ function pickBestMoney(...values: Array<number | undefined>): number | undefined
   const valid = values.filter((value): value is number => typeof value === "number" && Number.isFinite(value) && value > 0)
   if (valid.length === 0) return undefined
   const preferred = values.find((value): value is number => typeof value === "number" && value >= 1000)
-  return preferred ?? valid[0]
+  return preferred || valid[0]
 }
 
 function mergeCandidates(

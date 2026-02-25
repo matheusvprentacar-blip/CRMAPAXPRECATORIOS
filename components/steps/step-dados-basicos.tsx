@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { CurrencyInput } from "@/components/ui/currency-input"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
-import { Banknote, CalendarDays, Percent } from "lucide-react"
+import { Banknote, CalendarDays, Percent } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 
 interface StepDadosBasicosProps {
@@ -158,6 +158,55 @@ export function StepDadosBasicos({ dados, setDados, onCompletar, voltar }: StepD
                 <CurrencyInput
                   value={dados.multa || 0}
                   onChange={(value) => handleChange("multa", value)}
+                />
+              </div>
+            </div>
+          </SectionPanel>
+
+          <SectionPanel
+            title="Informações orçamentárias"
+            description="Campos de planejamento do pagamento para cálculo e acompanhamento."
+            tone="info"
+          >
+            <div className="grid grid-cols-12 gap-6">
+              <div className="col-span-12 space-y-2 md:col-span-4">
+                <Label className="text-sm text-muted-foreground">LOA (Lei Orçamentária Anual)</Label>
+                <Input
+                  value={dados.loa || ""}
+                  onChange={(e) => handleChange("loa", e.target.value)}
+                  placeholder="Ex: LOA 2027"
+                />
+              </div>
+              <div className="col-span-12 space-y-2 md:col-span-4">
+                <Label className="text-sm text-muted-foreground">Ano Orçamentário</Label>
+                <Input
+                  type="number"
+                  min={1900}
+                  max={2999}
+                  step={1}
+                  inputMode="numeric"
+                  value={
+                    dados.ano_orcamentario === null ||
+                    dados.ano_orcamentario === undefined ||
+                    dados.ano_orcamentario === ""
+                      ? ""
+                      : String(dados.ano_orcamentario)
+                  }
+                  onChange={(e) => handleChange("ano_orcamentario", e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                  placeholder="Ex: 2027"
+                />
+              </div>
+              <div className="col-span-12 space-y-2 md:col-span-4">
+                <Label className="text-sm text-muted-foreground">Previsão de Pagamento (Ano)</Label>
+                <Input
+                  type="number"
+                  min={1900}
+                  max={2999}
+                  step={1}
+                  inputMode="numeric"
+                  value={dados.previsao_pagamento || ""}
+                  onChange={(e) => handleChange("previsao_pagamento", e.target.value.replace(/[^\d]/g, "").slice(0, 4))}
+                  placeholder="Ex: 2028"
                 />
               </div>
             </div>

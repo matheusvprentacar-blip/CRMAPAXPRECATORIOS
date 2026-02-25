@@ -1,7 +1,8 @@
-"use client"
+﻿"use client"
 /* eslint-disable */
 
 import { useEffect, useMemo, useState } from "react"
+import CountUp from "react-countup"
 import {
   RefreshCw,
   Layers,
@@ -18,7 +19,7 @@ import {
   LayoutGrid,
   ClipboardList,
   Gauge,
-} from "lucide-react"
+} from "@/components/icons"
 
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
@@ -30,6 +31,7 @@ import { PerformanceMetrics } from "@/components/dashboard/performance-metrics"
 import { OperatorDistribution } from "@/components/dashboard/operator-distribution"
 import { CriticalPrecatorios } from "@/components/dashboard/critical-precatorios"
 import { MetricCard } from "@/components/dashboard/metric-card"
+import { PremiumDonutCard } from "@/components/charts/PremiumDonutCard"
 
 import {
   Button,
@@ -38,8 +40,6 @@ import {
   CardBody,
   Chip,
   Progress,
-  Select,
-  SelectItem,
   Divider,
   Tabs,
   Tab,
@@ -50,11 +50,13 @@ import {
   TableBody,
   TableRow,
   TableCell,
-} from "@heroui/react"
+} from "@/lib/heroui/compat"
+import { Label, ListBox, Select } from "@heroui/react"
 
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts"
 import { formatCurrency, formatPercent } from "@/lib/utils/currency"
 import { KANBAN_COLUMNS } from "@/app/(dashboard)/kanban/columns"
+import { useInViewOnce } from "@/lib/hooks/use-in-view-once"
 
 import type {
   BottleneckItem,
@@ -186,6 +188,27 @@ type Chart3DCardProps = {
   height?: number
 }
 
+type AnimatedNumberConfig = {
+  end: number
+  decimals?: number
+  prefix?: string
+  suffix?: string
+  duration?: number
+  separator?: string
+  decimal?: string
+}
+
+type DashboardMetricTileProps = {
+  title: string
+  value: string
+  subtitle?: string
+  icon: any
+  badgeLabel?: string
+  badgeAnimatedNumber?: AnimatedNumberConfig
+  badgeTone?: "default" | "success" | "warning" | "danger" | "primary"
+  animatedNumber?: AnimatedNumberConfig
+}
+
 const DEFAULT_KPIS: DashboardKpis = {
   periodo: { inicio: null, fim: null },
   resumo: {
@@ -256,6 +279,12 @@ const DEFAULT_PROPOSTA_COMPILADA: PropostaCompilada = {
   maiorProposta: 0,
   quantidadeComProposta: 0,
 }
+const CURRENCY_PREFIX = "R$\u00A0"
+const COUNTUP_SCROLL_PROPS = {
+  enableScrollSpy: true,
+  scrollSpyOnce: true,
+  scrollSpyDelay: 120,
+} as const
 const CHART_PALETTE = [
   "hsl(var(--chart-1))",
   "hsl(var(--chart-2))",
@@ -267,10 +296,10 @@ const CHART_PALETTE = [
 ]
 
 const PERIOD_OPTIONS: Array<{ value: PeriodKey; label: string; days: number | null }> = [
-  { value: "30d", label: "Òšltimos 30 dias", days: 30 },
-  { value: "90d", label: "Òšltimos 90 dias", days: 90 },
-  { value: "180d", label: "Òšltimos 6 meses", days: 180 },
-  { value: "365d", label: "Òšltimos 12 meses", days: 365 },
+  { value: "30d", label: "Últimos 30 dias", days: 30 },
+  { value: "90d", label: "Últimos 90 dias", days: 90 },
+  { value: "180d", label: "Últimos 6 meses", days: 180 },
+  { value: "365d", label: "Últimos 12 meses", days: 365 },
   { value: "all", label: "Todo o período", days: null },
 ]
 
@@ -399,10 +428,10 @@ function GlassCard(props: any) {
     <Card
       {...props}
       className={[
-        "border border-border bg-background/70 backdrop-blur-xl dark:border-border dark:bg-muted",
+        "rounded-[1.35rem] border border-border/70 bg-background/44 backdrop-blur-xl shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] dark:border-border/70 dark:bg-muted/48",
         props?.className || "",
       ].join(" ")}
-      shadow="sm"
+      shadow="none"
       radius="lg"
     />
   )
@@ -480,6 +509,7 @@ function Chart3DCard({
   emptyLabel = "Sem dados disponíveis",
   height = 360,
 }: Chart3DCardProps) {
+  const { ref: chartRef, hasEntered: canAnimate } = useInViewOnce<HTMLDivElement>({ threshold: 0.25 })
   const isCurrency = valueFormatter(1).includes("R$")
   const compactFormatter = (value: any) => {
     const numeric = Number(value || 0)
@@ -500,11 +530,13 @@ function Chart3DCard({
     color: CHART_PALETTE[index % CHART_PALETTE.length],
   }))
 
-  const chartHeight = Math.max(320, Math.min(620, rows.length * 48))
-  const yAxisWidth = Math.min(320, Math.max(132, Math.max(...chartData.map((item) => item.name.length), 0) * 7))
-  const labelSample = chartData.map((item) => compactFormatter(item.value))
-  const rightMargin = Math.min(220, Math.max(88, Math.max(...labelSample.map((v) => String(v).length), 0) * 7))
+  const chartHeight = Math.max(320, Math.min(560, 280 + rows.length * 18))
+  const maxLabelLength = Math.max(...chartData.map((item) => item.name.length), 0)
+  const hasLongLabels = maxLabelLength > 16
+  const xTickHeight = hasLongLabels ? 70 : 44
   const chartKey = `${title}-${chartData.length}-${chartData.map((d) => d.value).join("_")}`
+  const chartInstanceKey = `${chartKey}-${canAnimate ? "animate" : "idle"}`
+  const formatXAxisLabel = (label: string) => (label.length > 28 ? `${label.slice(0, 28)}…` : label)
 
   function KanbanBarTooltip({
     active,
@@ -518,7 +550,7 @@ function Chart3DCard({
     const value = Number(item?.value || payload[0]?.value || 0)
 
     return (
-      <div className="rounded-xl border border-border bg-background/95 p-3 text-sm shadow-2xl dark:border-border dark:bg-muted">
+      <div className="rounded-xl border border-border bg-background/48 p-3 text-sm shadow-[0_24px_50px_-36px_hsl(var(--primary)/0.45)] dark:border-border dark:bg-muted/44">
         <p className="font-semibold text-muted-foreground dark:text-white/90">{item?.name || "Item"}</p>
         <p className="mt-1 font-mono text-base tabular-nums text-muted-foreground dark:text-white/90">{valueFormatter(value)}</p>
       </div>
@@ -535,17 +567,35 @@ function Chart3DCard({
         {rows.length === 0 ? (
           <div className="py-10 text-center text-sm font-medium text-muted-foreground dark:text-muted-foreground">{emptyLabel}</div>
         ) : (
-          <div className="w-full" style={{ height: Math.max(chartHeight, height) }}>
+          <div ref={chartRef} className="w-full" style={{ height: Math.max(chartHeight, height) }}>
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart key={chartKey} data={chartData} layout="vertical" margin={{ top: 12, right: rightMargin, bottom: 12, left: 12 }}>
-                <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                <XAxis type="number" tickLine={false} axisLine={false} tickFormatter={compactFormatter} tick={{ fontSize: 12 }} />
-                <YAxis type="category" dataKey="name" width={yAxisWidth} tickLine={false} axisLine={false} tick={{ fontSize: 13 }} />
+              <BarChart key={chartInstanceKey} data={chartData} margin={{ top: 12, right: 12, bottom: xTickHeight, left: 8 }}>
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  type="category"
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  interval={0}
+                  height={xTickHeight}
+                  angle={hasLongLabels ? -22 : 0}
+                  textAnchor={hasLongLabels ? "end" : "middle"}
+                  tickFormatter={formatXAxisLabel}
+                  tick={{ fontSize: 12 }}
+                />
+                <YAxis
+                  type="number"
+                  tickLine={false}
+                  axisLine={false}
+                  width={86}
+                  tickFormatter={compactFormatter}
+                  tick={{ fontSize: 12 }}
+                />
                 <Tooltip cursor={{ fill: "hsl(var(--muted) / 0.35)" }} content={<KanbanBarTooltip />} />
-                <Bar dataKey="value" radius={[0, 10, 10, 0]}>
+                <Bar dataKey="value" radius={[10, 10, 0, 0]} maxBarSize={56} isAnimationActive={canAnimate} animationDuration={900} animationEasing="ease-out">
                   <LabelList
                     dataKey="value"
-                    position="right"
+                    position="top"
                     className="fill-foreground text-xs font-semibold"
                     formatter={compactFormatter}
                   />
@@ -568,27 +618,70 @@ function DashboardMetricTile({
   subtitle,
   icon: Icon,
   badgeLabel,
+  badgeAnimatedNumber,
   badgeTone = "default",
-}: any) {
+  animatedNumber,
+}: DashboardMetricTileProps) {
+  const renderValue = () => {
+    if (!animatedNumber || !Number.isFinite(animatedNumber.end)) return value
+
+    return (
+      <CountUp
+        end={animatedNumber.end}
+        duration={animatedNumber.duration ?? 0.9}
+        separator={animatedNumber.separator ?? "."}
+        decimal={animatedNumber.decimal ?? ","}
+        decimals={animatedNumber.decimals ?? (Number.isInteger(animatedNumber.end) ? 0 : 2)}
+        prefix={animatedNumber.prefix}
+        suffix={animatedNumber.suffix}
+        {...COUNTUP_SCROLL_PROPS}
+      />
+    )
+  }
+
+  const renderBadge = () => {
+    if (!badgeAnimatedNumber || !Number.isFinite(badgeAnimatedNumber.end)) return badgeLabel
+
+    return (
+      <CountUp
+        end={badgeAnimatedNumber.end}
+        duration={badgeAnimatedNumber.duration ?? 0.9}
+        separator={badgeAnimatedNumber.separator ?? "."}
+        decimal={badgeAnimatedNumber.decimal ?? ","}
+        decimals={badgeAnimatedNumber.decimals ?? (Number.isInteger(badgeAnimatedNumber.end) ? 0 : 2)}
+        prefix={badgeAnimatedNumber.prefix}
+        suffix={badgeAnimatedNumber.suffix}
+        {...COUNTUP_SCROLL_PROPS}
+      />
+    )
+  }
+
   return (
-    <GlassCard className="relative overflow-hidden">
-      <div className="pointer-events-none absolute inset-0 opacity-[0.12] dark:opacity-[0.10]">
-        <div className="absolute -right-10 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-primary/40 to-transparent blur-2xl" />
-        <div className="absolute -left-10 -bottom-10 h-32 w-32 rounded-full bg-gradient-to-br from-foreground/15 to-transparent blur-2xl" />
+    <GlassCard
+      className="dashboard-metric-tile relative overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14"
+      style={{
+        backgroundImage:
+          "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 56%, hsl(var(--primary) / 0.24) 100%)",
+      }}
+    >
+      <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
+        <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-chart-4/34 to-transparent blur-3xl" />
+        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
       </div>
 
       <CardBody className="relative p-5 sm:p-6">
         <div className="flex items-start justify-between gap-3">
-          <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-muted text-muted-foreground dark:bg-muted dark:text-white/90">
+          <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
           </div>
-          {badgeLabel ? <ToneChip tone={badgeTone}>{badgeLabel}</ToneChip> : null}
+          {badgeLabel ? <ToneChip tone={badgeTone}>{renderBadge()}</ToneChip> : null}
         </div>
 
         <div className="mt-4 space-y-1">
           <div className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{title}</div>
-          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.05rem,2.1vw,1.8rem)] font-bold tracking-tight text-primary">
-            {value}
+          <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.05rem,2.1vw,1.8rem)] font-semibold tracking-tight text-primary">
+            {renderValue()}
           </div>
           {subtitle ? <div className="text-xs text-muted-foreground dark:text-muted-foreground">{subtitle}</div> : null}
         </div>
@@ -967,19 +1060,8 @@ export default function DashboardPage() {
   // ----- loading (melhor visual) -----
   if (loading) {
     return (
-      <div className="relative min-h-[calc(100vh-4rem)]">
-        <div className="absolute inset-0 -z-10 bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-black" />
-        <div className="mx-auto flex max-w-7xl items-center justify-center px-4 py-16">
-          <GlassCard className="w-full max-w-md">
-            <CardBody className="py-10">
-              <div className="flex flex-col items-center gap-3">
-                <Spinner size="lg" />
-                <div className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">Carregando dashboard?</div>
-                <div className="text-xs text-muted-foreground dark:text-muted-foreground">Preparando KPIs, gráficos e métricas.</div>
-              </div>
-            </CardBody>
-          </GlassCard>
-        </div>
+      <div className="flex min-h-[420px] items-center justify-center">
+        <Spinner size="lg" />
       </div>
     )
   }
@@ -990,10 +1072,7 @@ export default function DashboardPage() {
     performance: DEFAULT_PERFORMANCE,
     operators: DEFAULT_OPERATORS,
     critical: DEFAULT_CRITICAL,
-    financial: {
-      totalPrincipal: kpis.resumo.total_principal,
-      totalAtualizado: kpis.resumo.total_atualizado,
-    },
+    totalProcessos: 0,
   }
 
   const financialData = {
@@ -1015,8 +1094,8 @@ export default function DashboardPage() {
   const financeiroConsolidadoRows: SimpleTableRow[] = [
     { label: "Total valor principal", value: kpis.resumo.total_principal },
     { label: "Total valor atualizado", value: kpis.resumo.total_atualizado },
-    { label: "Saldo líquido", value: kpis.resumo.total_saldo_liquido },
-    { label: "Honorários total", value: kpis.financeiro.honorarios_total },
+    { label: "Saldo liquido", value: kpis.resumo.total_saldo_liquido },
+    { label: "Honorarios total", value: kpis.financeiro.honorarios_total },
     { label: "IRPF total", value: kpis.financeiro.irpf_total },
     { label: "Adiantamento total", value: kpis.financeiro.adiantamento_total },
     { label: "PSS total", value: kpis.financeiro.pss_total },
@@ -1034,85 +1113,164 @@ export default function DashboardPage() {
 
   const slaHealthyPercent = slaBase > 0 ? ((kpis.sla.no_prazo + kpis.sla.concluido) / slaBase) * 100 : 0
   const monthlyTargetPercent = Math.round((docsPercent + certPercent + slaHealthyPercent) / 3)
-
-  const periodSelectedKeys = new Set([period])
-
   return (
-    <div className="relative min-h-[calc(100vh-4rem)]">
-      {/* background premium */}
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-black" />
-      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/20 via-sky-200/10 to-emerald-200/10 blur-3xl dark:from-primary/15 dark:via-sky-400/5 dark:to-emerald-400/5" />
+    <div className="dashboard-revamp relative min-h-[calc(100vh-4rem)] overflow-hidden lg:-m-6">
+      <div className="absolute inset-0 -z-20 bg-[hsl(var(--background))] dark:bg-black" />
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-        {/* header */}
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <div className="inline-flex h-9 w-9 items-center justify-center rounded-2xl bg-primary/10 text-primary">
-                <LayoutGrid className="h-5 w-5" />
+      <div className="relative z-10 w-full space-y-6 px-4 py-6 sm:px-6 lg:px-6">
+        <GlassCard className="dashboard-command-card relative overflow-hidden border-primary/22 bg-content1 shadow-[0_26px_58px_-42px_hsl(222_35%_22%/0.26)] dark:bg-muted/48 dark:shadow-[0_28px_60px_-42px_rgba(0,0,0,0.42)]">
+          <CardBody className="relative p-5 sm:p-6">
+            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+              <div className="space-y-1.5">
+                <div className="flex items-center gap-2.5">
+                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
+                    <LayoutGrid className="h-5 w-5" />
+                  </div>
+                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
+                    Dashboard estratégico
+                  </h1>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {isAdmin ? "Visao consolidada da operacao e da carteira." : `Seu desempenho operacional, ${profile?.nome || "usuario"}.`}
+                </p>
+                {lastUpdated ? (
+                  <div className="text-xs text-muted-foreground">
+                    Atualizado em {new Date(lastUpdated).toLocaleString("pt-BR")}
+                  </div>
+                ) : null}
               </div>
-              <h1 className="text-2xl font-bold tracking-tight text-muted-foreground dark:text-white/90 sm:text-3xl">
-                Dashboard estratégico
-              </h1>
+
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Select
+                  aria-label="Período do dashboard"
+                  selectedKey={period}
+                  onSelectionChange={(key) => {
+                    if (key) setPeriod(String(key) as PeriodKey)
+                  }}
+                  className="w-[240px]"
+                >
+                  <Label className="sr-only">Período</Label>
+                  <Select.Trigger className="h-10 rounded-xl border border-border bg-card text-foreground shadow-[0_10px_22px_-18px_hsl(var(--primary)/0.38)] dark:border-border dark:bg-card dark:text-foreground">
+                    <Clock className="h-4 w-4 text-muted-foreground" />
+                    <Select.Value />
+                    <Select.Indicator className="text-foreground/70 hover:text-foreground" />
+                  </Select.Trigger>
+                  <Select.Popover className="z-[120] rounded-xl border border-border !bg-card text-foreground shadow-[0_26px_56px_-38px_hsl(var(--primary)/0.52)] backdrop-blur-none dark:border-border dark:!bg-card dark:text-foreground">
+                    <ListBox className="!bg-card backdrop-blur-none">
+                      {PERIOD_OPTIONS.map((option) => (
+                        <ListBox.Item
+                          key={option.value}
+                          id={option.value}
+                          textValue={option.label}
+                          className="!bg-card data-[hovered=true]:!bg-muted data-[focused=true]:!bg-muted data-[selected=true]:!bg-muted"
+                        >
+                          {option.label}
+                          <ListBox.ItemIndicator />
+                        </ListBox.Item>
+                      ))}
+                    </ListBox>
+                  </Select.Popover>
+                </Select>
+
+                <Button
+                  onPress={handleRefresh}
+                  isLoading={refreshing}
+                  variant="outline"
+                  size="sm"
+                  className="border-primary/25 bg-primary/5 text-foreground hover:bg-primary/10"
+                  startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
+                >
+                  Atualizar
+                </Button>
+              </div>
             </div>
-            <p className="text-sm text-muted-foreground dark:text-muted-foreground">
-              {isAdmin ? "Visão completa de todos os precatórios" : `Seu desempenho ? ${profile?.nome || "Usuário"}`}
-            </p>
-            {lastUpdated ? (
-              <div className="text-xs text-muted-foreground dark:text-muted-foreground">
-                Atualizado em {new Date(lastUpdated).toLocaleString("pt-BR")}
+
+            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <div
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-background/68 via-background/38 to-primary/16 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, hsl(var(--primary) / 0.24) 100%)",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-80">
+                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-primary/34 to-transparent blur-2xl" />
+                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.12)_100%)]" />
+                </div>
+                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Ativos</div>
+                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
+                  <CountUp end={kpis.resumo.total_precatorios} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
+                </div>
               </div>
-            ) : null}
-          </div>
-
-          <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-            <Select
-              aria-label="Período"
-              selectedKeys={periodSelectedKeys as any}
-              onSelectionChange={(keys: any) => {
-                const first = Array.from(keys as Set<string>)[0]
-                if (first) setPeriod(first as PeriodKey)
-              }}
-              variant="bordered"
-              size="sm"
-              className="w-[240px]"
-              classNames={{
-                trigger:
-                  "border-border bg-background/95 text-muted-foreground shadow-sm dark:border-border dark:bg-muted dark:text-muted-foreground",
-                value: "text-muted-foreground dark:text-muted-foreground",
-                popoverContent:
-                  "z-[120] rounded-xl border border-border bg-background text-muted-foreground shadow-2xl backdrop-blur-none dark:border-border dark:bg-muted dark:text-muted-foreground",
-                listboxWrapper: "bg-transparent",
-                listbox: "bg-transparent",
-              }}
-              startContent={<Clock className="h-4 w-4 text-muted-foreground" />}
-            >
-              {PERIOD_OPTIONS.map((option) => (
-                <SelectItem key={option.value}>{option.label}</SelectItem>
-              ))}
-            </Select>
-
-            <Button
-              onPress={handleRefresh}
-              isLoading={refreshing}
-              variant="bordered"
-              size="sm"
-              startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
-            >
-              Atualizar
-            </Button>
-          </div>
-        </div>
-
-        {/* Tabs para organizar (mudança principal) */}
+              <div
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-background/68 via-background/38 to-emerald-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(16,185,129,0.24) 100%)",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-80">
+                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400/34 to-transparent blur-2xl" />
+                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(16,185,129,0.13)_100%)]" />
+                </div>
+                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Saldo liquido</div>
+                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
+                  <CountUp
+                    end={kpis.resumo.total_saldo_liquido}
+                    duration={0.9}
+                    separator="."
+                    decimal=","
+                    decimals={2}
+                    prefix={CURRENCY_PREFIX}
+                    {...COUNTUP_SCROLL_PROPS}
+                  />
+                </div>
+              </div>
+              <div
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-background/68 via-background/38 to-sky-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(56,189,248,0.24) 100%)",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-80">
+                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-sky-400/34 to-transparent blur-2xl" />
+                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(56,189,248,0.13)_100%)]" />
+                </div>
+                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">SLA saudavel</div>
+                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
+                  <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
+                </div>
+              </div>
+              <div
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-background/68 via-background/38 to-amber-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
+                style={{
+                  backgroundImage:
+                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(251,191,36,0.24) 100%)",
+                }}
+              >
+                <div className="pointer-events-none absolute inset-0 opacity-80">
+                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-amber-400/34 to-transparent blur-2xl" />
+                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(251,191,36,0.13)_100%)]" />
+                </div>
+                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Chat pendente</div>
+                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
+                  <CountUp end={kpis.chat.mensagens_nao_lidas} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
+                </div>
+              </div>
+            </div>
+          </CardBody>
+        </GlassCard>
         <Tabs
           selectedKey={tab}
           onSelectionChange={(k) => setTab(k as DashTabKey)}
           variant="underlined"
           color="primary"
           classNames={{
-            tabList: "gap-4",
-            tab: "data-[selected=true]:text-primary",
+            base: "dashboard-tab-shell",
+            tabList: "inline-flex gap-1 rounded-2xl border border-border/70 bg-background/48 p-1 shadow-[0_14px_30px_-24px_hsl(var(--primary)/0.4)]",
+            tab: "h-10 rounded-xl px-4 text-foreground/75 data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary",
+            panel: "pt-1",
           }}
         >
           <Tab
@@ -1124,224 +1282,305 @@ export default function DashboardPage() {
               </div>
             }
           >
-            <div className="mt-5 grid grid-cols-12 gap-4 md:gap-6">
-              <div className="col-span-12 space-y-6 xl:col-span-7">
-                <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2">
-                  <DashboardMetricTile
-                    title="Precatórios ativos"
-                    value={formatCount(kpis.resumo.total_precatorios)}
-                    subtitle={`Período: ${periodRange.label}`}
-                    icon={Layers}
-                    badgeLabel={`+${formatCount(kpis.periodo_kpis.novos_precatorios)}`}
-                    badgeTone="primary"
-                  />
-                  <DashboardMetricTile
-                    title="Credores"
-                    value={formatCount(kpis.resumo.total_credores)}
-                    subtitle="Base cadastrada"
-                    icon={Users}
-                    badgeLabel={`${formatCount(kpis.usuarios.ativos_total)} usuários`}
-                    badgeTone="primary"
-                  />
-                  <DashboardMetricTile
-                    title="Propostas (maior proposta)"
-                    value={formatCurrencyNoBreak(propostaCompilada.totalMaior)}
-                    subtitle={`Maior proposta ${formatCurrencyNoBreak(propostaCompilada.maiorProposta)}`}
-                    icon={FileText}
-                    badgeLabel={`${formatCount(propostaCompilada.quantidadeComProposta)} com proposta`}
-                    badgeTone="primary"
-                  />
-                  <DashboardMetricTile
-                    title="Mensagens não lidas"
-                    value={formatCount(kpis.chat.mensagens_nao_lidas)}
-                    subtitle={`${formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} no período`}
-                    icon={MessageSquare}
-                    badgeLabel={kpis.chat.mensagens_nao_lidas > 0 ? "Ação necessária" : "OK"}
-                    badgeTone="primary"
-                  />
+            <div className="mt-5 space-y-6">
+              <FinancialOverview data={financialData} loading={refreshing} />
+
+              <PremiumDonutCard
+                title="Valor por status (Kanban)"
+                subtitle="Distribuição financeira por etapa do fluxo."
+                data={kanbanValorRows.map((row) => ({ name: row.label, value: row.value }))}
+                valueFormatter={formatCurrency}
+                centerLabel="Total"
+              />
+
+              <div className="grid grid-cols-12 gap-4 md:gap-6">
+                <div className="col-span-12 space-y-6 xl:col-span-7">
+                  <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2">
+                    <DashboardMetricTile
+                      title="Precatórios ativos"
+                      value={formatCount(kpis.resumo.total_precatorios)}
+                      subtitle={`Período: ${periodRange.label}`}
+                      icon={Layers}
+                      badgeLabel={`+${formatCount(kpis.periodo_kpis.novos_precatorios)}`}
+                      badgeAnimatedNumber={{ end: kpis.periodo_kpis.novos_precatorios, prefix: "+" }}
+                      badgeTone="primary"
+                      animatedNumber={{ end: kpis.resumo.total_precatorios }}
+                    />
+                    <DashboardMetricTile
+                      title="Credores"
+                      value={formatCount(kpis.resumo.total_credores)}
+                      subtitle="Base cadastrada"
+                      icon={Users}
+                      badgeLabel={`${formatCount(kpis.usuarios.ativos_total)} usuários`}
+                      badgeAnimatedNumber={{ end: kpis.usuarios.ativos_total, suffix: " usuários" }}
+                      badgeTone="primary"
+                      animatedNumber={{ end: kpis.resumo.total_credores }}
+                    />
+                    <DashboardMetricTile
+                      title="Propostas (maior proposta)"
+                      value={formatCurrencyNoBreak(propostaCompilada.totalMaior)}
+                      subtitle={`Maior proposta ${formatCurrencyNoBreak(propostaCompilada.maiorProposta)}`}
+                      icon={FileText}
+                      badgeLabel={`${formatCount(propostaCompilada.quantidadeComProposta)} com proposta`}
+                      badgeAnimatedNumber={{ end: propostaCompilada.quantidadeComProposta, suffix: " com proposta" }}
+                      badgeTone="primary"
+                      animatedNumber={{
+                        end: propostaCompilada.totalMaior,
+                        decimals: 2,
+                        prefix: CURRENCY_PREFIX,
+                      }}
+                    />
+                    <DashboardMetricTile
+                      title="Mensagens não lidas"
+                      value={formatCount(kpis.chat.mensagens_nao_lidas)}
+                      subtitle={`${formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} no período`}
+                      icon={MessageSquare}
+                      badgeLabel={kpis.chat.mensagens_nao_lidas > 0 ? "Ação necessária" : "OK"}
+                      badgeTone="primary"
+                      animatedNumber={{ end: kpis.chat.mensagens_nao_lidas }}
+                    />
+                  </div>
+                </div>
+
+                <div className="col-span-12 xl:col-span-5 xl:self-stretch">
+                  <GlassCard
+                    className="relative h-full overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/12"
+                    style={{
+                      backgroundImage:
+                        "linear-gradient(135deg, hsl(var(--background) / 0.64) 0%, hsl(var(--background) / 0.38) 58%, hsl(var(--primary) / 0.2) 100%)",
+                    }}
+                  >
+                    <div className="pointer-events-none absolute inset-0 opacity-85">
+                      <div className="absolute -right-20 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-primary/28 to-transparent blur-3xl" />
+                      <div className="absolute -left-16 -bottom-16 h-36 w-36 rounded-full bg-gradient-to-br from-sky-400/24 to-transparent blur-3xl" />
+                      <div className="absolute inset-0 bg-[linear-gradient(126deg,transparent_0%,hsl(var(--primary)/0.10)_100%)]" />
+                    </div>
+                    <CardBody className="relative z-10 p-5 sm:p-6">
+                      <div className="flex items-start justify-between gap-4">
+                        <div>
+                          <div className="text-base font-semibold text-muted-foreground dark:text-white/90">
+                            Meta mensal operacional
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">
+                            Resultado médio entre documentos, certidões e SLA.
+                          </div>
+                        </div>
+                        <ToneChip tone="primary">
+                          <CountUp
+                            end={monthlyTargetPercent}
+                            duration={0.9}
+                            separator="."
+                            decimal=","
+                            decimals={0}
+                            suffix="%"
+                            {...COUNTUP_SCROLL_PROPS}
+                          />
+                        </ToneChip>
+                      </div>
+
+                      <div className="mt-6 space-y-5">
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
+                            <span>Documentos recebidos</span>
+                            <span className="font-mono tabular-nums text-primary">
+                              <CountUp
+                                end={docsPercent}
+                                duration={0.9}
+                                separator="."
+                                decimal=","
+                                decimals={0}
+                                suffix="%"
+                                {...COUNTUP_SCROLL_PROPS}
+                              />
+                            </span>
+                          </div>
+                          <Progress value={docsPercent} size="sm" className="w-full" />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
+                            <span>Certidões recebidas</span>
+                            <span className="font-mono tabular-nums text-primary">
+                              <CountUp
+                                end={certPercent}
+                                duration={0.9}
+                                separator="."
+                                decimal=","
+                                decimals={0}
+                                suffix="%"
+                                {...COUNTUP_SCROLL_PROPS}
+                              />
+                            </span>
+                          </div>
+                          <Progress value={certPercent} size="sm" className="w-full" />
+                        </div>
+
+                        <div className="space-y-2">
+                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
+                            <span>SLA saudável</span>
+                            <span className="font-mono tabular-nums text-primary">
+                              <CountUp
+                                end={slaHealthyPercent}
+                                duration={0.9}
+                                separator="."
+                                decimal=","
+                                decimals={0}
+                                suffix="%"
+                                {...COUNTUP_SCROLL_PROPS}
+                              />
+                            </span>
+                          </div>
+                          <Progress value={slaHealthyPercent} size="sm" className="w-full" />
+                        </div>
+                      </div>
+
+                      <Divider className="my-6" />
+
+                      <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
+                        <div
+                          className="min-w-0 rounded-2xl border border-primary/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-primary/20 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-primary/20 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                        >
+                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Saldo líquido</div>
+                          <div
+                            className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(0.74rem,1.1vw,0.92rem)] font-semibold leading-tight text-primary tabular-nums tracking-tight"
+                            title={formatCurrency(kpis.resumo.total_saldo_liquido)}
+                          >
+                            <CountUp
+                              end={kpis.resumo.total_saldo_liquido}
+                              duration={0.9}
+                              separator="."
+                              decimal=","
+                              decimals={2}
+                              prefix={CURRENCY_PREFIX}
+                              {...COUNTUP_SCROLL_PROPS}
+                            />
+                          </div>
+                        </div>
+                        <div
+                          className="min-w-0 rounded-2xl border border-amber-500/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-amber-400/20 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-amber-500/18 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                        >
+                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Vencidas</div>
+                          <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
+                            <CountUp end={kpis.documentos_certidoes.certidoes_vencidas} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
+                          </div>
+                        </div>
+                        <div
+                          className="min-w-0 rounded-2xl border border-destructive/30 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-destructive/25 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-destructive/18 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                        >
+                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">SLA atrasado</div>
+                          <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
+                            <CountUp end={kpis.sla.atrasado} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
+                          </div>
+                        </div>
+                      </div>
+                    </CardBody>
+                  </GlassCard>
                 </div>
               </div>
 
-              <div className="col-span-12 xl:col-span-5 xl:self-stretch">
-                <GlassCard className="h-full">
-                  <CardBody className="p-5 sm:p-6">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">
-                          Meta mensal operacional
-                        </div>
-                        <div className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">
-                          Resultado médio entre documentos, certidões e SLA.
-                        </div>
-                      </div>
-                      <ToneChip tone="primary">{monthlyTargetPercent}%</ToneChip>
-                    </div>
-
-                    <div className="mt-6 space-y-5">
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                          <span>Documentos recebidos</span>
-                          <span className="font-mono tabular-nums text-primary">{docsPercent.toFixed(0)}%</span>
-                        </div>
-                        <Progress value={docsPercent} size="sm" className="w-full" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                          <span>Certidões recebidas</span>
-                          <span className="font-mono tabular-nums text-primary">{certPercent.toFixed(0)}%</span>
-                        </div>
-                        <Progress value={certPercent} size="sm" className="w-full" />
-                      </div>
-
-                      <div className="space-y-2">
-                        <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                          <span>SLA saudável</span>
-                          <span className="font-mono tabular-nums text-primary">{slaHealthyPercent.toFixed(0)}%</span>
-                        </div>
-                        <Progress value={slaHealthyPercent} size="sm" className="w-full" />
-                      </div>
-                    </div>
-
-                    <Divider className="my-6" />
-
-                    <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
-                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
-                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Saldo líquido</div>
-                        <div
-                          className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(0.74rem,1.1vw,0.92rem)] font-semibold leading-tight text-primary tabular-nums tracking-tight"
-                          title={formatCurrency(kpis.resumo.total_saldo_liquido)}
-                        >
-                          {formatCurrencyNoBreak(kpis.resumo.total_saldo_liquido)}
-                        </div>
-                      </div>
-                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
-                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Vencidas</div>
-                        <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
-                          {formatCount(kpis.documentos_certidoes.certidoes_vencidas)}
-                        </div>
-                      </div>
-                      <div className="min-w-0 rounded-xl bg-muted p-3 dark:bg-muted">
-                        <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">SLA atrasado</div>
-                        <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
-                          {formatCount(kpis.sla.atrasado)}
-                        </div>
-                      </div>
-                    </div>
-                  </CardBody>
-                </GlassCard>
-              </div>
 
               <div className="col-span-12">
-                <FinancialOverview data={financialData} loading={refreshing} />
-              </div>
-
-              <div className="col-span-12">
-                <Chart3DCard
-                  title="Valor por status (Kanban)"
-                  description="Distribuição financeira por etapa do fluxo."
-                  rows={kanbanValorRows}
-                  valueFormatter={formatCurrency}
-                  emptyLabel="Sem valores por status"
-                  height={420}
-                />
-              </div>
-
-              <div className="col-span-12">
-                <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
-                  <Chart3DCard
+                <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
+                  <PremiumDonutCard
                     title="Quantidade por status"
-                    description="Distribuição de precatórios por etapa."
-                    rows={kanbanQuantidadeRows}
+                    subtitle="Distribuição de precatórios por etapa."
+                    data={kanbanQuantidadeRows.map((row) => ({ name: row.label, value: row.value }))}
                     valueFormatter={formatCount}
-                    emptyLabel="Sem precatórios"
+                    centerLabel="Total"
                   />
-                  <Chart3DCard
+                  <PremiumDonutCard
                     title="Consolidado financeiro"
-                    description="Passe o mouse nas barras para ver os totais."
-                    rows={financeiroConsolidadoRows}
+                    subtitle="Passe o mouse nos itens para ver os totais."
+                    data={financeiroConsolidadoRows.map((row) => ({ name: row.label, value: row.value }))}
                     valueFormatter={formatCurrency}
-                    emptyLabel="Sem dados financeiros"
+                    centerLabel="Total"
                   />
                 </div>
               </div>
 
               {isAdmin ? (
                 <div className="col-span-12 xl:self-stretch">
-                <GlassCard className="h-full">
-                  <CardBody className="p-5 sm:p-6">
-                    <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                      <div>
-                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Precatórios críticos</div>
-                        <div className="text-sm text-muted-foreground dark:text-muted-foreground">
-                          Itens com maior risco operacional no momento.
-                        </div>
-                      </div>
-                      <Button
-                        onPress={handleRefresh}
-                        isLoading={refreshing}
-                        variant="bordered"
-                        size="sm"
-                        startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
-                      >
-                        Atualizar
-                      </Button>
+                  <GlassCard
+                    className="relative h-full overflow-hidden border-primary/20 bg-content1 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-background/68 dark:via-background/40 dark:to-primary/14 dark:shadow-[0_28px_56px_-36px_rgba(0,0,0,0.42)]"
+                  >
+                    <div className="pointer-events-none absolute inset-0 hidden opacity-[0.14] dark:block">
+                      <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
+                      <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-chart-4/34 to-transparent blur-3xl" />
+                      <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
                     </div>
+                    <CardBody className="relative p-5 sm:p-6">
+                      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                        <div>
+                          <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Precatórios críticos</div>
+                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">
+                            Itens com maior risco operacional no momento.
+                          </div>
+                        </div>
+                        <Button
+                          onPress={handleRefresh}
+                          isLoading={refreshing}
+                          variant="outline"
+                          size="sm"
+                          startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
+                        >
+                          Atualizar
+                        </Button>
+                      </div>
 
-                    <Table
-                      aria-label="Precatórios críticos"
-                      isHeaderSticky
-                      isStriped
-                      classNames={{
-                        th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
-                      }}
-                    >
-                      <TableHeader>
-                        <TableColumn>Precatório</TableColumn>
-                        <TableColumn>Responsável</TableColumn>
-                        <TableColumn>SLA</TableColumn>
-                        <TableColumn className="text-right">Score</TableColumn>
-                      </TableHeader>
-                      <TableBody
-                        emptyContent="Sem precatórios críticos para o período selecionado."
+                      <Table
+                        aria-label="Precatórios críticos"
+                        isHeaderSticky
+                        isStriped
+                        classNames={{
+                          th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
+                        }}
                       >
-                        {topCritical.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell>
-                              <div className="flex flex-col">
-                                <span className="font-medium text-muted-foreground dark:text-white/90">
-                                  {item.numero_precatorio || item.titulo}
-                                </span>
-                                <span className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                  {humanizeKey(item.status || "sem_status")}
-                                </span>
-                              </div>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
-                              {item.responsavel_nome || "Não atribuído"}
-                            </TableCell>
-                            <TableCell>
-                              <ToneChip
-                                tone={
-                                  item.sla_status === "atrasado"
-                                    ? "danger"
-                                    : item.sla_status === "atencao"
-                                      ? "warning"
-                                      : "success"
-                                }
-                              >
-                                {humanizeKey(item.sla_status || "no_prazo")}
-                              </ToneChip>
-                            </TableCell>
-                            <TableCell className="text-right font-mono tabular-nums">
-                              {formatCount(item.score_criticidade || 0)}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </CardBody>
-                </GlassCard>
+                        <TableHeader>
+                          <TableColumn>Precatório</TableColumn>
+                          <TableColumn>Responsável</TableColumn>
+                          <TableColumn>SLA</TableColumn>
+                          <TableColumn className="text-right">Score</TableColumn>
+                        </TableHeader>
+                        <TableBody
+                          emptyContent="Sem precatórios críticos para o período selecionado."
+                        >
+                          {topCritical.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell>
+                                <div className="flex flex-col">
+                                  <span className="font-medium text-muted-foreground dark:text-white/90">
+                                    {item.numero_precatorio || item.titulo}
+                                  </span>
+                                  <span className="text-xs text-muted-foreground dark:text-muted-foreground">
+                                    {humanizeKey(item.status || "sem_status")}
+                                  </span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
+                                {item.responsavel_nome || "Não atribuído"}
+                              </TableCell>
+                              <TableCell>
+                                <ToneChip
+                                  tone={
+                                    item.sla_status === "atrasado"
+                                      ? "danger"
+                                      : item.sla_status === "atencao"
+                                        ? "warning"
+                                        : "success"
+                                  }
+                                >
+                                  {humanizeKey(item.sla_status || "no_prazo")}
+                                </ToneChip>
+                              </TableCell>
+                              <TableCell className="text-right font-mono tabular-nums">
+                                {formatCount(item.score_criticidade || 0)}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardBody>
+                  </GlassCard>
                 </div>
               ) : null}
             </div>
@@ -1368,11 +1607,11 @@ export default function DashboardPage() {
                     </div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                    <MetricCard title="Novos precatórios" value={formatCount(kpis.periodo_kpis.novos_precatorios)} icon={Layers} />
-                    <MetricCard title="Precatórios atualizados" value={formatCount(kpis.periodo_kpis.precatorios_atualizados)} icon={RefreshCw} />
-                    <MetricCard title="Propostas criadas" value={formatCount(kpis.periodo_kpis.propostas_criadas)} icon={FileText} />
-                    <MetricCard title="Atividades" value={formatCount(kpis.periodo_kpis.atividades_periodo)} icon={ListChecks} />
-                    <MetricCard title="Mensagens no chat" value={formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} icon={MessageSquare} />
+                    <MetricCard title="Novos precatórios" value={formatCount(kpis.periodo_kpis.novos_precatorios)} animatedNumber={{ end: kpis.periodo_kpis.novos_precatorios }} icon={Layers} />
+                    <MetricCard title="Precatórios atualizados" value={formatCount(kpis.periodo_kpis.precatorios_atualizados)} animatedNumber={{ end: kpis.periodo_kpis.precatorios_atualizados }} icon={RefreshCw} />
+                    <MetricCard title="Propostas criadas" value={formatCount(kpis.periodo_kpis.propostas_criadas)} animatedNumber={{ end: kpis.periodo_kpis.propostas_criadas }} icon={FileText} />
+                    <MetricCard title="Atividades" value={formatCount(kpis.periodo_kpis.atividades_periodo)} animatedNumber={{ end: kpis.periodo_kpis.atividades_periodo }} icon={ListChecks} />
+                    <MetricCard title="Mensagens no chat" value={formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} animatedNumber={{ end: kpis.periodo_kpis.mensagens_chat_periodo }} icon={MessageSquare} />
                   </div>
                 </CardBody>
               </GlassCard>
@@ -1384,9 +1623,9 @@ export default function DashboardPage() {
                     <div className="text-sm text-muted-foreground dark:text-muted-foreground">Valores e distribuição</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <MetricCard title="Valor total" value={formatCurrency(kpis.propostas.valor_total)} icon={Wallet} />
-                    <MetricCard title="Ticket médio" value={formatCurrency(kpis.propostas.ticket_medio)} icon={TrendingUp} />
-                    <MetricCard title="Desconto médio" value={formatPercent(kpis.propostas.desconto_medio, 2)} icon={Percent} />
+                    <MetricCard title="Valor total" value={formatCurrency(kpis.propostas.valor_total)} animatedNumber={{ end: kpis.propostas.valor_total, decimals: 2, prefix: CURRENCY_PREFIX }} icon={Wallet} />
+                    <MetricCard title="Ticket médio" value={formatCurrency(kpis.propostas.ticket_medio)} animatedNumber={{ end: kpis.propostas.ticket_medio, decimals: 2, prefix: CURRENCY_PREFIX }} icon={TrendingUp} />
+                    <MetricCard title="Desconto médio" value={formatPercent(kpis.propostas.desconto_medio, 2)} animatedNumber={{ end: kpis.propostas.desconto_medio, decimals: 2, suffix: "%" }} icon={Percent} />
                   </div>
                   <SimpleTableCard title="Propostas por status" rows={propostaStatusRows} emptyLabel="Sem propostas" />
                 </CardBody>
@@ -1399,16 +1638,16 @@ export default function DashboardPage() {
                     <div className="text-sm text-muted-foreground dark:text-muted-foreground">Controle de prazo e progresso da fila</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <MetricCard title="Pronto para cálculo" value={formatCount(kpis.calculo.pronto_calculo)} icon={ListChecks} />
-                    <MetricCard title="Em cálculo" value={formatCount(kpis.calculo.em_calculo)} icon={Clock} />
-                    <MetricCard title="No prazo" value={formatCount(kpis.sla.no_prazo)} icon={CheckCircle2} variant="success" />
-                    <MetricCard title="Atenção" value={formatCount(kpis.sla.atencao)} icon={AlertTriangle} variant="warning" />
-                    <MetricCard title="Atrasado" value={formatCount(kpis.sla.atrasado)} icon={AlertTriangle} variant={kpis.sla.atrasado > 0 ? "danger" : "default"} />
-                    <MetricCard title="Concluídos" value={formatCount(kpis.calculo.concluido)} icon={CheckCircle2} variant="success" />
-                    <MetricCard title="Não iniciado" value={formatCount(kpis.sla.nao_iniciado)} icon={Clock} />
-                    <MetricCard title="Desatualizados" value={formatCount(kpis.calculo.desatualizado)} icon={AlertTriangle} />
+                    <MetricCard title="Pronto para cálculo" value={formatCount(kpis.calculo.pronto_calculo)} animatedNumber={{ end: kpis.calculo.pronto_calculo }} icon={ListChecks} />
+                    <MetricCard title="Em cálculo" value={formatCount(kpis.calculo.em_calculo)} animatedNumber={{ end: kpis.calculo.em_calculo }} icon={Clock} />
+                    <MetricCard title="No prazo" value={formatCount(kpis.sla.no_prazo)} animatedNumber={{ end: kpis.sla.no_prazo }} icon={CheckCircle2} variant="success" />
+                    <MetricCard title="Atenção" value={formatCount(kpis.sla.atencao)} animatedNumber={{ end: kpis.sla.atencao }} icon={AlertTriangle} variant="warning" />
+                    <MetricCard title="Atrasado" value={formatCount(kpis.sla.atrasado)} animatedNumber={{ end: kpis.sla.atrasado }} icon={AlertTriangle} variant={kpis.sla.atrasado > 0 ? "danger" : "default"} />
+                    <MetricCard title="Concluídos" value={formatCount(kpis.calculo.concluido)} animatedNumber={{ end: kpis.calculo.concluido }} icon={CheckCircle2} variant="success" />
+                    <MetricCard title="Não iniciado" value={formatCount(kpis.sla.nao_iniciado)} animatedNumber={{ end: kpis.sla.nao_iniciado }} icon={Clock} />
+                    <MetricCard title="Desatualizados" value={formatCount(kpis.calculo.desatualizado)} animatedNumber={{ end: kpis.calculo.desatualizado }} icon={AlertTriangle} />
                     <MetricCard title="Tempo médio" value={formatHours(kpis.sla.tempo_medio_calculo_horas)} icon={Clock} />
-                    <MetricCard title="Versões média" value={kpis.calculo.versoes_media.toFixed(1)} icon={TrendingUp} />
+                    <MetricCard title="Versões média" value={kpis.calculo.versoes_media.toFixed(1)} animatedNumber={{ end: kpis.calculo.versoes_media, decimals: 1 }} icon={TrendingUp} />
                   </div>
                 </CardBody>
               </GlassCard>
@@ -1462,8 +1701,8 @@ export default function DashboardPage() {
               <GlassCard>
                 <CardBody className="p-5 sm:p-6">
                   <div className="grid gap-4 md:grid-cols-2">
-                    <MetricCard title="Total credores" value={formatCount(kpis.credores.total_credores)} icon={Users} />
-                    <MetricCard title="Valor total principal" value={formatCurrency(kpis.credores.valor_total_principal)} icon={Wallet} />
+                    <MetricCard title="Total credores" value={formatCount(kpis.credores.total_credores)} animatedNumber={{ end: kpis.credores.total_credores }} icon={Users} />
+                    <MetricCard title="Valor total principal" value={formatCurrency(kpis.credores.valor_total_principal)} animatedNumber={{ end: kpis.credores.valor_total_principal, decimals: 2, prefix: CURRENCY_PREFIX }} icon={Wallet} />
                   </div>
                 </CardBody>
               </GlassCard>
@@ -1488,8 +1727,8 @@ export default function DashboardPage() {
                     <div className="text-sm text-muted-foreground dark:text-muted-foreground">Pendências e concluído</div>
                   </div>
                   <div className="grid gap-4 md:grid-cols-2">
-                    <MetricCard title="Análise Processual Inicial" value={formatCount(kpis.oficios.analise_processual_inicial)} icon={FileText} />
-                    <MetricCard title="Com ofício" value={formatCount(kpis.oficios.com_oficio)} icon={CheckCircle2} variant="success" />
+                    <MetricCard title="Análise Processual Inicial" value={formatCount(kpis.oficios.analise_processual_inicial)} animatedNumber={{ end: kpis.oficios.analise_processual_inicial }} icon={FileText} />
+                    <MetricCard title="Com ofício" value={formatCount(kpis.oficios.com_oficio)} animatedNumber={{ end: kpis.oficios.com_oficio }} icon={CheckCircle2} variant="success" />
                   </div>
                 </CardBody>
               </GlassCard>

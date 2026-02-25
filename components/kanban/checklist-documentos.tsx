@@ -6,9 +6,9 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { FileText, Plus, Pencil, Eye, Trash2, ImageIcon, Download } from "lucide-react"
+import { FileText, Plus, Pencil, Eye, Trash2, ImageIcon, Download } from "@/components/icons"
 import { ItemChecklistDialog } from "./item-checklist-dialog"
-import { getFileDownloadUrl, downloadFileAsArrayBuffer } from "@/lib/utils/file-upload"
+import { buildDownloadFileName, downloadFileAsArrayBuffer, downloadFileWithMetadata, getFileDownloadUrl } from "@/lib/utils/file-upload"
 import { usePDFViewer } from "@/components/providers/pdf-viewer-provider"
 import JSZip from "jszip"
 import { saveFileWithPicker } from "@/lib/utils/file-saver-custom"
@@ -263,23 +263,80 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
         })
       } else {
         // POST
-        const { data: newItemId, error } = await supabase.rpc('adicionar_item_customizado', {
+        const { data: createdResult, error } = await supabase.rpc('adicionar_item_customizado', {
           p_precatorio_id: precatorioId,
           p_tipo_grupo: 'DOC_CREDOR',
           p_nome_item: itemData.nome,
-          p_observacao: itemData.observacao
+          p_observacao: itemData.observacao || null,
+          p_validade: itemData.validade || null,
+          p_arquivo_url: itemData.arquivo_url || null,
         })
         if (error) throw error
 
-        if (newItemId && (itemData.arquivo_url || itemData.status || itemData.validade)) {
-          const { error: updateError } = await supabase.rpc('atualizar_status_item', {
-            p_item_id: newItemId,
-            p_novo_status: itemData.status || "PENDENTE",
-            p_validade: itemData.validade || null,
-            p_observacao: itemData.observacao || null,
-            p_arquivo_url: itemData.arquivo_url || null,
+        let createdItemId: string | null = null
+        if (typeof createdResult === "string" && createdResult.length > 20) {
+          createdItemId = createdResult
+        } else if (
+          createdResult &&
+          typeof createdResult === "object" &&
+          "id" in createdResult &&
+          typeof (createdResult as { id: unknown }).id === "string"
+        ) {
+          createdItemId = (createdResult as { id: string }).id
+        }
+
+        if (!createdItemId) {
+          const { data: refreshedItems, error: refreshError } = await supabase.rpc("obter_itens_precatorio", {
+            p_precatorio_id: precatorioId,
           })
-          if (updateError) throw updateError
+          if (refreshError) throw refreshError
+
+          const targetName = normalizeNomeItem(itemData.nome)
+          const createdItem = (refreshedItems || [])
+            .filter(
+              (candidate: any) =>
+                candidate.tipo_grupo === "DOC_CREDOR" &&
+                candidate.observacao !== EXCLUDED_DOC_MARKER &&
+                normalizeNomeItem(candidate.nome_item) === targetName
+            )
+            .sort((a: any, b: any) => {
+              const left = Date.parse(a?.created_at || "") || 0
+              const right = Date.parse(b?.created_at || "") || 0
+              return right - left
+            })[0]
+
+          createdItemId = createdItem?.id || null
+        }
+
+        if (!createdItemId) {
+          throw new Error("Item criado, mas nao foi possivel identificar o registro para aplicar status e anexo.")
+        }
+
+        const { error: updateError } = await supabase.rpc("atualizar_status_item", {
+          p_item_id: createdItemId,
+          p_novo_status: itemData.status || "PENDENTE",
+          p_validade: itemData.validade || null,
+          p_observacao: itemData.observacao || null,
+          p_arquivo_url: itemData.arquivo_url || null,
+        })
+        if (updateError) {
+          const { data: rollbackOk, error: rollbackError } = await supabase.rpc("excluir_item_precatorio", {
+            p_item_id: createdItemId,
+          })
+
+          if (rollbackError || rollbackOk !== true) {
+            await supabase
+              .from("precatorio_itens")
+              .update({
+                status_item: "NAO_APLICAVEL",
+                arquivo_url: null,
+                validade: null,
+                observacao: EXCLUDED_DOC_MARKER,
+              })
+              .eq("id", createdItemId)
+          }
+
+          throw new Error("Nao foi possivel salvar o item completo. O card parcial foi removido automaticamente.")
         }
 
         toast({
@@ -363,13 +420,19 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
 
       toast({ title: "Baixando", description: `Iniciando download de ${name}...` })
 
-      const buffer = await downloadFileAsArrayBuffer(url, supabase, name)
-      if (!buffer) throw new Error("Falha ao baixar arquivo")
+      const downloaded = await downloadFileWithMetadata(url, supabase, name)
+      if (!downloaded) throw new Error("Falha ao baixar arquivo")
 
-      const blob = new Blob([buffer])
-      const ext = getFileExt(getFileNameFromUrl(url))
-      const safeName = name.replace(/[^a-z0-9]/gi, '_').substring(0, 50)
-      const fileName = `${safeName}.${ext.toLowerCase()}`
+      const fileName = buildDownloadFileName({
+        preferredName: name,
+        sourceFileName: downloaded.fileName,
+        sourceUrl: url,
+        mimeType: downloaded.mimeType,
+      })
+
+      const blob = new Blob([downloaded.buffer], {
+        type: downloaded.mimeType || "application/octet-stream",
+      })
 
       await saveFileWithPicker(blob, fileName)
 
@@ -425,20 +488,23 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
         for (const item of allItems) {
           if (!item.arquivo_url || item.observacao === EXCLUDED_DOC_MARKER) continue
 
-          const blob = await downloadFileAsArrayBuffer(item.arquivo_url, supabase, item.nome_item)
-          if (!blob) {
+          const downloaded = await downloadFileWithMetadata(item.arquivo_url, supabase, item.nome_item)
+          if (!downloaded) {
             errors++
             continue
           }
 
-          const ext = getFileExt(getFileNameFromUrl(item.arquivo_url))
-          const safeName = item.nome_item.replace(/[^a-z0-9]/gi, '_').substring(0, 50)
-          const fileName = `${safeName}.${ext.toLowerCase()}`
+          const fileName = buildDownloadFileName({
+            preferredName: item.nome_item,
+            sourceFileName: downloaded.fileName,
+            sourceUrl: item.arquivo_url,
+            mimeType: downloaded.mimeType,
+          })
 
           if (item.tipo_grupo === 'CERTIDAO') {
-            certFolder?.file(fileName, blob)
+            certFolder?.file(fileName, downloaded.buffer)
           } else {
-            docsFolder?.file(fileName, blob)
+            docsFolder?.file(fileName, downloaded.buffer)
           }
           count++
         }

@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
 import { SegmentedToggle } from "@/components/ui/segmented-toggle"
-import { Calculator, CheckCircle2, AlertCircle } from "lucide-react"
+import { Calculator, CheckCircle2, AlertCircle } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { useState, useEffect, useCallback } from "react"
 
