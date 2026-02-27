@@ -30,11 +30,6 @@ import { STATUS_LABELS, STATUS_OPTIONS } from "@/lib/types/filtros"
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
 
-const precatorioCardGradientStyle: React.CSSProperties = {
-  backgroundImage:
-    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 56%, hsl(var(--primary) / 0.24) 100%)",
-}
-
 const deleteActionPopoverClassName =
   "w-fit !min-w-0 md:!min-w-0 overflow-hidden rounded-xl border border-white/15 !bg-black/75 p-0 text-white shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)] backdrop-blur-md"
 const deleteActionMenuClassName = "w-auto min-w-0 bg-transparent !p-0 !gap-0 text-white"
@@ -801,14 +796,12 @@ export default function PrecatoriosPage() {
                 return (
                   <AnimatedListItem key={precatorio.id} index={index}>
                     <Card
-                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
-                      style={precatorioCardGradientStyle}
+                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_56%,hsl(var(--primary)/0.24)_100%)] shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
                       onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                     >
-                      <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+                      <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
                         <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                        <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/30 to-transparent blur-3xl" />
-                        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+                        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
                       </div>
                       <CardContent className="relative z-10 p-5">
                         <div className="flex gap-4">
@@ -1079,14 +1072,12 @@ export default function PrecatoriosPage() {
                     return (
                       <AnimatedListItem key={precatorio.id} index={index}>
                         <Card
-                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition"
-                          style={precatorioCardGradientStyle}
+                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_56%,hsl(var(--primary)/0.24)_100%)] shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
                           onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         >
-                          <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+                          <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
                             <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                            <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/30 to-transparent blur-3xl" />
-                            <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+                            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
                           </div>
                           <CardContent className="relative z-10 p-5">
                             <div className="flex gap-4">

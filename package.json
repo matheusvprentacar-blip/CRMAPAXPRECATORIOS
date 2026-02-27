@@ -1,6 +1,6 @@
 {
   "name": "Blackbox AI clone",
-  "version": "1.6.34",
+  "version": "1.6.35",
   "private": true,
   "scripts": {
     "dev": "npx @react-grab/codex@latest && node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "ui:add:8star": "node ./scripts/add-8starlabs-component.mjs",
     "tauri": "tauri",
     "release:update": "powershell -ExecutionPolicy Bypass -File ./scripts/release_update.ps1",
     "release:update:minor": "powershell -ExecutionPolicy Bypass -File ./scripts/release_update.ps1 -Bump minor",
@@ -42,6 +43,7 @@
     "@radix-ui/react-tabs": "^1.1.13",
     "@radix-ui/react-toast": "^1.2.15",
     "@radix-ui/react-toggle-group": "^1.1.11",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "@supabase/ssr": "latest",
     "@supabase/supabase-js": "latest",
     "@tauri-apps/plugin-notification": "^2.3.3",
@@ -58,6 +60,7 @@
     "framer-motion": "^12.34.3",
     "gsap": "^3.14.2",
     "jszip": "^3.10.1",
+    "lucide-react": "^0.575.0",
     "motion": "^12.34.2",
     "next": "^15.5.9",
     "next-themes": "latest",

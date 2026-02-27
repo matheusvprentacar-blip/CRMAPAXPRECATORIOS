@@ -161,13 +161,13 @@ export function PremiumDonutCard({
       whileHover={{ y: -3 }}
       transition={{ type: "spring", stiffness: 260, damping: 22 }}
       className={[
-        "relative overflow-hidden rounded-2xl border border-primary/30 bg-content1 shadow-[0_24px_56px_-38px_hsl(222_35%_22%/0.22)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-primary/22 dark:shadow-[0_24px_56px_-38px_hsl(var(--primary)/0.52)]",
+        "relative overflow-hidden rounded-2xl border border-primary/30 bg-content1 shadow-[0_24px_56px_-38px_hsl(222_35%_22%/0.22)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-[0_24px_56px_-38px_hsl(var(--primary)/0.52)]",
         className ?? "",
       ].join(" ")}
     >
       <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
         <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/34 to-transparent blur-2xl" />
-        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.12)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
       </div>
       <div className="relative p-6">
         <div className="flex items-start justify-between gap-3">

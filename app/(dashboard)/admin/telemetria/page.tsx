@@ -99,11 +99,12 @@ const SOURCE_LABELS: Record<TelemetryEventRow["source"], string> = {
 const TELEMETRY_SELECT =
   "id, user_id, session_id, event_type, source, event_data, occurred_at, usuario:usuarios(nome, email, role)"
 const TELEMETRY_PAGE_SIZE = 500
-const TELEMETRY_MAX_ROWS = 5000
 const RECENT_EVENTS_PAGE_SIZE_OPTIONS = [20, 50, 100] as const
 const SESSIONS_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 const GLASS_PANEL_CLASS =
   "border-border/60 bg-card/70 backdrop-blur-xl shadow-[0_18px_55px_-35px_hsl(var(--foreground)/0.65)]"
+const TOP_METRIC_CARD_CLASS =
+  "relative overflow-hidden rounded-xl border border-border/70 bg-gradient-to-b from-background/80 to-background/55 p-3 shadow-[0_10px_26px_-22px_hsl(var(--foreground)/0.75)]"
 const SECTION_VARIANTS = {
   initial: { opacity: 0, y: 14 },
   animate: { opacity: 1, y: 0 },
@@ -178,6 +179,56 @@ type TimeBucket = {
   idle: number
   locks: number
   reauth: number
+}
+
+type WeeklyHourBucket = {
+  days: Array<{ key: string; label: string }>
+  hours: number[]
+  matrix: number[][]
+  max: number
+}
+
+function toLocalDayKey(date: Date) {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, "0")
+  const d = String(date.getDate()).padStart(2, "0")
+  return `${y}-${m}-${d}`
+}
+
+function buildWeeklyHourBuckets(events: TelemetryEventRow[]): WeeklyHourBucket {
+  const now = new Date()
+  const start = new Date(now)
+  start.setHours(0, 0, 0, 0)
+  start.setDate(start.getDate() - 6)
+
+  const days: Array<{ key: string; label: string }> = []
+  for (let i = 0; i < 7; i++) {
+    const day = new Date(start)
+    day.setDate(start.getDate() + i)
+    days.push({
+      key: toLocalDayKey(day),
+      label: day.toLocaleDateString("pt-BR", { weekday: "short", day: "2-digit", month: "2-digit" }),
+    })
+  }
+
+  const dayIndex = new Map(days.map((day, idx) => [day.key, idx]))
+  const hours = Array.from({ length: 24 }, (_, i) => i)
+  const matrix = Array.from({ length: 24 }, () => Array.from({ length: 7 }, () => 0))
+
+  for (const event of events) {
+    const ms = safeMs(event.occurred_at)
+    if (ms === null) continue
+    const date = new Date(ms)
+    if (date < start || date > now) continue
+    const dKey = toLocalDayKey(date)
+    const dIdx = dayIndex.get(dKey)
+    if (dIdx === undefined) continue
+    const hour = date.getHours()
+    matrix[hour][dIdx] += 1
+  }
+
+  const max = matrix.reduce((acc, row) => Math.max(acc, ...row), 0)
+  return { days, hours, matrix, max }
 }
 
 function buildTimeSeries(events: TelemetryEventRow[], rangeKey: RangeKey) {
@@ -397,7 +448,6 @@ export default function TelemetriaPage() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [loadCapped, setLoadCapped] = useState(false)
   const [selectedUserId, setSelectedUserId] = useState<string>("all")
   const [rangeKey, setRangeKey] = useState<RangeKey>("24h")
   const [recentEventsFrom, setRecentEventsFrom] = useState("")
@@ -430,9 +480,8 @@ export default function TelemetriaPage() {
 
     const rawRows: Array<Record<string, unknown>> = []
     let from = 0
-    let capReached = false
 
-    while (rawRows.length < TELEMETRY_MAX_ROWS) {
+    while (true) {
       const to = from + TELEMETRY_PAGE_SIZE - 1
       const { data: pageData, error: pageError } = await supabase
         .from("telemetria_uso")
@@ -444,7 +493,6 @@ export default function TelemetriaPage() {
       if (pageError) {
         setError(pageError.message || "Não foi possível carregar os eventos de telemetria.")
         setEvents([])
-        setLoadCapped(false)
         setLoading(false)
         setRefreshing(false)
         return
@@ -458,25 +506,6 @@ export default function TelemetriaPage() {
       if (pageRows.length < TELEMETRY_PAGE_SIZE) break
 
       from += TELEMETRY_PAGE_SIZE
-      if (rawRows.length >= TELEMETRY_MAX_ROWS) {
-        rawRows.length = TELEMETRY_MAX_ROWS
-        capReached = true
-        break
-      }
-    }
-
-    // Probe para detectar se realmente existe próxima página.
-    if (capReached) {
-      const { data: probeData, error: probeError } = await supabase
-        .from("telemetria_uso")
-        .select("id")
-        .order("occurred_at", { ascending: false })
-        .order("id", { ascending: false })
-        .range(from, from)
-
-      if (!probeError && (probeData?.length ?? 0) === 0) {
-        capReached = false
-      }
     }
 
     const rows = rawRows.map((row) => ({
@@ -491,7 +520,6 @@ export default function TelemetriaPage() {
     }))
 
     setEvents(rows)
-    setLoadCapped(capReached)
     setLoading(false)
     setRefreshing(false)
   }, [])
@@ -550,6 +578,8 @@ export default function TelemetriaPage() {
       return t !== null && t >= now - ms
     })
   }, [byUserFiltered, rangeKey])
+
+  const weeklyHourHeatmap = useMemo(() => buildWeeklyHourBuckets(byUserFiltered), [byUserFiltered])
 
   const eventTypeOptions = useMemo(() => {
     const unique = Array.from(new Set(rangeFilteredEvents.map((event) => event.event_type).filter(Boolean)))
@@ -827,7 +857,7 @@ export default function TelemetriaPage() {
           transition={{ duration: 0.28, ease: "easeOut" }}
           className={`relative overflow-hidden rounded-2xl ${GLASS_PANEL_CLASS}`}
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.24),transparent_52%),radial-gradient(circle_at_bottom_left,hsl(var(--chart-4)/0.16),transparent_52%)]" />
+          <div className="pointer-events-none absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.24)_0%,transparent_58%)]" />
           <div className="relative space-y-6 p-6 lg:p-7">
             <div className="flex flex-col gap-5 xl:flex-row xl:items-start xl:justify-between">
               <div className="space-y-3">
@@ -849,35 +879,38 @@ export default function TelemetriaPage() {
                     Lote: <span className="font-medium text-foreground">{TELEMETRY_PAGE_SIZE}</span>
                   </span>
                   <span>
-                    Maximo por consulta: <span className="font-medium text-foreground">{TELEMETRY_MAX_ROWS}</span>
-                  </span>
-                  <span>
-                    Estado:{" "}
-                    <span className={loadCapped ? "font-medium text-amber-500" : "font-medium text-foreground"}>
-                      {loadCapped ? "limite atingido" : "carregamento completo"}
-                    </span>
+                    Limite: <span className="font-medium text-foreground">sem teto (até fim da paginação)</span>
                   </span>
                 </div>
               </div>
 
               <div className="grid gap-3 sm:grid-cols-3 xl:w-[560px]">
-                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
-                  <div className="mb-1 text-xs text-muted-foreground">Saude da operacao</div>
+                <div className={TOP_METRIC_CARD_CLASS}>
                   <div className="mb-2 flex items-center justify-between">
-                    <span className="text-xl font-semibold tabular-nums">{summary.health}</span>
+                    <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                      <Gauge className="h-3.5 w-3.5" />
+                      Saude da operacao
+                    </div>
                     <span className={`text-xs font-medium ${healthIndicator.tone}`}>{healthIndicator.label}</span>
                   </div>
-                  <Progress value={summary.health} className="h-1.5 bg-muted/70" />
+                  <div className="mb-2 text-xl font-semibold tabular-nums">{summary.health}</div>
+                  <Progress value={summary.health} className="h-1.5 bg-muted/70 [&>div]:bg-gradient-to-r [&>div]:from-primary [&>div]:to-emerald-500" />
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
-                  <div className="text-xs text-muted-foreground">Tempo trabalhado (periodo)</div>
+                <div className={TOP_METRIC_CARD_CLASS}>
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
+                    Tempo trabalhado (periodo)
+                  </div>
                   <div className="mt-2 text-base font-semibold tabular-nums">{formatDuration(summary.totalWorked)}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     Para em desconexao ou inatividade
                   </div>
                 </div>
-                <div className="rounded-xl border border-border/70 bg-background/70 p-3">
-                  <div className="text-xs text-muted-foreground">Origem dominante</div>
+                <div className={TOP_METRIC_CARD_CLASS}>
+                  <div className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                    <PieIcon className="h-3.5 w-3.5" />
+                    Origem dominante
+                  </div>
                   <div className="mt-2 text-base font-semibold">{dominantSource}</div>
                   <div className="mt-1 text-xs text-muted-foreground">
                     {sourcePie.reduce((acc, item) => acc + item.value, 0)} eventos
@@ -1008,32 +1041,94 @@ export default function TelemetriaPage() {
                 Total de eventos por {rangeKey === "24h" ? "hora" : "período"} + linhas de locks e falhas de senha.
               </CardDescription>
             </CardHeader>
-            <CardContent style={{ minHeight: 320 }}>
+            <CardContent className="space-y-6" style={{ minHeight: 320 }}>
               {loading ? (
                 <div className="h-full animate-pulse rounded-md bg-muted/40" />
               ) : timeSeries.length === 0 ? (
                 <p className="text-sm text-muted-foreground">Sem dados suficientes no período.</p>
               ) : (
-                <div className="w-full" style={{ height: 300 }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <ComposedChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
-                      <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
-                      <YAxis tick={{ fontSize: 12 }} />
-                      <Tooltip
-                        contentStyle={{
-                          background: "hsl(var(--popover))",
-                          border: "1px solid hsl(var(--border))",
-                          borderRadius: 8,
-                        }}
-                        labelStyle={{ color: "hsl(var(--foreground))" }}
-                      />
-                      <Legend />
-                      <Bar dataKey="total" name="Eventos" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
-                      <Line dataKey="locks" name="Bloqueios" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
-                      <Line dataKey="reauth" name="Falhas senha" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
+                <div className="space-y-6">
+                  <div className="w-full" style={{ height: 300 }}>
+                    <ResponsiveContainer width="100%" height="100%">
+                      <ComposedChart data={timeSeries} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" opacity={0.25} />
+                        <XAxis dataKey="label" tick={{ fontSize: 12 }} interval="preserveStartEnd" />
+                        <YAxis tick={{ fontSize: 12 }} />
+                        <Tooltip
+                          contentStyle={{
+                            background: "hsl(var(--popover))",
+                            border: "1px solid hsl(var(--border))",
+                            borderRadius: 8,
+                          }}
+                          labelStyle={{ color: "hsl(var(--foreground))" }}
+                        />
+                        <Legend />
+                        <Bar dataKey="total" name="Eventos" fill="hsl(var(--primary))" radius={[6, 6, 0, 0]} />
+                        <Line dataKey="locks" name="Bloqueios" stroke="hsl(var(--destructive))" strokeWidth={2} dot={false} />
+                        <Line dataKey="reauth" name="Falhas senha" stroke="hsl(var(--foreground))" strokeWidth={2} dot={false} />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="space-y-2 rounded-xl border border-border/60 bg-muted/15 p-3">
+                    <p className="text-xs font-medium uppercase tracking-[0.12em] text-muted-foreground">
+                      Heatmap semanal por hora
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {selectedUser
+                        ? `Distribuição horária semanal de ${selectedUser.label}.`
+                        : "Distribuição horária semanal agregada de todos os usuários."}
+                    </p>
+                    <div className="overflow-x-auto pb-1">
+                      <div className="min-w-[760px] rounded-lg border border-border/50 bg-background/40 p-2">
+                        <div
+                          className="grid gap-1.5"
+                          style={{
+                            gridTemplateColumns: "60px repeat(7, minmax(70px, 1fr))",
+                          }}
+                        >
+                          <div />
+                          {weeklyHourHeatmap.days.map((day) => (
+                            <div key={day.key} className="text-center text-[11px] font-medium text-muted-foreground">
+                              {day.label}
+                            </div>
+                          ))}
+
+                          {weeklyHourHeatmap.hours.map((hour) => (
+                            <div key={`row-${hour}`} className="contents">
+                              <div
+                                key={`label-${hour}`}
+                                className="flex items-center justify-end pr-2 text-[10px] text-muted-foreground"
+                              >
+                                {String(hour).padStart(2, "0")}h
+                              </div>
+                              {weeklyHourHeatmap.days.map((day, dayIndex) => {
+                                const value = weeklyHourHeatmap.matrix[hour][dayIndex]
+                                const intensity =
+                                  weeklyHourHeatmap.max > 0 ? Math.max(0.12, value / weeklyHourHeatmap.max) : 0
+                                const bg =
+                                  value > 0 ? `hsl(var(--primary) / ${intensity.toFixed(2)})` : "hsl(var(--muted) / 0.35)"
+
+                                return (
+                                  <div
+                                    key={`${day.key}-${hour}`}
+                                    className="h-4 rounded-[4px] border border-border/35"
+                                    style={{ backgroundColor: bg }}
+                                    title={`${day.label} ${String(hour).padStart(2, "0")}h: ${value} evento(s)`}
+                                  />
+                                )
+                              })}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div className="mt-2 flex items-center justify-end gap-2 text-[11px] text-muted-foreground">
+                        <span>Menor</span>
+                        <div className="h-2 w-16 rounded-full bg-gradient-to-r from-muted/60 to-primary/90" />
+                        <span>Maior</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -1628,12 +1723,21 @@ function SummaryCard({
 }) {
   const toneClass =
     tone === "positive"
-      ? "border-emerald-500/35"
+      ? "border-emerald-500/35 bg-gradient-to-b from-emerald-500/10 to-background/70"
       : tone === "warning"
-        ? "border-amber-500/35"
+        ? "border-amber-500/35 bg-gradient-to-b from-amber-500/10 to-background/70"
         : tone === "danger"
-          ? "border-destructive/35"
-          : "border-border/60"
+          ? "border-destructive/35 bg-gradient-to-b from-destructive/10 to-background/70"
+          : "border-border/60 bg-gradient-to-b from-background/65 to-background/45"
+
+  const iconToneClass =
+    tone === "positive"
+      ? "border-emerald-500/30 text-emerald-400"
+      : tone === "warning"
+        ? "border-amber-500/35 text-amber-400"
+        : tone === "danger"
+          ? "border-destructive/35 text-destructive"
+          : "border-border/60 text-muted-foreground"
 
   return (
     <motion.div whileHover={{ y: -2 }} transition={{ duration: 0.18, ease: "easeOut" }}>
@@ -1643,8 +1747,8 @@ function SummaryCard({
             <CardTitle className="text-sm font-medium">{title}</CardTitle>
             {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
           </div>
-          <div className="rounded-md border border-border/60 bg-background/60 p-1.5">
-            <Icon className="h-4 w-4 text-muted-foreground" />
+          <div className={`rounded-md border bg-background/60 p-1.5 ${iconToneClass}`}>
+            <Icon className="h-4 w-4" />
           </div>
         </CardHeader>
         <CardContent>

@@ -702,12 +702,11 @@ function KpiCard({
   return (
     <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 260, damping: 22 }}>
       <Card
-        className="relative h-full overflow-hidden rounded-[1.15rem] border border-default-200/80 bg-content1 shadow-[0_18px_36px_-26px_hsl(222_35%_22%/0.26)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_22px_44px_-32px_hsl(var(--primary)/0.44)]"
+        className="relative h-full overflow-hidden rounded-[1.15rem] border border-default-200/80 bg-content1 shadow-[0_18px_36px_-26px_hsl(222_35%_22%/0.26)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-[0_22px_44px_-32px_hsl(var(--primary)/0.44)]"
       >
         <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
-          <div className="absolute -left-12 -bottom-10 h-28 w-28 rounded-full bg-gradient-to-br from-primary/28 to-transparent blur-2xl" />
           <div className="absolute -right-12 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/22 to-transparent blur-2xl" />
-          <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+          <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
         </div>
         <CardBody className="relative z-10 p-4">
           <div className="flex items-start justify-between gap-3">
@@ -784,7 +783,7 @@ function ClienteGridCard({
             }
           }}
           className={[
-            `${clientCardHeight} w-full min-w-0 rounded-[1.2rem] border border-default-200/80 bg-content1 shadow-[0_20px_40px_-30px_hsl(222_35%_22%/0.24)] dark:border-primary/22 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_26px_52px_-36px_hsl(var(--primary)/0.5)]`,
+            `${clientCardHeight} w-full min-w-0 rounded-[1.2rem] border border-default-200/80 bg-content1 shadow-[0_20px_40px_-30px_hsl(222_35%_22%/0.24)] dark:border-primary/22 dark:bg-zinc-900/72 dark:shadow-[0_26px_52px_-36px_hsl(var(--primary)/0.5)]`,
             "flex flex-col",
             "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
             "hover:border-primary/38 transition",
@@ -794,7 +793,7 @@ function ClienteGridCard({
           <div className="pointer-events-none absolute inset-0 hidden opacity-78 dark:block">
             <div className="absolute -left-16 -bottom-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/24 to-transparent blur-2xl" />
             <div className="absolute -right-14 -top-14 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/20 to-transparent blur-2xl" />
-            <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
           </div>
           <div className="flex items-center justify-between px-4 pt-4">
             <div className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-primary">
@@ -865,7 +864,7 @@ function ClienteGridCard({
             </div>
 
             <div
-              className="rounded-xl border border-default-200/80 bg-content1/95 p-3 shadow-[0_12px_26px_-22px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/95 dark:via-background/84 dark:to-primary/12 dark:shadow-none"
+              className="rounded-xl border border-default-200/80 bg-content1/95 p-3 shadow-[0_12px_26px_-22px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-none"
             >
               <p className="text-[11px] uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
               <p className={`truncate text-base font-semibold tabular-nums ${carteiraAccentClass}`}>
@@ -1645,12 +1644,12 @@ export default function ClientsPage() {
     <div className="clients-revamp relative w-full max-w-[100vw] px-4 py-6 lg:px-6">
       <div className="space-y-6">
         <Card
-          className={`${glassCard} ${sheen} clients-hero-card relative overflow-hidden border-default-200/80 bg-content1 shadow-[0_24px_50px_-34px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-gradient-to-br dark:from-background/96 dark:via-background/82 dark:to-primary/14 dark:shadow-[0_34px_72px_-50px_hsl(var(--primary)/0.48)]`}
+          className={`${glassCard} ${sheen} clients-hero-card relative overflow-hidden border-default-200/80 bg-content1 shadow-[0_24px_50px_-34px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-[0_34px_72px_-50px_hsl(var(--primary)/0.48)]`}
         >
           <div className="pointer-events-none absolute inset-0 hidden opacity-85 dark:block">
             <div className="absolute -left-20 -bottom-16 h-44 w-44 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl" />
             <div className="absolute -right-24 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-orange-400/24 to-transparent blur-3xl" />
-            <div className="absolute inset-0 bg-[linear-gradient(122deg,transparent_0%,rgba(255,128,26,0.16)_100%)]" />
+            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
           </div>
           <CardBody className="relative gap-5 p-5 lg:p-6">
             <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">

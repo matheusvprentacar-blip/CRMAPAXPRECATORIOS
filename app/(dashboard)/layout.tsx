@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable */
 import type React from "react"
@@ -15,8 +15,6 @@ import {
   Kanban,
   Users,
   Settings,
-  Menu,
-  X,
   LogOut,
   Scale,
   RotateCcw,
@@ -32,7 +30,20 @@ import {
   Activity,
 } from "@/components/icons"
 import { Avatar, AvatarIcon, Slider } from "@/lib/heroui/compat"
-import { Button } from "@/components/ui/button"
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+  useSidebar,
+} from "@/components/ui/sidebar"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -138,25 +149,25 @@ const navigation = [
     name: "Análise Processual",
     href: "/analise-processual",
     icon: FileSearch,
-    roles: ["admin", "operador_calculo", "gestor"]
+    roles: ["admin", "operador_calculo", "gestor"],
   },
   {
     name: "Gestão de Certidões",
     href: "/gestao-certidoes",
     icon: FileCheck,
-    roles: ["admin", "gestor_certidoes", "gestor"]
+    roles: ["admin", "gestor_certidoes", "gestor"],
   },
   {
     name: "Gestão de Ofícios",
     href: "/gestao-oficios",
     icon: Scroll,
-    roles: ["admin", "gestor_oficio", "gestor"]
+    roles: ["admin", "gestor_oficio", "gestor"],
   },
   {
     name: "Gestão de Escrituras",
     href: "/gestao-escrituras",
     icon: ScrollText,
-    roles: ["admin", "gestor_escrituras", "gestor"]
+    roles: ["admin", "gestor_escrituras", "gestor"],
   },
   {
     name: "Acesso Controlado",
@@ -186,13 +197,218 @@ const navigation = [
   { name: "Financeiro", href: "/admin/financeiro", icon: DollarSign, roles: ["admin", "gestor"] },
 ]
 
+type DashboardSidebarProps = {
+  pathname: string
+  filteredNavigation: (typeof navigation)
+  logoUrl: string | null
+  nomeEmpresa: string
+  subtituloEmpresa: string
+  appVersion: string
+}
+
+function DashboardSidebar({
+  pathname,
+  filteredNavigation,
+  logoUrl,
+  nomeEmpresa,
+  subtituloEmpresa,
+  appVersion,
+}: DashboardSidebarProps) {
+  const { setOpenMobile } = useSidebar()
+
+  return (
+    <Sidebar collapsible="icon" className="border-sidebar-border/70 shadow-xl">
+      <SidebarHeader className="p-3">
+        <div className="relative overflow-hidden rounded-xl border border-sidebar-border/70 bg-sidebar/60 group-data-[collapsible=icon]:hidden">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-500" />
+          <SidebarMenu className="p-2 pt-3">
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" tooltip={nomeEmpresa}>
+                <div className="size-10 rounded-lg bg-primary/15 flex items-center justify-center border border-primary/40 shrink-0">
+                  <Image
+                    src={logoUrl || "/logo-apax.png"}
+                    alt="Logo"
+                    width={30}
+                    height={30}
+                    priority
+                    className="object-contain"
+                  />
+                </div>
+                <div className="grid flex-1 text-left text-sm leading-tight">
+                  <span className="truncate font-semibold">{nomeEmpresa}</span>
+                  <span className="truncate text-xs text-muted-foreground">{subtituloEmpresa}</span>
+                </div>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </div>
+      </SidebarHeader>
+
+      <SidebarContent className="px-2 pb-2">
+        <SidebarMenu>
+          {filteredNavigation.map((item) => {
+            const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
+            const Icon = item.icon
+
+            return (
+              <SidebarMenuItem key={item.name}>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive}
+                  tooltip={item.name}
+                  className={cn(
+                    "h-10",
+                    "data-[active=true]:bg-amber-50 data-[active=true]:text-zinc-900 dark:data-[active=true]:bg-amber-900/20 dark:data-[active=true]:text-zinc-100"
+                  )}
+                >
+                  <Link href={item.href} onClick={() => setOpenMobile(false)}>
+                    <Icon className={cn("size-5", isActive && "text-amber-600")} />
+                    <span>{item.name}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            )
+          })}
+        </SidebarMenu>
+      </SidebarContent>
+      <SidebarFooter className="p-2">
+        <div className="px-2 pt-1 group-data-[collapsible=icon]:hidden">
+          <p className="text-[10px] text-center text-muted-foreground">v{appVersion}</p>
+        </div>
+      </SidebarFooter>
+
+      <SidebarRail />
+    </Sidebar>
+  )
+}
+
+type UserMenuDropdownProps = {
+  profile: any
+  signOut: () => Promise<void>
+  zoomPercent: number
+  zoomAppliedPercent: number
+  uiZoomPreview: number
+  ZOOM_MIN: number
+  ZOOM_MAX: number
+  handleZoomPreviewChange: (value: number | number[]) => void
+  handleZoomCommit: (value: number | number[]) => void
+  handleZoomReset: () => void
+}
+
+function UserMenuDropdown({
+  profile,
+  signOut,
+  zoomPercent,
+  zoomAppliedPercent,
+  uiZoomPreview,
+  ZOOM_MIN,
+  ZOOM_MAX,
+  handleZoomPreviewChange,
+  handleZoomCommit,
+  handleZoomReset,
+}: UserMenuDropdownProps) {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <button
+          type="button"
+          className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground"
+          aria-label="Abrir menu do usuário"
+        >
+          <Avatar
+            className="size-8 text-xs"
+            src={profile?.foto_url || undefined}
+            name={profile?.nome || undefined}
+            showFallback
+            icon={<AvatarIcon />}
+            classNames={{
+              fallback: "bg-primary text-primary-foreground font-semibold",
+              icon: "text-primary-foreground",
+            }}
+          />
+        </button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent
+        align="end"
+        className="w-60 border border-border/90 !bg-[#f7f4ef] dark:!bg-[#151922] text-foreground shadow-xl !opacity-100 backdrop-blur-none supports-[backdrop-filter]:!backdrop-blur-none"
+        style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        forceMount
+      >
+        <DropdownMenuLabel className="font-normal">
+          <div className="flex flex-col space-y-1">
+            <p className="text-sm font-medium leading-none">{profile?.nome}</p>
+            <p className="text-xs leading-none text-muted-foreground">
+              {(Array.isArray(profile?.role) ? profile.role : [profile?.role])
+                .filter(Boolean)
+                .map((r: string) => r?.replace(/_/g, " "))
+                .join(", ")}
+            </p>
+          </div>
+        </DropdownMenuLabel>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem asChild>
+          <Link href="/perfil">
+            <User className="w-4 h-4 mr-2" />
+            Perfil
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuItem asChild>
+          <Link href="/configuracoes">
+            <Settings className="w-4 h-4 mr-2" />
+            Configurações
+          </Link>
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <div className="px-3 py-2 space-y-2">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>Zoom da interface</span>
+            <AnimatePresence mode="wait" initial={false}>
+              <motion.span
+                key={zoomPercent}
+                initial={{ opacity: 0, y: 6, scale: 0.92 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -6, scale: 0.92 }}
+                transition={{ duration: 0.16, ease: "easeOut" }}
+                className="font-mono text-foreground tabular-nums"
+              >
+                {zoomPercent}%
+              </motion.span>
+            </AnimatePresence>
+          </div>
+          <Slider
+            className="max-w-[220px]"
+            value={uiZoomPreview}
+            minValue={ZOOM_MIN}
+            maxValue={ZOOM_MAX}
+            step={0.01}
+            color="primary"
+            size="sm"
+            onChange={handleZoomPreviewChange}
+            onChangeEnd={handleZoomCommit}
+            aria-label="Zoom da interface"
+          />
+          <p className="text-[11px] text-muted-foreground">Solte o mouse para aplicar ({zoomAppliedPercent}% atual)</p>
+        </div>
+        <DropdownMenuItem onClick={handleZoomReset}>
+          <RotateCcw className="w-4 h-4 mr-2" />
+          Voltar para 90%
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => signOut()}>
+          <LogOut className="w-4 h-4 mr-2" />
+          Sair
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
+
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const DEFAULT_UI_ZOOM = 0.9
   const UI_ZOOM_STORAGE_KEY = "ui_zoom"
   const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_90_applied"
 
   const pathname = usePathname()
-  const [sidebarOpen, setSidebarOpen] = useState(false)
   const [hideMenuForComunicado, setHideMenuForComunicado] = useState(false)
   const { profile, signOut } = useAuth()
   const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
@@ -200,7 +416,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const baseFontSizeRef = useRef<number | null>(null)
 
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
-  const [nomeEmpresa, setNomeEmpresa] = useState("CRM APAX Precat\u00f3rios")
+  const [nomeEmpresa, setNomeEmpresa] = useState("CRM APAX Precatórios")
   const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
   const [appVersion, setAppVersion] = useState<string>(packageJson.version)
 
@@ -211,18 +427,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
   const filteredNavigation = navigation.filter((item) => {
     if (!profile?.role) return false
-    // Garantir que role seja tratado como array
-    const userRoles = typeof profile.role === 'string' ? [profile.role] : profile.role
+    const userRoles = typeof profile.role === "string" ? [profile.role] : profile.role
 
-    // Verificar se usuário tem QUALQUER uma das roles necessárias para este item
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return item.roles.some(requiredRole => userRoles.includes(requiredRole as any))
+    return item.roles.some((requiredRole) => userRoles.includes(requiredRole as any))
   })
+  const isKanbanPage = pathname === "/kanban"
 
   useEffect(() => {
     loadConfig()
-
-
   }, [])
 
   useEffect(() => {
@@ -253,8 +465,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     const parsed = Number(savedZoom)
     const invalid = Number.isNaN(parsed) || !Number.isFinite(parsed)
     const outOfRange = parsed < ZOOM_MIN || parsed > ZOOM_MAX
-
-    // Migra usuários do padrão antigo (100% e 80%) para o novo padrão (90%) uma vez.
     const migratedDefault = !migrationApplied && (parsed === 1 || parsed === 0.8)
 
     const sanitized = invalid || outOfRange || migratedDefault ? DEFAULT_UI_ZOOM : parsed
@@ -298,19 +508,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     window.dispatchEvent(new CustomEvent("ui-zoom:changed", { detail: uiZoom }))
   }, [uiZoom])
 
-  useEffect(() => {
-    if (!hideMenuForComunicado) return
-    setSidebarOpen(false)
-  }, [hideMenuForComunicado])
-
   async function loadConfig() {
     try {
       const supabase = getSupabase()
       if (!supabase) return
 
       const { data } = await supabase
-        .from('configuracoes_sistema')
-        .select('logo_url, nome_empresa, subtitulo_empresa')
+        .from("configuracoes_sistema")
+        .select("logo_url, nome_empresa, subtitulo_empresa")
         .single()
 
       if (data) {
@@ -319,7 +524,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         if (data.subtitulo_empresa) setSubtituloEmpresa(data.subtitulo_empresa)
       }
     } catch (error) {
-      console.error('Erro ao carregar configurações:', error)
+      console.error("Erro ao carregar configurações:", error)
     }
   }
 
@@ -340,235 +545,101 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     setUiZoomPreview(zoom)
   }
 
-
-  const profileMenu = (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="gap-2 hover:bg-muted/60">
-          <Avatar
-            className="w-8 h-8 text-xs"
-            src={profile?.foto_url || undefined}
-            name={profile?.nome || undefined}
-            showFallback
-            icon={<AvatarIcon />}
-            classNames={{
-              fallback: "bg-primary text-primary-foreground font-semibold",
-              icon: "text-primary-foreground",
-            }}
-          />
-          <span className="text-sm hidden sm:inline">{profile?.nome}</span>
-        </Button>
-      </DropdownMenuTrigger>
-      <DropdownMenuContent
-        align="end"
-        className="w-60 border border-border/90 !bg-[#f7f4ef] dark:!bg-[#151922] text-foreground shadow-xl !opacity-100 backdrop-blur-none supports-[backdrop-filter]:!backdrop-blur-none"
-        style={{ backdropFilter: "none", WebkitBackdropFilter: "none" }}
-        forceMount
-      >
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">{profile?.nome}</p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {(Array.isArray(profile?.role) ? profile.role : [profile?.role]).filter(Boolean).map((r) => r?.replace(/_/g, " ")).join(", ")}
-            </p>
-          </div>
-        </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/perfil">
-            <User className="w-4 h-4 mr-2" />
-            Perfil
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuItem asChild>
-          <Link href="/configuracoes">
-            <Settings className="w-4 h-4 mr-2" />
-            {"Configura\u00e7\u00f5es"}
-          </Link>
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <div className="px-3 py-2 space-y-2">
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <span>Zoom da interface</span>
-            <AnimatePresence mode="wait" initial={false}>
-              <motion.span
-                key={zoomPercent}
-                initial={{ opacity: 0, y: 6, scale: 0.92 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -6, scale: 0.92 }}
-                transition={{ duration: 0.16, ease: "easeOut" }}
-                className="font-mono text-foreground tabular-nums"
-              >
-                {zoomPercent}%
-              </motion.span>
-            </AnimatePresence>
-          </div>
-          <Slider
-            className="max-w-[220px]"
-            value={uiZoomPreview}
-            minValue={ZOOM_MIN}
-            maxValue={ZOOM_MAX}
-            step={0.01}
-            color="primary"
-            size="sm"
-            onChange={handleZoomPreviewChange}
-            onChangeEnd={handleZoomCommit}
-            aria-label="Zoom da interface"
-          />
-          <p className="text-[11px] text-muted-foreground">Solte o mouse para aplicar ({zoomAppliedPercent}% atual)</p>
-        </div>
-        <DropdownMenuItem onClick={handleZoomReset}>
-          <RotateCcw className="w-4 h-4 mr-2" />
-          Voltar para {Math.round(DEFAULT_UI_ZOOM * 100)}%
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()}>
-          <LogOut className="w-4 h-4 mr-2" />
-          Sair
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  )
-
   return (
     <ProtectedRoute>
       <TelemetryProvider>
         <NotificationsProvider>
-          <div className="min-h-screen bg-transparent">
-            {/* Mobile sidebar backdrop */}
-            {sidebarOpen && !hideMenuForComunicado && (
-              <div className="fixed inset-0 bg-black/50 z-40 lg:hidden" onClick={() => setSidebarOpen(false)} />
-            )}
+          <SidebarProvider defaultOpen={false}>
+            <div className="min-h-screen bg-transparent flex w-full overflow-x-hidden">
+              <div
+                className="global-watermark fixed inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03] mix-blend-multiply blur-[1px] select-none"
+                aria-hidden="true"
+              >
+                <div className="relative w-[500px] h-[500px]">
+                  <Image src="/logo-apax.png" alt="Watermark" fill className="object-contain grayscale" />
+                </div>
+              </div>
 
-            {/* Global Watermark/Timbrado - BRANDING */}
-            <div
-              className="global-watermark fixed inset-0 pointer-events-none z-0 flex items-center justify-center opacity-[0.03] mix-blend-multiply blur-[1px] select-none"
-              aria-hidden="true"
-            >
-              <div className="relative w-[500px] h-[500px]">
-                <Image
-                  src="/logo-apax.png"
-                  alt="Watermark"
-                  fill
-                  className="object-contain grayscale"
+              {!hideMenuForComunicado && (
+                <DashboardSidebar
+                  pathname={pathname}
+                  filteredNavigation={filteredNavigation}
+                  logoUrl={logoUrl}
+                  nomeEmpresa={nomeEmpresa}
+                  subtituloEmpresa={subtituloEmpresa}
+                  appVersion={appVersion}
                 />
-              </div>
-            </div>
-
-            {/* Sidebar */}
-            <aside
-              className={cn(
-                "fixed inset-y-0 left-0 z-50 w-64 border-r transform transition-transform duration-300 ease-in-out lg:translate-x-0 overflow-y-auto",
-                "bg-zinc-100 text-zinc-900 border-zinc-300/70 shadow-xl dark:bg-zinc-950/40 dark:text-zinc-100 dark:border-zinc-800/60",
-                hideMenuForComunicado && "pointer-events-none -translate-x-full opacity-0 lg:-translate-x-full",
-                sidebarOpen ? "translate-x-0" : "-translate-x-full",
               )}
-            >
-              <div className="flex flex-col h-full relative z-10">
-                {/* Gradient Accent Top */}
-                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-orange-400 to-amber-500" />
 
-                {/* Logo Area */}
-                <div className="flex items-center gap-3 p-6 border-b border-border/50">
-                  <div className="w-12 h-12 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0 relative overflow-hidden shadow-sm border border-primary/40">
-                    <Image
-                      src={logoUrl || "/logo-apax.png"}
-                      alt="Logo"
-                      width={40}
-                      height={40}
-                      priority
-                      className="object-contain w-10 h-10"
-                    />
+              <SidebarInset>
+                <header
+                  className={cn(
+                    "sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border lg:hidden",
+                    hideMenuForComunicado && "invisible pointer-events-none"
+                  )}
+                >
+                  <div className="flex min-w-0 items-center justify-between gap-2 p-4 pr-6">
+                    <SidebarTrigger className="-ml-1" />
+                    <h2 className="hidden min-w-0 flex-1 truncate text-lg font-semibold sm:block">{nomeEmpresa}</h2>
+                    <div className="ml-auto flex shrink-0 flex-nowrap items-center gap-2">
+                      <NotificationBell />
+                      <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
+                      <UserMenuDropdown
+                        profile={profile}
+                        signOut={signOut}
+                        zoomPercent={zoomPercent}
+                        zoomAppliedPercent={zoomAppliedPercent}
+                        uiZoomPreview={uiZoomPreview}
+                        ZOOM_MIN={ZOOM_MIN}
+                        ZOOM_MAX={ZOOM_MAX}
+                        handleZoomPreviewChange={handleZoomPreviewChange}
+                        handleZoomCommit={handleZoomCommit}
+                        handleZoomReset={handleZoomReset}
+                      />
+                    </div>
                   </div>
-                  <div className="flex flex-col">
-                    <h1 className="text-lg font-bold leading-none tracking-tight text-foreground">{nomeEmpresa}</h1>
-                    <p className="text-xs text-muted-foreground mt-1 font-medium">{subtituloEmpresa}</p>
+                </header>
+
+                <header
+                  className={cn(
+                    "hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border",
+                    hideMenuForComunicado && "invisible pointer-events-none"
+                  )}
+                >
+                  <div className="flex min-w-0 items-center justify-between p-4 pr-6 gap-2">
+                    <SidebarTrigger className="-ml-1" />
+                    <div className="ml-auto flex shrink-0 flex-nowrap items-center gap-2">
+                      <NotificationBell />
+                      <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
+                      <UserMenuDropdown
+                        profile={profile}
+                        signOut={signOut}
+                        zoomPercent={zoomPercent}
+                        zoomAppliedPercent={zoomAppliedPercent}
+                        uiZoomPreview={uiZoomPreview}
+                        ZOOM_MIN={ZOOM_MIN}
+                        ZOOM_MAX={ZOOM_MAX}
+                        handleZoomPreviewChange={handleZoomPreviewChange}
+                        handleZoomCommit={handleZoomCommit}
+                        handleZoomReset={handleZoomReset}
+                      />
+                    </div>
                   </div>
-                </div>
+                </header>
 
-                {/* Navigation */}
-                <nav className="flex-1 p-4 space-y-1">
-                  {filteredNavigation.reduce((acc: React.ReactNode[], item) => {
-                    // Logic to add separators if needed, for now just the items
-                    // You can group them here if the `roles` or `category` was more explicit in the `navigation` array
-
-                    const isActive = pathname === item.href || pathname.startsWith(item.href + "/")
-                    const Icon = item.icon
-
-                    const link = (
-                      <Link
-                        key={item.name}
-                        href={item.href}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all duration-200 relative group",
-                          isActive
-                            ? "bg-amber-50 text-zinc-900 font-semibold dark:bg-amber-900/20 dark:text-zinc-100"
-                            : "text-zinc-600 hover:bg-zinc-100/70 hover:text-zinc-900 dark:text-zinc-400 dark:hover:bg-zinc-900/60 dark:hover:text-zinc-100",
-                        )}
-                        onClick={() => setSidebarOpen(false)}
-                      >
-                        {isActive && (
-                          <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-amber-500 rounded-r-full" />
-                        )}
-                        <Icon
-                          className={cn(
-                            "w-5 h-5 transition-colors",
-                            isActive
-                              ? "text-amber-600"
-                              : "text-zinc-500 group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100"
-                          )}
-                        />
-                        {item.name}
-                      </Link>
-                    )
-
-                    return [...acc, link]
-                  }, [])}
-                </nav>
-
-                {/* User section removed as per request to move to top header */}
-                <div className="p-4 border-t border-border/50 bg-muted/5">
-                  <p className="text-[10px] text-center text-muted-foreground">v{appVersion}</p>
-                </div>
-              </div>
-            </aside>
-
-            {/* Main content */}
-            <div
-              className={cn(
-                "transition-[padding] duration-500 ease-out",
-                hideMenuForComunicado ? "lg:pl-0" : "lg:pl-64"
-              )}
-            >
-              {/* Mobile header */}
-              <header className={cn("sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border lg:hidden", hideMenuForComunicado && "invisible pointer-events-none")}>
-                <div className="flex items-center justify-between p-4">
-                  <Button variant="ghost" size="icon" onClick={() => setSidebarOpen(!sidebarOpen)}>
-                    {sidebarOpen ? <X /> : <Menu />}
-                  </Button>
-                  <h2 className="text-lg font-semibold">{nomeEmpresa}</h2>
-                  <div className="flex items-center gap-2">
-                    <NotificationBell />
-                    <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
-                    {profileMenu}
-                  </div>
-                </div>
-              </header>
-
-              {/* Desktop header */}
-              <header className={cn("hidden lg:block sticky top-0 z-30 bg-background/80 backdrop-blur border-b border-border dark:bg-muted dark:border-border", hideMenuForComunicado && "invisible pointer-events-none")}>
-                {/* Subtle noise texture or gradient could be added here via pseudo-element if desired, for now keeping it clean/glassy */}
-                <div className="flex items-center justify-end p-4 gap-2">
-                  <NotificationBell />
-                  <AnimatedThemeToggler className="inline-flex h-9 w-9 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/60 hover:text-foreground" />
-                  {profileMenu}
-                </div>
-              </header>
-
-              {/* Page content */}
-              <main className="min-h-[calc(100vh-4rem)] p-6 transition-all duration-500 ease-out">{children}</main>
+                <main
+                  className={cn(
+                    "min-w-0 w-full max-w-full overflow-x-hidden transition-all duration-500 ease-out",
+                    isKanbanPage
+                      ? "flex-1 min-h-0 h-[calc(100vh-76px)] overflow-hidden p-0 lg:p-2 flex flex-col"
+                      : "min-h-[calc(100vh-76px)] p-6"
+                  )}
+                >
+                  {children}
+                </main>
+              </SidebarInset>
             </div>
-          </div>
+          </SidebarProvider>
           <NotificationsModal />
           <ComunicadosBroadcastModal onComunicadoBlockingChange={setHideMenuForComunicado} />
         </NotificationsProvider>

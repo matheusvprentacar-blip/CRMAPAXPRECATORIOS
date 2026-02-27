@@ -1,7 +1,8 @@
-import { z } from "zod"
+﻿import { z } from "zod"
 import {
   LEGAL_OPINION_EVENT_TYPES,
   LEGAL_OPINION_PRIORITIES,
+  LEGAL_OPINION_SOURCES,
   LEGAL_OPINION_STATUSES,
   LEGAL_OPINION_TYPES,
 } from "@/features/legal-opinion/types"
@@ -17,6 +18,7 @@ export const legalOpinionCreateSchema = z.object({
   type: z.enum(LEGAL_OPINION_TYPES),
   status: z.enum(LEGAL_OPINION_STATUSES).optional().default("pendente"),
   priority: z.enum(LEGAL_OPINION_PRIORITIES).optional().default("media"),
+  origemSolicitacao: z.enum(LEGAL_OPINION_SOURCES).optional().default("manual"),
   dueDate: z.string().date().nullish(),
   executiveSummary: z.string().trim().max(5000).nullish(),
   analysis: z.string().trim().max(25000).nullish(),
@@ -32,6 +34,7 @@ export const legalOpinionUpdateSchema = z
     type: z.enum(LEGAL_OPINION_TYPES).optional(),
     status: z.enum(LEGAL_OPINION_STATUSES).optional(),
     priority: z.enum(LEGAL_OPINION_PRIORITIES).optional(),
+    origemSolicitacao: z.enum(LEGAL_OPINION_SOURCES).optional(),
     dueDate: z.string().date().nullish(),
     executiveSummary: z.string().trim().max(5000).nullish(),
     analysis: z.string().trim().max(25000).nullish(),
@@ -49,6 +52,7 @@ export const legalOpinionListQuerySchema = z.object({
   status: z.enum(LEGAL_OPINION_STATUSES).optional(),
   type: z.enum(LEGAL_OPINION_TYPES).optional(),
   priority: z.enum(LEGAL_OPINION_PRIORITIES).optional(),
+  origemSolicitacao: z.enum(LEGAL_OPINION_SOURCES).optional(),
   assignedTo: uuidSchema.optional(),
   precatorioId: uuidSchema.optional(),
   search: z.string().trim().max(200).optional(),
@@ -98,4 +102,3 @@ export type LegalOpinionCommentCreateInput = z.infer<typeof legalOpinionCommentC
 export type LegalOpinionEventCreateInput = z.infer<typeof legalOpinionEventCreateSchema>
 export type LegalOpinionAttachmentCreateInput = z.infer<typeof legalOpinionAttachmentCreateSchema>
 export type LegalOpinionAttachmentSignedUrlInput = z.infer<typeof legalOpinionAttachmentSignedUrlSchema>
-

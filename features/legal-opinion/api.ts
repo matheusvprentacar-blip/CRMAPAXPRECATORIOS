@@ -16,6 +16,7 @@ import type {
   LegalOpinionComment,
   LegalOpinionEvent,
   LegalOpinionPriority,
+  LegalOpinionSource,
   LegalOpinionStatus,
   LegalOpinionType,
   LegalOpinionUserRef,
@@ -46,6 +47,7 @@ type LegalOpinionListQuery = {
   status?: LegalOpinionStatus
   type?: LegalOpinionType
   priority?: LegalOpinionPriority
+  origemSolicitacao?: LegalOpinionSource
   assignedTo?: string
   precatorioId?: string
   dueStart?: string
@@ -79,6 +81,7 @@ export type LegalOpinionCreatePayload = {
   type: LegalOpinionType
   status?: LegalOpinionStatus
   priority?: LegalOpinionPriority
+  origemSolicitacao?: LegalOpinionSource
   dueDate?: string | null
   executiveSummary?: string | null
   analysis?: string | null
@@ -99,6 +102,7 @@ type OpinionRow = {
   type: string
   status: string
   priority: string
+  origem_solicitacao?: string | null
   due_date: string | null
   executive_summary: string | null
   analysis: string | null
@@ -155,6 +159,12 @@ const ALLOWED_ATTACHMENT_TYPES = [
 
 const MAX_ATTACHMENT_SIZE = 20 * 1024 * 1024
 
+function isMissingOrigemSolicitacaoColumnError(error: unknown): boolean {
+  if (!error || typeof error !== "object") return false
+  const message = String((error as { message?: string }).message || "").toLowerCase()
+  return message.includes("origem_solicitacao")
+}
+
 function firstIssueMessage(error: { issues?: Array<{ message?: string }> }) {
   return error.issues?.[0]?.message || "Dados invalidos."
 }
@@ -162,6 +172,21 @@ function firstIssueMessage(error: { issues?: Array<{ message?: string }> }) {
 function normalizeSearchTerm(value?: string) {
   const term = String(value || "").trim()
   return term.length > 0 ? term : ""
+}
+
+function normalizeRoles(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .filter((item): item is string => typeof item === "string")
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean)
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    return [value.trim().toLowerCase()]
+  }
+
+  return []
 }
 
 function getSupabaseOrThrow() {
@@ -316,6 +341,7 @@ async function hydrateOpinions(ctx: TenantContext, rows: OpinionRow[]): Promise<
     type: row.type as LegalOpinionType,
     status: row.status as LegalOpinionStatus,
     priority: row.priority as LegalOpinionPriority,
+    origem_solicitacao: (row.origem_solicitacao || "manual") as LegalOpinionSource,
     checklist: row.checklist || {},
     requested_by_user: usersMap.get(row.requested_by) || null,
     assigned_to_user: row.assigned_to ? usersMap.get(row.assigned_to) || null : null,
@@ -383,6 +409,7 @@ export async function listLegalOpinions(query: LegalOpinionListQuery = {}): Prom
   if (q.status) dbQuery = dbQuery.eq("status", q.status)
   if (q.type) dbQuery = dbQuery.eq("type", q.type)
   if (q.priority) dbQuery = dbQuery.eq("priority", q.priority)
+  if (q.origemSolicitacao) dbQuery = dbQuery.eq("origem_solicitacao", q.origemSolicitacao)
   if (q.assignedTo) dbQuery = dbQuery.eq("assigned_to", q.assignedTo)
   if (q.precatorioId) dbQuery = dbQuery.eq("precatorio_id", q.precatorioId)
   if (q.dueStart) dbQuery = dbQuery.gte("due_date", q.dueStart)
@@ -420,7 +447,59 @@ export async function listLegalOpinions(query: LegalOpinionListQuery = {}): Prom
     dbQuery = dbQuery.or(searchClauses.join(","))
   }
 
-  const { data, error, count } = await dbQuery.range(from, to)
+  let { data, error, count } = await dbQuery.range(from, to)
+  if (error && isMissingOrigemSolicitacaoColumnError(error)) {
+    let fallbackQuery = ctx.supabase
+      .from("legal_opinions")
+      .select("*", { count: "exact" })
+      .eq("tenant_id", ctx.tenantId)
+      .order("created_at", { ascending: false })
+
+    if (q.status) fallbackQuery = fallbackQuery.eq("status", q.status)
+    if (q.type) fallbackQuery = fallbackQuery.eq("type", q.type)
+    if (q.priority) fallbackQuery = fallbackQuery.eq("priority", q.priority)
+    if (q.assignedTo) fallbackQuery = fallbackQuery.eq("assigned_to", q.assignedTo)
+    if (q.precatorioId) fallbackQuery = fallbackQuery.eq("precatorio_id", q.precatorioId)
+    if (q.dueStart) fallbackQuery = fallbackQuery.gte("due_date", q.dueStart)
+    if (q.dueEnd) fallbackQuery = fallbackQuery.lte("due_date", q.dueEnd)
+
+    if (searchTerm) {
+      const escaped = searchTerm.replace(/,/g, " ")
+      const { data: matchingPrecatorios, error: precatorioSearchError } = await ctx.supabase
+        .from("precatorios")
+        .select("id")
+        .or(
+          `numero_precatorio.ilike.%${escaped}%,numero_processo.ilike.%${escaped}%,credor_nome.ilike.%${escaped}%,titulo.ilike.%${escaped}%`
+        )
+        .limit(200)
+
+      if (precatorioSearchError) {
+        throw new Error(precatorioSearchError.message)
+      }
+
+      const precatorioIds = (matchingPrecatorios || [])
+        .map((row) => row.id)
+        .filter(Boolean) as string[]
+
+      const searchClauses = [
+        `title.ilike.%${escaped}%`,
+        `executive_summary.ilike.%${escaped}%`,
+        `analysis.ilike.%${escaped}%`,
+      ]
+
+      if (precatorioIds.length > 0) {
+        searchClauses.push(`precatorio_id.in.(${precatorioIds.join(",")})`)
+      }
+
+      fallbackQuery = fallbackQuery.or(searchClauses.join(","))
+    }
+
+    const fallbackResult = await fallbackQuery.range(from, to)
+    data = fallbackResult.data
+    error = fallbackResult.error
+    count = fallbackResult.count
+  }
+
   if (error) {
     throw new Error(error.message)
   }
@@ -455,11 +534,9 @@ export async function listLegalOpinionsByPrecatorio(precatorioId: string): Promi
 
 export async function getLegalOpinionMetadata(options?: {
   search?: string
-  precatorioLimit?: number
 }): Promise<LegalOpinionMetadata> {
   const ctx = await resolveTenantContext()
   const search = normalizeSearchTerm(options?.search)
-  const precatorioLimit = Math.max(20, Math.min(options?.precatorioLimit || 120, 300))
 
   const { data: tenant, error: tenantError } = await ctx.supabase
     .from("tenants")
@@ -490,7 +567,7 @@ export async function getLegalOpinionMetadata(options?: {
   if (memberIds.length > 0) {
     let usersQuery = ctx.supabase
       .from("usuarios")
-      .select("id, nome, email")
+      .select("id, nome, email, role")
       .in("id", memberIds)
       .order("nome", { ascending: true })
 
@@ -503,34 +580,52 @@ export async function getLegalOpinionMetadata(options?: {
       throw new Error(usersError.message)
     }
 
-    users = (userRows || []).map((item) => ({
-      id: item.id,
-      nome: item.nome || item.email || "Usuario",
-      email: item.email || null,
-    }))
+    users = (userRows || [])
+      .filter((item) => normalizeRoles((item as { role?: unknown }).role).includes("juridico"))
+      .map((item) => ({
+        id: item.id,
+        nome: item.nome || item.email || "Usuario",
+        email: item.email || null,
+      }))
   }
 
-  let precatoriosQuery = ctx.supabase
-    .from("precatorios")
-    .select("id, titulo, numero_precatorio, numero_processo, credor_nome")
-    .order("created_at", { ascending: false })
-    .limit(precatorioLimit)
+  const precatorios: LegalOpinionMetadata["precatorios"] = []
+  const pageSize = 1000
+  let from = 0
+  let keepFetching = true
 
-  if (search) {
-    precatoriosQuery = precatoriosQuery.or(
-      `titulo.ilike.%${search}%,numero_precatorio.ilike.%${search}%,numero_processo.ilike.%${search}%,credor_nome.ilike.%${search}%`
-    )
-  }
+  while (keepFetching) {
+    let precatoriosQuery = ctx.supabase
+      .from("precatorios")
+      .select("id, titulo, numero_precatorio, numero_processo, credor_nome")
+      .order("created_at", { ascending: false })
+      .range(from, from + pageSize - 1)
 
-  const { data: precatorios, error: precatoriosError } = await precatoriosQuery
-  if (precatoriosError) {
-    throw new Error(precatoriosError.message)
+    if (search) {
+      precatoriosQuery = precatoriosQuery.or(
+        `titulo.ilike.%${search}%,numero_precatorio.ilike.%${search}%,numero_processo.ilike.%${search}%,credor_nome.ilike.%${search}%`
+      )
+    }
+
+    const { data: chunk, error: precatoriosError } = await precatoriosQuery
+    if (precatoriosError) {
+      throw new Error(precatoriosError.message)
+    }
+
+    const rows = (chunk || []) as LegalOpinionMetadata["precatorios"]
+    precatorios.push(...rows)
+
+    if (rows.length < pageSize) {
+      keepFetching = false
+    } else {
+      from += pageSize
+    }
   }
 
   return {
     tenant: tenant || null,
     users,
-    precatorios: (precatorios || []) as LegalOpinionMetadata["precatorios"],
+    precatorios,
   }
 }
 
@@ -606,26 +701,37 @@ export async function createLegalOpinion(payload: LegalOpinionCreatePayload): Pr
     await assertActiveTenantMember(ctx, data.assignedTo)
   }
 
-  const { data: inserted, error } = await ctx.supabase
+  const basePayload = {
+    tenant_id: ctx.tenantId,
+    precatorio_id: data.precatorioId,
+    requested_by: ctx.userId,
+    assigned_to: data.assignedTo || null,
+    title: data.title,
+    type: data.type,
+    status: data.status,
+    priority: data.priority,
+    due_date: data.dueDate || null,
+    executive_summary: data.executiveSummary || null,
+    analysis: data.analysis || null,
+    recommendation: data.recommendation || null,
+    conclusion: data.conclusion || null,
+    checklist: data.checklist || {},
+  }
+
+  let { data: inserted, error } = await ctx.supabase
     .from("legal_opinions")
     .insert({
-      tenant_id: ctx.tenantId,
-      precatorio_id: data.precatorioId,
-      requested_by: ctx.userId,
-      assigned_to: data.assignedTo || null,
-      title: data.title,
-      type: data.type,
-      status: data.status,
-      priority: data.priority,
-      due_date: data.dueDate || null,
-      executive_summary: data.executiveSummary || null,
-      analysis: data.analysis || null,
-      recommendation: data.recommendation || null,
-      conclusion: data.conclusion || null,
-      checklist: data.checklist || {},
+      ...basePayload,
+      origem_solicitacao: data.origemSolicitacao,
     })
     .select("*")
     .single()
+
+  if (error && isMissingOrigemSolicitacaoColumnError(error)) {
+    const retry = await ctx.supabase.from("legal_opinions").insert(basePayload).select("*").single()
+    inserted = retry.data
+    error = retry.error
+  }
 
   if (error || !inserted) {
     throw new Error(error?.message || "Falha ao criar parecer.")
@@ -655,6 +761,9 @@ export async function updateLegalOpinion(
   if (parsed.data.type !== undefined) updatePayload.type = parsed.data.type
   if (parsed.data.status !== undefined) updatePayload.status = parsed.data.status
   if (parsed.data.priority !== undefined) updatePayload.priority = parsed.data.priority
+  if (parsed.data.origemSolicitacao !== undefined) {
+    updatePayload.origem_solicitacao = parsed.data.origemSolicitacao
+  }
   if (parsed.data.dueDate !== undefined) updatePayload.due_date = parsed.data.dueDate || null
   if (parsed.data.executiveSummary !== undefined) {
     updatePayload.executive_summary = parsed.data.executiveSummary || null
@@ -666,13 +775,28 @@ export async function updateLegalOpinion(
   if (parsed.data.conclusion !== undefined) updatePayload.conclusion = parsed.data.conclusion || null
   if (parsed.data.checklist !== undefined) updatePayload.checklist = parsed.data.checklist || {}
 
-  const { data: updated, error } = await ctx.supabase
+  let { data: updated, error } = await ctx.supabase
     .from("legal_opinions")
     .update(updatePayload)
     .eq("tenant_id", ctx.tenantId)
     .eq("id", id)
     .select("*")
     .single()
+
+  if (error && isMissingOrigemSolicitacaoColumnError(error)) {
+    const retryPayload = { ...updatePayload }
+    delete retryPayload.origem_solicitacao
+    const retry = await ctx.supabase
+      .from("legal_opinions")
+      .update(retryPayload)
+      .eq("tenant_id", ctx.tenantId)
+      .eq("id", id)
+      .select("*")
+      .single()
+
+    updated = retry.data
+    error = retry.error
+  }
 
   if (error || !updated) {
     throw new Error(error?.message || "Falha ao atualizar parecer.")
@@ -907,4 +1031,3 @@ export async function uploadAndRegisterLegalAttachment(
     size: file.size,
   })
 }
-

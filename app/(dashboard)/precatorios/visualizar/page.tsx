@@ -41,8 +41,6 @@ function requireSupabase(): SupabaseClientType {
 }
 import { ChecklistDocumentos } from "@/components/kanban/checklist-documentos"
 import { ChecklistCertidoes } from "@/components/kanban/checklist-certidoes"
-import { FormSolicitarJuridico } from "@/components/kanban/form-solicitar-juridico"
-import { FormParecerJuridico } from "@/components/kanban/form-parecer-juridico"
 import { FormExportarCalculo } from "@/components/kanban/form-exportar-calculo"
 import { HistoricoCalculos } from "@/components/kanban/historico-calculos"
 import { Timeline } from "@/components/precatorios/timeline"

@@ -40,13 +40,13 @@ export function MetricCard({
 }: MetricCardProps) {
   const variantStyles = {
     default:
-      "border-border/70 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-primary/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+      "border-border/70 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
     success:
-      "border-emerald-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-emerald-500/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+      "border-emerald-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
     warning:
-      "border-amber-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-amber-500/24 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+      "border-amber-500/30 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
     danger:
-      "border-destructive/40 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/60 dark:via-zinc-900/40 dark:to-destructive/28 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
+      "border-destructive/40 bg-content1 shadow-[0_16px_34px_-26px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_20px_42px_-30px_rgba(0,0,0,0.42)]",
   }
 
   const glowStyles = {
@@ -105,7 +105,7 @@ export function MetricCard({
     <Card className={cn("relative overflow-hidden backdrop-blur-md", variantStyles[variant], className)}>
       <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
         <div className={cn("absolute -right-8 -top-8 h-24 w-24 rounded-full bg-gradient-to-br blur-2xl", glowStyles[variant])} />
-        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.08)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]" />
       </div>
 
       <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">

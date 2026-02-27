@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button, Card, Chip, Spinner } from "@heroui/react"
+import { Button, Card, Chip, Modal, Spinner } from "@heroui/react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -83,6 +83,30 @@ function getRoleCanCreate(canCreate?: boolean) {
   return canCreate !== false
 }
 
+const REQUEST_OPINION_BUTTON_CLASS =
+  "!bg-orange-500 !text-white shadow-[0_0_0_1px_rgba(249,115,22,0.45),0_0_24px_rgba(249,115,22,0.5)] hover:!bg-orange-400 hover:shadow-[0_0_0_1px_rgba(251,146,60,0.55),0_0_30px_rgba(251,146,60,0.6)] focus-visible:ring-2 focus-visible:ring-orange-300/80"
+
+const CHECKLIST_ITEMS = [
+  { key: "titularidade", label: "Titularidade/Cessao" },
+  { key: "calculos", label: "Calculos" },
+  { key: "prioridade", label: "Prioridade" },
+  { key: "penhoras", label: "Penhoras/Bloqueios" },
+  { key: "documentos", label: "Documentos" },
+  { key: "compliance", label: "Compliance" },
+] as const
+
+type BaseChecklistItemKey = (typeof CHECKLIST_ITEMS)[number]["key"]
+type ChecklistItemKey = BaseChecklistItemKey | `outro${string}`
+
+type ChecklistEntry = {
+  key: ChecklistItemKey
+  label: string
+  checked: boolean
+  note: string | null
+  customName: string | null
+  isOther: boolean
+}
+
 async function forceDownloadByFileName(signedUrl: string, fileName: string) {
   const response = await fetch(signedUrl)
   if (!response.ok) {
@@ -135,6 +159,10 @@ export function LegalOpinionPanel({
   const [isEditMode, setIsEditMode] = useState(false)
   const [isSubmittingForm, setIsSubmittingForm] = useState(false)
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false)
+  const [isChecklistModalOpen, setIsChecklistModalOpen] = useState(false)
+  const [activeChecklistItem, setActiveChecklistItem] = useState<ChecklistEntry | null>(null)
+  const [checklistOpinionText, setChecklistOpinionText] = useState("")
+  const [isSavingChecklistOpinion, setIsSavingChecklistOpinion] = useState(false)
 
   useEffect(() => {
     if (!initialOpinionId) return
@@ -148,24 +176,75 @@ export function LegalOpinionPanel({
 
   const statusCounters = useMemo(() => countOpinionsByStatus(opinions), [opinions])
 
+  const checklistMetaByKey = useMemo(() => {
+    const metaMap = new Map<string, { note: string | null; name: string | null }>()
+    const pattern = /^\[CHECKLIST:([a-z0-9_]+)\](?:\[NOME:([^\]]+)\])?\s*([\s\S]*)$/i
+
+    for (const comment of comments) {
+      const content = String(comment.content || "").trim()
+      const match = content.match(pattern)
+      if (!match) continue
+
+      const key = match[1].toLowerCase()
+      const name = (match[2] || "").trim() || null
+      const note = (match[3] || "").trim() || null
+      const current = metaMap.get(key) || { note: null, name: null }
+      metaMap.set(key, {
+        note: current.note || note,
+        name: current.name || name,
+      })
+    }
+
+    return metaMap
+  }, [comments])
+
   const checklistEntries = useMemo(() => {
     const data = selectedOpinion?.checklist || {}
-    return [
-      { key: "titularidade", label: "Titularidade/Cessao", checked: Boolean(data.titularidade) },
-      { key: "calculos", label: "Calculos", checked: Boolean(data.calculos) },
-      { key: "prioridade", label: "Prioridade", checked: Boolean(data.prioridade) },
-      { key: "penhoras", label: "Penhoras/Bloqueios", checked: Boolean(data.penhoras) },
-      { key: "documentos", label: "Documentos", checked: Boolean(data.documentos) },
-      { key: "compliance", label: "Compliance", checked: Boolean(data.compliance) },
-    ]
-  }, [selectedOpinion?.checklist])
+    const baseEntries: ChecklistEntry[] = CHECKLIST_ITEMS.map((item) => ({
+      key: item.key,
+      label: item.label,
+      checked: Boolean(data[item.key]),
+      note: checklistMetaByKey.get(item.key)?.note || null,
+      customName: null,
+      isOther: false,
+    }))
+
+    const otherKeys = Object.keys(data)
+      .filter((key) => /^outro(?:_\d+)?$/i.test(key))
+      .sort((a, b) => {
+        const aNum = a === "outro" ? 1 : Number(a.replace("outro_", "")) || 1
+        const bNum = b === "outro" ? 1 : Number(b.replace("outro_", "")) || 1
+        return aNum - bNum
+      })
+
+    if (otherKeys.length === 0) {
+      otherKeys.push("outro")
+    }
+
+    const otherEntries: ChecklistEntry[] = otherKeys.map((key, index) => {
+      const meta = checklistMetaByKey.get(key)
+      const customName = meta?.name || null
+      const defaultLabel = index === 0 ? "Outro" : `Outro ${index + 1}`
+
+      return {
+        key: key as ChecklistItemKey,
+        label: customName || defaultLabel,
+        checked: Boolean(data[key]),
+        note: meta?.note || null,
+        customName,
+        isOther: true,
+      }
+    })
+
+    return [...baseEntries, ...otherEntries]
+  }, [checklistMetaByKey, selectedOpinion?.checklist])
 
   async function loadOpinions(preferredOpinionId?: string | null) {
     setIsLoading(true)
     try {
       const [opinionsData, metadata] = await Promise.all([
         listLegalOpinionsByPrecatorio(precatorioId),
-        getLegalOpinionMetadata({ precatorioLimit: 150 }),
+        getLegalOpinionMetadata(),
       ])
 
       setOpinions(opinionsData)
@@ -392,6 +471,121 @@ export function LegalOpinionPanel({
     }
   }
 
+  function openChecklistModal(item: ChecklistEntry) {
+    if (!hasEditPermission) return
+    setActiveChecklistItem(item)
+    setChecklistOpinionText(item.note || "")
+    setIsChecklistModalOpen(true)
+  }
+
+  async function handleRenameOtherItem(item: ChecklistEntry) {
+    if (!hasEditPermission || !selectedOpinion || !item.isOther) return
+
+    const suggestedName = item.customName || item.label || "Outro"
+    const nextNameRaw = window.prompt("Novo nome para este item 'Outro':", suggestedName)
+    if (nextNameRaw === null) return
+
+    const nextName = nextNameRaw.trim()
+    if (!nextName) {
+      toast({
+        title: "Nome invalido",
+        description: "Informe um nome valido para o item 'Outro'.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    if (nextName === suggestedName) return
+
+    try {
+      const noteText = item.note || "Nome do item atualizado."
+      await addLegalOpinionComment(
+        selectedOpinion.id,
+        `[CHECKLIST:${item.key}][NOME:${nextName}] ${noteText}`
+      )
+      await loadDetail(selectedOpinion.id)
+      toast({
+        title: "Nome atualizado",
+        description: `Item renomeado para "${nextName}".`,
+      })
+    } catch (error) {
+      toast({
+        title: "Falha ao renomear item",
+        description: error instanceof Error ? error.message : "Falha inesperada.",
+        variant: "destructive",
+      })
+    }
+  }
+
+  async function handleSaveChecklistOpinion() {
+    if (!selectedOpinion || !activeChecklistItem) return
+
+    const note = checklistOpinionText.trim()
+    if (!note) {
+      toast({
+        title: "Parecer obrigatorio",
+        description: "Informe o parecer para concluir este item do checklist.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    setIsSavingChecklistOpinion(true)
+    try {
+      const nextChecklist: Record<string, boolean> = {
+        ...(selectedOpinion.checklist || {}),
+        [activeChecklistItem.key]: true,
+      }
+
+      if (activeChecklistItem.isOther) {
+        const hasPendingOther = Object.entries(nextChecklist).some(
+          ([key, value]) => /^outro(?:_\d+)?$/i.test(key) && !value
+        )
+
+        if (!hasPendingOther) {
+          const maxOtherIndex = Object.keys(nextChecklist).reduce((max, key) => {
+            if (!/^outro(?:_\d+)?$/i.test(key)) return max
+            const idx = key === "outro" ? 1 : Number(key.replace("outro_", "")) || 1
+            return Math.max(max, idx)
+          }, 1)
+
+          const nextOtherKey = `outro_${maxOtherIndex + 1}`
+          nextChecklist[nextOtherKey] = false
+        }
+      }
+
+      await updateLegalOpinion(selectedOpinion.id, {
+        checklist: nextChecklist,
+      })
+
+      const commentPrefix = activeChecklistItem.isOther
+        ? activeChecklistItem.customName
+          ? `[CHECKLIST:${activeChecklistItem.key}][NOME:${activeChecklistItem.customName}]`
+          : `[CHECKLIST:${activeChecklistItem.key}]`
+        : `[CHECKLIST:${activeChecklistItem.key}]`
+      await addLegalOpinionComment(selectedOpinion.id, `${commentPrefix} ${note}`)
+
+      await loadDetail(selectedOpinion.id)
+
+      setIsChecklistModalOpen(false)
+      setActiveChecklistItem(null)
+      setChecklistOpinionText("")
+
+      toast({
+        title: "Checklist atualizado",
+        description: `Item "${activeChecklistItem.label}" marcado como concluido.`,
+      })
+    } catch (error) {
+      toast({
+        title: "Falha ao salvar checklist",
+        description: error instanceof Error ? error.message : "Falha inesperada.",
+        variant: "destructive",
+      })
+    } finally {
+      setIsSavingChecklistOpinion(false)
+    }
+  }
+
   const openCreateModal = () => {
     setIsEditMode(false)
     setIsFormOpen(true)
@@ -427,7 +621,12 @@ export function LegalOpinionPanel({
               </Button>
             ) : null}
             {hasCreatePermission ? (
-              <Button color="primary" size="sm" onPress={openCreateModal}>
+              <Button
+                color="primary"
+                size="sm"
+                className={REQUEST_OPINION_BUTTON_CLASS}
+                onPress={openCreateModal}
+              >
                 <Plus className="h-4 w-4" />
                 Solicitar Parecer
               </Button>
@@ -583,17 +782,39 @@ export function LegalOpinionPanel({
                     </p>
                     <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                       {checklistEntries.map((item) => (
-                        <div
-                          key={item.key}
-                          className={cn(
-                            "flex items-center gap-2 rounded-xl border px-3 py-2 text-sm",
-                            item.checked
-                              ? "border-success/40 bg-success/10 text-success-foreground"
-                              : "border-default-200/80 bg-content1 text-muted-foreground"
-                          )}
-                        >
-                          {item.checked ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4" />}
-                          <span>{item.label}</span>
+                        <div key={item.key} className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => openChecklistModal(item)}
+                            disabled={!hasEditPermission}
+                            className={cn(
+                              "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors",
+                              hasEditPermission ? "cursor-pointer hover:border-primary/50 hover:bg-primary/10" : "cursor-default",
+                              item.checked
+                                ? "border-success/40 bg-success/10 text-success-foreground"
+                                : "border-default-200/80 bg-content1 text-muted-foreground"
+                            )}
+                          >
+                            {item.checked ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4" />}
+                            <div className="min-w-0">
+                              <p>{item.label}</p>
+                              {item.note ? (
+                                <p className="line-clamp-1 text-xs text-muted-foreground">{item.note}</p>
+                              ) : null}
+                            </div>
+                          </button>
+                          {item.isOther && hasEditPermission ? (
+                            <Button
+                              size="sm"
+                              variant="secondary"
+                              className="h-8 shrink-0 px-2 text-xs"
+                              onPress={() => {
+                                void handleRenameOtherItem(item)
+                              }}
+                            >
+                              Renomear
+                            </Button>
+                          ) : null}
                         </div>
                       ))}
                     </div>
@@ -737,6 +958,62 @@ export function LegalOpinionPanel({
         submitting={isSubmittingForm}
         onSubmit={handleCreateOrUpdate}
       />
+
+      <Modal.Backdrop
+        isOpen={isChecklistModalOpen}
+        onOpenChange={setIsChecklistModalOpen}
+        isDismissable={!isSavingChecklistOpinion}
+        isKeyboardDismissDisabled={isSavingChecklistOpinion}
+        className="bg-black/55 backdrop-blur-[3px] supports-[backdrop-filter]:bg-black/45"
+      >
+        <Modal.Container placement="center" size="lg" className="px-3 py-3 sm:px-6">
+          <Modal.Dialog className="mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-default-200/70 bg-content1 shadow-xl outline-none">
+            <Modal.CloseTrigger
+              className={[
+                "absolute right-4 top-4 z-20 rounded-full border border-default-200/70 bg-content1/95 hover:bg-content2",
+                isSavingChecklistOpinion ? "pointer-events-none opacity-60" : "",
+              ].join(" ")}
+            />
+
+            <Modal.Header className="border-b border-default-200/70 px-5 pb-4 pt-5 sm:px-6">
+              <Modal.Heading className="text-lg font-semibold">
+                Parecer do checklist
+              </Modal.Heading>
+              <p className="mt-1 text-sm text-foreground/70">
+                {activeChecklistItem ? `Item: ${activeChecklistItem.label}` : "Selecione um item"}
+              </p>
+            </Modal.Header>
+
+            <Modal.Body className="px-5 py-4 sm:px-6">
+              <div className="space-y-2">
+                <Label htmlFor="checklist-opinion">Parecer juridico</Label>
+                <Textarea
+                  id="checklist-opinion"
+                  rows={6}
+                  placeholder="Descreva o parecer para este item..."
+                  value={checklistOpinionText}
+                  onChange={(event) => setChecklistOpinionText(event.target.value)}
+                />
+              </div>
+            </Modal.Body>
+
+            <Modal.Footer className="border-t border-default-200/70 px-5 py-3 sm:px-6">
+              <div className="flex w-full justify-end gap-2">
+                <Button
+                  variant="secondary"
+                  onPress={() => setIsChecklistModalOpen(false)}
+                  isDisabled={isSavingChecklistOpinion}
+                >
+                  Cancelar
+                </Button>
+                <Button color="primary" onPress={handleSaveChecklistOpinion} isLoading={isSavingChecklistOpinion}>
+                  Salvar e marcar como feito
+                </Button>
+              </div>
+            </Modal.Footer>
+          </Modal.Dialog>
+        </Modal.Container>
+      </Modal.Backdrop>
     </div>
   )
 }

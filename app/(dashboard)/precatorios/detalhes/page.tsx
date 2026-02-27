@@ -55,7 +55,6 @@ import { ChecklistCertidoes } from "@/components/kanban/checklist-certidoes"
 import { AbaFechamento } from "@/components/kanban/aba-fechamento"
 import { AbaEscrituras } from "@/components/kanban/aba-escrituras"
 import { TimelineViewer } from "@/components/precatorios/timeline-viewer"
-import { FormSolicitarJuridico } from "@/components/kanban/form-solicitar-juridico"
 import { FormParecerJuridico } from "@/components/kanban/form-parecer-juridico"
 import { FormExportarCalculo } from "@/components/kanban/form-exportar-calculo"
 import { HistoricoCalculos } from "@/components/kanban/historico-calculos"
@@ -1187,7 +1186,7 @@ export default function PrecatorioDetailPage() {
   }
 
   // --- Logic to Advance Stage ---
-  const currentStatusKanban = String(precatorio?.status_kanban || precatorio?.localizacao_kanban || "")
+  const currentStatusKanban = String(statusAtual || "")
   const juridicoFoiAcionado = Boolean(
     String(precatorio?.juridico_motivo || "").trim() ||
     String(precatorio?.juridico_descricao_bloqueio || "").trim() ||
@@ -1200,6 +1199,7 @@ export default function PrecatorioDetailPage() {
     (col) => col.id === currentStatusKanban || col.statusIds?.includes(currentStatusKanban)
   )
 
+  const currentColumn = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex] : null
   const currentColumnId = currentColumnIndex >= 0 ? KANBAN_COLUMNS[currentColumnIndex]?.id || null : null
   const nextColumn =
     currentColumnId === "analise_processual_inicial" && !juridicoFoiAcionado
@@ -1217,6 +1217,91 @@ export default function PrecatorioDetailPage() {
     currentColumnId !== "juridico" &&
     currentColumnId !== "proposta_aceita" &&
     nextColumn?.id !== "reprovado"
+
+  const getKanbanGlowClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
+    switch (column?.id) {
+      case "entrada":
+        return "shadow-[0_10px_24px_rgba(29,78,216,0.35)] dark:shadow-[0_10px_24px_rgba(96,165,250,0.35)]"
+      case "triagem_interesse":
+        return "shadow-[0_10px_24px_rgba(67,56,202,0.35)] dark:shadow-[0_10px_24px_rgba(129,140,248,0.35)]"
+      case "docs_credor":
+        return "shadow-[0_10px_24px_rgba(3,105,161,0.35)] dark:shadow-[0_10px_24px_rgba(56,189,248,0.35)]"
+      case "analise_processual_inicial":
+        return "shadow-[0_10px_24px_rgba(14,116,144,0.35)] dark:shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
+      case "juridico":
+        return "shadow-[0_10px_24px_rgba(190,24,93,0.35)] dark:shadow-[0_10px_24px_rgba(251,113,133,0.35)]"
+      case "pronto_calculo":
+        return "shadow-[0_10px_24px_rgba(194,65,12,0.35)] dark:shadow-[0_10px_24px_rgba(251,146,60,0.35)]"
+      case "calculo_andamento":
+        return "shadow-[0_10px_24px_rgba(180,83,9,0.35)] dark:shadow-[0_10px_24px_rgba(251,191,36,0.35)]"
+      case "calculo_concluido":
+        return "shadow-[0_10px_24px_rgba(21,128,61,0.35)] dark:shadow-[0_10px_24px_rgba(74,222,128,0.35)]"
+      case "proposta_negociacao":
+        return "shadow-[0_10px_24px_rgba(161,98,7,0.35)] dark:shadow-[0_10px_24px_rgba(250,204,21,0.35)]"
+      case "proposta_aceita":
+        return "shadow-[0_10px_24px_rgba(4,120,87,0.35)] dark:shadow-[0_10px_24px_rgba(52,211,153,0.35)]"
+      case "certidoes":
+        return "shadow-[0_10px_24px_rgba(109,40,217,0.35)] dark:shadow-[0_10px_24px_rgba(167,139,250,0.35)]"
+      case "escrituras":
+        return "shadow-[0_10px_24px_rgba(162,28,175,0.35)] dark:shadow-[0_10px_24px_rgba(232,121,249,0.35)]"
+      default:
+        return "shadow-[0_10px_24px_rgba(15,23,42,0.25)]"
+    }
+  }
+
+  const getKanbanFillClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
+    switch (column?.id) {
+      case "entrada":
+        return "bg-blue-600 dark:bg-blue-500 text-white"
+      case "triagem_interesse":
+        return "bg-indigo-600 dark:bg-indigo-500 text-white"
+      case "docs_credor":
+        return "bg-sky-600 dark:bg-sky-500 text-white"
+      case "analise_processual_inicial":
+        return "bg-cyan-600 dark:bg-cyan-500 text-white"
+      case "juridico":
+        return "bg-rose-600 dark:bg-rose-500 text-white"
+      case "pronto_calculo":
+        return "bg-orange-600 dark:bg-orange-500 text-white"
+      case "calculo_andamento":
+        return "bg-amber-500 dark:bg-amber-400 text-zinc-900"
+      case "calculo_concluido":
+        return "bg-green-600 dark:bg-green-500 text-white"
+      case "proposta_negociacao":
+        return "bg-yellow-500 dark:bg-yellow-400 text-zinc-900"
+      case "proposta_aceita":
+        return "bg-emerald-600 dark:bg-emerald-500 text-white"
+      case "certidoes":
+        return "bg-purple-600 dark:bg-purple-500 text-white"
+      case "escrituras":
+        return "bg-fuchsia-600 dark:bg-fuchsia-500 text-white"
+      case "fechado":
+      case "reprovado":
+        return "bg-zinc-700 dark:bg-zinc-600 text-white"
+      case "encerrados":
+        return "bg-slate-700 dark:bg-slate-600 text-white"
+      default:
+        return "bg-primary text-primary-foreground"
+    }
+  }
+
+  const getKanbanToneChipClass = (
+    column: (typeof KANBAN_COLUMNS)[number] | null | undefined,
+    options?: { emphasized?: boolean; glow?: boolean }
+  ) => {
+    if (!column) return ""
+    if (options?.emphasized) {
+      return `${getKanbanFillClass(column)} ring-1 ${column.color.ring} ${options?.glow ? getKanbanGlowClass(column) : "shadow-sm"}`
+    }
+    return `${column.color.bg} ${column.color.text} ring-1 ${column.color.ring}`
+  }
+
+  const getKanbanToneButtonClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
+    if (!column) {
+      return "bg-gradient-to-r from-primary to-orange-500 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+    }
+    return `${getKanbanFillClass(column)} ring-1 ${column.color.ring} shadow-[0_10px_24px_rgba(15,23,42,0.18)] hover:opacity-90`
+  }
 
   async function handleAdvanceToNextStage() {
     if (!id || !nextColumn || !canEdit) return
@@ -1650,9 +1735,8 @@ export default function PrecatorioDetailPage() {
           initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
           animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
           transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-          className="relative z-20 overflow-hidden rounded-3xl border border-border bg-gradient-to-br from-white/90 via-white/72 to-zinc-50/65 px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/80 dark:via-zinc-950/62 dark:to-zinc-900/52 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
+          className="relative z-20 overflow-hidden rounded-3xl border border-border bg-white/90 px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-zinc-950/80 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
         >
-          <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.16),transparent_42%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(251,146,60,0.2),transparent_48%)]" />
           <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <div className="flex items-start gap-4">
@@ -1927,11 +2011,21 @@ export default function PrecatorioDetailPage() {
                       </p>
 
                       <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                        <Chip size="md" color="primary" variant="flat" radius="full" className="font-semibold">
+                        <Chip
+                          size="md"
+                          variant="flat"
+                          radius="full"
+                          className={`font-semibold ${getKanbanToneChipClass(currentColumn, { emphasized: true, glow: true })}`}
+                        >
                           Atual: {statusAtualLabel}
                         </Chip>
                         {nextColumn ? (
-                          <Chip size="md" color="warning" variant="flat" radius="full">
+                          <Chip
+                            size="md"
+                            variant="flat"
+                            radius="full"
+                            className={`font-semibold ${getKanbanToneChipClass(nextColumn)}`}
+                          >
                             Próxima: {nextColumn.titulo}
                           </Chip>
                         ) : (
@@ -1946,7 +2040,7 @@ export default function PrecatorioDetailPage() {
                       {canAdvanceToNextColumn ? (
                         <Button
                           size="sm"
-                          className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+                          className={`h-10 rounded-xl px-4 ${getKanbanToneButtonClass(nextColumn)}`}
                           onClick={handleAdvanceToNextStage}
                           disabled={advancingStage}
                         >
@@ -1982,21 +2076,17 @@ export default function PrecatorioDetailPage() {
                           const isDone = isDoneBase && !isSkippedJuridico
                           const isNext = hasCurrent && nextColumnIndex >= 0 && index === nextColumnIndex
 
-                          let chipVariant: "solid" | "flat" | "bordered" = "bordered"
-                          let chipColor: "default" | "primary" | "secondary" | "success" | "warning" | "danger" = "default"
                           let chipStartContent: ReactNode = null
+                          let toneClass = getKanbanToneChipClass(col)
 
                           if (isCurrent) {
-                            chipVariant = "solid"
-                            chipColor = "primary"
-                            chipStartContent = <span className="h-2 w-2 rounded-full bg-primary-foreground/80" />
+                            toneClass = getKanbanToneChipClass(col, { emphasized: true, glow: true })
+                            chipStartContent = <span className="h-2 w-2 rounded-full bg-white/85 dark:bg-white/75" />
                           } else if (isDone) {
-                            chipVariant = "flat"
-                            chipColor = "success"
+                            toneClass = getKanbanToneChipClass(col)
                             chipStartContent = <CheckCircle2 className="h-3.5 w-3.5" />
                           } else if (isNext) {
-                            chipVariant = "flat"
-                            chipColor = "warning"
+                            toneClass = getKanbanToneChipClass(col)
                             chipStartContent = <ArrowRight className="h-3.5 w-3.5" />
                           }
 
@@ -2005,10 +2095,9 @@ export default function PrecatorioDetailPage() {
                               key={col.id}
                               size="lg"
                               radius="full"
-                              variant={chipVariant}
-                              color={chipColor}
+                              variant="flat"
                               startContent={chipStartContent}
-                              className={`whitespace-nowrap ${isCurrent ? "font-semibold ring-1 ring-primary/30" : "font-medium"} min-h-10`}
+                              className={`whitespace-nowrap min-h-10 border-transparent ${toneClass} ${isCurrent ? "font-semibold" : "font-medium"}`}
                             >
                               {col.titulo}
                             </Chip>
@@ -3288,7 +3377,7 @@ export default function PrecatorioDetailPage() {
                   canEdit={roles.some((role) => ["admin", "juridico", "gestor"].includes(role))}
                   showOpenModuleButton={false}
                 />
-                <div className="max-w-4xl">
+                <div className="w-full">
                   {precatorio.status_kanban === "proposta_aceita" && (
                     <Card className={`${dashboardCardClass} mb-4 border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15`}>
                       <CardContent className="py-4 flex items-start gap-3 text-primary">
@@ -3456,10 +3545,15 @@ export default function PrecatorioDetailPage() {
                             </CardContent>
                           </Card>
                         ) : (
-                          <FormSolicitarJuridico
-                            precatorioId={id}
-                            onUpdate={loadPrecatorio}
-                          />
+                          <Card className={dashboardCardClass}>
+                            <CardContent className="py-8 flex flex-col items-center justify-center text-center text-muted-foreground">
+                              <CheckSquare className="h-12 w-12 mb-4 opacity-50" />
+                              <p className="font-medium">Solicitacao juridica centralizada</p>
+                              <p className="text-sm mt-1">
+                                Use o modulo "Parecer Juridico" acima para abrir uma nova solicitacao.
+                              </p>
+                            </CardContent>
+                          </Card>
                         )
                       )}
                     </div>

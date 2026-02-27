@@ -1,4 +1,4 @@
-export const LEGAL_OPINION_TYPES = [
+﻿export const LEGAL_OPINION_TYPES = [
   "risco_processual",
   "calculos",
   "titularidade_cessao",
@@ -23,6 +23,13 @@ export const LEGAL_OPINION_PRIORITIES = [
   "critica",
 ] as const
 
+export const LEGAL_OPINION_SOURCES = [
+  "kanban",
+  "calculo",
+  "manual",
+  "migracao",
+] as const
+
 export const LEGAL_OPINION_EVENT_TYPES = [
   "created",
   "updated",
@@ -37,6 +44,7 @@ export const LEGAL_OPINION_EVENT_TYPES = [
 export type LegalOpinionType = (typeof LEGAL_OPINION_TYPES)[number]
 export type LegalOpinionStatus = (typeof LEGAL_OPINION_STATUSES)[number]
 export type LegalOpinionPriority = (typeof LEGAL_OPINION_PRIORITIES)[number]
+export type LegalOpinionSource = (typeof LEGAL_OPINION_SOURCES)[number]
 export type LegalOpinionEventType = (typeof LEGAL_OPINION_EVENT_TYPES)[number]
 
 export type LegalOpinionChecklist = {
@@ -73,6 +81,7 @@ export type LegalOpinion = {
   type: LegalOpinionType
   status: LegalOpinionStatus
   priority: LegalOpinionPriority
+  origem_solicitacao?: LegalOpinionSource | null
   due_date: string | null
   executive_summary: string | null
   analysis: string | null
@@ -122,27 +131,34 @@ export type LegalOpinionAttachment = {
 
 export const LEGAL_OPINION_TYPE_LABELS: Record<LegalOpinionType, string> = {
   risco_processual: "Risco Processual",
-  calculos: "Cálculos",
-  titularidade_cessao: "Titularidade/Cessão",
+  calculos: "Calculos",
+  titularidade_cessao: "Titularidade/Cessao",
   prioridade: "Prioridade",
   penhoras_bloqueios: "Penhoras/Bloqueios",
   documentos_compliance: "Documentos/Compliance",
-  estrategia: "Estratégia",
+  estrategia: "Estrategia",
 }
 
 export const LEGAL_OPINION_STATUS_LABELS: Record<LegalOpinionStatus, string> = {
   pendente: "Pendente",
-  em_analise: "Em análise",
-  concluido: "Concluído",
+  em_analise: "Em analise",
+  concluido: "Concluido",
   rejeitado: "Rejeitado",
   arquivado: "Arquivado",
 }
 
 export const LEGAL_OPINION_PRIORITY_LABELS: Record<LegalOpinionPriority, string> = {
   baixa: "Baixa",
-  media: "Média",
+  media: "Media",
   alta: "Alta",
-  critica: "Crítica",
+  critica: "Critica",
+}
+
+export const LEGAL_OPINION_SOURCE_LABELS: Record<LegalOpinionSource, string> = {
+  kanban: "Kanban",
+  calculo: "Calculo",
+  manual: "Manual",
+  migracao: "Migracao",
 }
 
 export const LEGAL_OPINION_STATUS_COLORS: Record<
@@ -155,4 +171,3 @@ export const LEGAL_OPINION_STATUS_COLORS: Record<
   rejeitado: "danger",
   arquivado: "default",
 }
-

@@ -3,7 +3,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
 import { useEffect, useMemo, useState, useRef, useCallback, memo, type RefObject } from "react"
-import { createPortal } from "react-dom"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -33,6 +32,7 @@ import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
 import ShinyText from "@/components/ui/shiny-text"
 import GlareHover from "@/components/ui/glare-hover"
 import { KANBAN_COLUMNS } from "./columns"
+import { useSidebar } from "@/components/ui/sidebar"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "@/components/icons"
@@ -365,7 +365,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
   return (
     <Card
       onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
-      className={`cursor-grab active:cursor-grabbing min-h-[152px] rounded-2xl border bg-content1/92 dark:bg-zinc-950/70 backdrop-blur-sm shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)] group hover:shadow-[0_20px_36px_-24px_rgba(0,0,0,0.95)] hover:border-primary/35 transition-all duration-200 select-none ${isDragging
+      className={`cursor-grab active:cursor-grabbing min-h-[9.5rem] rounded-2xl border bg-content1/92 dark:bg-zinc-950/70 backdrop-blur-sm shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)] group hover:shadow-[0_20px_36px_-24px_rgba(0,0,0,0.95)] hover:border-primary/35 transition-all duration-200 select-none ${isDragging
         ? "shadow-2xl ring-2 ring-primary/60"
         : precatorio.motivo_atraso_calculo
           ? "border-red-500/80 dark:border-red-500/80 ring-1 ring-red-500/25"
@@ -376,7 +376,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
         <div className="space-y-2.5 min-w-0">
           <div className="flex items-start justify-between gap-2">
             <div className="flex flex-1 items-start min-w-0">
-              <h4 className="min-w-0 flex-1 font-semibold text-[14px] leading-tight text-orange-500 dark:text-orange-400 line-clamp-2 break-words transition-colors">
+              <h4 className="min-w-0 flex-1 font-semibold text-sm leading-tight text-orange-500 dark:text-orange-400 line-clamp-2 break-words transition-colors">
                 {precatorio.titulo || numeroPrecatorio || "Sem título"}
               </h4>
             </div>
@@ -392,14 +392,14 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           <div className="space-y-1.5">
             {numeroPrecatorio && (
-              <div className="flex min-w-0 items-center gap-1.5 text-[12px]">
+              <div className="flex min-w-0 items-center gap-1.5 text-xs">
                 <span className="text-foreground/60 dark:text-zinc-400 shrink-0">Precatório:</span>
                 <span className="font-medium text-foreground dark:text-zinc-100 truncate" title={numeroPrecatorio}>
                   {numeroPrecatorio}
                 </span>
               </div>
             )}
-            <div className="flex min-w-0 items-center gap-1 text-[12px] text-foreground/60 dark:text-zinc-400">
+            <div className="flex min-w-0 items-center gap-1 text-xs text-foreground/60 dark:text-zinc-400">
               <User className="h-3 w-3 shrink-0" />
               <p className="min-w-0 truncate" title={precatorio.credor_nome || undefined}>
                 {precatorio.credor_nome || "Credor não informado"}
@@ -409,31 +409,31 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           <div className="flex flex-wrap items-center gap-1 pt-0.5">
             {colunaId === "encerrados" && (
-              <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
                 {ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
               </Badge>
             )}
             {precatorio.urgente && (
-              <Badge variant="destructive" className="text-[9px] h-4 px-1.5">
+              <Badge variant="destructive" className="text-[0.5625rem] h-4 px-1.5">
                 Urgente
               </Badge>
             )}
             {precatorio.titular_falecido && (
-              <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
                 Titular falecido
               </Badge>
             )}
             {precatorio.calculo_desatualizado && (
               <Badge
                 variant="outline"
-                className="text-[9px] h-4 px-1.5 border-amber-300 text-amber-700 dark:text-amber-300"
+                className="text-[0.5625rem] h-4 px-1.5 border-amber-300 text-amber-700 dark:text-amber-300"
               >
                 Cálculo desatualizado
               </Badge>
             )}
 
             {precatorio.calculo_ultima_versao > 0 && (
-              <Badge variant="secondary" className="text-[9px] h-4 px-1.5">
+              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
                 v{precatorio.calculo_ultima_versao}
               </Badge>
             )}
@@ -442,14 +442,14 @@ const KanbanCardItem = memo(function KanbanCardItem({
             {precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status && (
               <Badge
                 variant="outline"
-                className="text-[9px] h-4 px-1.5 border-red-200 text-red-700 dark:text-red-300"
+                className="text-[0.5625rem] h-4 px-1.5 border-red-200 text-red-700 dark:text-red-300"
               >
                 Jurídico: {getParecerLabel(precatorio.juridico_parecer_status)}
               </Badge>
             )}
 
             {precatorio.motivo_atraso_calculo && (
-              <Badge variant="destructive" className="text-[9px] h-4 px-1.5 animate-pulse">
+              <Badge variant="destructive" className="text-[0.5625rem] h-4 px-1.5 animate-pulse">
                 <AlertCircle className="h-2.5 w-2.5 mr-1" />
                 Em Atraso
               </Badge>
@@ -458,10 +458,10 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           {temValor && (
             <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-xl border border-default-200/70 dark:border-zinc-700/50 bg-content2/60 dark:bg-zinc-900/60 px-2.5 py-2">
-              <span className={`text-[10px] uppercase tracking-wide leading-none font-medium ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
+              <span className={`text-[0.625rem] uppercase tracking-wide leading-none font-medium ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
                 {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
               </span>
-              <span className={`min-w-0 text-right text-[15px] font-semibold tabular-nums whitespace-nowrap leading-none ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-500" : "text-foreground dark:text-zinc-100"}`}>
+              <span className={`min-w-0 text-right text-[0.9375rem] font-semibold tabular-nums whitespace-nowrap leading-none ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-500" : "text-foreground dark:text-zinc-100"}`}>
                 {formatBR(valorExibido)}
               </span>
             </div>
@@ -469,7 +469,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           <div className="pt-0.5 flex items-center justify-between gap-2 min-w-0">
             <div
-              className="min-w-0 flex items-center gap-1 text-[11px] text-foreground/65 dark:text-zinc-400 bg-content2/65 dark:bg-zinc-900/70 px-2 py-1 rounded-lg max-w-[58%]"
+              className="min-w-0 flex items-center gap-1 text-[0.6875rem] text-foreground/65 dark:text-zinc-400 bg-content2/65 dark:bg-zinc-900/70 px-2 py-1 rounded-lg max-w-[58%]"
               title={`Responsável: ${precatorio.responsavel_perfil?.nome || "Não definido"}`}
             >
               <User className="h-3 w-3 shrink-0" />
@@ -478,7 +478,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
             {podeCalculos ? (
               <div
-                className="h-7 shrink-0 px-2.5 rounded-lg border border-emerald-400/35 bg-emerald-500/10 text-[10px] text-emerald-300 inline-flex items-center"
+                className="h-7 shrink-0 px-2.5 rounded-lg border border-emerald-400/35 bg-emerald-500/10 text-[0.625rem] text-emerald-300 inline-flex items-center"
                 title="Acesso ao cálculo liberado"
               >
                 <LockOpen className="h-3 w-3 mr-1.5" />
@@ -486,7 +486,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
               </div>
             ) : (
               <div
-                className="h-7 shrink-0 px-2.5 rounded-lg border border-default-200/70 dark:border-zinc-700/60 bg-content2/65 dark:bg-zinc-900/70 text-[10px] text-foreground/70 dark:text-zinc-400 inline-flex items-center"
+                className="h-7 shrink-0 px-2.5 rounded-lg border border-default-200/70 dark:border-zinc-700/60 bg-content2/65 dark:bg-zinc-900/70 text-[0.625rem] text-foreground/70 dark:text-zinc-400 inline-flex items-center"
                 title="Cálculo bloqueado até cumprir os requisitos"
               >
                 <Lock className="h-3 w-3 mr-1.5" />
@@ -505,6 +505,7 @@ type KanbanColumnProps = {
   precatorios: PrecatorioCard[]
   totalColuna: number
   totalCards: number
+  columnWidthClass: string
   isDragging: boolean
   updatedPrecatorios: Set<string>
   podeAcessarCalculos: (precatorio: PrecatorioCard) => boolean
@@ -517,6 +518,7 @@ const KanbanColumn = memo(function KanbanColumn({
   precatorios,
   totalColuna,
   totalCards,
+  columnWidthClass,
   isDragging,
   updatedPrecatorios,
   podeAcessarCalculos,
@@ -528,7 +530,7 @@ const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div
-      className={`flex-shrink-0 min-w-[286px] w-[286px] md:min-w-[310px] md:w-[310px] xl:min-w-[350px] xl:w-[350px] h-full flex flex-col ${isDragging ? "" : "snap-start"
+      className={`flex-shrink-0 ${columnWidthClass} h-full flex flex-col ${isDragging ? "" : "snap-start"
         }`}
     >
       <Droppable droppableId={coluna.id}>
@@ -555,13 +557,13 @@ const KanbanColumn = memo(function KanbanColumn({
                   <div className="flex items-center gap-2">
                     <span className={`h-4 w-1.5 rounded-full ${c.bar}`} />
                     <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
-                    <CardTitle className={`text-[13px] font-semibold truncate ${c.text}`}>{coluna.titulo}</CardTitle>
+                    <CardTitle className={`text-[0.8125rem] font-semibold truncate ${c.text}`}>{coluna.titulo}</CardTitle>
                   </div>
-                  <CardDescription className="mt-1 text-[12px] text-zinc-700 dark:text-zinc-300 line-clamp-1">
+                  <CardDescription className="mt-1 text-xs text-zinc-700 dark:text-zinc-300 line-clamp-1">
                     {progressValue}% do pipeline • {formatBR(totalColuna)}
                   </CardDescription>
                 </div>
-                <Badge variant="secondary" className="shrink-0 text-[11px] h-6 px-2.5 py-0 rounded-full">
+                <Badge variant="secondary" className="shrink-0 text-[0.6875rem] h-6 px-2.5 py-0 rounded-full">
                   {precatorios.length}
                 </Badge>
               </div>
@@ -570,7 +572,7 @@ const KanbanColumn = memo(function KanbanColumn({
                   value={progressValue}
                   className="h-1 bg-zinc-200/70 dark:bg-zinc-800/70"
                 />
-                <span className="text-[11px] text-zinc-700 dark:text-zinc-300 tabular-nums">{progressValue}%</span>
+                <span className="text-[0.6875rem] text-zinc-700 dark:text-zinc-300 tabular-nums">{progressValue}%</span>
                 </div>
               </GlareHover>
             </CardHeader>
@@ -578,11 +580,12 @@ const KanbanColumn = memo(function KanbanColumn({
             <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
               <div
                 data-kanban-scroll
-                className={`space-y-2.5 p-2.5 h-full min-h-[120px] max-h-[calc(100vh-286px)] overflow-y-auto overscroll-contain pr-1.5 rounded-b-2xl transition-all duration-200 [&_[data-rfd-placeholder-context-id]]:rounded-xl [&_[data-rfd-placeholder-context-id]]:border-2 [&_[data-rfd-placeholder-context-id]]:border-dashed [&_[data-rfd-placeholder-context-id]]:border-primary/45 [&_[data-rfd-placeholder-context-id]]:bg-primary/10 [&_[data-rfd-placeholder-context-id]]:transition-all [&_[data-rfd-placeholder-context-id]]:duration-200 ${
+                className={`space-y-2.5 p-2.5 h-full max-h-[65vh] md:max-h-[68vh] xl:max-h-[72vh] min-h-[7.5rem] overflow-y-auto overscroll-contain pr-3 rounded-b-2xl transition-all duration-200 [&_[data-rfd-placeholder-context-id]]:rounded-xl [&_[data-rfd-placeholder-context-id]]:border-2 [&_[data-rfd-placeholder-context-id]]:border-dashed [&_[data-rfd-placeholder-context-id]]:border-primary/45 [&_[data-rfd-placeholder-context-id]]:bg-primary/10 [&_[data-rfd-placeholder-context-id]]:transition-all [&_[data-rfd-placeholder-context-id]]:duration-200 ${
                   snapshot.isDraggingOver
                     ? "bg-primary/10 ring-2 ring-primary/30"
                     : "bg-content1/55 dark:bg-zinc-950/40"
                 }`}
+                style={{ scrollbarGutter: "stable both-edges" }}
               >
                 {precatorios.map((precatorio, index) => {
                   const podeCalculos = podeAcessarCalculos(precatorio)
@@ -602,7 +605,7 @@ const KanbanColumn = memo(function KanbanColumn({
                             className={snapshot.isDragging ? "pointer-events-none" : ""}
                             style={{
                               ...dragStyle,
-                              zIndex: snapshot.isDragging ? 9999 : "auto",
+                              zIndex: snapshot.isDragging ? 20 : "auto",
                             }}
                           >
                             <KanbanCardItem
@@ -617,9 +620,7 @@ const KanbanColumn = memo(function KanbanColumn({
                           </div>
                         )
 
-                        return snapshot.isDragging && typeof window !== "undefined"
-                          ? createPortal(draggingCard, document.body)
-                          : draggingCard
+                        return draggingCard
                       }}
                     </Draggable>
                   )
@@ -644,6 +645,7 @@ const KanbanColumn = memo(function KanbanColumn({
 
 export default function KanbanPageNewGates() {
   const { profile } = useAuth()
+  const { state: sidebarState, isMobile } = useSidebar()
   const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [precatorios, setPrecatorios] = useState<PrecatorioCard[]>([])
@@ -1460,6 +1462,10 @@ export default function KanbanPageNewGates() {
 
   const [canScrollLeft, setCanScrollLeft] = useState(false)
   const [canScrollRight, setCanScrollRight] = useState(false)
+  const isSidebarCollapsed = !isMobile && sidebarState === "collapsed"
+  const columnWidthClass = isSidebarCollapsed
+    ? "min-w-[268px] w-[268px] md:min-w-[292px] md:w-[292px] xl:min-w-[324px] xl:w-[324px]"
+    : "min-w-[248px] w-[248px] md:min-w-[272px] md:w-[272px] xl:min-w-[300px] xl:w-[300px]"
 
   const updateScrollButtons = useCallback(() => {
     const container = scrollContainerRef.current
@@ -1486,6 +1492,24 @@ export default function KanbanPageNewGates() {
   }, [updateScrollButtons])
 
   useEffect(() => {
+    const container = scrollContainerRef.current
+    if (!container || typeof ResizeObserver === "undefined") return
+
+    const observer = new ResizeObserver(() => updateScrollButtons())
+    observer.observe(container)
+    return () => observer.disconnect()
+  }, [updateScrollButtons])
+
+  useEffect(() => {
+    const frame = window.requestAnimationFrame(() => updateScrollButtons())
+    const timeout = window.setTimeout(() => updateScrollButtons(), 220)
+    return () => {
+      window.cancelAnimationFrame(frame)
+      window.clearTimeout(timeout)
+    }
+  }, [isSidebarCollapsed, updateScrollButtons])
+
+  useEffect(() => {
     const frame = window.requestAnimationFrame(() => updateScrollButtons())
     return () => window.cancelAnimationFrame(frame)
   }, [updateScrollButtons, filteredPrecatorios.length])
@@ -1498,7 +1522,7 @@ export default function KanbanPageNewGates() {
 
   if (loading) {
     return (
-      <div className="w-full px-4 md:px-5 h-[calc(100vh-7rem)] flex flex-col space-y-4">
+      <div className="min-w-0 w-full max-w-full overflow-hidden px-3 md:px-4 lg:px-5 py-3 h-full min-h-0 flex flex-col space-y-4">
         <div className="space-y-3 border-b pb-4">
           <div className="h-8 w-60 rounded-xl bg-muted/60 animate-pulse" />
           <div className="h-4 w-80 rounded-lg bg-muted/40 animate-pulse" />
@@ -1508,7 +1532,7 @@ export default function KanbanPageNewGates() {
             {COLUNAS.slice(0, 4).map((coluna) => (
               <div
                 key={coluna.id}
-                className="min-w-[286px] w-[286px] md:min-w-[310px] md:w-[310px] xl:min-w-[350px] xl:w-[350px] h-full flex flex-col"
+                className={`${columnWidthClass} h-full flex flex-col`}
               >
                 <div className="h-full rounded-2xl border border-border/60 bg-muted/30 animate-pulse" />
               </div>
@@ -1520,18 +1544,18 @@ export default function KanbanPageNewGates() {
   }
 
   return (
-    <div className="w-full px-4 md:px-5 h-[calc(100vh-7rem)] flex flex-col space-y-4">
+    <div className="min-w-0 w-full max-w-full overflow-hidden px-3 md:px-4 lg:px-5 py-3 h-full min-h-0 flex flex-col space-y-4">
       {/* Header Premium */}
       <div className="flex flex-col gap-3 border-b border-default-200/70 dark:border-zinc-800/70 pb-4">
-        <div className="flex flex-col xl:flex-row xl:items-center justify-between gap-3">
-          <div>
+        <div className="min-w-0 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+          <div className="min-w-0">
             <h1 className="text-2xl md:text-4xl font-bold tracking-tight w-fit">
               <ShinyText text="Kanban Workflow" className="align-middle" {...KANBAN_SHINY_PROPS} />
             </h1>
             <p className="text-muted-foreground mt-1 text-base">Fluxo controlado com gates de validação automática</p>
           </div>
-          <div className="flex items-center gap-2 w-full xl:w-auto">
-            <div className="w-full xl:w-80">
+          <div className="min-w-0 flex w-full flex-wrap items-center gap-2 sm:flex-nowrap xl:w-auto">
+            <div className="min-w-0 w-full flex-1 xl:w-80">
               <SearchBar
                 value={filtros.termo || ""}
                 onChange={setSearchTerm}
@@ -1541,12 +1565,14 @@ export default function KanbanPageNewGates() {
                 showButton={false}
               />
             </div>
-            <AdvancedFilters
-              filtros={filtros}
-              onFilterChange={updateFiltros}
-              onClearFilters={clearFiltros}
-              totalFiltrosAtivos={filtrosAtivos.length}
-            />
+            <div className="shrink-0">
+              <AdvancedFilters
+                filtros={filtros}
+                onFilterChange={updateFiltros}
+                onClearFilters={clearFiltros}
+                totalFiltrosAtivos={filtrosAtivos.length}
+              />
+            </div>
           </div>
         </div>
 
@@ -1605,7 +1631,7 @@ export default function KanbanPageNewGates() {
         </div>
       )}
 
-      <div className="flex-1 min-h-0 overflow-hidden flex flex-col">
+      <div className="min-w-0 max-w-full flex-1 min-h-0 overflow-hidden flex flex-col">
         <DragDropContext
           onDragEnd={(result) => {
             setIsDragging(false)
@@ -1615,37 +1641,42 @@ export default function KanbanPageNewGates() {
             setIsDragging(true)
           }}
         >
-          <div className="relative h-full">
+          <div className="relative min-w-0 max-w-full h-full overflow-hidden">
             <div
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
-              className={`flex w-full gap-3 overflow-x-auto overflow-y-hidden pb-3 h-full px-1.5 overscroll-x-contain scrollbar-thin scrollbar-thumb-border/60 scrollbar-track-transparent ${isDragging ? "snap-none" : "snap-x snap-proximity"
-                }`}
+              className="w-full h-full overflow-x-auto overflow-y-hidden pb-3 px-1 md:px-1.5 overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
               style={{
                 WebkitOverflowScrolling: "touch",
                 overscrollBehaviorX: "contain",
+                scrollbarGutter: "stable both-edges",
               }}
             >
-              {COLUNAS.map((coluna) => {
-                const precatoriosColuna = grupos[coluna.id] || []
-                const totalColuna = calcularTotalColuna(precatoriosColuna)
+              <div
+                className={`flex min-w-max h-full gap-2.5 md:gap-3 ${isDragging ? "snap-none" : "snap-x snap-proximity"}`}
+              >
+                {COLUNAS.map((coluna) => {
+                  const precatoriosColuna = grupos[coluna.id] || []
+                  const totalColuna = calcularTotalColuna(precatoriosColuna)
 
-                return (
-                  <KanbanColumn
-                    key={coluna.id}
-                    coluna={coluna}
-                    precatorios={precatoriosColuna}
-                    totalColuna={totalColuna}
-                    totalCards={filteredPrecatorios.length}
-                    isDragging={isDragging}
-                    updatedPrecatorios={updatedPrecatorios}
-                    podeAcessarCalculos={podeAcessarCalculos}
-                    onOpenDetails={abrirDetalhe}
-                    onOpenCalculo={abrirAreaCalculos}
-                  />
-                )
-              })}
+                  return (
+                    <KanbanColumn
+                      key={coluna.id}
+                      coluna={coluna}
+                      precatorios={precatoriosColuna}
+                      totalColuna={totalColuna}
+                      totalCards={filteredPrecatorios.length}
+                      columnWidthClass={columnWidthClass}
+                      isDragging={isDragging}
+                      updatedPrecatorios={updatedPrecatorios}
+                      podeAcessarCalculos={podeAcessarCalculos}
+                      onOpenDetails={abrirDetalhe}
+                      onOpenCalculo={abrirAreaCalculos}
+                    />
+                  )
+                })}
+              </div>
             </div>
 
             {canScrollLeft && (

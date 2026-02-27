@@ -1,6 +1,6 @@
 import * as React from "react"
 import { Slot } from "@radix-ui/react-slot"
-import { Button as HeroButton } from "@/lib/heroui/compat"
+import { Button as HeroButton, Tooltip } from "@heroui/react"
 import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
@@ -38,6 +38,9 @@ export interface ButtonProps
   extends Omit<React.ButtonHTMLAttributes<HTMLButtonElement>, "color">,
   VariantProps<typeof buttonVariants> {
   asChild?: boolean
+  tooltip?: React.ReactNode
+  tooltipPlacement?: "top" | "right" | "bottom" | "left"
+  tooltipDelay?: number
 }
 
 function getHeroVariant(
@@ -65,11 +68,39 @@ function getHeroSize(size: ButtonProps["size"]): "sm" | "md" | "lg" {
 }
 
 const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
-  ({ className, variant, size, asChild = false, ...props }, ref) => {
+  (
+    {
+      className,
+      variant,
+      size,
+      asChild = false,
+      tooltip,
+      tooltipPlacement = "right",
+      tooltipDelay = 0,
+      ...props
+    },
+    ref
+  ) => {
     const resolvedClassName = cn(buttonVariants({ variant, size, className }))
 
+    const withTooltip = (content: React.ReactElement) => {
+      if (!tooltip) return content
+
+      return (
+        <Tooltip delay={tooltipDelay}>
+          {content}
+          <Tooltip.Content showArrow placement={tooltipPlacement}>
+            <Tooltip.Arrow />
+            <p>{tooltip}</p>
+          </Tooltip.Content>
+        </Tooltip>
+      )
+    }
+
     if (asChild) {
-      return <Slot className={resolvedClassName} ref={ref} {...props} />
+      return withTooltip(
+        <Slot className={resolvedClassName} ref={ref} {...props} />
+      )
     }
 
     const heroProps = props as Omit<
@@ -77,7 +108,7 @@ const Button = React.forwardRef<HTMLButtonElement, ButtonProps>(
       "variant" | "size" | "color" | "className" | "isIconOnly"
     >
 
-    return (
+    return withTooltip(
       <HeroButton
         ref={ref}
         variant={getHeroVariant(variant)}

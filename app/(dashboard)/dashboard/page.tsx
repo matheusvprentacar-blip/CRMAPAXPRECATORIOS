@@ -658,16 +658,11 @@ function DashboardMetricTile({
 
   return (
     <GlassCard
-      className="dashboard-metric-tile relative overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14"
-      style={{
-        backgroundImage:
-          "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 56%, hsl(var(--primary) / 0.24) 100%)",
-      }}
+      className="dashboard-metric-tile relative overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 dark:bg-zinc-900/72"
     >
-      <div className="pointer-events-none absolute inset-0 opacity-[0.16] dark:opacity-[0.14]">
+      <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
         <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-        <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-chart-4/34 to-transparent blur-3xl" />
-        <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
       </div>
 
       <CardBody className="relative p-5 sm:p-6">
@@ -1187,15 +1182,11 @@ export default function DashboardPage() {
 
             <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
               <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-primary/30 bg-gradient-to-br from-background/68 via-background/38 to-primary/16 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, hsl(var(--primary) / 0.24) 100%)",
-                }}
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-primary/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,hsl(var(--primary)/0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
               >
                 <div className="pointer-events-none absolute inset-0 opacity-80">
                   <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-primary/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,hsl(var(--primary)/0.12)_100%)]" />
+                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
                 </div>
                 <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Ativos</div>
                 <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
@@ -1203,15 +1194,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-gradient-to-br from-background/68 via-background/38 to-emerald-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(16,185,129,0.24) 100%)",
-                }}
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(16,185,129,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
               >
                 <div className="pointer-events-none absolute inset-0 opacity-80">
                   <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(16,185,129,0.13)_100%)]" />
+                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(16,185,129,0.17)_0%,transparent_58%)]" />
                 </div>
                 <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Saldo liquido</div>
                 <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
@@ -1227,15 +1214,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-sky-500/30 bg-gradient-to-br from-background/68 via-background/38 to-sky-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(56,189,248,0.24) 100%)",
-                }}
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-sky-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(56,189,248,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
               >
                 <div className="pointer-events-none absolute inset-0 opacity-80">
                   <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-sky-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(56,189,248,0.13)_100%)]" />
+                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(56,189,248,0.17)_0%,transparent_58%)]" />
                 </div>
                 <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">SLA saudavel</div>
                 <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
@@ -1243,15 +1226,11 @@ export default function DashboardPage() {
                 </div>
               </div>
               <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-amber-500/30 bg-gradient-to-br from-background/68 via-background/38 to-amber-500/18 p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-                style={{
-                  backgroundImage:
-                    "linear-gradient(135deg, hsl(var(--background) / 0.7) 0%, hsl(var(--background) / 0.44) 62%, rgba(251,191,36,0.24) 100%)",
-                }}
+                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-amber-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(251,191,36,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
               >
                 <div className="pointer-events-none absolute inset-0 opacity-80">
                   <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-amber-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,rgba(251,191,36,0.13)_100%)]" />
+                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(251,191,36,0.17)_0%,transparent_58%)]" />
                 </div>
                 <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Chat pendente</div>
                 <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
@@ -1344,16 +1323,11 @@ export default function DashboardPage() {
 
                 <div className="col-span-12 xl:col-span-5 xl:self-stretch">
                   <GlassCard
-                    className="relative h-full overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/12"
-                    style={{
-                      backgroundImage:
-                        "linear-gradient(135deg, hsl(var(--background) / 0.64) 0%, hsl(var(--background) / 0.38) 58%, hsl(var(--primary) / 0.2) 100%)",
-                    }}
+                    className="relative h-full overflow-hidden border-primary/20 bg-background/70 dark:bg-zinc-900/72"
                   >
-                    <div className="pointer-events-none absolute inset-0 opacity-85">
+                    <div className="pointer-events-none absolute inset-0 hidden opacity-85 dark:block">
                       <div className="absolute -right-20 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-primary/28 to-transparent blur-3xl" />
-                      <div className="absolute -left-16 -bottom-16 h-36 w-36 rounded-full bg-gradient-to-br from-sky-400/24 to-transparent blur-3xl" />
-                      <div className="absolute inset-0 bg-[linear-gradient(126deg,transparent_0%,hsl(var(--primary)/0.10)_100%)]" />
+                      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]" />
                     </div>
                     <CardBody className="relative z-10 p-5 sm:p-6">
                       <div className="flex items-start justify-between gap-4">
@@ -1438,7 +1412,7 @@ export default function DashboardPage() {
 
                       <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
                         <div
-                          className="min-w-0 rounded-2xl border border-primary/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-primary/20 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-primary/20 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                          className="relative min-w-0 overflow-hidden rounded-2xl border border-primary/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-primary/20 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]"
                         >
                           <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Saldo líquido</div>
                           <div
@@ -1457,7 +1431,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div
-                          className="min-w-0 rounded-2xl border border-amber-500/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-amber-400/20 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-amber-500/18 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                          className="relative min-w-0 overflow-hidden rounded-2xl border border-amber-500/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-amber-400/20 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,rgba(251,191,36,0.16)_0%,transparent_58%)]"
                         >
                           <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Vencidas</div>
                           <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
@@ -1465,7 +1439,7 @@ export default function DashboardPage() {
                           </div>
                         </div>
                         <div
-                          className="min-w-0 rounded-2xl border border-destructive/30 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-destructive/25 dark:bg-gradient-to-br dark:from-zinc-950/62 dark:via-zinc-900/42 dark:to-destructive/18 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)]"
+                          className="relative min-w-0 overflow-hidden rounded-2xl border border-destructive/30 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-destructive/25 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--destructive)/0.16)_0%,transparent_58%)]"
                         >
                           <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">SLA atrasado</div>
                           <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
@@ -1501,12 +1475,11 @@ export default function DashboardPage() {
               {isAdmin ? (
                 <div className="col-span-12 xl:self-stretch">
                   <GlassCard
-                    className="relative h-full overflow-hidden border-primary/20 bg-content1 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-background/68 dark:via-background/40 dark:to-primary/14 dark:shadow-[0_28px_56px_-36px_rgba(0,0,0,0.42)]"
+                    className="relative h-full overflow-hidden border-primary/20 bg-content1 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_28px_56px_-36px_rgba(0,0,0,0.42)]"
                   >
                     <div className="pointer-events-none absolute inset-0 hidden opacity-[0.14] dark:block">
                       <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                      <div className="absolute -left-12 -bottom-12 h-32 w-32 rounded-full bg-gradient-to-br from-chart-4/34 to-transparent blur-3xl" />
-                      <div className="absolute inset-0 bg-[linear-gradient(130deg,transparent_0%,transparent_52%,hsl(var(--primary)/0.12)_100%)]" />
+                      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
                     </div>
                     <CardBody className="relative p-5 sm:p-6">
                       <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

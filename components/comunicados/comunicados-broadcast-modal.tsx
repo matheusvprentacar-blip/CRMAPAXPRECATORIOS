@@ -149,6 +149,29 @@ function formatCurrency(value?: number | null) {
   return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
 }
 
+function describeError(error: unknown): string {
+  if (!error) return "erro desconhecido"
+  if (typeof error === "string") return error
+  if (error instanceof Error) return error.message
+  if (typeof error === "object") {
+    const obj = error as Record<string, unknown>
+    const code = readOptionalString(obj, "code")
+    const message = readOptionalString(obj, "message")
+    const details = readOptionalString(obj, "details")
+    const hint = readOptionalString(obj, "hint")
+    const parts = [code ? `code=${code}` : null, message, details, hint].filter(
+      (value): value is string => Boolean(value)
+    )
+    if (parts.length > 0) return parts.join(" | ")
+  }
+
+  try {
+    return JSON.stringify(error)
+  } catch {
+    return String(error)
+  }
+}
+
 export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: ComunicadosBroadcastModalProps) {
   const router = useRouter()
   const { profile } = useAuth()
@@ -240,13 +263,13 @@ export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: Comuni
         await Promise.all([comunicadoPromise, alertPromise])
 
       if (comunicadoError) {
-        console.error("Erro ao buscar comunicados pendentes:", comunicadoError)
+        console.error(`Erro ao buscar comunicados pendentes: ${describeError(comunicadoError)}`)
         setLoading(false)
         return
       }
 
       if (alertsError) {
-        console.error("Erro ao buscar alertas individuais do admin:", alertsError)
+        console.error(`Erro ao buscar alertas individuais do admin: ${describeError(alertsError)}`)
       }
 
       const comunicadoRows = (Array.isArray(comunicadoData) ? comunicadoData : [])
@@ -271,10 +294,12 @@ export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: Comuni
         const { data: precatoriosData, error: precatoriosError } = await supabase
           .from("precatorios")
           .select("id, titulo, numero_precatorio, credor_nome, valor_atualizado, valor_principal")
-          .in("id", alertPrecatorioIds)
+        .in("id", alertPrecatorioIds)
 
         if (precatoriosError) {
-          console.error("Erro ao carregar dados de precatorios para alertas:", precatoriosError)
+          console.error(
+            `Erro ao carregar dados de precatorios para alertas: ${describeError(precatoriosError)}`
+          )
         } else {
           const rows = Array.isArray(precatoriosData)
             ? (precatoriosData as Array<Record<string, unknown>>)
@@ -309,7 +334,7 @@ export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: Comuni
       setPendingAdminAlert(nextAdminAlert)
       setOpen(Boolean(nextPending || nextAdminAlert))
     } catch (err) {
-      console.error("Erro inesperado ao buscar comunicados:", err)
+      console.error(`Erro inesperado ao buscar comunicados: ${describeError(err)}`)
     } finally {
       setLoading(false)
     }
@@ -325,7 +350,7 @@ export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: Comuni
       })
 
       if (error) {
-        console.error("Erro ao registrar evento de comunicado:", error)
+        console.error(`Erro ao registrar evento de comunicado: ${describeError(error)}`)
         toast.error("Nao foi possivel registrar sua acao no comunicado.")
         return false
       }
@@ -369,7 +394,7 @@ export function ComunicadosBroadcastModal({ onComunicadoBlockingChange }: Comuni
       toast.success("Alerta marcado como lido.")
       void fetchPending()
     } catch (error) {
-      console.error("Erro ao marcar alerta como lido:", error)
+      console.error(`Erro ao marcar alerta como lido: ${describeError(error)}`)
       toast.error("Nao foi possivel confirmar leitura do alerta.")
     } finally {
       setSaving(false)

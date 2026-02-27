@@ -59,12 +59,12 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
 
   const getCriticalityColor = (score: number) => {
     if (score >= 70) {
-      return "border-destructive/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-destructive/24 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
+      return "relative overflow-hidden border-destructive/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--destructive)/0.16)_0%,transparent_58%)]"
     }
     if (score >= 40) {
-      return "border-primary/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-primary/24 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
+      return "relative overflow-hidden border-primary/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]"
     }
-    return "border-primary/35 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-gradient-to-br dark:from-zinc-950/58 dark:via-zinc-900/38 dark:to-primary/20 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)]"
+    return "relative overflow-hidden border-primary/35 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]"
   }
 
   const getCriticalityIcon = (score: number) => {

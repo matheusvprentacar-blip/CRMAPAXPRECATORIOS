@@ -15,7 +15,6 @@ import { maskProcesso } from "@/lib/masks"
 import { FormInteresse } from "./form-interesse"
 import { ChecklistDocumentos } from "./checklist-documentos"
 import { ChecklistCertidoes } from "./checklist-certidoes"
-import { FormSolicitarJuridico } from "./form-solicitar-juridico"
 import { FormParecerJuridico } from "./form-parecer-juridico"
 import { FormExportarCalculo } from "./form-exportar-calculo"
 import { HistoricoCalculos } from "./historico-calculos"
@@ -346,7 +345,9 @@ export function ModalDetalhesKanban({
                 </div>
               </div>
             ) : podeSolicitarJuridico && precatorio.status_kanban === "calculo_andamento" ? (
-              <FormSolicitarJuridico precatorioId={precatorioId} onUpdate={handleUpdate} />
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Solicitação jurídica centralizada no módulo de Parecer Jurídico.</p>
+              </div>
             ) : (
               <div className="text-center py-8 text-muted-foreground">
                 <p>Jurídico não solicitado para este precatório.</p>

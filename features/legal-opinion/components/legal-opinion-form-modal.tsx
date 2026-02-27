@@ -1,7 +1,16 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Button, Chip, Modal } from "@heroui/react"
+import {
+  Autocomplete,
+  Button,
+  Chip,
+  EmptyState,
+  ListBox,
+  Modal,
+  SearchField,
+  useFilter,
+} from "@heroui/react"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
@@ -26,6 +35,7 @@ export type LegalOpinionFormValue = {
   priority: LegalOpinionPriority
   dueDate?: string | null
   assignedTo?: string | null
+  observations?: string | null
   executiveSummary?: string | null
   analysis?: string | null
   recommendation?: string | null
@@ -65,7 +75,11 @@ const CHECKLIST_KEYS = [
   { key: "penhoras", label: "Penhoras/bloqueios" },
   { key: "documentos", label: "Pendencias documentais" },
   { key: "compliance", label: "Compliance/antifraude" },
+  { key: "outro", label: "Outro" },
 ]
+
+const REQUEST_OPINION_BUTTON_CLASS =
+  "!bg-orange-500 !text-white shadow-[0_0_0_1px_rgba(249,115,22,0.45),0_0_24px_rgba(249,115,22,0.5)] hover:!bg-orange-400 hover:shadow-[0_0_0_1px_rgba(251,146,60,0.55),0_0_30px_rgba(251,146,60,0.6)] focus-visible:ring-2 focus-visible:ring-orange-300/80"
 
 function buildInitialState(
   mode: "create" | "edit",
@@ -82,6 +96,7 @@ function buildInitialState(
     priority: (initialValue?.priority as LegalOpinionPriority) || "media",
     dueDate: initialValue?.due_date || null,
     assignedTo: initialValue?.assigned_to || null,
+    observations: initialValue?.executive_summary || "",
     executiveSummary: initialValue?.executive_summary || "",
     analysis: initialValue?.analysis || "",
     recommendation: initialValue?.recommendation || "",
@@ -95,8 +110,9 @@ function buildInitialState(
             prioridade: false,
             penhoras: false,
             documentos: false,
-            compliance: false,
-          },
+          compliance: false,
+          outro: false,
+        },
   }
 }
 
@@ -112,10 +128,12 @@ export function LegalOpinionFormModal({
   submitting = false,
   onSubmit,
 }: LegalOpinionFormModalProps) {
+  const { contains } = useFilter({ sensitivity: "base" })
   const [form, setForm] = useState<LegalOpinionFormValue>(
     buildInitialState(mode, fixedPrecatorioId, initialValue, defaultTitle)
   )
   const [error, setError] = useState<string | null>(null)
+  const isRequestMode = mode === "create"
 
   useEffect(() => {
     if (!open) return
@@ -143,11 +161,16 @@ export function LegalOpinionFormModal({
 
     await onSubmit({
       ...form,
+      status: isRequestMode ? "pendente" : form.status,
       title: form.title.trim(),
-      executiveSummary: (form.executiveSummary || "").trim() || null,
-      analysis: (form.analysis || "").trim() || null,
-      recommendation: (form.recommendation || "").trim() || null,
-      conclusion: (form.conclusion || "").trim() || null,
+      observations: (form.observations || "").trim() || null,
+      executiveSummary: isRequestMode
+        ? (form.observations || "").trim() || null
+        : (form.executiveSummary || "").trim() || null,
+      analysis: isRequestMode ? null : (form.analysis || "").trim() || null,
+      recommendation: isRequestMode ? null : (form.recommendation || "").trim() || null,
+      conclusion: isRequestMode ? null : (form.conclusion || "").trim() || null,
+      checklist: isRequestMode ? {} : form.checklist,
     })
   }
 
@@ -178,14 +201,16 @@ export function LegalOpinionFormModal({
                   Parecer juridico
                 </Chip>
                 <Chip size="sm" color="default" variant="flat" className="border border-default-200/70 font-semibold">
-                  {mode === "create" ? "Novo parecer" : "Edicao de parecer"}
+                  {mode === "create" ? "Nova solicitacao" : "Edicao de parecer"}
                 </Chip>
               </div>
               <Modal.Heading className="text-xl font-bold tracking-tight">
                 {mode === "create" ? "Solicitar Parecer Juridico" : "Editar Parecer Juridico"}
               </Modal.Heading>
               <p className="text-sm text-foreground/70">
-                Preencha os campos essenciais para registrar a analise juridica.
+                {isRequestMode
+                  ? "Preencha os campos essenciais para solicitar a analise juridica."
+                  : "Atualize os campos do parecer juridico."}
               </p>
             </div>
           </Modal.Header>
@@ -209,28 +234,58 @@ export function LegalOpinionFormModal({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label htmlFor="legal-opinion-precatorio">Precatorio</Label>
-                  <Select
-                    value={form.precatorioId}
-                    onValueChange={(value) => setForm((prev) => ({ ...prev, precatorioId: value }))}
+                  <Label>Precatorio</Label>
+                  <Autocomplete
+                    allowsEmptyCollection
+                    className="w-full"
+                    placeholder="Selecione o precatorio"
+                    selectionMode="single"
+                    value={form.precatorioId || null}
+                    onChange={(value) =>
+                      setForm((prev) => ({
+                        ...prev,
+                        precatorioId: typeof value === "string" ? value : "",
+                      }))
+                    }
                   >
-                    <SelectTrigger id="legal-opinion-precatorio" className="w-full">
-                      <SelectValue placeholder="Selecione o precatorio" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {precatorios.length === 0 ? (
-                        <SelectItem value="__none__" disabled>
-                          Nenhum precatorio disponivel
-                        </SelectItem>
-                      ) : (
-                        precatorios.map((precatorio) => (
-                          <SelectItem key={precatorio.id} value={precatorio.id}>
-                            {precatorio.label}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    <Autocomplete.Trigger className="w-full">
+                      <Autocomplete.Value />
+                      <Autocomplete.ClearButton />
+                      <Autocomplete.Indicator />
+                    </Autocomplete.Trigger>
+                    <Autocomplete.Popover>
+                      <Autocomplete.Filter filter={contains}>
+                        <SearchField autoFocus name="search" variant="secondary">
+                          <SearchField.Group>
+                            <SearchField.SearchIcon />
+                            <SearchField.Input placeholder="Buscar precatorio..." />
+                            <SearchField.ClearButton />
+                          </SearchField.Group>
+                        </SearchField>
+                        <ListBox
+                          renderEmptyState={() => (
+                            <EmptyState>Nenhum precatorio encontrado</EmptyState>
+                          )}
+                        >
+                          {precatorios.map((precatorio) => (
+                            <ListBox.Item
+                              key={precatorio.id}
+                              id={precatorio.id}
+                              textValue={`${precatorio.label} ${precatorio.subtitle || ""}`}
+                            >
+                              <div className="flex flex-col">
+                                <span>{precatorio.label}</span>
+                                {precatorio.subtitle ? (
+                                  <span className="text-xs text-muted-foreground">{precatorio.subtitle}</span>
+                                ) : null}
+                              </div>
+                              <ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Autocomplete.Filter>
+                    </Autocomplete.Popover>
+                  </Autocomplete>
                   {selectedPrecatorio?.subtitle ? (
                     <p className="text-xs text-muted-foreground">{selectedPrecatorio.subtitle}</p>
                   ) : null}
@@ -264,7 +319,7 @@ export function LegalOpinionFormModal({
                       <SelectTrigger>
                         <SelectValue placeholder="Tipo" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent portal={false}>
                         {LEGAL_OPINION_TYPES.map((option) => (
                           <SelectItem key={option} value={option}>
                             {LEGAL_OPINION_TYPE_LABELS[option]}
@@ -273,26 +328,33 @@ export function LegalOpinionFormModal({
                       </SelectContent>
                     </Select>
                   </div>
-                  <div className="space-y-2">
-                    <Label>Status</Label>
-                    <Select
-                      value={form.status}
-                      onValueChange={(value) =>
-                        setForm((prev) => ({ ...prev, status: value as LegalOpinionStatus }))
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {LEGAL_OPINION_STATUSES.map((option) => (
-                          <SelectItem key={option} value={option}>
-                            {LEGAL_OPINION_STATUS_LABELS[option]}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {isRequestMode ? (
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Input value="Pendente" disabled />
+                    </div>
+                  ) : (
+                    <div className="space-y-2">
+                      <Label>Status</Label>
+                      <Select
+                        value={form.status}
+                        onValueChange={(value) =>
+                          setForm((prev) => ({ ...prev, status: value as LegalOpinionStatus }))
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent portal={false}>
+                          {LEGAL_OPINION_STATUSES.map((option) => (
+                            <SelectItem key={option} value={option}>
+                              {LEGAL_OPINION_STATUS_LABELS[option]}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Prioridade</Label>
                     <Select
@@ -304,7 +366,7 @@ export function LegalOpinionFormModal({
                       <SelectTrigger>
                         <SelectValue placeholder="Prioridade" />
                       </SelectTrigger>
-                      <SelectContent>
+                      <SelectContent portal={false}>
                         {LEGAL_OPINION_PRIORITIES.map((option) => (
                           <SelectItem key={option} value={option}>
                             {LEGAL_OPINION_PRIORITY_LABELS[option]}
@@ -342,7 +404,7 @@ export function LegalOpinionFormModal({
                     <SelectTrigger>
                       <SelectValue placeholder="Nao atribuido" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent portal={false}>
                       <SelectItem value="__none__">Nao atribuido</SelectItem>
                       {users.map((user) => (
                         <SelectItem key={user.id} value={user.id}>
@@ -354,80 +416,99 @@ export function LegalOpinionFormModal({
                 </div>
               </div>
 
-              <div className="space-y-2">
-                <Label htmlFor="legal-opinion-summary">Resumo executivo</Label>
-                <Textarea
-                  id="legal-opinion-summary"
-                  rows={3}
-                  value={form.executiveSummary || ""}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, executiveSummary: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="legal-opinion-analysis">Analise tecnica</Label>
-                <Textarea
-                  id="legal-opinion-analysis"
-                  rows={6}
-                  value={form.analysis || ""}
-                  onChange={(event) =>
-                    setForm((prev) => ({ ...prev, analysis: event.target.value }))
-                  }
-                />
-              </div>
-
-              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              {isRequestMode ? (
                 <div className="space-y-2">
-                  <Label htmlFor="legal-opinion-recommendation">Recomendacao</Label>
+                  <Label htmlFor="legal-opinion-observations">Observacoes</Label>
                   <Textarea
-                    id="legal-opinion-recommendation"
+                    id="legal-opinion-observations"
                     rows={4}
-                    value={form.recommendation || ""}
+                    placeholder="Descreva contexto, duvidas e pontos de atencao para o juridico..."
+                    value={form.observations || ""}
                     onChange={(event) =>
-                      setForm((prev) => ({ ...prev, recommendation: event.target.value }))
+                      setForm((prev) => ({ ...prev, observations: event.target.value }))
                     }
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="legal-opinion-conclusion">Conclusao</Label>
-                  <Textarea
-                    id="legal-opinion-conclusion"
-                    rows={4}
-                    value={form.conclusion || ""}
-                    onChange={(event) =>
-                      setForm((prev) => ({ ...prev, conclusion: event.target.value }))
-                    }
-                  />
-                </div>
-              </div>
+              ) : null}
 
-              <div className="rounded-2xl border border-default-200/75 bg-default-100/45 p-4">
-                <p className="text-sm font-semibold">Checklist de itens analisados</p>
-                <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
-                  {CHECKLIST_KEYS.map((item) => (
-                    <label
-                      key={item.key}
-                      className="flex items-center gap-2 rounded-xl border border-default-200/75 bg-content1/75 px-3 py-2 text-sm"
-                    >
-                      <Checkbox
-                        checked={Boolean(form.checklist[item.key])}
-                        onCheckedChange={(checked) =>
-                          setForm((prev) => ({
-                            ...prev,
-                            checklist: {
-                              ...prev.checklist,
-                              [item.key]: Boolean(checked),
-                            },
-                          }))
+              {!isRequestMode ? (
+                <>
+                  <div className="space-y-2">
+                    <Label htmlFor="legal-opinion-summary">Resumo executivo</Label>
+                    <Textarea
+                      id="legal-opinion-summary"
+                      rows={3}
+                      value={form.executiveSummary || ""}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, executiveSummary: event.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="legal-opinion-analysis">Analise tecnica</Label>
+                    <Textarea
+                      id="legal-opinion-analysis"
+                      rows={6}
+                      value={form.analysis || ""}
+                      onChange={(event) =>
+                        setForm((prev) => ({ ...prev, analysis: event.target.value }))
+                      }
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="legal-opinion-recommendation">Recomendacao</Label>
+                      <Textarea
+                        id="legal-opinion-recommendation"
+                        rows={4}
+                        value={form.recommendation || ""}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, recommendation: event.target.value }))
                         }
                       />
-                      <span>{item.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="legal-opinion-conclusion">Conclusao</Label>
+                      <Textarea
+                        id="legal-opinion-conclusion"
+                        rows={4}
+                        value={form.conclusion || ""}
+                        onChange={(event) =>
+                          setForm((prev) => ({ ...prev, conclusion: event.target.value }))
+                        }
+                      />
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-default-200/75 bg-default-100/45 p-4">
+                    <p className="text-sm font-semibold">Checklist de itens analisados</p>
+                    <div className="mt-3 grid grid-cols-1 gap-3 md:grid-cols-2">
+                      {CHECKLIST_KEYS.map((item) => (
+                        <label
+                          key={item.key}
+                          className="flex items-center gap-2 rounded-xl border border-default-200/75 bg-content1/75 px-3 py-2 text-sm"
+                        >
+                          <Checkbox
+                            checked={Boolean(form.checklist[item.key])}
+                            onCheckedChange={(checked) =>
+                              setForm((prev) => ({
+                                ...prev,
+                                checklist: {
+                                  ...prev.checklist,
+                                  [item.key]: Boolean(checked),
+                                },
+                              }))
+                            }
+                          />
+                          <span>{item.label}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              ) : null}
 
               {error ? (
                 <div className="rounded-xl border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
@@ -442,8 +523,13 @@ export function LegalOpinionFormModal({
               <Button variant="secondary" onPress={() => onOpenChange(false)} isDisabled={submitting}>
                 Cancelar
               </Button>
-              <Button color="primary" onPress={handleSubmit} isLoading={submitting}>
-                {mode === "create" ? "Criar parecer" : "Salvar alteracoes"}
+              <Button
+                color="primary"
+                className={mode === "create" ? REQUEST_OPINION_BUTTON_CLASS : undefined}
+                onPress={handleSubmit}
+                isLoading={submitting}
+              >
+                {mode === "create" ? "Solicitar parecer" : "Salvar alteracoes"}
               </Button>
             </div>
           </Modal.Footer>

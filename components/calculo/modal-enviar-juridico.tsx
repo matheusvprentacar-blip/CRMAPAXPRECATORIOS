@@ -8,179 +8,189 @@ import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Scale } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
+import { ensureOpenLegalOpinionForPrecatorio } from "@/features/legal-opinion/request-from-precatorio"
 
 interface ModalEnviarJuridicoProps {
-    open: boolean
-    onOpenChange: (open: boolean) => void
-    precatorioId: string
-    precatorioTitulo: string
-    onSuccess: () => void
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  precatorioId: string
+  precatorioTitulo: string
+  onSuccess: () => void
 }
 
 const MOTIVOS_JURIDICOS = [
-    { value: "PENHORA", label: "Penhora Identificada" },
-    { value: "CESSAO", label: "Cessão de Crédito" },
-    { value: "HONORARIOS", label: "Honorários Contratuais" },
-    { value: "HABILITACAO", label: "Habilitação de Herdeiros" },
-    { value: "DUVIDA_BASE_INDICE", label: "Dúvida Base/Índice" },
-    { value: "OUTROS", label: "Outros" },
+  { value: "PENHORA", label: "Penhora Identificada" },
+  { value: "CESSAO", label: "Cessao de Credito" },
+  { value: "HONORARIOS", label: "Honorarios Contratuais" },
+  { value: "HABILITACAO", label: "Habilitacao de Herdeiros" },
+  { value: "DUVIDA_BASE_INDICE", label: "Duvida Base/Indice" },
+  { value: "OUTROS", label: "Outros" },
 ]
 
-export function ModalEnviarJuridico({ open, onOpenChange, precatorioId, precatorioTitulo, onSuccess }: ModalEnviarJuridicoProps) {
-    const [motivo, setMotivo] = useState<string>("")
-    const [descricao, setDescricao] = useState("")
-    const [loading, setLoading] = useState(false)
-    const [error, setError] = useState("")
+export function ModalEnviarJuridico({
+  open,
+  onOpenChange,
+  precatorioId,
+  precatorioTitulo,
+  onSuccess,
+}: ModalEnviarJuridicoProps) {
+  const [motivo, setMotivo] = useState<string>("")
+  const [descricao, setDescricao] = useState("")
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState("")
 
-    const handleSubmit = async () => {
-        // Validações
-        if (!motivo) {
-            setError("Por favor, selecione o motivo do envio")
-            return
-        }
-
-        if (!descricao.trim()) {
-            setError("A descrição do motivo é obrigatória")
-            return
-        }
-
-        if (descricao.trim().length < 10) {
-            setError("A descrição deve ter pelo menos 10 caracteres")
-            return
-        }
-
-        setLoading(true)
-        setError("")
-
-        try {
-            const supabase = getSupabase()
-            if (!supabase) throw new Error("Supabase não disponível")
-
-            const {
-                data: { user },
-            } = await supabase.auth.getUser()
-            if (!user) throw new Error("Usuário não autenticado")
-
-            // Atualizar precatório
-            const { error: updateError } = await supabase
-                .from("precatorios")
-                .update({
-                    status_kanban: "juridico",
-                    localizacao_kanban: "juridico",
-                    juridico_motivo: motivo,
-                    juridico_descricao_bloqueio: descricao.trim(),
-                    updated_at: new Date().toISOString(),
-                })
-                .eq("id", precatorioId)
-
-            if (updateError) throw updateError
-
-            // Registrar atividade
-            await supabase.from("atividades").insert({
-                precatorio_id: precatorioId,
-                usuario_id: user.id,
-                tipo: "mudanca_status",
-                descricao: `Enviado para Jurídico: ${MOTIVOS_JURIDICOS.find((t) => t.value === motivo)?.label}`,
-                dados_novos: {
-                    motivo: motivo,
-                    descricao: descricao.trim(),
-                    origem: "fila_calculo"
-                },
-            })
-
-            console.log("[MODAL JURIDICO] Enviado para jurídico com sucesso")
-
-            // Limpar e fechar
-            setMotivo("")
-            setDescricao("")
-            onOpenChange(false)
-            onSuccess()
-        } catch (err: any) {
-            console.error("[MODAL JURIDICO] Erro ao enviar:", err)
-            setError(err.message || "Erro ao registrar envio")
-        } finally {
-            setLoading(false)
-        }
+  const handleSubmit = async () => {
+    if (!motivo) {
+      setError("Por favor, selecione o motivo do envio")
+      return
     }
 
-    return (
-        <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[600px]">
-                <DialogHeader>
-                    <DialogTitle className="flex items-center gap-2">
-                        <Scale className="h-5 w-5 text-primary" />
-                        Enviar para Jurídico
-                    </DialogTitle>
-                    <DialogDescription>
-                        Isso moverá o precatório <span className="font-medium">{precatorioTitulo}</span> para a fila do Jurídico.
-                    </DialogDescription>
-                </DialogHeader>
+    if (!descricao.trim()) {
+      setError("A descricao do motivo e obrigatoria")
+      return
+    }
 
-                <div className="space-y-4 py-4">
-                    {/* Motivo */}
-                    <div className="space-y-2">
-                        <Label htmlFor="motivo">
-                            Motivo Principal <span className="text-destructive">*</span>
-                        </Label>
-                        <Select value={motivo} onValueChange={(value) => {
-                            setMotivo(value)
-                            setError("")
-                        }}>
-                            <SelectTrigger>
-                                <SelectValue placeholder="Selecione o motivo" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                {MOTIVOS_JURIDICOS.map((m) => (
-                                    <SelectItem key={m.value} value={m.value}>
-                                        {m.label}
-                                    </SelectItem>
-                                ))}
-                            </SelectContent>
-                        </Select>
-                    </div>
+    if (descricao.trim().length < 10) {
+      setError("A descricao deve ter pelo menos 10 caracteres")
+      return
+    }
 
-                    {/* Descrição */}
-                    <div className="space-y-2">
-                        <Label htmlFor="descricao">
-                            Descrição Detalhada <span className="text-destructive">*</span>
-                        </Label>
-                        <Textarea
-                            id="descricao"
-                            placeholder="Descreva o impedimento ou dúvida jurídica..."
-                            value={descricao}
-                            onChange={(e) => {
-                                setDescricao(e.target.value)
-                                setError("")
-                            }}
-                            rows={4}
-                            className={error ? "border-destructive/40" : ""}
-                        />
-                        {error && <p className="text-sm text-destructive">{error}</p>}
-                    </div>
+    setLoading(true)
+    setError("")
 
-                    <div className="rounded-lg bg-primary/15 dark:bg-primary/15 p-3 text-sm">
-                        <p className="text-primary dark:text-primary">
-                            <strong>Atenção:</strong> O precatório sairá da sua fila de cálculo e ficará bloqueado até o retorno do setor jurídico.
-                        </p>
-                    </div>
-                </div>
+    try {
+      const supabase = getSupabase()
+      if (!supabase) throw new Error("Supabase nao disponivel")
 
-                <DialogFooter>
-                    <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
-                        Cancelar
-                    </Button>
-                    <Button
-                        type="button"
-                        onClick={handleSubmit}
-                        disabled={loading || !motivo || !descricao.trim() || descricao.trim().length < 10}
-                        className="bg-primary/15 hover:bg-primary/15 text-white"
-                    >
-                        {loading ? "Enviando..." : "Enviar para Jurídico"}
-                    </Button>
-                </DialogFooter>
-            </DialogContent>
-        </Dialog>
-    )
+      const {
+        data: { user },
+      } = await supabase.auth.getUser()
+      if (!user) throw new Error("Usuario nao autenticado")
+
+      const motivoSelecionado = MOTIVOS_JURIDICOS.find((item) => item.value === motivo)
+      await ensureOpenLegalOpinionForPrecatorio({
+        precatorioId,
+        motivo,
+        motivoLabel: motivoSelecionado?.label,
+        descricao: descricao.trim(),
+        origemSolicitacao: "calculo",
+      })
+
+      const { error: updateError } = await supabase
+        .from("precatorios")
+        .update({
+          status_kanban: "juridico",
+          localizacao_kanban: "juridico",
+          juridico_motivo: motivo,
+          juridico_descricao_bloqueio: descricao.trim(),
+          updated_at: new Date().toISOString(),
+        })
+        .eq("id", precatorioId)
+
+      if (updateError) throw updateError
+
+      await supabase.from("atividades").insert({
+        precatorio_id: precatorioId,
+        usuario_id: user.id,
+        tipo: "mudanca_status",
+        descricao: `Enviado para Juridico: ${motivoSelecionado?.label || motivo}`,
+        dados_novos: {
+          motivo,
+          descricao: descricao.trim(),
+          origem: "fila_calculo",
+        },
+      })
+
+      setMotivo("")
+      setDescricao("")
+      onOpenChange(false)
+      onSuccess()
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Erro ao registrar envio"
+      console.error("[MODAL JURIDICO] Erro ao enviar:", err)
+      setError(message)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[600px]">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Scale className="h-5 w-5 text-primary" />
+            Enviar para Juridico
+          </DialogTitle>
+          <DialogDescription>
+            Isso movera o precatorio <span className="font-medium">{precatorioTitulo}</span> para a fila do Juridico.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="motivo">
+              Motivo Principal <span className="text-destructive">*</span>
+            </Label>
+            <Select
+              value={motivo}
+              onValueChange={(value) => {
+                setMotivo(value)
+                setError("")
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o motivo" />
+              </SelectTrigger>
+              <SelectContent>
+                {MOTIVOS_JURIDICOS.map((m) => (
+                  <SelectItem key={m.value} value={m.value}>
+                    {m.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="descricao">
+              Descricao Detalhada <span className="text-destructive">*</span>
+            </Label>
+            <Textarea
+              id="descricao"
+              placeholder="Descreva o impedimento ou duvida juridica..."
+              value={descricao}
+              onChange={(e) => {
+                setDescricao(e.target.value)
+                setError("")
+              }}
+              rows={4}
+              className={error ? "border-destructive/40" : ""}
+            />
+            {error && <p className="text-sm text-destructive">{error}</p>}
+          </div>
+
+          <div className="rounded-lg bg-primary/15 dark:bg-primary/15 p-3 text-sm">
+            <p className="text-primary dark:text-primary">
+              <strong>Atencao:</strong> O precatorio saira da sua fila de calculo e ficara bloqueado ate o retorno do setor juridico.
+            </p>
+          </div>
+        </div>
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={loading}>
+            Cancelar
+          </Button>
+          <Button
+            type="button"
+            onClick={handleSubmit}
+            disabled={loading || !motivo || !descricao.trim() || descricao.trim().length < 10}
+            className="bg-primary/15 hover:bg-primary/15 text-white"
+          >
+            {loading ? "Enviando..." : "Enviar para Juridico"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
 }
-
-
