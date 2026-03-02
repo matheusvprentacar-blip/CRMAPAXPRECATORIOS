@@ -1784,6 +1784,20 @@ export default function PrecatorioDetailPage() {
                   Sinalizar interesse
                 </Button>
               )}
+              {!isEditing && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+                  onClick={() => {
+                    setActiveTab("timeline")
+                    syncTabToUrl("timeline")
+                  }}
+                >
+                  <Clock className="h-4 w-4 mr-2" />
+                  Timeline
+                </Button>
+              )}
               {canEdit && !isEditing && (
                 <Button
                   onClick={() => setIsEditing(true)}
@@ -1979,13 +1993,6 @@ export default function PrecatorioDetailPage() {
                   <Calendar className="h-4 w-4 mr-2" />
                   Agenda
                 </button>
-                <TabsTrigger
-                  value="timeline"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <Clock className="h-4 w-4 mr-2" />
-                  Timeline
-                </TabsTrigger>
               </TabsList>
             </div>
           </div>
@@ -2048,17 +2055,6 @@ export default function PrecatorioDetailPage() {
                           {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
                         </Button>
                       ) : null}
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        className="h-10 rounded-xl border border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-                        onClick={() => {
-                          setActiveTab("timeline")
-                          syncTabToUrl("timeline")
-                        }}
-                      >
-                        Ver timeline
-                      </Button>
                     </div>
                   </div>
 

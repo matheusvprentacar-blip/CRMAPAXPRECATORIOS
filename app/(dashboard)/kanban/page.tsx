@@ -1646,7 +1646,7 @@ export default function KanbanPageNewGates() {
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
-              className="w-full h-full overflow-x-auto overflow-y-hidden pb-3 px-1 md:px-1.5 overscroll-x-contain [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+              className="kanban-horizontal-scroll w-full h-full overflow-x-auto overflow-y-hidden pb-3 px-1 md:px-1.5 overscroll-x-contain"
               style={{
                 WebkitOverflowScrolling: "touch",
                 overscrollBehaviorX: "contain",

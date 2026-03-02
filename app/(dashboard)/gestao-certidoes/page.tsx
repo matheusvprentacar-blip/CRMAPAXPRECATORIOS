@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   ChevronRight,
   Clock3,
+  FileCheck,
   FileText,
   MapPin,
   ScrollText,
