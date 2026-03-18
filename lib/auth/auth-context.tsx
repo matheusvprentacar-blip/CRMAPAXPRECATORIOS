@@ -220,6 +220,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     localStorage.removeItem("SHOW_REAUTH")
     const { error } = await supabase.auth.signOut()
     if (error) throw error
+    setUser(null)
+    setProfile(null)
     router.push("/login")
   }
 

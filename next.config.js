@@ -1,5 +1,6 @@
 /** @type {import('next').NextConfig} */
 const isProdBuild = process.env.NODE_ENV === "production";
+const appVersion = process.env.npm_package_version || "0.0.0";
 const nextConfig = {
   reactStrictMode: false,
   // Em dev mantemos server features (ex.: route handlers) para OCR robusto.
@@ -11,6 +12,9 @@ const nextConfig = {
   poweredByHeader: false,         // Remove cabeçalho X-Powered-By
   eslint: { ignoreDuringBuilds: true },
   typescript: { ignoreBuildErrors: true },
+  env: {
+    NEXT_PUBLIC_APP_VERSION: appVersion,
+  },
   turbopack: {
     resolveAlias: {
       canvas: "./lib/shims/empty.js",

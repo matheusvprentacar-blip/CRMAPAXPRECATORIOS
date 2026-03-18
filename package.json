@@ -1,6 +1,6 @@
 {
   "name": "Blackbox AI clone",
-  "version": "1.6.36",
+  "version": "1.6.37",
   "private": true,
   "scripts": {
     "dev": "npx @react-grab/codex@latest && node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
@@ -12,6 +12,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
+    "audit:overlays": "node ./scripts/audit-overlay-transparency.mjs",
     "ui:add:8star": "node ./scripts/add-8starlabs-component.mjs",
     "tauri": "tauri",
     "release:update": "powershell -ExecutionPolicy Bypass -File ./scripts/release_update.ps1",
@@ -92,6 +93,7 @@
     "eslint-config-next": "15.1.1",
     "postcss": "^8.4.32",
     "shadcn": "^3.8.5",
+    "supabase": "^2.78.1",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.0.0"
   }

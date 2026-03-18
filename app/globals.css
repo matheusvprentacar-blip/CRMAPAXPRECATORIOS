@@ -148,6 +148,28 @@ body {
 }
 
 @layer base {
+  [data-ui-overlay] {
+    background-image: none;
+    opacity: 1;
+    isolation: isolate;
+  }
+
+  [data-ui-overlay="dialog"],
+  [data-ui-overlay="alert-dialog"],
+  [data-ui-overlay="sheet"] {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+  }
+
+  [data-ui-overlay="select"],
+  [data-ui-overlay="dropdown"],
+  [data-ui-overlay="dropdown-submenu"],
+  [data-ui-overlay="popover"],
+  [data-ui-overlay="tooltip"] {
+    background-color: hsl(var(--popover));
+    color: hsl(var(--popover-foreground));
+  }
+
   [data-radix-dialog-content="true"],
   [data-radix-alert-dialog-content="true"] {
     background-color: hsl(30 20% 98%);

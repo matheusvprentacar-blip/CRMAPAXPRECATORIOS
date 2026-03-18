@@ -112,6 +112,7 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [dialogCreateMode, setDialogCreateMode] = useState<"default" | "solicitado_card">("default")
   const [confirmConclusaoOpen, setConfirmConclusaoOpen] = useState(false)
   const [statusCertidoes, setStatusCertidoes] = useState<string>(initialStatus || "nao_iniciado")
   const [savingStatusCertidoes, setSavingStatusCertidoes] = useState(false)
@@ -309,11 +310,19 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
 
   function handleEditItem(item: Item) {
     setSelectedItem(item)
+    setDialogCreateMode("default")
     setDialogOpen(true)
   }
 
   function handleAddItem() {
     setSelectedItem(null)
+    setDialogCreateMode("default")
+    setDialogOpen(true)
+  }
+
+  function handleAddSolicitadoCard() {
+    setSelectedItem(null)
+    setDialogCreateMode("solicitado_card")
     setDialogOpen(true)
   }
 
@@ -789,6 +798,10 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
               <Plus className="h-4 w-4 mr-2" />
               Adicionar Certidão Customizada
             </Button>
+            <Button variant="secondary" className="w-full" onClick={handleAddSolicitadoCard}>
+              <FileText className="h-4 w-4 mr-2" />
+              Adicionar Card Ja solicitado
+            </Button>
 
             <div className="border-t pt-4 mt-4">
               <Button
@@ -822,11 +835,15 @@ export function ChecklistCertidoes({ precatorioId, canEdit, onUpdate, initialSta
       {/* Dialog de Edição */}
       <ItemChecklistDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setDialogCreateMode("default")
+        }}
         item={selectedItem}
         tipo="CERTIDAO"
         onSave={handleSaveItem}
         onDelete={selectedItem ? () => handleDeleteItem(selectedItem.id) : undefined}
+        createMode={dialogCreateMode}
       />
 
       {/* Dialog de Confirmação de Conclusão */}

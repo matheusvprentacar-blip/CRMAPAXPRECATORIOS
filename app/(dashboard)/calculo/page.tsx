@@ -819,7 +819,7 @@ export default function FilaCalculoPage() {
                                         </Button>
                                       </PopoverTrigger>
                                       <PopoverContent
-                                        className="w-[320px] border-border/70 bg-popover/95 p-3 backdrop-blur"
+                                        className="w-[320px] border-border/70 bg-popover p-3"
                                         align="end"
                                         onClick={(e) => e.stopPropagation()}
                                       >

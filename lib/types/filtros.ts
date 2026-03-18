@@ -431,3 +431,9 @@ export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
 
   return params
 }
+
+export function sanitizeRpcParams(params: Record<string, unknown>) {
+  return Object.fromEntries(
+    Object.entries(params).filter(([, value]) => value !== null && value !== undefined)
+  )
+}

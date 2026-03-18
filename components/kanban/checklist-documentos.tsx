@@ -97,6 +97,7 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
   const [loading, setLoading] = useState(true)
   const [dialogOpen, setDialogOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState<Item | null>(null)
+  const [dialogCreateMode, setDialogCreateMode] = useState<"default" | "solicitado_card">("default")
 
   useEffect(() => {
     loadItems()
@@ -233,11 +234,19 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
 
   function handleEditItem(item: Item) {
     setSelectedItem(item)
+    setDialogCreateMode("default")
     setDialogOpen(true)
   }
 
   function handleAddItem() {
     setSelectedItem(null)
+    setDialogCreateMode("default")
+    setDialogOpen(true)
+  }
+
+  function handleAddSolicitadoCard() {
+    setSelectedItem(null)
+    setDialogCreateMode("solicitado_card")
     setDialogOpen(true)
   }
 
@@ -776,20 +785,30 @@ export function ChecklistDocumentos({ precatorioId, canEdit, onUpdate, pdfUrl }:
 
       {/* Botão Adicionar */}
       {canEdit && (
-        <Button variant="outline" className="w-full" onClick={handleAddItem}>
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Documento Customizado
-        </Button>
+        <div className="grid gap-2">
+          <Button variant="outline" className="w-full" onClick={handleAddItem}>
+            <Plus className="h-4 w-4 mr-2" />
+            Adicionar Documento Customizado
+          </Button>
+          <Button variant="secondary" className="w-full" onClick={handleAddSolicitadoCard}>
+            <FileText className="h-4 w-4 mr-2" />
+            Adicionar Card Ja solicitado
+          </Button>
+        </div>
       )}
 
       {/* Dialog de Edição */}
       <ItemChecklistDialog
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) setDialogCreateMode("default")
+        }}
         item={selectedItem}
         tipo="DOCUMENTO"
         onSave={handleSaveItem}
         onDelete={selectedItem ? () => deleteItem(selectedItem.id) : undefined}
+        createMode={dialogCreateMode}
       />
     </div>
   )

@@ -80,7 +80,7 @@ const modalWrapper = "z-[120] p-2 sm:p-4"
 const modalBackdrop = "bg-black/65"
 const modalBase =
   "w-[min(96vw,72rem)] max-w-[96vw] rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/95 dark:bg-content1 shadow-[0_30px_64px_-42px_hsl(var(--primary)/0.52)] backdrop-blur-xl"
+  "bg-content1 dark:bg-content1 shadow-[0_30px_64px_-42px_hsl(var(--primary)/0.52)]"
 const modalContentBase =
   "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-[1.35rem] bg-content1 dark:bg-content1"
 

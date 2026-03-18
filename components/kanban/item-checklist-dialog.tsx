@@ -34,6 +34,7 @@ interface ItemChecklistDialogProps {
   tipo: "DOCUMENTO" | "CERTIDAO"
   onSave: (data: any) => Promise<void>
   onDelete?: () => Promise<void>
+  createMode?: "default" | "solicitado_card"
 }
 
 const STATUS_OPTIONS = [
@@ -52,6 +53,7 @@ export function ItemChecklistDialog({
   tipo,
   onSave,
   onDelete,
+  createMode = "default",
 }: ItemChecklistDialogProps) {
   const [saving, setSaving] = useState(false)
   const [deleting, setDeleting] = useState(false)
@@ -75,20 +77,23 @@ export function ItemChecklistDialog({
     } else {
       setFormData({
         nome: "",
-        status: "PENDENTE",
-        observacao: "",
+        status: createMode === "solicitado_card" ? "SOLICITADO" : "PENDENTE",
+        observacao: createMode === "solicitado_card" ? "Já foi solicitado." : "",
         validade: "",
         arquivo_url: "",
       })
     }
-  }, [item, open])
+  }, [item, open, createMode])
+
+  const isSolicitadoCardCreate = !item && createMode === "solicitado_card"
 
   async function handleSave() {
     if (!formData.nome.trim()) {
       alert("Nome é obrigatório")
       return
     }
-    if (!item && !formData.arquivo_url) {
+
+    if (!item && !isSolicitadoCardCreate && !formData.arquivo_url) {
       alert("Anexe um arquivo antes de salvar o item customizado.")
       return
     }
@@ -120,7 +125,11 @@ export function ItemChecklistDialog({
         <DialogHeader>
           <DialogTitle>{item ? "Editar" : "Adicionar"} {tipo === "DOCUMENTO" ? "Documento" : "Certidão"}</DialogTitle>
           <DialogDescription>
-            {item ? "Atualize as informações do item" : "Adicione um novo item customizado"}
+            {item
+              ? "Atualize as informações do item"
+              : isSolicitadoCardCreate
+                ? "Crie um card customizado para sinalizar que este item já foi solicitado."
+                : "Adicione um novo item customizado"}
           </DialogDescription>
         </DialogHeader>
 
@@ -138,7 +147,11 @@ export function ItemChecklistDialog({
 
           <div className="space-y-2">
             <Label htmlFor="status">Status *</Label>
-            <Select value={formData.status} onValueChange={(value) => setFormData({ ...formData, status: value })}>
+            <Select
+              value={formData.status}
+              onValueChange={(value) => setFormData({ ...formData, status: value })}
+              disabled={isSolicitadoCardCreate}
+            >
               <SelectTrigger id="status">
                 <SelectValue />
               </SelectTrigger>
@@ -150,9 +163,14 @@ export function ItemChecklistDialog({
                 ))}
               </SelectContent>
             </Select>
+            {isSolicitadoCardCreate && (
+              <p className="text-xs text-muted-foreground">
+                Este card será criado com status <strong>Solicitado</strong>.
+              </p>
+            )}
           </div>
 
-          {tipo === "CERTIDAO" && (
+          {tipo === "CERTIDAO" && !isSolicitadoCardCreate && (
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label>Definir Validade (Preenchimento Rápido)</Label>
@@ -201,72 +219,67 @@ export function ItemChecklistDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Arquivo / Comprovante</Label>
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant={formData.arquivo_url ? "outline" : "secondary"}
-                  size="sm"
-                  onClick={() => document.getElementById("file-upload-dialog")?.click()}
-                  disabled={saving}
-                >
-                  {formData.arquivo_url ? (
-                    <>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Substituir Arquivo
-                    </>
-                  ) : (
-                    <>
-                      <Upload className="h-4 w-4 mr-2" />
-                      Anexar Arquivo (PDF/Imagem)
-                    </>
+          {!isSolicitadoCardCreate && (
+            <div className="space-y-2">
+              <Label>Arquivo / Comprovante</Label>
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={formData.arquivo_url ? "outline" : "secondary"}
+                    size="sm"
+                    onClick={() => document.getElementById("file-upload-dialog")?.click()}
+                    disabled={saving}
+                  >
+                    {formData.arquivo_url ? (
+                      <>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Substituir Arquivo
+                      </>
+                    ) : (
+                      <>
+                        <Upload className="h-4 w-4 mr-2" />
+                        Anexar Arquivo (PDF/Imagem)
+                      </>
+                    )}
+                  </Button>
+                  {formData.arquivo_url && (
+                    <p className="text-xs text-muted-foreground truncate max-w-[200px]">
+                      Arquivo anexado
+                    </p>
                   )}
-                </Button>
-                {/* Visualizar Link */}
-                {formData.arquivo_url && (
-                  <p className="text-xs text-muted-foreground truncate max-w-[200px]">
-                    Arquivo anexado
-                  </p>
-                )}
+                </div>
+
+                <input
+                  id="file-upload-dialog"
+                  type="file"
+                  accept="application/pdf,image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0]
+                    if (!file) return
+                    try {
+                      const { toast } = await import("sonner")
+                      toast.info("Enviando arquivo...")
+
+                      const { uploadFile } = await import("@/lib/utils/file-upload")
+                      const { storageRef } = await uploadFile({
+                        file,
+                        pathPrefix: tipo === "CERTIDAO" ? "certidoes" : "documentos"
+                      })
+
+                      setFormData(prev => ({ ...prev, arquivo_url: storageRef }))
+                      toast.success("Arquivo anexado!")
+                    } catch (err: any) {
+                      console.error(err)
+                      alert("Erro ao enviar arquivo: " + err.message)
+                    }
+                    e.target.value = ""
+                  }}
+                />
               </div>
-
-              <input
-                id="file-upload-dialog"
-                type="file"
-                accept="application/pdf,image/*"
-                className="hidden"
-                onChange={async (e) => {
-                  const file = e.target.files?.[0]
-                  if (!file) return
-                  try {
-                    // Feedback visual simples via texto botão (ou poderia usar state local uploading)
-                    const { toast } = await import("sonner") // Lazy load toast
-                    toast.info("Enviando arquivo...")
-
-                    const { uploadFile } = await import("@/lib/utils/file-upload")
-                    const { storageRef } = await uploadFile({
-                      file,
-                      pathPrefix: tipo === "CERTIDAO" ? "certidoes" : "documentos"
-                    })
-
-                    setFormData(prev => ({ ...prev, arquivo_url: storageRef }))
-                    toast.success("Arquivo anexado!")
-                  } catch (err: any) {
-                    console.error(err)
-                    alert("Erro ao enviar arquivo: " + err.message)
-                  }
-                  e.target.value = "" // reset
-                }}
-              />
             </div>
-            {/* Fallback manual input se quiserem colar link externo ainda? 
-                Talvez esconder ou deixar como opcional. 
-                Vou deixar apenas o upload por enquanto para simplificar conforme pedido.
-                Se o usuário quiser ver a URL crua, poderia ser um input readonly.
-             */}
-          </div>
+          )}
         </div>
 
         <DialogFooter className="flex justify-between">
@@ -309,7 +322,7 @@ export function ItemChecklistDialog({
             <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving || deleting}>
               Cancelar
             </Button>
-            <Button onClick={handleSave} disabled={saving || deleting || (!item && !formData.arquivo_url)}>
+            <Button onClick={handleSave} disabled={saving || deleting || (!item && !isSolicitadoCardCreate && !formData.arquivo_url)}>
               {saving ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

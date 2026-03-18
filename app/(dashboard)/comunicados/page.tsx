@@ -253,6 +253,9 @@ async function requestAiViaSupabaseHttp(
   } = await supabase.auth.getSession()
 
   if (sessionError) {
+    if (/auth session missing/i.test(sessionError.message || "")) {
+      throw new Error("Sessao expirada para chamar IA. Faca login novamente.")
+    }
     throw new Error(sessionError.message || "Nao foi possivel validar a sessao atual.")
   }
 

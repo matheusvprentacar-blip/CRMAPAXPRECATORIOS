@@ -81,7 +81,8 @@ export default function ConfiguracoesPage() {
       const { data, error } = await supabase
         .from('configuracoes_sistema')
         .select('*')
-        .single()
+        .limit(1)
+        .maybeSingle()
 
       if (error) throw error
 

@@ -1,9 +1,9 @@
-﻿"use client"
+"use client"
 
 import { useState, useEffect, useCallback, useMemo, useRef } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
-import { filtrosToRpcParams, getFiltrosAtivos } from "@/lib/types/filtros"
+import { filtrosToRpcParams, getFiltrosAtivos, sanitizeRpcParams, STATUS_OPTIONS } from "@/lib/types/filtros"
 
 const RELATED_FILTER_KEYS: Record<string, Array<keyof FiltrosPrecatorios>> = {
   data_criacao: ["data_criacao_inicio", "data_criacao_fim"],
@@ -34,33 +34,19 @@ const RANGE_FILTER_PAIRS: Array<[keyof FiltrosPrecatorios, keyof FiltrosPrecator
   ["valor_sem_atualizacao_min", "valor_sem_atualizacao_max"],
 ]
 
-const QUICK_SEARCH_ALLOWED_FIELDS = [
-  "titulo",
-  "numero_precatorio",
-  "numero_processo",
-  "numero_oficio",
-  "credor_nome",
-  "credor_cpf_cnpj",
-  "devedor",
-] as const
+const ALL_STATUS_VALUES = Array.from(new Set(STATUS_OPTIONS.map((option) => option.value)))
+const CALCULADOS_STATUS = ["calculado", "concluido"]
+const EM_CALCULO_OU_NOVO_STATUS = ["em_calculo", "novo"]
 
-function normalizeSearchTerm(value: unknown): string {
-  if (typeof value !== "string") return ""
-  return value
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase()
-    .trim()
+type UsePrecatoriosSearchOptions = {
+  page?: number
+  pageSize?: number
+  excludedStatuses?: string[]
 }
 
-function matchesQuickSearch(item: Record<string, unknown>, rawTerm: string): boolean {
-  const term = normalizeSearchTerm(rawTerm)
-  if (!term) return true
-
-  return QUICK_SEARCH_ALLOWED_FIELDS.some((field) => {
-    const value = normalizeSearchTerm(item[field])
-    return value.includes(term)
-  })
+type UsePrecatoriosSearchSummary = {
+  calculados: number
+  emCalculoOuNovo: number
 }
 
 function normalizeString(value: unknown): string | undefined {
@@ -98,6 +84,19 @@ function normalizeStringArray(value: unknown): string[] | undefined {
     )
   )
   return normalized.length > 0 ? normalized : undefined
+}
+
+function normalizeStatusList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+
+  return Array.from(
+    new Set(
+      value
+        .filter((item): item is string => typeof item === "string")
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0)
+    )
+  )
 }
 
 function normalizeFiltros(input: FiltrosPrecatorios): FiltrosPrecatorios {
@@ -142,22 +141,77 @@ function normalizeFiltros(input: FiltrosPrecatorios): FiltrosPrecatorios {
   return next
 }
 
-export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
+function applyStatusConstraints(
+  params: Record<string, unknown>,
+  {
+    includeStatuses,
+    excludedStatuses,
+  }: {
+    includeStatuses?: string[]
+    excludedStatuses?: string[]
+  } = {}
+) {
+  const shouldAdjust =
+    (Array.isArray(includeStatuses) && includeStatuses.length > 0) ||
+    (Array.isArray(excludedStatuses) && excludedStatuses.length > 0)
+
+  if (!shouldAdjust) return { ...params }
+
+  let statuses = normalizeStatusList(params.p_status)
+
+  if (statuses.length === 0) {
+    statuses = [...ALL_STATUS_VALUES]
+  }
+
+  if (Array.isArray(includeStatuses) && includeStatuses.length > 0) {
+    const includeSet = new Set(includeStatuses)
+    statuses = statuses.filter((status) => includeSet.has(status))
+  }
+
+  if (Array.isArray(excludedStatuses) && excludedStatuses.length > 0) {
+    const excludeSet = new Set(excludedStatuses)
+    statuses = statuses.filter((status) => !excludeSet.has(status))
+  }
+
+  return {
+    ...params,
+    p_status: Array.from(new Set(statuses)),
+  }
+}
+
+export function usePrecatoriosSearch(
+  initialFiltros: FiltrosPrecatorios = {},
+  options: UsePrecatoriosSearchOptions = {}
+) {
   const [filtros, setFiltros] = useState<FiltrosPrecatorios>(normalizeFiltros(initialFiltros))
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const [resultados, setResultados] = useState<Array<Record<string, unknown>>>([])
   const [total, setTotal] = useState(0)
+  const [summary, setSummary] = useState<UsePrecatoriosSearchSummary>({
+    calculados: 0,
+    emCalculoOuNovo: 0,
+  })
   const [error, setError] = useState<string | null>(null)
   const activeRequestRef = useRef(0)
 
   const supabase = useMemo(() => createBrowserClient(), [])
   const filtrosNormalizados = useMemo(() => normalizeFiltros(filtros), [filtros])
+  const page = Math.max(1, options.page ?? 1)
+  const pageSize = Math.max(1, options.pageSize ?? 20)
+  const excludedStatusesKey = Array.isArray(options.excludedStatuses)
+    ? Array.from(new Set(options.excludedStatuses.map((status) => status.trim()).filter(Boolean))).sort().join("|")
+    : ""
+  const excludedStatuses = useMemo(
+    () => (excludedStatusesKey ? excludedStatusesKey.split("|") : []),
+    [excludedStatusesKey]
+  )
 
   const buscar = useCallback(async () => {
     if (!supabase) {
       setResultados([])
       setTotal(0)
+      setSummary({ calculados: 0, emCalculoOuNovo: 0 })
       setError("Supabase nao disponivel")
       setInitialized(true)
       return
@@ -168,21 +222,37 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
     setError(null)
 
     try {
-      const params = filtrosToRpcParams(filtrosNormalizados)
-      const { data, error: rpcError } = await supabase.rpc("buscar_precatorios_global", params)
+      const rpcParams = sanitizeRpcParams(filtrosToRpcParams(filtrosNormalizados))
+      const baseParams = applyStatusConstraints(rpcParams, { excludedStatuses })
+      const from = (page - 1) * pageSize
+      const to = from + pageSize - 1
 
-      if (rpcError) throw rpcError
+      const [pageResponse, calculadosResponse, emCalculoOuNovoResponse] = await Promise.all([
+        supabase.rpc("buscar_precatorios_global", baseParams, { count: "exact" }).range(from, to),
+        supabase.rpc(
+          "buscar_precatorios_global",
+          applyStatusConstraints(baseParams, { includeStatuses: CALCULADOS_STATUS }),
+          { head: true, count: "exact" }
+        ),
+        supabase.rpc(
+          "buscar_precatorios_global",
+          applyStatusConstraints(baseParams, { includeStatuses: EM_CALCULO_OU_NOVO_STATUS }),
+          { head: true, count: "exact" }
+        ),
+      ])
+
+      if (pageResponse.error) throw pageResponse.error
+      if (calculadosResponse.error) throw calculadosResponse.error
+      if (emCalculoOuNovoResponse.error) throw emCalculoOuNovoResponse.error
       if (requestId !== activeRequestRef.current) return
 
-      const list = (data || []) as Array<Record<string, unknown>>
-      const termoRapido = filtrosNormalizados.termo
-      const filteredList =
-        termoRapido && termoRapido.length > 0
-          ? list.filter((item) => matchesQuickSearch(item, termoRapido))
-          : list
-
-      setResultados(filteredList)
-      setTotal(filteredList.length)
+      const list = (pageResponse.data || []) as Array<Record<string, unknown>>
+      setResultados(list)
+      setTotal(pageResponse.count ?? list.length)
+      setSummary({
+        calculados: calculadosResponse.count ?? 0,
+        emCalculoOuNovo: emCalculoOuNovoResponse.count ?? 0,
+      })
     } catch (err) {
       if (requestId !== activeRequestRef.current) return
 
@@ -190,13 +260,14 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
       setError(message)
       setResultados([])
       setTotal(0)
+      setSummary({ calculados: 0, emCalculoOuNovo: 0 })
     } finally {
       if (requestId === activeRequestRef.current) {
         setLoading(false)
         setInitialized(true)
       }
     }
-  }, [filtrosNormalizados, supabase])
+  }, [excludedStatuses, filtrosNormalizados, page, pageSize, supabase])
 
   useEffect(() => {
     void buscar()
@@ -248,6 +319,7 @@ export function usePrecatoriosSearch(initialFiltros: FiltrosPrecatorios = {}) {
     initialized,
     resultados,
     total,
+    summary,
     error,
     filtrosAtivos,
     refetch: buscar,

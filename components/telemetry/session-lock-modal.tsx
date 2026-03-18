@@ -49,7 +49,7 @@ export function SessionLockModal({ open, loading, error, reason, onUnlock, onSig
       isDismissable={false}
     >
       <Modal.Container placement="center" size="md">
-        <Modal.Dialog className="rounded-3xl border-none bg-transparent shadow-none outline-none">
+        <Modal.Dialog className="rounded-3xl border-none bg-white shadow-none outline-none dark:bg-zinc-900">
           {() => (
             <Surface
               className="flex flex-col w-full max-w-full overflow-hidden border border-default-200 rounded-3xl shadow-2xl bg-white dark:bg-zinc-900 opacity-100"

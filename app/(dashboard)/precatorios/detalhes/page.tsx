@@ -61,6 +61,7 @@ import { HistoricoCalculos } from "@/components/kanban/historico-calculos"
 import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
 import CalculadoraPrecatorios from "@/components/calculador-precatorios"
 import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-detalhado"
+import { ProjecaoComparativoPanel } from "@/components/precatorios/comparativo/projecao-comparativo-panel"
 
 import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
@@ -113,6 +114,37 @@ function normalizeRoles(value: unknown): string[] {
   }
 
   return []
+}
+
+function formatStructuredText(value: unknown): string {
+  if (value === null || value === undefined) return ""
+
+  if (typeof value === "string") {
+    return value.trim()
+  }
+
+  if (typeof value === "number" || typeof value === "boolean") {
+    return String(value)
+  }
+
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => formatStructuredText(item))
+      .filter(Boolean)
+      .join("\n")
+  }
+
+  if (typeof value === "object") {
+    return Object.entries(value)
+      .map(([key, entryValue]) => {
+        const formattedValue = formatStructuredText(entryValue)
+        return formattedValue ? `${key}: ${formattedValue}` : ""
+      })
+      .filter(Boolean)
+      .join("\n")
+  }
+
+  return String(value)
 }
 
 const SectionTitle = ({ icon: Icon, title }: { icon?: LucideIcon; title: string }) => (
@@ -320,6 +352,22 @@ export default function PrecatorioDetailPage() {
     const saldoLiquido = Number(precatorio.saldo_liquido || 0)
     return hasDadosCalculo || valorAtualizado > 0 || saldoLiquido > 0 || !!precatorio.calculo_ultima_versao
   })()
+  const defaultComparativoPrecoCompra = (() => {
+    if (!precatorio) return null
+    const candidates = [
+      precatorio.proposta_menor_valor,
+      precatorio.saldo_liquido,
+      precatorio.valor_atualizado,
+      precatorio.valor_principal,
+    ]
+
+    for (const candidate of candidates) {
+      const parsed = Number(candidate)
+      if (Number.isFinite(parsed) && parsed > 0) return parsed
+    }
+
+    return null
+  })()
 
   const STATUS_TAB_MAP: Record<string, string> = {
     entrada: "detalhes",
@@ -451,6 +499,7 @@ export default function PrecatorioDetailPage() {
       "juridico",
       "fechamento",
       "calculo",
+      "comparativo",
       "propostas",
       "timeline",
     ])
@@ -594,13 +643,18 @@ export default function PrecatorioDetailPage() {
         return
       }
 
-      setPrecatorio(finalData)
+      const normalizedFinalData = {
+        ...finalData,
+        contatos: formatStructuredText(finalData?.contatos),
+      }
+
+      setPrecatorio(normalizedFinalData)
       const previsaoPagamentoRaw = finalData?.previsao_pagamento
         ? String(finalData.previsao_pagamento).slice(0, 4)
         : ""
       const previsaoPagamentoAno = /^\d{4}$/.test(previsaoPagamentoRaw) ? previsaoPagamentoRaw : ""
       setEditData({
-        ...finalData,
+        ...normalizedFinalData,
         esfera_devedor: normalizeEsferaDevedor(finalData?.esfera_devedor) || "",
         previsao_pagamento: previsaoPagamentoAno,
       })
@@ -1032,7 +1086,7 @@ export default function PrecatorioDetailPage() {
         herdeiro_telefone: editData.herdeiro_telefone,
         herdeiro_endereco: editData.herdeiro_endereco,
         cessionario: editData.cessionario,
-        contatos: editData.contatos,
+        contatos: formatStructuredText(editData.contatos) || null,
         observacoes: editData.observacoes,
         banco: editData.banco,
         agencia: editData.agencia,
@@ -1977,6 +2031,13 @@ export default function PrecatorioDetailPage() {
                 >
                   <Calculator className="h-4 w-4 mr-2" />
                   Cálculo
+                </TabsTrigger>
+                <TabsTrigger
+                  value="comparativo"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <DollarSign className="h-4 w-4 mr-2" />
+                  {"Proje\u00e7\u00e3o & Comparativo"}
                 </TabsTrigger>
                 <TabsTrigger
                   value="propostas"
@@ -3606,6 +3667,15 @@ export default function PrecatorioDetailPage() {
                     </div>
                   </div>
                 )}
+              </TabsContent>
+
+              {/* Tab: Projecao & Comparativo */}
+              <TabsContent value="comparativo" className="mt-0">
+                <ProjecaoComparativoPanel
+                  precatorioId={id}
+                  defaultPrevisaoPagamento={precatorio?.previsao_pagamento || null}
+                  defaultPrecoCompra={defaultComparativoPrecoCompra}
+                />
               </TabsContent>
 
               {/* Tab: Propostas */}

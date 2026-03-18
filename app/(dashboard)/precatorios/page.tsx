@@ -31,13 +31,13 @@ import { STATUS_LABELS, STATUS_OPTIONS } from "@/lib/types/filtros"
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
 
 const deleteActionPopoverClassName =
-  "w-fit !min-w-0 md:!min-w-0 overflow-hidden rounded-xl border border-white/15 !bg-black/75 p-0 text-white shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)] backdrop-blur-md"
-const deleteActionMenuClassName = "w-auto min-w-0 bg-transparent !p-0 !gap-0 text-white"
+  "w-fit !min-w-0 md:!min-w-0 overflow-hidden rounded-xl border border-white/15 !bg-black p-0 text-white shadow-[0_20px_50px_-28px_rgba(0,0,0,0.95)]"
+const deleteActionMenuClassName = "w-auto min-w-0 !bg-black !p-0 !gap-0 text-white"
 const deleteActionItemClassName =
   "!m-0 !h-auto !min-h-0 !rounded-none !bg-transparent !px-0 !py-0 text-white outline-none transition-colors data-[focus=true]:!bg-black/40 data-[focus-visible=true]:!bg-black/40 data-[hover=true]:!bg-black/40 data-[hovered=true]:!bg-black/40"
 const deleteActionItemStyle: React.CSSProperties = { padding: 0, minHeight: 0 }
 const deleteActionContentClassName =
-  "group flex w-full select-none items-center gap-3 rounded-lg border border-white/15 bg-black/55 p-2 shadow-sm"
+  "group flex w-full select-none items-center gap-3 rounded-lg border border-white/15 bg-black p-2 shadow-sm"
 
 type ButtonVariant = "default" | "outline" | "ghost" | "destructive" | "secondary"
 
@@ -220,8 +220,24 @@ export default function PrecatoriosPage() {
   const [userRole, setUserRole] = useState<string[] | null>(null)
   const [authUserId, setAuthUserId] = useState<string | null>(null)
   const [responsaveis, setResponsaveis] = useState<{ id: string; nome: string }[]>([])
+  const [searchInput, setSearchInput] = useState("")
 
-  // Usar hook de busca avançada
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
+  const [deletingBatch, setDeletingBatch] = useState(false)
+
+  const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
+  const [currentPage, setCurrentPage] = useState(1)
+  const pageSize = 20
+
+  const isCalculoOnly = userRole?.includes("operador_calculo") && !userRole?.includes("admin") && !userRole?.includes("gestor")
+  const excludedStatuses = useMemo(() => (isCalculoOnly ? ["em_calculo"] : []), [isCalculoOnly])
+  const searchOptions = useMemo(
+    () => ({ page: currentPage, pageSize, excludedStatuses }),
+    [currentPage, pageSize, excludedStatuses]
+  )
+
+  // Usar hook de busca avancada
   const {
     filtros,
     updateFiltros,
@@ -230,46 +246,15 @@ export default function PrecatoriosPage() {
     setTermo,
     loading,
     initialized,
-    resultados: precatoriosRaw,
+    resultados: precatorios,
+    total: totalPrecatorios,
+    summary,
     filtrosAtivos,
     refetch,
-  } = usePrecatoriosSearch()
+  } = usePrecatoriosSearch({}, searchOptions)
 
-  const [searchInput, setSearchInput] = useState("")
-
-  // Estado para seleção em lote
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false)
-  const [deletingBatch, setDeletingBatch] = useState(false)
-
-  const [viewMode, setViewMode] = useState<"cards" | "table">("cards")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize] = useState(20)
-
-  // Filtrar precatórios em cálculo para operador de cálculo (exceto se for admin ou gestor)
-  const isCalculoOnly = userRole?.includes("operador_calculo") && !userRole?.includes("admin") && !userRole?.includes("gestor")
-  const precatorios = isCalculoOnly
-    ? precatoriosRaw.filter(p => p.status !== "em_calculo")
-    : precatoriosRaw
-
-  // Atualizar total após filtro
-  const totalPrecatorios = precatorios.length
-
-  const calculadosCount = useMemo(() => {
-    return precatorios.filter((precatorio: any) => {
-      const status = String(precatorio.status || "").toLowerCase()
-      const statusKanban = String(precatorio.status_kanban || "").toLowerCase()
-      return status === "calculado" || status === "concluido" || statusKanban === "calculo_concluido"
-    }).length
-  }, [precatorios])
-
-  const emCalculoOuNovoCount = useMemo(() => {
-    return precatorios.filter((precatorio: any) => {
-      const status = String(precatorio.status || "").toLowerCase()
-      const statusKanban = String(precatorio.status_kanban || "").toLowerCase()
-      return status === "em_calculo" || status === "novo" || statusKanban === "calculo_andamento" || statusKanban === "entrada"
-    }).length
-  }, [precatorios])
+  const calculadosCount = summary.calculados
+  const emCalculoOuNovoCount = summary.emCalculoOuNovo
 
   const responsavelAtivo = useMemo(() => {
     if (!filtros.responsavel_id) return null
@@ -401,21 +386,21 @@ export default function PrecatoriosPage() {
     clearFiltros()
   }
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(precatorios.length / pageSize)), [precatorios.length, pageSize])
-  const paginatedPrecatorios = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return precatorios.slice(start, start + pageSize)
-  }, [precatorios, currentPage, pageSize])
-  const rangeStart = precatorios.length === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = Math.min(currentPage * pageSize, precatorios.length)
+  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalPrecatorios / pageSize)), [totalPrecatorios, pageSize])
+  const rangeStart = totalPrecatorios === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = totalPrecatorios === 0 ? 0 : Math.min(rangeStart + precatorios.length - 1, totalPrecatorios)
 
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchInput, filtros, precatorios.length])
+  }, [filtros, isCalculoOnly])
 
   useEffect(() => {
     setCurrentPage((prev) => Math.min(prev, totalPages))
   }, [totalPages])
+
+  useEffect(() => {
+    setSelectedIds(new Set())
+  }, [currentPage, filtros, isCalculoOnly])
 
 
   async function handleDeletePrecatorio() {
@@ -773,7 +758,7 @@ export default function PrecatoriosPage() {
                     checked={selectedIds.size > 0 && selectedIds.size === deletableCount}
                     onCheckedChange={toggleSelectAll}
                   />
-                  Selecionar todos
+                  Selecionar página
                 </label>
                 {selectedIds.size > 0 && (
                   <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{selectedIds.size} selecionado(s)</span>
@@ -783,7 +768,7 @@ export default function PrecatoriosPage() {
 
             {/* Cards sempre no mobile */}
             <div className="grid gap-4 md:hidden">
-              {paginatedPrecatorios.map((precatorio, index) => {
+              {precatorios.map((precatorio, index) => {
                 const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                 const valorPrincipal = Number(precatorio.valor_principal || 0)
                 const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
@@ -796,7 +781,7 @@ export default function PrecatoriosPage() {
                 return (
                   <AnimatedListItem key={precatorio.id} index={index}>
                     <Card
-                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_56%,hsl(var(--primary)/0.24)_100%)] shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
+                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-content1 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
                       onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                     >
                       <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
@@ -963,7 +948,7 @@ export default function PrecatoriosPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {paginatedPrecatorios.map((precatorio) => {
+                      {precatorios.map((precatorio) => {
                         const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                         const valorPrincipal = Number(precatorio.valor_principal || 0)
                         const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
@@ -1059,7 +1044,7 @@ export default function PrecatoriosPage() {
                 </div>
               ) : (
                 <div className="grid gap-4">
-                  {paginatedPrecatorios.map((precatorio, index) => {
+                  {precatorios.map((precatorio, index) => {
                     const valorAtualizado = Number(precatorio.valor_atualizado || 0)
                     const valorPrincipal = Number(precatorio.valor_principal || 0)
                     const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
@@ -1072,7 +1057,7 @@ export default function PrecatoriosPage() {
                     return (
                       <AnimatedListItem key={precatorio.id} index={index}>
                         <Card
-                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_56%,hsl(var(--primary)/0.24)_100%)] shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
+                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-content1 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
                           onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
                         >
                           <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
@@ -1224,7 +1209,7 @@ export default function PrecatoriosPage() {
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-default-200/70 bg-content1 px-4 py-3">
               <span className="text-sm text-foreground/70">
-                Exibindo {rangeStart}-{rangeEnd} de {precatorios.length} precatórios
+                Exibindo {rangeStart}-{rangeEnd} de {totalPrecatorios} precatórios
               </span>
               <div className="flex items-center gap-2">
                 <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
@@ -1358,5 +1343,4 @@ export default function PrecatoriosPage() {
     </div >
   )
 }
-
 

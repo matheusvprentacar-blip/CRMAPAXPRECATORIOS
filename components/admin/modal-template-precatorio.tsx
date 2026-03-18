@@ -20,19 +20,6 @@ interface ModalTemplatePrecatorioProps {
   createdById?: string | null
 }
 
-const DEFAULT_TEMPLATE = `[
-  {
-    "titulo": "Precatorio Exemplo",
-    "credor_nome": "Nome do Credor",
-    "advogado_nome": "Nome do Advogado",
-    "natureza": "Comum",
-    "numero_precatorio": "0000000-00.0000.0.00.0000",
-    "numero_processo": "0000000-00.0000.0.00.0000",
-    "tribunal": "TJSP",
-    "valor_principal": 1000000
-  }
-]`
-
 type OperatorInfo = {
   id: string
   nome: string
@@ -56,16 +43,26 @@ const ALLOWED_COLUMNS = new Set([
   "esfera_devedor",
   "credor_nome",
   "credor_cpf_cnpj",
+  "credor_data_nascimento",
+  "credor_profissao",
+  "credor_estado_civil",
   "credor_telefone",
   "credor_email",
   "credor_endereco",
   "credor_cidade",
   "credor_uf",
   "credor_cep",
+  "conjuge_nome",
+  "conjuge_cpf_cnpj",
   "advogado_nome",
   "advogado_cpf_cnpj",
   "advogado_oab",
   "advogado_telefone",
+  "herdeiro",
+  "herdeiro_cpf",
+  "herdeiro_telefone",
+  "herdeiro_endereco",
+  "cessionario",
   "natureza",
   "valor_principal",
   "valor_atualizado",
@@ -86,14 +83,53 @@ const ALLOWED_COLUMNS = new Set([
   "data_base",
   "data_expedicao",
   "data_calculo",
+  "previsao_pagamento",
+  "loa",
+  "ano_orcamentario",
+  "score_complexidade",
+  "sla_horas",
+  "data_entrada_calculo",
+  "data_atraso_calculo",
   "status",
   "status_kanban",
   "localizacao_kanban",
   "prioridade",
+  "titular_falecido",
+  "urgente",
+  "irpf_isento",
+  "contatos",
+  "banco",
+  "agencia",
+  "conta",
+  "tipo_conta",
+  "chave_pix",
+  "tipo_chave_pix",
+  "observacoes_bancarias",
+  "motivo_atraso_calculo",
+  "tipo_atraso",
+  "impacto_atraso",
+  "observacoes_escrituras",
+  "analise_penhora",
+  "analise_cessao",
+  "analise_herdeiros",
+  "analise_viavel",
+  "analise_observacoes",
+  "analise_penhora_valor",
+  "analise_penhora_percentual",
+  "analise_cessao_valor",
+  "analise_cessao_percentual",
+  "analise_adiantamento_valor",
+  "analise_adiantamento_percentual",
+  "analise_honorarios_valor",
+  "analise_honorarios_percentual",
+  "analise_itcmd",
+  "analise_itcmd_valor",
+  "analise_itcmd_percentual",
   "observacoes",
   "raw_text",
   "dono_usuario_id",
   "responsavel_calculo_id",
+  "responsavel_escrituras_id",
   "responsavel",
   "criado_por",
 ])
@@ -115,7 +151,228 @@ const NUMERIC_FIELDS = new Set([
   "proposta_maior_percentual",
   "proposta_menor_valor",
   "proposta_maior_valor",
+  "ano_orcamentario",
+  "score_complexidade",
+  "sla_horas",
+  "analise_penhora_valor",
+  "analise_penhora_percentual",
+  "analise_cessao_valor",
+  "analise_cessao_percentual",
+  "analise_adiantamento_valor",
+  "analise_adiantamento_percentual",
+  "analise_honorarios_valor",
+  "analise_honorarios_percentual",
+  "analise_itcmd_valor",
+  "analise_itcmd_percentual",
 ])
+
+const DATE_FIELDS = new Set([
+  "credor_data_nascimento",
+  "data_base",
+  "data_expedicao",
+  "data_calculo",
+  "previsao_pagamento",
+  "loa",
+  "data_entrada_calculo",
+  "data_atraso_calculo",
+])
+
+const BOOLEAN_FIELDS = new Set([
+  "titular_falecido",
+  "urgente",
+  "irpf_isento",
+  "analise_penhora",
+  "analise_cessao",
+  "analise_viavel",
+  "analise_itcmd",
+])
+
+const UUID_FIELDS = new Set([
+  "dono_usuario_id",
+  "responsavel_calculo_id",
+  "responsavel_escrituras_id",
+  "responsavel",
+  "criado_por",
+])
+
+const STATUS_VALIDOS = new Set([
+  "novo",
+  "em_andamento",
+  "em_contato",
+  "em_calculo",
+  "calculado",
+  "aguardando_cliente",
+  "concluido",
+  "cancelado",
+  "fila_calculo",
+  "entrada",
+  "triagem_interesse",
+  "aguardando_oficio",
+  "docs_credor",
+  "analise_processual_inicial",
+  "analise_juridica",
+  "recalculo_pos_juridico",
+  "pronto_calculo",
+  "calculo_andamento",
+  "juridico",
+  "calculo_concluido",
+  "proposta_negociacao",
+  "proposta_aceita",
+  "certidoes",
+  "escrituras",
+  "fechado",
+  "encerrados",
+  "reprovado",
+  "nao_elegivel",
+  "credito_vendido",
+  "pos_fechamento",
+  "pausado_credor",
+  "pausado_documentos",
+  "sem_interesse",
+])
+
+const STATUS_KANBAN_VALIDOS = new Set([
+  "entrada",
+  "triagem_interesse",
+  "aguardando_oficio",
+  "analise_processual_inicial",
+  "docs_credor",
+  "pronto_calculo",
+  "calculo_andamento",
+  "juridico",
+  "calculo_concluido",
+  "proposta_negociacao",
+  "proposta_aceita",
+  "certidoes",
+  "escrituras",
+  "fechado",
+  "pos_fechamento",
+  "pausado_credor",
+  "pausado_documentos",
+  "sem_interesse",
+  "reprovado",
+  "analise_juridica",
+  "recalculo_pos_juridico",
+  "encerrados",
+])
+
+const PRIORIDADES_VALIDAS = new Set(["baixa", "media", "alta", "urgente"])
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const ACCEPTED_TEMPLATE_FIELDS = Array.from(ALLOWED_COLUMNS).sort()
+
+const EXTRA_SUPPORTED_INPUT_FIELDS = [
+  "numero",
+  "processo",
+  "numero_do_processo",
+  "credor",
+  "nome_credor",
+  "estado",
+  "uf",
+  "cidade",
+  "cep",
+  "endereco",
+  "endereco_completo",
+  "oab",
+  "advogado.nome",
+  "natureza_precatorio",
+  "tipo_precatorio",
+  "comum_ou_alimentar",
+  "datas.previsao_pagamento",
+  "datas.previsao",
+  "datas.data_base",
+  "datas.base",
+  "datas.data_expedicao",
+  "datas.expedicao",
+  "datas.data_calculo",
+  "datas.calculo",
+  "texto",
+  "texto_extraido",
+  "observacao",
+  "obs",
+  "resumo",
+  "detalhes.resumo",
+  "detalhes.texto",
+  "pontos_importantes",
+  "pontos_chave",
+  "highlights",
+  "detalhes.pontos_importantes",
+  "detalhes.pontos_chave",
+  "detalhes.highlights",
+  "contato",
+  "dados_contato",
+].sort()
+
+function buildDefaultTemplateJson() {
+  const defaultItem: Record<string, unknown> = {}
+
+  Array.from(ALLOWED_COLUMNS).forEach((field) => {
+    if (NUMERIC_FIELDS.has(field)) {
+      defaultItem[field] = 0
+      return
+    }
+    if (BOOLEAN_FIELDS.has(field)) {
+      defaultItem[field] = false
+      return
+    }
+    if (DATE_FIELDS.has(field)) {
+      defaultItem[field] = "2026-01-01"
+      return
+    }
+    defaultItem[field] = ""
+  })
+
+  Object.assign(defaultItem, {
+    titulo: "Precatorio Exemplo",
+    numero_precatorio: "0000000-00.0000.0.00.0000",
+    numero_processo: "0000000-00.0000.0.00.0000",
+    numero_oficio: "OF-2026-0001",
+    tribunal: "TJSP",
+    devedor: "Fazenda Publica",
+    esfera_devedor: "ESTADO",
+    natureza: "Comum",
+    credor_nome: "Nome do Credor",
+    credor_cpf_cnpj: "000.000.000-00",
+    credor_telefone: "(11) 90000-0000",
+    credor_email: "credor@email.com",
+    advogado_nome: "Nome do Advogado",
+    advogado_oab: "SP123456",
+    valor_principal: 1000000,
+    valor_atualizado: 1200000,
+    data_base: "2024-01-15",
+    data_expedicao: "2024-03-10",
+    previsao_pagamento: "2026-12-20",
+    status: "novo",
+    status_kanban: "entrada",
+    localizacao_kanban: "entrada",
+    prioridade: "media",
+    criado_por: "",
+    dono_usuario_id: "",
+    responsavel: "",
+    responsavel_calculo_id: "",
+    responsavel_escrituras_id: "",
+    contatos: {
+      whatsapp: "(11) 90000-0000",
+      email: "credor@email.com",
+    },
+    observacoes: "Observacoes livres",
+    pontos_importantes: [
+      "Prioridade por idade",
+      "Documentacao principal validada",
+    ],
+    detalhes: {
+      resumo: "Resumo extraido automaticamente",
+      pontos_importantes: [
+        "Confirmar dados bancarios",
+        "Existe pendencia de certidao complementar",
+      ],
+    },
+  })
+
+  return JSON.stringify([defaultItem], null, 2)
+}
+
+const DEFAULT_TEMPLATE = buildDefaultTemplateJson()
 
 function normalizeNatureza(value: unknown): string | undefined {
   if (value === null || value === undefined) return undefined
@@ -132,6 +389,54 @@ function normalizeNatureza(value: unknown): string | undefined {
   if (normalized.includes("comum")) return "Comum"
 
   return raw
+}
+
+function normalizeToken(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined
+  const raw = String(value).trim()
+  if (!raw) return undefined
+
+  const normalized = raw
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[\s-]+/g, "_")
+
+  if (!normalized) return undefined
+  if (normalized === "encerrado") return "encerrados"
+  return normalized
+}
+
+function normalizeStatus(value: unknown): string | undefined {
+  const normalized = normalizeToken(value)
+  return normalized && STATUS_VALIDOS.has(normalized) ? normalized : undefined
+}
+
+function normalizeStatusKanban(value: unknown): string | undefined {
+  const normalized = normalizeToken(value)
+  return normalized && STATUS_KANBAN_VALIDOS.has(normalized) ? normalized : undefined
+}
+
+function normalizePrioridade(value: unknown): string | undefined {
+  const normalized = normalizeToken(value)
+  return normalized && PRIORIDADES_VALIDAS.has(normalized) ? normalized : undefined
+}
+
+function normalizeUuid(value: unknown): string | undefined {
+  if (value === null || value === undefined) return undefined
+  const text = String(value).trim()
+  if (!text) return undefined
+  const lower = text.toLowerCase()
+  if (lower === "none" || lower === "null" || lower === "undefined") return undefined
+  return UUID_REGEX.test(text) ? text : undefined
+}
+
+function formatSupabaseError(error: any): string {
+  if (!error) return "Erro desconhecido"
+  const parts = [error.code, error.message, error.details, error.hint]
+    .map((part) => String(part || "").trim())
+    .filter(Boolean)
+  return parts.length > 0 ? parts.join(" | ") : "Erro desconhecido"
 }
 
 function normalizeTemplate(raw: string): TemplateItem[] {
@@ -153,6 +458,109 @@ function coerceNumber(value: any): number | undefined {
     .replace(",", ".")
   const parsed = Number(cleaned)
   return Number.isFinite(parsed) ? parsed : undefined
+}
+
+function coerceBoolean(value: any): boolean | undefined {
+  if (value === null || value === undefined || value === "") return undefined
+  if (typeof value === "boolean") return value
+  if (typeof value === "number") return value !== 0
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase()
+    if (["true", "1", "sim", "yes", "y", "s"].includes(normalized)) return true
+    if (["false", "0", "nao", "não", "no", "n"].includes(normalized)) return false
+  }
+  return undefined
+}
+
+function normalizeDate(value: any): string | undefined {
+  if (value === null || value === undefined || value === "") return undefined
+  if (value instanceof Date && !Number.isNaN(value.getTime())) return value.toISOString().slice(0, 10)
+
+  const raw = String(value).trim()
+  if (!raw) return undefined
+  if (/^\d{4}$/.test(raw)) return `${raw}-01-01`
+
+  const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  if (iso) return `${iso[1]}-${iso[2]}-${iso[3]}`
+
+  const br = raw.match(/^(\d{2})[\/-](\d{2})[\/-](\d{4})$/)
+  if (br) return `${br[3]}-${br[2]}-${br[1]}`
+
+  const parsed = new Date(raw)
+  if (!Number.isNaN(parsed.getTime())) return parsed.toISOString().slice(0, 10)
+
+  return undefined
+}
+
+function getByPath(source: TemplateItem, path: string): any {
+  if (!path.includes(".")) return source?.[path]
+  return path.split(".").reduce<any>((acc, key) => (acc && typeof acc === "object" ? acc[key] : undefined), source)
+}
+
+function getFirstValue(source: TemplateItem, paths: string[]): any {
+  for (const path of paths) {
+    const value = getByPath(source, path)
+    if (value === null || value === undefined) continue
+    if (typeof value === "string" && !value.trim()) continue
+    return value
+  }
+  return undefined
+}
+
+function toTextList(value: any): string[] {
+  if (value === null || value === undefined) return []
+  if (Array.isArray(value)) return value.flatMap((item) => toTextList(item))
+  if (typeof value === "string") {
+    const text = value.trim()
+    if (!text) return []
+    return text
+      .split(/\r?\n|;/)
+      .map((part) => part.trim())
+      .filter(Boolean)
+  }
+  if (typeof value === "number" || typeof value === "boolean") return [String(value)]
+  return []
+}
+
+function normalizeContatos(value: any): string | undefined {
+  if (value === null || value === undefined || value === "") return undefined
+  if (Array.isArray(value)) {
+    const entries = value.flatMap((item) => toTextList(item))
+    return entries.length > 0 ? entries.join("\n") : undefined
+  }
+  if (typeof value === "object") {
+    const entries = Object.entries(value)
+      .map(([key, val]) => {
+        const text = String(val ?? "").trim()
+        return text ? `${key}: ${text}` : ""
+      })
+      .filter(Boolean)
+    return entries.length > 0 ? entries.join("\n") : undefined
+  }
+  const text = String(value).trim()
+  return text || undefined
+}
+
+function composeObservacoes(item: TemplateItem): string | undefined {
+  const blocos: string[] = []
+  const observacaoDireta = String(getFirstValue(item, ["observacoes", "observacao", "obs"]) ?? "").trim()
+  if (observacaoDireta) blocos.push(observacaoDireta)
+
+  const detalheResumo = String(getFirstValue(item, ["resumo", "detalhes.resumo", "detalhes.texto"]) ?? "").trim()
+  if (detalheResumo) blocos.push(`Detalhes: ${detalheResumo}`)
+
+  const pontosImportantes = [
+    ...toTextList(getFirstValue(item, ["pontos_importantes", "pontos_chave", "highlights"])),
+    ...toTextList(getFirstValue(item, ["detalhes.pontos_importantes", "detalhes.pontos_chave", "detalhes.highlights"])),
+  ]
+    .map((value) => value.trim())
+    .filter(Boolean)
+
+  if (pontosImportantes.length > 0) {
+    blocos.push(`Pontos importantes:\n${pontosImportantes.map((value) => `- ${value}`).join("\n")}`)
+  }
+
+  return blocos.length > 0 ? blocos.join("\n\n") : undefined
 }
 
 function buildTitulo(item: TemplateItem, index: number) {
@@ -259,12 +667,34 @@ function sanitizePayload(item: TemplateItem, index: number, createdById?: string
   const payload: Record<string, any> = {}
   Object.keys(item || {}).forEach((key) => {
     if (!ALLOWED_COLUMNS.has(key)) return
+    if (UUID_FIELDS.has(key)) {
+      const normalized = normalizeUuid(item[key])
+      if (normalized) payload[key] = normalized
+      return
+    }
     if (NUMERIC_FIELDS.has(key)) {
       const coerced = coerceNumber(item[key])
       if (coerced !== undefined) payload[key] = coerced
       return
     }
-    if (item[key] !== undefined) payload[key] = item[key]
+    if (BOOLEAN_FIELDS.has(key)) {
+      const coerced = coerceBoolean(item[key])
+      if (coerced !== undefined) payload[key] = coerced
+      return
+    }
+    if (DATE_FIELDS.has(key)) {
+      const normalized = normalizeDate(item[key])
+      if (normalized) payload[key] = normalized
+      return
+    }
+    if (item[key] === undefined || item[key] === null) return
+    if (typeof item[key] === "string") {
+      const text = item[key].trim()
+      if (!text) return
+      payload[key] = text
+      return
+    }
+    payload[key] = item[key]
   })
 
   if (!payload.tribunal && item?.vara_origem) {
@@ -279,6 +709,22 @@ function sanitizePayload(item: TemplateItem, index: number, createdById?: string
     payload.advogado_nome = item.advogado.nome.trim()
   }
 
+  if (!payload.credor_endereco && typeof item?.endereco_completo === "string" && item.endereco_completo.trim()) {
+    payload.credor_endereco = item.endereco_completo.trim()
+  }
+
+  if (!payload.credor_uf && typeof item?.estado === "string" && item.estado.trim()) {
+    payload.credor_uf = item.estado.trim().toUpperCase()
+  }
+
+  if (!payload.credor_cidade && typeof item?.cidade === "string" && item.cidade.trim()) {
+    payload.credor_cidade = item.cidade.trim()
+  }
+
+  if (!payload.credor_cep && typeof item?.cep === "string" && item.cep.trim()) {
+    payload.credor_cep = item.cep.replace(/\D/g, "")
+  }
+
   const naturezaFonte =
     payload.natureza ??
     item?.natureza ??
@@ -289,14 +735,90 @@ function sanitizePayload(item: TemplateItem, index: number, createdById?: string
   const naturezaNormalizada = normalizeNatureza(naturezaFonte)
   if (naturezaNormalizada) {
     payload.natureza = naturezaNormalizada
+  } else if (payload.natureza !== undefined) {
+    delete payload.natureza
   }
 
+  const observacoesOrganizadas = composeObservacoes(item)
+  if (observacoesOrganizadas) payload.observacoes = observacoesOrganizadas
+
+  const contatosFonte = getFirstValue(item, ["contatos", "contato", "dados_contato"])
+  const contatosNormalizados = normalizeContatos(contatosFonte)
+  if (contatosNormalizados) payload.contatos = contatosNormalizados
+
+  DATE_FIELDS.forEach((field) => {
+    if (payload[field]) return
+    const normalized = normalizeDate(getFirstValue(item, [field, `datas.${field}`]))
+    if (normalized) payload[field] = normalized
+  })
+
+  BOOLEAN_FIELDS.forEach((field) => {
+    if (payload[field] !== undefined) return
+    const coerced = coerceBoolean(getFirstValue(item, [field]))
+    if (coerced !== undefined) payload[field] = coerced
+  })
+
+  const statusNormalizado = normalizeStatus(payload.status)
+  const statusKanbanNormalizado = normalizeStatusKanban(payload.status_kanban)
+  const localizacaoNormalizada = normalizeStatusKanban(payload.localizacao_kanban)
+  const prioridadeNormalizada = normalizePrioridade(payload.prioridade)
+
   payload.titulo = buildTitulo({ ...item, titulo: payload.titulo }, index)
-  payload.criado_por = payload.criado_por || createdById || null
-  payload.status = payload.status || "novo"
-  payload.status_kanban = payload.status_kanban || "entrada"
+  payload.criado_por = normalizeUuid(payload.criado_por) || normalizeUuid(createdById) || null
+  payload.status = statusNormalizado || "novo"
+  payload.status_kanban = statusKanbanNormalizado || "entrada"
+  payload.localizacao_kanban = localizacaoNormalizada || payload.status_kanban
+  if (prioridadeNormalizada) {
+    payload.prioridade = prioridadeNormalizada
+  } else {
+    delete payload.prioridade
+  }
 
   return payload
+}
+
+function extrairColunaInexistente(error: any): string | null {
+  const message = String(error?.message || "")
+  const details = String(error?.details || "")
+  const hint = String(error?.hint || "")
+  const combined = `${message} ${details} ${hint}`.trim()
+  if (!combined) return null
+
+  const patterns = [
+    /Could not find the '([^']+)' column/i,
+    /column "([^"]+)" of relation "precatorios" does not exist/i,
+    /column ([a-zA-Z_][a-zA-Z0-9_]*) does not exist/i,
+  ]
+
+  for (const pattern of patterns) {
+    const match = combined.match(pattern)
+    if (match?.[1]) return match[1]
+  }
+  return null
+}
+
+async function inserirPrecatorioResiliente(
+  supabase: NonNullable<ReturnType<typeof createBrowserClient>>,
+  payload: Record<string, any>
+) {
+  const payloadMutavel: Record<string, any> = { ...payload }
+  const colunasRemovidas: string[] = []
+  const maxTentativas = 8
+
+  for (let tentativa = 0; tentativa <= maxTentativas; tentativa += 1) {
+    const { error } = await supabase.from("precatorios").insert(payloadMutavel)
+    if (!error) return { colunasRemovidas }
+
+    const colunaInexistente = extrairColunaInexistente(error)
+    if (!colunaInexistente || !(colunaInexistente in payloadMutavel)) {
+      throw error
+    }
+
+    delete payloadMutavel[colunaInexistente]
+    colunasRemovidas.push(colunaInexistente)
+  }
+
+  throw new Error("Nao foi possivel inserir: payload incompativel com o schema atual.")
 }
 
 export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, createdById }: ModalTemplatePrecatorioProps) {
@@ -377,6 +899,8 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
 
   useEffect(() => {
     if (!open) {
+      setRawJson(DEFAULT_TEMPLATE)
+      setParseError(null)
       setLastResult(null)
       setStep("edit")
       setOutlierAssignments({})
@@ -433,6 +957,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
         const { data } = await supabase.auth.getUser()
         userId = data.user?.id || null
       }
+      if (!userId) throw new Error("Usuario nao autenticado")
 
       const assignmentMap = new Map<string, string>()
       Object.entries(distributionPreview.assignments).forEach(([operatorId, keys]) => {
@@ -458,12 +983,22 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
           errors.push(`Item ${i + 1}: sem operador definido`)
           continue
         }
-        const { error } = await supabase.from("precatorios").insert(payload)
-        if (error) {
-          fail += 1
-          errors.push(`Item ${i + 1}: ${error.message}`)
-        } else {
+        try {
+          const { colunasRemovidas } = await inserirPrecatorioResiliente(supabase, payload)
+          if (colunasRemovidas.length > 0) {
+            console.warn(
+              `[Template Import] Colunas ignoradas para compatibilidade no item ${i + 1}:`,
+              colunasRemovidas
+            )
+          }
           ok += 1
+        } catch (error: any) {
+          fail += 1
+          errors.push(`Item ${i + 1}: ${formatSupabaseError(error)}`)
+          console.error(`[Template Import] Falha no item ${i + 1}`, {
+            payload,
+            error,
+          })
         }
       }
 
@@ -486,7 +1021,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden">
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col overflow-hidden !bg-[hsl(var(--background))] backdrop-blur-none">
         <DialogHeader>
           <DialogTitle>Importar por Template (JSON)</DialogTitle>
           <DialogDescription>
@@ -521,15 +1056,30 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
               <div className="space-y-2">
                 <Label>Template JSON</Label>
                 <p className="text-xs text-muted-foreground">
-                  Campos recomendados: <code>credor_nome</code>, <code>advogado_nome</code>,{" "}
-                  <code>natureza</code> (Comum ou Alimentar), <code>numero_precatorio</code> e{" "}
-                  <code>valor_principal</code>. O campo <code>file_url</code> nao e aceito neste template.
+                  O template aceita campos opcionais. Campos ausentes sao permitidos. O campo{" "}
+                  <code>file_url</code> nao e aceito.
                 </p>
+                <div className="rounded-md border border-border/60 bg-muted p-2">
+                  <p className="text-[11px] text-muted-foreground mb-1">
+                    Campos aceitos ({ACCEPTED_TEMPLATE_FIELDS.length}):
+                  </p>
+                  <div className="max-h-28 overflow-y-auto rounded-md border border-border/50 bg-background px-2 py-1 font-mono text-[11px] leading-5">
+                    {ACCEPTED_TEMPLATE_FIELDS.join(", ")}
+                  </div>
+                </div>
+                <div className="rounded-md border border-border/60 bg-muted p-2">
+                  <p className="text-[11px] text-muted-foreground mb-1">
+                    Aliases/campos extras aceitos para normalizacao ({EXTRA_SUPPORTED_INPUT_FIELDS.length}):
+                  </p>
+                  <div className="max-h-24 overflow-y-auto rounded-md border border-border/50 bg-background px-2 py-1 font-mono text-[11px] leading-5">
+                    {EXTRA_SUPPORTED_INPUT_FIELDS.join(", ")}
+                  </div>
+                </div>
                 <Textarea
                   value={rawJson}
                   onChange={(e) => setRawJson(e.target.value)}
                   rows={12}
-                  className="font-mono text-xs"
+                  className="font-mono text-xs bg-background"
                 />
                 {parseError ? (
                   <p className="text-xs text-destructive">{parseError}</p>
@@ -540,7 +1090,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
                 )}
               </div>
 
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-xs space-y-2">
+              <div className="rounded-lg border border-border/60 bg-muted p-3 text-xs space-y-2">
                 <p className="font-medium">Resumo rapido</p>
                 <div className="flex flex-wrap gap-2">
                   <Badge variant="secondary">Itens: {templateItems.length}</Badge>
@@ -549,7 +1099,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
               </div>
 
               {lastResult && (
-                <div className="rounded-lg border border-border/60 bg-muted/20 p-3 text-xs space-y-2">
+                <div className="rounded-lg border border-border/60 bg-muted p-3 text-xs space-y-2">
                   <p className="font-medium">Resultado</p>
                   <p>
                     {lastResult.ok} criados, {lastResult.fail} falharam.
@@ -566,7 +1116,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
             </div>
           ) : (
             <div className="grid gap-4">
-              <div className="rounded-lg border border-border/60 bg-muted/30 p-3 text-sm">
+              <div className="rounded-lg border border-border/60 bg-muted p-3 text-sm">
                 <div className="flex flex-wrap items-center justify-between gap-2">
                   <div>
                     <p className="text-xs text-muted-foreground">Itens</p>
@@ -645,7 +1195,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
                         const sum = distributionPreview.sums[id] || 0
                         const approved = approvedOperators[id]
                         return (
-                          <div key={id} className="rounded-md border border-border/60 bg-background/60 px-3 py-2">
+                          <div key={id} className="rounded-md border border-border/60 bg-background px-3 py-2">
                             <div className="flex items-center justify-between">
                               <div>
                                 <p className="text-xs text-muted-foreground">{op?.nome || "Operador"}</p>
@@ -681,7 +1231,7 @@ export function ModalTemplatePrecatorio({ open, onOpenChange, onSuccess, created
                   <p className="font-medium">Creditos destoantes precisam de atribuicao manual</p>
                   <div className="mt-2 space-y-2 text-xs">
                     {pendingOutliers.map((item) => (
-                      <div key={item.key} className="flex flex-col gap-2 rounded-md border border-primary/40 bg-background/50 p-2">
+                      <div key={item.key} className="flex flex-col gap-2 rounded-md border border-primary/40 bg-background p-2">
                         <div className="flex items-center justify-between">
                           <span className="truncate">{item.label}</span>
                           <span>

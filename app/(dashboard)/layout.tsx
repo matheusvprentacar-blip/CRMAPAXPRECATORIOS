@@ -61,9 +61,10 @@ import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { NotificationsModal } from "@/components/notifications/NotificationsModal"
 import { ComunicadosBroadcastModal } from "@/components/comunicados/comunicados-broadcast-modal"
 import { getVersion } from "@tauri-apps/api/app"
-import packageJson from "@/package.json"
 import { TelemetryProvider } from "@/components/telemetry/telemetry-provider"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
+
+const FALLBACK_APP_VERSION = process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"
 
 const navigation = [
   {
@@ -418,7 +419,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
   const [nomeEmpresa, setNomeEmpresa] = useState("CRM APAX Precatórios")
   const [subtituloEmpresa, setSubtituloEmpresa] = useState("Sistema de Gestão")
-  const [appVersion, setAppVersion] = useState<string>(packageJson.version)
+  const [appVersion, setAppVersion] = useState<string>(FALLBACK_APP_VERSION)
 
   const ZOOM_MIN = 0.65
   const ZOOM_MAX = 1.15
@@ -445,7 +446,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (!isTauriWindow) return
 
     getVersion().then(setAppVersion).catch(() => {
-      // Keep package.json version as fallback.
+      // Keep the build-time public version as fallback.
     })
   }, [])
 
@@ -513,10 +514,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       const supabase = getSupabase()
       if (!supabase) return
 
-      const { data } = await supabase
+      const { data, error } = await supabase
         .from("configuracoes_sistema")
         .select("logo_url, nome_empresa, subtitulo_empresa")
-        .single()
+        .limit(1)
+        .maybeSingle()
+
+      if (error) throw error
 
       if (data) {
         if (data.logo_url) setLogoUrl(data.logo_url)
