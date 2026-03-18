@@ -1,8 +1,10 @@
 import { NextResponse } from "next/server"
-import { createServerSupabaseClient } from "@/lib/supabase/server"
+import { createClient as createSupabaseClient } from "@supabase/supabase-js"
 import { getLatestSnapshot, isSnapshotStale } from "@/services/market-data"
 
 export const runtime = "nodejs"
+export const dynamic = "force-static"
+export const revalidate = 3600
 
 function getErrorMessage(error: unknown): string {
   if (error instanceof Error && error.message) return error.message
@@ -11,16 +13,6 @@ function getErrorMessage(error: unknown): string {
     if (typeof message === "string" && message.trim().length > 0) return message
   }
   return "Erro desconhecido"
-}
-
-function normalizeRoles(input: unknown): string[] {
-  if (Array.isArray(input)) {
-    return input.map((item) => String(item).trim()).filter(Boolean)
-  }
-  if (typeof input === "string" && input.trim().length > 0) {
-    return [input.trim()]
-  }
-  return []
 }
 
 function daysBetween(dateA: string, dateB: string): number {
@@ -45,27 +37,38 @@ function saoPauloTodayIso(): string {
 
 export async function GET() {
   try {
-    const supabase = await createServerSupabaseClient()
+    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+
+    if (!supabaseUrl || !supabaseAnonKey) {
+      return NextResponse.json(
+        {
+          snapshot: null,
+          stale: true,
+          staleDays: null,
+          canRefresh: false,
+          message: "Supabase nao configurado no servidor.",
+        },
+        { status: 404 },
+      )
+    }
+
+    const supabase = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
+      auth: { persistSession: false, autoRefreshToken: false },
+    })
+
     if (!supabase) {
-      return NextResponse.json({ error: "Supabase nao configurado no servidor." }, { status: 500 })
+      return NextResponse.json(
+        {
+          snapshot: null,
+          stale: true,
+          staleDays: null,
+          canRefresh: false,
+          message: "Supabase nao configurado no servidor.",
+        },
+        { status: 404 },
+      )
     }
-
-    const {
-      data: { user },
-      error: authError,
-    } = await supabase.auth.getUser()
-
-    if (authError || !user) {
-      return NextResponse.json({ error: "Nao autenticado." }, { status: 401 })
-    }
-
-    const { data: profile } = await supabase
-      .from("usuarios")
-      .select("role")
-      .eq("id", user.id)
-      .maybeSingle()
-
-    const roles = normalizeRoles(profile?.role)
 
     const snapshot = await getLatestSnapshot(supabase)
     if (!snapshot) {
@@ -74,7 +77,7 @@ export async function GET() {
           snapshot: null,
           stale: true,
           staleDays: null,
-          canRefresh: roles.includes("admin") || roles.includes("gestor"),
+          canRefresh: false,
           message: "Nenhum snapshot de mercado encontrado.",
         },
         { status: 404 },
@@ -89,7 +92,7 @@ export async function GET() {
       snapshot,
       stale,
       staleDays,
-      canRefresh: roles.includes("admin") || roles.includes("gestor"),
+      canRefresh: false,
     })
   } catch (error) {
     return NextResponse.json(

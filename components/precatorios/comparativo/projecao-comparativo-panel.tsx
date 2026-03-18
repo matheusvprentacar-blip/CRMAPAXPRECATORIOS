@@ -195,10 +195,11 @@ export function ProjecaoComparativoPanel({
     setSimulating(true)
 
     try {
-      const response = await fetch(`/api/precatorios/${precatorioId}/simulate`, {
+      const response = await fetch("/api/precatorios/simulate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          precatorioId,
           dataVenda,
           precoCompra,
           dataPagamento,

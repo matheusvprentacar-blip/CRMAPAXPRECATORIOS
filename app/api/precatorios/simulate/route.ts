@@ -11,6 +11,7 @@ import { ModoCdi } from "@/services/simulation/types"
 export const runtime = "nodejs"
 
 type SimulateBody = {
+  precatorioId?: string
   dataVenda?: string
   precoCompra?: number | string
   dataPagamento?: string
@@ -72,9 +73,11 @@ function pickDefaultPrecoCompra(precatorio: PrecatorioPriceSource): number {
   return 0
 }
 
-export async function POST(request: Request, context: { params: Promise<{ id: string }> }) {
+export async function POST(request: Request) {
   try {
-    const { id } = await context.params
+    const body = (await request.json().catch(() => ({}))) as SimulateBody
+    const id = String(body?.precatorioId || "").trim()
+
     if (!id) {
       return NextResponse.json({ error: "ID do precatorio nao informado." }, { status: 400 })
     }
@@ -111,8 +114,6 @@ export async function POST(request: Request, context: { params: Promise<{ id: st
     if (!snapshot) {
       return NextResponse.json({ error: "Nenhum snapshot de mercado disponivel. Atualize os dados de mercado primeiro." }, { status: 409 })
     }
-
-    const body = (await request.json().catch(() => ({}))) as SimulateBody
 
     const defaultDataVenda = getSaoPauloTodayIso()
     const dataVenda = normalizeVendaDateInput(body?.dataVenda || defaultDataVenda) || defaultDataVenda
