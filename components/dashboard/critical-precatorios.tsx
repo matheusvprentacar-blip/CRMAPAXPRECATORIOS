@@ -19,7 +19,7 @@ type DelayType = Parameters<typeof DelayTypeBadge>[0]["tipo"]
 
 export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps) {
   const router = useRouter()
-  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
+  const surfaceClass = ""
 
   if (loading) {
     return (
@@ -58,13 +58,9 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
   }
 
   const getCriticalityColor = (score: number) => {
-    if (score >= 70) {
-      return "relative overflow-hidden border-destructive/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--destructive)/0.16)_0%,transparent_58%)]"
-    }
-    if (score >= 40) {
-      return "relative overflow-hidden border-primary/40 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]"
-    }
-    return "relative overflow-hidden border-primary/35 bg-content1 shadow-[0_14px_32px_-24px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_18px_40px_-26px_rgba(0,0,0,0.42)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]"
+    if (score >= 70) return "border-destructive/40"
+    if (score >= 40) return "border-primary/40"
+    return "border-primary/30"
   }
 
   const getCriticalityIcon = (score: number) => {
@@ -89,7 +85,7 @@ export function CriticalPrecatorios({ data, loading }: CriticalPrecatoriosProps)
           {data.map((precatorio) => (
             <Card
               key={precatorio.id}
-              className={`${getCriticalityColor(precatorio.score_criticidade)} border-2 backdrop-blur-md transition-all hover:shadow-md`}
+              className={`${getCriticalityColor(precatorio.score_criticidade)} transition-all`}
             >
               <CardContent className="p-4">
                 <div className="space-y-3">

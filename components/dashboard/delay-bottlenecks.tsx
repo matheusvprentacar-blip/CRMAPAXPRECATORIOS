@@ -15,7 +15,7 @@ interface DelayBottlenecksProps {
 type DelayType = Parameters<typeof DelayTypeBadge>[0]["tipo"]
 
 export function DelayBottlenecks({ data, loading }: DelayBottlenecksProps) {
-  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
+  const surfaceClass = ""
 
   if (loading) {
     return (

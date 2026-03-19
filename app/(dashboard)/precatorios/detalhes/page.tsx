@@ -1111,6 +1111,7 @@ export default function PrecatorioDetailPage() {
         analise_itcmd: editData.analise_itcmd,
         analise_itcmd_valor: toNumberOrNull(editData.analise_itcmd_valor),
         analise_itcmd_percentual: toNumberOrNull(editData.analise_itcmd_percentual),
+        origem_lead: editData.origem_lead || null,
         updated_at: new Date().toISOString(),
       }
 
@@ -2214,6 +2215,26 @@ export default function PrecatorioDetailPage() {
                                 <Label>Número do Ofício</Label>
                                 <Input value={editData.numero_oficio || ""} onChange={(e) => setEditData({ ...editData, numero_oficio: e.target.value })} />
                               </div>
+                              <div>
+                                <Label>Origem do Lead</Label>
+                                <select
+                                  value={editData.origem_lead || ""}
+                                  onChange={(e) => setEditData({ ...editData, origem_lead: e.target.value })}
+                                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+                                >
+                                  <option value="">Não informada</option>
+                                  <option value="Indicação">Indicação</option>
+                                  <option value="Google">Google</option>
+                                  <option value="Instagram">Instagram</option>
+                                  <option value="Facebook">Facebook</option>
+                                  <option value="WhatsApp">WhatsApp</option>
+                                  <option value="Site/Landing page">Site/Landing page</option>
+                                  <option value="LinkedIn">LinkedIn</option>
+                                  <option value="Evento">Evento</option>
+                                  <option value="Parceiro comercial">Parceiro comercial</option>
+                                  <option value="Outro">Outro</option>
+                                </select>
+                              </div>
                             </div>
                             <Separator className="my-4" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2249,6 +2270,10 @@ export default function PrecatorioDetailPage() {
                                 <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "-"}</span>
                               </div>
                             </div>
+                            <InfoRow
+                              label="Origem do Lead"
+                              value={precatorio.origem_lead || "Não informada"}
+                            />
                           </div>
                         )}
                       </CardContent>

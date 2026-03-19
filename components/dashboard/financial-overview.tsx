@@ -18,20 +18,12 @@ export function FinancialOverview({ data, loading }: FinancialOverviewProps) {
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-2">
             {/* Total Valor Principal */}
-            <Card
-                allowShadow
-                disableDefaultSurface
-                className="relative overflow-hidden rounded-3xl border border-primary/30 bg-content1 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_30px_76px_-42px_rgba(251,146,60,0.42)]"
-            >
-                <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
-                    <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-2xl" />
-                    <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-                </div>
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-primary/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Total Valor Principal</CardTitle>
                     <Wallet className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                     {loading ? (
                         <div className="h-7 w-32 animate-pulse rounded-2xl bg-muted" />
                     ) : (
@@ -56,20 +48,12 @@ export function FinancialOverview({ data, loading }: FinancialOverviewProps) {
             </Card>
 
             {/* Total Valor Atualizado */}
-            <Card
-                allowShadow
-                disableDefaultSurface
-                className="relative overflow-hidden rounded-3xl border border-orange-500/30 bg-content1 shadow-[0_22px_54px_-34px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_30px_76px_-42px_rgba(251,146,60,0.42)]"
-            >
-                <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
-                    <div className="absolute -right-12 -top-12 h-28 w-28 rounded-full bg-gradient-to-br from-orange-400/38 to-transparent blur-2xl" />
-                    <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(251,146,60,0.17)_0%,transparent_58%)]" />
-                </div>
-                <CardHeader className="relative z-10 flex flex-row items-center justify-between space-y-0 pb-2">
+            <Card className="border-orange-500/30">
+                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
                     <CardTitle className="text-xs font-semibold tracking-wide uppercase text-muted-foreground">Total Valor Atualizado</CardTitle>
                     <TrendingUp className="h-4 w-4 text-primary" />
                 </CardHeader>
-                <CardContent className="relative z-10">
+                <CardContent>
                     {loading ? (
                         <div className="h-7 w-32 animate-pulse rounded-2xl bg-muted" />
                     ) : (

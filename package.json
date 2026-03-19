@@ -1,9 +1,9 @@
 {
   "name": "Blackbox AI clone",
-  "version": "1.6.38",
+  "version": "1.6.39",
   "private": true,
   "scripts": {
-    "dev": "npx @react-grab/codex@latest && node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
+    "dev": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
     "dev:webpack": "next dev",
     "dev:clean": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
     "dev:clean:webpack": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
@@ -93,7 +93,7 @@
     "eslint-config-next": "15.1.1",
     "postcss": "^8.4.32",
     "shadcn": "^3.8.5",
-    "supabase": "^2.78.1",
+    "supabase": "^2.81.3",
     "tailwindcss": "^4.1.12",
     "typescript": "^5.0.0"
   }

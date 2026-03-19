@@ -1,0 +1,947 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Precatórios — Preview de Hierarquia Visual</title>
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --primary: #f97316;
+    --primary-light: #fed7aa;
+    --primary-glow: rgba(249,115,22,.18);
+    --emerald: #10b981;
+    --emerald-bg: rgba(16,185,129,.10);
+    --rose: #f43f5e;
+    --rose-bg: rgba(244,63,94,.10);
+    --amber: #f59e0b;
+    --amber-bg: rgba(245,158,11,.10);
+    --blue: #3b82f6;
+    --blue-bg: rgba(59,130,246,.10);
+    --violet: #8b5cf6;
+    --bg: #f4f5f8;
+    --surface: #ffffff;
+    --border: rgba(15,23,42,.10);
+    --text: #0f172a;
+    --text-muted: #64748b;
+    --text-xs: #94a3b8;
+    --radius-card: 18px;
+    --radius-sm: 10px;
+    --shadow-card: 0 4px 24px -8px rgba(15,23,42,.10);
+    --shadow-float: 0 16px 48px -20px rgba(249,115,22,.22);
+    --transition: 0.22s cubic-bezier(.4,0,.2,1);
+  }
+  body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'Inter', 'Segoe UI', sans-serif; color: var(--text); min-height: 100vh; }
+
+  /* ── Layout ── */
+  .page { max-width: 1280px; margin: 0 auto; padding: 24px 20px 80px; display: flex; flex-direction: column; gap: 20px; }
+
+  /* ── Header Hero ── */
+  .hero {
+    position: relative; overflow: hidden;
+    background: linear-gradient(135deg, #fff 60%, #fff7ed 100%);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 28px 32px;
+    box-shadow: var(--shadow-card);
+  }
+  .hero::before {
+    content: ''; position: absolute; top: -60px; right: -20px;
+    width: 200px; height: 200px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,.14) 0%, transparent 70%);
+  }
+  .hero::after {
+    content: ''; position: absolute; bottom: -50px; left: 10px;
+    width: 160px; height: 160px; border-radius: 50%;
+    background: radial-gradient(circle, rgba(249,115,22,.10) 0%, transparent 70%);
+  }
+  .hero-inner { position: relative; z-index: 1; }
+  .hero-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 20px; flex-wrap: wrap; }
+  .hero-label { font-size: 10px; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: var(--text-muted); }
+  .hero-title {
+    margin-top: 4px; font-size: 36px; font-weight: 700; line-height: 1.1;
+    background: linear-gradient(90deg, #ea580c 0%, #f97316 50%, #fbbf24 100%);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+  }
+  .hero-desc { margin-top: 8px; font-size: 13.5px; color: var(--text-muted); max-width: 480px; line-height: 1.55; }
+  .hero-actions { display: flex; gap: 10px; align-items: center; padding-top: 4px; flex-shrink: 0; }
+
+  /* Botões */
+  .btn { display: inline-flex; align-items: center; gap: 7px; border-radius: 12px; font-size: 13.5px; font-weight: 600; cursor: pointer; border: none; transition: var(--transition); padding: 0 16px; height: 40px; }
+  .btn-outline { background: rgba(255,255,255,.9); border: 1px solid var(--border); color: var(--text-muted); box-shadow: 0 1px 4px rgba(15,23,42,.06); }
+  .btn-outline:hover { background: #fff; border-color: rgba(249,115,22,.4); color: var(--primary); }
+  .btn-primary {
+    background: linear-gradient(135deg, #f97316 0%, #ea580c 100%);
+    color: #fff;
+    box-shadow: 0 8px 24px -10px rgba(249,115,22,.7);
+  }
+  .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 28px -10px rgba(249,115,22,.8); }
+  .btn-icon { font-size: 15px; line-height: 1; }
+
+  /* KPIs */
+  .kpi-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin-top: 22px; }
+  .kpi {
+    border-radius: 14px; padding: 14px 16px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.85);
+    transition: var(--transition);
+    cursor: default;
+  }
+  .kpi:hover { transform: translateY(-2px); box-shadow: var(--shadow-card); }
+  .kpi-label { font-size: 9.5px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; }
+  .kpi-value { margin-top: 5px; font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1; }
+  .kpi-sub { margin-top: 4px; font-size: 11px; }
+  .kpi-default { }
+  .kpi-default .kpi-label { color: var(--text-muted); }
+  .kpi-default .kpi-value { color: var(--text); }
+  .kpi-default .kpi-sub { color: var(--text-xs); }
+  .kpi-green { background: var(--emerald-bg); border-color: rgba(16,185,129,.25); }
+  .kpi-green .kpi-label { color: #059669; }
+  .kpi-green .kpi-value { color: #047857; }
+  .kpi-green .kpi-sub { color: #059669; }
+  .kpi-orange { background: rgba(249,115,22,.08); border-color: rgba(249,115,22,.25); }
+  .kpi-orange .kpi-label { color: #c2410c; }
+  .kpi-orange .kpi-value { color: var(--primary); }
+  .kpi-orange .kpi-sub { color: #c2410c; }
+  .kpi-red { background: var(--rose-bg); border-color: rgba(244,63,94,.25); }
+  .kpi-red .kpi-label { color: #be123c; }
+  .kpi-red .kpi-value { color: var(--rose); }
+  .kpi-red .kpi-sub { color: #be123c; }
+  .kpi-blue { background: var(--blue-bg); border-color: rgba(59,130,246,.25); }
+  .kpi-blue .kpi-label { color: #1d4ed8; }
+  .kpi-blue .kpi-value { color: var(--blue); }
+  .kpi-blue .kpi-sub { color: #1d4ed8; }
+
+  /* ── Toolbar ── */
+  .toolbar {
+    border-radius: var(--radius-card);
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.92);
+    backdrop-filter: blur(12px);
+    padding: 16px 20px;
+    display: flex; flex-direction: column; gap: 12px;
+    box-shadow: var(--shadow-card);
+  }
+  .toolbar-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .search-wrap { flex: 1; min-width: 240px; }
+  .search-input {
+    width: 100%; height: 40px; border-radius: 12px;
+    border: 1px solid var(--border);
+    background: var(--bg);
+    padding: 0 14px 0 38px;
+    font-size: 13.5px; color: var(--text);
+    outline: none; transition: var(--transition);
+    position: relative;
+  }
+  .search-wrap { position: relative; }
+  .search-icon { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--text-muted); font-size: 15px; pointer-events: none; }
+  .search-input:focus { border-color: rgba(249,115,22,.5); background: #fff; box-shadow: 0 0 0 3px rgba(249,115,22,.08); }
+  .select-pill {
+    height: 40px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 13px; font-weight: 500; color: var(--text-muted);
+    cursor: pointer; outline: none; appearance: none;
+    padding-right: 30px;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2.5'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 10px center;
+    transition: var(--transition);
+  }
+  .select-pill:focus { border-color: rgba(249,115,22,.5); background-color: #fff; }
+  .btn-filter {
+    height: 40px; padding: 0 14px; border-radius: 12px;
+    border: 1px solid var(--border); background: var(--bg);
+    font-size: 13px; font-weight: 600; color: var(--text-muted);
+    display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+    transition: var(--transition);
+  }
+  .btn-filter:hover { background: #fff; border-color: rgba(249,115,22,.4); color: var(--primary); }
+  .badge-count { background: var(--primary); color: #fff; border-radius: 99px; font-size: 10px; font-weight: 700; padding: 1px 6px; margin-left: 2px; }
+  .count-pill { display: inline-flex; align-items: center; gap: 6px; border-radius: 99px; padding: 5px 14px; background: var(--bg); border: 1px solid var(--border); font-size: 12.5px; font-weight: 500; color: var(--text-muted); }
+  .view-toggle { display: inline-flex; align-items: center; background: var(--bg); border: 1px solid var(--border); border-radius: 99px; padding: 3px; }
+  .view-btn { display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 5px 12px; font-size: 12px; font-weight: 600; border: none; background: transparent; color: var(--text-muted); cursor: pointer; transition: var(--transition); }
+  .view-btn.active { background: rgba(249,115,22,.15); color: var(--primary); box-shadow: 0 2px 8px rgba(249,115,22,.18); }
+  .filters-active { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; padding-top: 10px; border-top: 1px solid var(--border); }
+  .filters-label { font-size: 10px; font-weight: 700; letter-spacing: .18em; text-transform: uppercase; color: var(--text-xs); }
+  .chip { display: inline-flex; align-items: center; gap: 5px; border-radius: 99px; padding: 4px 10px 4px 12px; background: #fff; border: 1px solid var(--border); font-size: 12px; color: var(--text-muted); }
+  .chip-key { font-weight: 700; color: var(--text); }
+  .chip-remove { width: 16px; height: 16px; border-radius: 50%; background: var(--bg); border: none; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 10px; }
+  .chip-remove:hover { background: var(--rose-bg); color: var(--rose); }
+
+  /* ── Selection bar ── */
+  .selection-bar {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 16px; border-radius: 12px;
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.9);
+    font-size: 13px; color: var(--text-muted);
+  }
+  .selection-bar-left { display: flex; align-items: center; gap: 10px; }
+  .checkbox-fake { width: 16px; height: 16px; border-radius: 5px; border: 2px solid var(--border); background: #fff; display: inline-block; cursor: pointer; }
+  .selection-count { font-weight: 600; color: var(--primary); }
+
+  /* ── Cards grid ── */
+  .cards-meta { display: flex; align-items: center; justify-content: space-between; }
+  .cards-meta-label { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .sort-select { font-size: 12px; color: var(--text-muted); background: transparent; border: none; outline: none; cursor: pointer; font-weight: 600; }
+
+  .cards-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(310px, 1fr)); gap: 14px; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-card);
+    padding: 20px;
+    cursor: pointer;
+    transition: var(--transition);
+    position: relative;
+    overflow: hidden;
+    display: flex; flex-direction: column; gap: 14px;
+    box-shadow: var(--shadow-card);
+  }
+  .card:hover { transform: translateY(-3px); box-shadow: var(--shadow-float); border-color: rgba(249,115,22,.25); }
+  .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px; border-radius: var(--radius-card) var(--radius-card) 0 0; opacity: 0; transition: var(--transition); }
+  .card:hover::before { opacity: 1; }
+  .card-urgente::before { background: var(--rose); opacity: 1; }
+  .card-atencao::before { background: var(--amber); }
+  .card-ok::before { background: var(--emerald); }
+
+  /* Card top: credor + valor */
+  .card-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+  .card-credor-block { flex: 1; min-width: 0; }
+  .card-credor-row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .card-avatar { width: 34px; height: 34px; border-radius: 9px; display: inline-flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; flex-shrink: 0; }
+  .card-credor { font-size: 14px; font-weight: 700; color: var(--text); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+  .card-title-row { display: flex; align-items: center; gap: 6px; margin-top: 5px; flex-wrap: wrap; }
+  .card-num { font-size: 11.5px; color: var(--text-muted); font-weight: 500; font-family: monospace; }
+  .card-devedor { font-size: 11.5px; color: var(--text-xs); }
+
+  /* Status + tags */
+  .card-tags { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .tag { display: inline-flex; align-items: center; border-radius: 99px; padding: 3px 9px; font-size: 10.5px; font-weight: 700; letter-spacing: .04em; }
+  .tag-status-novo { background: rgba(148,163,184,.12); color: #475569; border: 1px solid rgba(148,163,184,.25); }
+  .tag-status-calculo { background: var(--blue-bg); color: var(--blue); border: 1px solid rgba(59,130,246,.25); }
+  .tag-status-concluido { background: var(--emerald-bg); color: var(--emerald); border: 1px solid rgba(16,185,129,.25); }
+  .tag-status-andamento { background: rgba(249,115,22,.10); color: var(--primary); border: 1px solid rgba(249,115,22,.25); }
+  .tag-urgente { background: var(--rose-bg); color: var(--rose); border: 1px solid rgba(244,63,94,.25); }
+  .tag-sla-ok { background: var(--emerald-bg); color: var(--emerald); border: 1px solid rgba(16,185,129,.25); }
+  .tag-sla-atencao { background: var(--amber-bg); color: var(--amber); border: 1px solid rgba(245,158,11,.25); }
+  .tag-sla-atrasado { background: var(--rose-bg); color: var(--rose); border: 1px solid rgba(244,63,94,.25); }
+  .tag-origem { background: rgba(139,92,246,.08); color: var(--violet); border: 1px solid rgba(139,92,246,.20); }
+  .tag-dot { width: 5px; height: 5px; border-radius: 50%; background: currentColor; display: inline-block; margin-right: 3px; }
+
+  /* Valor */
+  .card-valor-block { text-align: right; flex-shrink: 0; }
+  .card-valor { font-size: 18px; font-weight: 800; font-variant-numeric: tabular-nums; line-height: 1; }
+  .card-valor-label { font-size: 10px; font-weight: 700; letter-spacing: .16em; text-transform: uppercase; margin-top: 4px; }
+  .valor-atualizado { color: #047857; }
+  .valor-principal { color: var(--primary); }
+  .valor-aguardando { color: var(--text-xs); font-size: 14px; }
+
+  /* Divider */
+  .card-divider { height: 1px; background: var(--bg); border: none; margin: 0; }
+
+  /* Info grid */
+  .card-info { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+  .info-item {}
+  .info-label { font-size: 9.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-xs); }
+  .info-value { font-size: 12px; font-weight: 600; color: var(--text); margin-top: 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .info-value.mono { font-family: monospace; font-size: 11.5px; }
+
+  /* Responsável + footer */
+  .card-footer { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+  .card-resp { display: flex; align-items: center; gap: 7px; }
+  .resp-avatar { width: 24px; height: 24px; border-radius: 99px; background: linear-gradient(135deg, #f97316, #fb923c); display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: 700; color: #fff; flex-shrink: 0; }
+  .resp-name { font-size: 12px; font-weight: 500; color: var(--text-muted); }
+  .card-action { font-size: 12px; font-weight: 700; color: var(--primary); display: flex; align-items: center; gap: 4px; opacity: 0; transition: var(--transition); }
+  .card:hover .card-action { opacity: 1; }
+
+  /* SLA bar */
+  .sla-bar-wrap { display: flex; align-items: center; gap: 8px; }
+  .sla-bar-track { flex: 1; height: 4px; border-radius: 99px; background: var(--bg); overflow: hidden; }
+  .sla-bar-fill { height: 100%; border-radius: 99px; transition: width 0.6s cubic-bezier(.4,0,.2,1); }
+  .sla-ok .sla-bar-fill { background: var(--emerald); }
+  .sla-atencao .sla-bar-fill { background: var(--amber); }
+  .sla-atrasado .sla-bar-fill { background: var(--rose); }
+  .sla-label { font-size: 10.5px; font-weight: 700; color: var(--text-xs); width: 52px; text-align: right; flex-shrink: 0; }
+
+  /* ── Paginação ── */
+  .pagination { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 4px 0; }
+  .pagination-info { font-size: 12.5px; color: var(--text-muted); }
+  .pagination-controls { display: flex; align-items: center; gap: 4px; }
+  .page-btn { width: 34px; height: 34px; border-radius: 9px; border: 1px solid var(--border); background: #fff; font-size: 12.5px; font-weight: 600; color: var(--text-muted); cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: var(--transition); }
+  .page-btn:hover { border-color: rgba(249,115,22,.4); color: var(--primary); }
+  .page-btn.active { background: linear-gradient(135deg, #f97316, #ea580c); color: #fff; border-color: transparent; box-shadow: 0 4px 12px rgba(249,115,22,.4); }
+  .page-btn:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* ── TABLE VIEW ── */
+  .table-wrap { border-radius: var(--radius-card); border: 1px solid var(--border); background: #fff; overflow: hidden; box-shadow: var(--shadow-card); }
+  table { width: 100%; border-collapse: collapse; }
+  thead { background: var(--bg); position: sticky; top: 0; z-index: 2; }
+  th { padding: 12px 14px; text-align: left; font-size: 10.5px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--text-muted); border-bottom: 1px solid var(--border); white-space: nowrap; }
+  th.sort-active { color: var(--primary); }
+  th.sort-active::after { content: ' ↓'; }
+  td { padding: 14px; font-size: 13.5px; color: var(--text); border-bottom: 1px solid rgba(15,23,42,.05); vertical-align: middle; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: rgba(249,115,22,.03); }
+  .td-credor { font-weight: 700; max-width: 200px; }
+  .td-num { font-family: monospace; font-size: 12px; color: var(--text-muted); }
+  .td-valor { font-weight: 700; font-variant-numeric: tabular-nums; font-size: 14px; text-align: right; }
+  .td-resp { display: flex; align-items: center; gap: 7px; }
+  .td-action { text-align: right; opacity: 0; transition: var(--transition); }
+  tr:hover .td-action { opacity: 1; }
+  .td-origem-tag { display: inline-flex; align-items: center; gap: 4px; }
+
+  /* ── Anotações de hierarquia (overlay) ── */
+  .annotation { position: absolute; top: -10px; right: -10px; background: #1e293b; color: #fff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; letter-spacing: .06em; z-index: 10; pointer-events: none; }
+
+  /* Empty state */
+  .empty { display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 64px 20px; text-align: center; border: 2px dashed var(--border); border-radius: var(--radius-card); }
+  .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+  .empty-title { font-size: 16px; font-weight: 700; color: var(--text); }
+  .empty-desc { font-size: 13.5px; color: var(--text-muted); margin-top: 6px; max-width: 320px; }
+
+  /* Hierarchy legend */
+  .legend { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; padding: 20px; background: #1e293b; border-radius: 16px; }
+  .legend-title { color: #fff; font-size: 10px; font-weight: 800; letter-spacing: .2em; text-transform: uppercase; margin-bottom: 16px; grid-column: 1/-1; }
+  .legend-item { display: flex; align-items: flex-start; gap: 10px; }
+  .legend-num { width: 22px; height: 22px; border-radius: 6px; background: var(--primary); color: #fff; font-size: 11px; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .legend-text { }
+  .legend-text strong { display: block; color: #f1f5f9; font-size: 12px; }
+  .legend-text span { color: #94a3b8; font-size: 11px; line-height: 1.4; }
+
+  /* Tabs */
+  .view-tabs { display: flex; gap: 1px; background: var(--bg); border-radius: 13px; padding: 3px; width: fit-content; border: 1px solid var(--border); }
+  .view-tab { padding: 6px 16px; border-radius: 10px; font-size: 12.5px; font-weight: 600; color: var(--text-muted); border: none; background: transparent; cursor: pointer; transition: var(--transition); }
+  .view-tab.active { background: #fff; color: var(--text); box-shadow: 0 1px 4px rgba(15,23,42,.08); }
+
+  /* Responsive */
+  @media (max-width: 900px) { .kpi-row { grid-template-columns: repeat(3, 1fr); } .cards-grid { grid-template-columns: 1fr; } }
+  @media (max-width: 600px) { .hero { padding: 20px; } .hero-title { font-size: 26px; } .kpi-row { grid-template-columns: 1fr 1fr; } }
+
+  /* Scroll hint */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: rgba(15,23,42,.12); border-radius: 99px; }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- ══════════════════ LEGENDA DE HIERARQUIA ══════════════════ -->
+  <div class="legend">
+    <div class="legend-title">🗂 Mapa de hierarquia visual — Página de Precatórios</div>
+    <div class="legend-item"><div class="legend-num">1</div><div class="legend-text"><strong>Header Hero</strong><span>Identidade do módulo, KPIs primários (5 métricas), CTAs principais. Nível mais alto.</span></div></div>
+    <div class="legend-item"><div class="legend-num">2</div><div class="legend-text"><strong>Toolbar de busca</strong><span>Busca + filtro de status + filtros avançados + contador + toggle de visualização.</span></div></div>
+    <div class="legend-item"><div class="legend-num">3</div><div class="legend-text"><strong>Meta-row</strong><span>Contagem de resultados e ordenação — contexto secundário antes da lista.</span></div></div>
+    <div class="legend-item"><div class="legend-num">4</div><div class="legend-text"><strong>Cards — Credor + Valor</strong><span>Hierarquia interna: Nome credor (H3) → valor (destaque mono) → status tags → dados secundários → responsável → ação.</span></div></div>
+    <div class="legend-item"><div class="legend-num">5</div><div class="legend-text"><strong>Linha de acento colorida</strong><span>Borda superior que aparece no hover codifica urgência/SLA sem poluir o estado idle.</span></div></div>
+    <div class="legend-item"><div class="legend-num">6</div><div class="legend-text"><strong>Origem do lead</strong><span>Tag compacta com ícone para canal de captação — informação CRM de segunda camada.</span></div></div>
+    <div class="legend-item"><div class="legend-num">7</div><div class="legend-text"><strong>SLA bar</strong><span>Barra de progresso + rótulo temporal substitui badge genérico por dado acionável.</span></div></div>
+    <div class="legend-item"><div class="legend-num">8</div><div class="legend-text"><strong>Paginação</strong><span>Info de range + botões de página — sempre visível abaixo da grade.</span></div></div>
+  </div>
+
+  <!-- ══════════════════ 1. HERO HEADER ══════════════════ -->
+  <section class="hero">
+    <div class="hero-inner">
+      <div class="hero-top">
+        <div>
+          <div class="hero-label">Carteira ativa</div>
+          <h1 class="hero-title">Precatórios</h1>
+          <p class="hero-desc">Gerencie a carteira com visão operacional clara, atalhos rápidos e filtros inteligentes.</p>
+        </div>
+        <div class="hero-actions">
+          <button class="btn btn-outline">
+            <span class="btn-icon">📄</span> Importar JSON
+          </button>
+          <button class="btn btn-primary">
+            <span class="btn-icon">＋</span> Novo Precatório
+          </button>
+        </div>
+      </div>
+
+      <!-- KPIs — 5 métricas com cores semânticas -->
+      <div class="kpi-row">
+        <div class="kpi kpi-default">
+          <div class="kpi-label">Total</div>
+          <div class="kpi-value">1.847</div>
+          <div class="kpi-sub">precatórios na carteira</div>
+        </div>
+        <div class="kpi kpi-green">
+          <div class="kpi-label">Calculados</div>
+          <div class="kpi-value">412</div>
+          <div class="kpi-sub">cálculo concluído</div>
+        </div>
+        <div class="kpi kpi-orange">
+          <div class="kpi-label">Em cálculo</div>
+          <div class="kpi-value">87</div>
+          <div class="kpi-sub">em andamento agora</div>
+        </div>
+        <div class="kpi kpi-red">
+          <div class="kpi-label">SLA atrasado</div>
+          <div class="kpi-value">23</div>
+          <div class="kpi-sub">requerem ação imediata</div>
+        </div>
+        <div class="kpi kpi-blue">
+          <div class="kpi-label">Valor atualizado</div>
+          <div class="kpi-value" style="font-size:18px">R$ 2,4 bi</div>
+          <div class="kpi-sub">portfólio total</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════════ 2. TOOLBAR ══════════════════ -->
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <div class="search-wrap" style="flex:1; min-width: 220px;">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" placeholder="Busque por título, número, credor ou processo..." />
+      </div>
+      <select class="select-pill">
+        <option>Todos os status</option>
+        <option>Novo</option>
+        <option>Em andamento</option>
+        <option>Em cálculo</option>
+        <option>Concluído</option>
+        <option>Cancelado</option>
+      </select>
+      <button class="btn-filter">
+        ⚙ Filtros avançados
+        <span class="badge-count">2</span>
+      </button>
+      <div style="margin-left:auto; display:flex; align-items:center; gap:10px;">
+        <div class="count-pill">1.847 registros</div>
+        <div class="view-tabs">
+          <button class="view-tab active">⊞ Cards</button>
+          <button class="view-tab">☰ Tabela</button>
+        </div>
+      </div>
+    </div>
+    <!-- Filtros ativos -->
+    <div class="filters-active">
+      <span class="filters-label">Filtros ativos</span>
+      <div class="chip"><span class="chip-key">Status:</span>&nbsp;Em cálculo <button class="chip-remove">✕</button></div>
+      <div class="chip"><span class="chip-key">Responsável:</span>&nbsp;Stefanny Lopes <button class="chip-remove">✕</button></div>
+      <button class="btn-outline" style="height:28px; padding:0 10px; font-size:12px; border-radius:8px;">Limpar tudo</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════ 3. META-ROW ══════════════════ -->
+  <div class="cards-meta" style="padding: 0 2px;">
+    <span class="cards-meta-label">Exibindo <strong>20</strong> de <strong>1.847</strong> precatórios</span>
+    <div style="display:flex; align-items:center; gap:6px;">
+      <span style="font-size:12px; color:var(--text-muted);">Ordenar por</span>
+      <select class="sort-select">
+        <option>Valor atualizado (↓)</option>
+        <option>Data de criação</option>
+        <option>SLA crítico</option>
+        <option>Nome do credor</option>
+        <option>Score de complexidade</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- Selection bar (quando há seleção) -->
+  <div class="selection-bar">
+    <div class="selection-bar-left">
+      <div class="checkbox-fake"></div>
+      <span>Selecionar todos da página</span>
+      <span class="selection-count">3 selecionados</span>
+    </div>
+    <button class="btn btn-outline" style="height:32px; padding:0 12px; font-size:12.5px; color:var(--rose); border-color:rgba(244,63,94,.3);">
+      🗑 Excluir selecionados
+    </button>
+  </div>
+
+  <!-- ══════════════════ 4. CARDS GRID ══════════════════ -->
+  <div class="cards-grid">
+
+    <!-- CARD 1 — urgente + atrasado -->
+    <div class="card card-urgente">
+      <!-- Tags no topo: prioridade visual máxima para alertas -->
+      <div class="card-tags">
+        <span class="tag tag-urgente"><span class="tag-dot"></span>Urgente</span>
+        <span class="tag tag-sla-atrasado"><span class="tag-dot"></span>SLA atrasado</span>
+        <span class="tag tag-status-calculo"><span class="tag-dot"></span>Em cálculo</span>
+      </div>
+
+      <!-- Credor + Valor — hierarquia primária do card -->
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(244,63,94,.12); color:var(--rose);">JM</div>
+            <div>
+              <div class="card-credor">João Marcos da Silva</div>
+              <div class="card-num">5026455-54.2025.4.04.9388</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: UNIÃO</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-atualizado">R$ 1,24 mi</div>
+          <div class="card-valor-label" style="color:#059669;">Atualizado</div>
+        </div>
+      </div>
+
+      <hr class="card-divider" />
+
+      <!-- Info grid — dados secundários compactos -->
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Tribunal</div>
+          <div class="info-value">TRF-4</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Data-base</div>
+          <div class="info-value">01/03/2025</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Complexidade</div>
+          <div class="info-value" style="color:var(--rose);">Alta ▲</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">📣 Indicação</span></div>
+        </div>
+      </div>
+
+      <!-- SLA bar -->
+      <div class="sla-bar-wrap sla-atrasado">
+        <div class="sla-bar-track">
+          <div class="sla-bar-fill" style="width:110%;"></div>
+        </div>
+        <span class="sla-label" style="color:var(--rose);">+18h atraso</span>
+      </div>
+
+      <!-- Footer: responsável + ação -->
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar">SL</div>
+          <span class="resp-name">Stefanny Lopes</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+    <!-- CARD 2 — atenção SLA -->
+    <div class="card card-atencao">
+      <div class="card-tags">
+        <span class="tag tag-sla-atencao"><span class="tag-dot"></span>Atenção SLA</span>
+        <span class="tag tag-status-andamento"><span class="tag-dot"></span>Em andamento</span>
+      </div>
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(245,158,11,.12); color:var(--amber);">MA</div>
+            <div>
+              <div class="card-credor">Maria Aparecida Costa</div>
+              <div class="card-num">5004128-11.2010.4.04.7200</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: Estado de SP</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-atualizado">R$ 540 mil</div>
+          <div class="card-valor-label" style="color:#059669;">Atualizado</div>
+        </div>
+      </div>
+      <hr class="card-divider" />
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Tribunal</div>
+          <div class="info-value">TJSP</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Natureza</div>
+          <div class="info-value">Alimentar</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Complexidade</div>
+          <div class="info-value" style="color:var(--amber);">Média ●</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">📱 Instagram</span></div>
+        </div>
+      </div>
+      <div class="sla-bar-wrap sla-atencao">
+        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:78%;"></div></div>
+        <span class="sla-label" style="color:var(--amber);">4h restantes</span>
+      </div>
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar" style="background:linear-gradient(135deg,#8b5cf6,#a78bfa);">RO</div>
+          <span class="resp-name">Rafael Oliveira</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+    <!-- CARD 3 — concluído / saudável -->
+    <div class="card card-ok">
+      <div class="card-tags">
+        <span class="tag tag-sla-ok"><span class="tag-dot"></span>No prazo</span>
+        <span class="tag tag-status-concluido"><span class="tag-dot"></span>Concluído</span>
+      </div>
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(16,185,129,.12); color:var(--emerald);">EP</div>
+            <div>
+              <div class="card-credor">Empresa de Pesquisa Agropecuária…</div>
+              <div class="card-num">5026455-54.2025.4.04.9388</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: UNIÃO</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-atualizado">R$ 2,1 mi</div>
+          <div class="card-valor-label" style="color:#059669;">Atualizado</div>
+        </div>
+      </div>
+      <hr class="card-divider" />
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Tribunal</div>
+          <div class="info-value">TRF-4</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Data-base</div>
+          <div class="info-value">01/03/2025</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Complexidade</div>
+          <div class="info-value" style="color:var(--emerald);">Baixa ▼</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">🔍 Google</span></div>
+        </div>
+      </div>
+      <div class="sla-bar-wrap sla-ok">
+        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:38%;"></div></div>
+        <span class="sla-label" style="color:var(--emerald);">26h restantes</span>
+      </div>
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar" style="background:linear-gradient(135deg,#10b981,#34d399);">AL</div>
+          <span class="resp-name">Ana Lima</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+    <!-- CARD 4 — novo / sem valor -->
+    <div class="card">
+      <div class="card-tags">
+        <span class="tag tag-status-novo">Novo</span>
+      </div>
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(148,163,184,.12); color:#64748b;">PS</div>
+            <div>
+              <div class="card-credor">Pedro Santos Rodrigues</div>
+              <div class="card-num">Sem número de precatório</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: Município de Curitiba</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-aguardando">Aguardando</div>
+          <div class="card-valor-label" style="color:var(--text-xs);">Valor</div>
+        </div>
+      </div>
+      <hr class="card-divider" />
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Tribunal</div>
+          <div class="info-value">TJPR</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Criado em</div>
+          <div class="info-value">19/03/2026</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Natureza</div>
+          <div class="info-value">Comum</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">💼 Parceiro</span></div>
+        </div>
+      </div>
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar" style="background:linear-gradient(135deg,#64748b,#94a3b8);">—</div>
+          <span class="resp-name">Não atribuído</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+    <!-- CARD 5 — saldo líquido com proposta -->
+    <div class="card card-ok">
+      <div class="card-tags">
+        <span class="tag tag-sla-ok"><span class="tag-dot"></span>No prazo</span>
+        <span class="tag tag-status-andamento"><span class="tag-dot"></span>Em andamento</span>
+        <span class="tag" style="background:rgba(59,130,246,.10);color:var(--blue);border:1px solid rgba(59,130,246,.25);">💬 Proposta enviada</span>
+      </div>
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(59,130,246,.12); color:var(--blue);">CF</div>
+            <div>
+              <div class="card-credor">Construtora Figueiredo Ltda</div>
+              <div class="card-num">0042310-88.2022.4.02.5001</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: Estado do RJ</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-atualizado">R$ 8,6 mi</div>
+          <div class="card-valor-label" style="color:#059669;">Atualizado</div>
+        </div>
+      </div>
+      <hr class="card-divider" />
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Proposta maior</div>
+          <div class="info-value" style="color:var(--emerald);">R$ 3,1 mi (36%)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Proposta menor</div>
+          <div class="info-value">R$ 2,4 mi (28%)</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Complexidade</div>
+          <div class="info-value" style="color:var(--amber);">Média ●</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">🌐 Site / LP</span></div>
+        </div>
+      </div>
+      <div class="sla-bar-wrap sla-ok">
+        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:62%;"></div></div>
+        <span class="sla-label" style="color:var(--emerald);">14h restantes</span>
+      </div>
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar" style="background:linear-gradient(135deg,#3b82f6,#60a5fa);">MG</div>
+          <span class="resp-name">Marcos Guimarães</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+    <!-- CARD 6 — sem sla -->
+    <div class="card">
+      <div class="card-tags">
+        <span class="tag tag-status-calculo"><span class="tag-dot"></span>Em cálculo</span>
+      </div>
+      <div class="card-head">
+        <div class="card-credor-block">
+          <div class="card-credor-row">
+            <div class="card-avatar" style="background:rgba(59,130,246,.12); color:var(--blue);">LR</div>
+            <div>
+              <div class="card-credor">Luísa Rodrigues Mendes</div>
+              <div class="card-num">1234567-89.2021.5.00.0001</div>
+            </div>
+          </div>
+          <div class="card-title-row">
+            <div class="card-devedor">Devedor: INSS</div>
+          </div>
+        </div>
+        <div class="card-valor-block">
+          <div class="card-valor valor-principal">R$ 320 mil</div>
+          <div class="card-valor-label" style="color:var(--primary);">Principal</div>
+        </div>
+      </div>
+      <hr class="card-divider" />
+      <div class="card-info">
+        <div class="info-item">
+          <div class="info-label">Tribunal</div>
+          <div class="info-value">TST</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Natureza</div>
+          <div class="info-value">Alimentar</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Responsável</div>
+          <div class="info-value">Bruno Alves</div>
+        </div>
+        <div class="info-item">
+          <div class="info-label">Origem do lead</div>
+          <div class="info-value"><span class="tag tag-origem" style="font-size:10px;">📢 Facebook</span></div>
+        </div>
+      </div>
+      <div class="sla-bar-wrap sla-ok">
+        <div class="sla-bar-track"><div class="sla-bar-fill" style="width:20%;"></div></div>
+        <span class="sla-label" style="color:var(--emerald);">48h restantes</span>
+      </div>
+      <div class="card-footer">
+        <div class="card-resp">
+          <div class="resp-avatar" style="background:linear-gradient(135deg,#0ea5e9,#38bdf8);">BA</div>
+          <span class="resp-name">Bruno Alves</span>
+        </div>
+        <span class="card-action">Ver detalhes →</span>
+      </div>
+    </div>
+
+  </div><!-- /cards-grid -->
+
+  <!-- ══════════════════ 8. PAGINAÇÃO ══════════════════ -->
+  <div class="pagination">
+    <div class="pagination-info">Mostrando <strong>1–20</strong> de <strong>1.847</strong> registros</div>
+    <div class="pagination-controls">
+      <button class="page-btn" disabled>‹</button>
+      <button class="page-btn active">1</button>
+      <button class="page-btn">2</button>
+      <button class="page-btn">3</button>
+      <span style="font-size:13px; color:var(--text-xs); padding:0 4px;">…</span>
+      <button class="page-btn">93</button>
+      <button class="page-btn">›</button>
+    </div>
+  </div>
+
+  <!-- ══════════════════ SEPARADOR — VIEW TABELA ══════════════════ -->
+  <div style="display:flex; align-items:center; gap:12px; margin-top:12px;">
+    <div style="flex:1; height:1px; background:var(--border);"></div>
+    <span style="font-size:11px; font-weight:700; letter-spacing:.16em; text-transform:uppercase; color:var(--text-xs);">Modo Tabela</span>
+    <div style="flex:1; height:1px; background:var(--border);"></div>
+  </div>
+
+  <!-- ══════════════════ TABELA VIEW ══════════════════ -->
+  <div class="table-wrap">
+    <table>
+      <thead>
+        <tr>
+          <th style="width:32px;"><div class="checkbox-fake"></div></th>
+          <th class="sort-active">Credor / Processo</th>
+          <th>Status</th>
+          <th>Origem</th>
+          <th>Tribunal</th>
+          <th>Complexidade</th>
+          <th>SLA</th>
+          <th style="text-align:right;">Valor atualizado</th>
+          <th>Responsável</th>
+          <th style="width:40px;"></th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><div class="checkbox-fake"></div></td>
+          <td>
+            <div class="td-credor">João Marcos da Silva</div>
+            <div class="td-num">5026455-54.2025.4.04.9388</div>
+          </td>
+          <td><span class="tag tag-status-calculo"><span class="tag-dot"></span>Em cálculo</span></td>
+          <td><span class="tag tag-origem td-origem-tag">📣 Indicação</span></td>
+          <td style="color:var(--text-muted);">TRF-4</td>
+          <td><span style="color:var(--rose); font-weight:700;">Alta ▲</span></td>
+          <td><span class="tag tag-sla-atrasado">+18h atraso</span></td>
+          <td class="td-valor valor-atualizado">R$ 1.240.000</td>
+          <td><div class="td-resp"><div class="resp-avatar" style="width:22px;height:22px;font-size:9px;">SL</div><span style="font-size:12.5px;color:var(--text-muted);">Stefanny L.</span></div></td>
+          <td class="td-action"><button class="btn-outline" style="height:28px;padding:0 10px;font-size:12px;border-radius:8px;">Abrir →</button></td>
+        </tr>
+        <tr>
+          <td><div class="checkbox-fake"></div></td>
+          <td>
+            <div class="td-credor">Maria Aparecida Costa</div>
+            <div class="td-num">5004128-11.2010.4.04.7200</div>
+          </td>
+          <td><span class="tag tag-status-andamento"><span class="tag-dot"></span>Em andamento</span></td>
+          <td><span class="tag tag-origem td-origem-tag">📱 Instagram</span></td>
+          <td style="color:var(--text-muted);">TJSP</td>
+          <td><span style="color:var(--amber); font-weight:700;">Média ●</span></td>
+          <td><span class="tag tag-sla-atencao">4h restantes</span></td>
+          <td class="td-valor valor-atualizado">R$ 540.690</td>
+          <td><div class="td-resp"><div class="resp-avatar" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#8b5cf6,#a78bfa);">RO</div><span style="font-size:12.5px;color:var(--text-muted);">Rafael O.</span></div></td>
+          <td class="td-action"><button class="btn-outline" style="height:28px;padding:0 10px;font-size:12px;border-radius:8px;">Abrir →</button></td>
+        </tr>
+        <tr>
+          <td><div class="checkbox-fake"></div></td>
+          <td>
+            <div class="td-credor">Empresa de Pesquisa Agropecuária</div>
+            <div class="td-num">5026455-54.2025.4.04.9388</div>
+          </td>
+          <td><span class="tag tag-status-concluido"><span class="tag-dot"></span>Concluído</span></td>
+          <td><span class="tag tag-origem td-origem-tag">🔍 Google</span></td>
+          <td style="color:var(--text-muted);">TRF-4</td>
+          <td><span style="color:var(--emerald); font-weight:700;">Baixa ▼</span></td>
+          <td><span class="tag tag-sla-ok">No prazo</span></td>
+          <td class="td-valor valor-atualizado">R$ 2.100.000</td>
+          <td><div class="td-resp"><div class="resp-avatar" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#10b981,#34d399);">AL</div><span style="font-size:12.5px;color:var(--text-muted);">Ana L.</span></div></td>
+          <td class="td-action"><button class="btn-outline" style="height:28px;padding:0 10px;font-size:12px;border-radius:8px;">Abrir →</button></td>
+        </tr>
+        <tr>
+          <td><div class="checkbox-fake"></div></td>
+          <td>
+            <div class="td-credor">Construtora Figueiredo Ltda</div>
+            <div class="td-num">0042310-88.2022.4.02.5001</div>
+          </td>
+          <td><span class="tag tag-status-andamento"><span class="tag-dot"></span>Em andamento</span></td>
+          <td><span class="tag tag-origem td-origem-tag">🌐 Site / LP</span></td>
+          <td style="color:var(--text-muted);">TJRJ</td>
+          <td><span style="color:var(--amber); font-weight:700;">Média ●</span></td>
+          <td><span class="tag tag-sla-ok">14h restantes</span></td>
+          <td class="td-valor valor-atualizado">R$ 8.600.000</td>
+          <td><div class="td-resp"><div class="resp-avatar" style="width:22px;height:22px;font-size:9px;background:linear-gradient(135deg,#3b82f6,#60a5fa);">MG</div><span style="font-size:12.5px;color:var(--text-muted);">Marcos G.</span></div></td>
+          <td class="td-action"><button class="btn-outline" style="height:28px;padding:0 10px;font-size:12px;border-radius:8px;">Abrir →</button></td>
+        </tr>
+        <tr>
+          <td><div class="checkbox-fake"></div></td>
+          <td>
+            <div class="td-credor">Pedro Santos Rodrigues</div>
+            <div class="td-num">—</div>
+          </td>
+          <td><span class="tag tag-status-novo">Novo</span></td>
+          <td><span class="tag tag-origem td-origem-tag">💼 Parceiro</span></td>
+          <td style="color:var(--text-muted);">TJPR</td>
+          <td><span style="color:var(--text-xs); font-weight:700;">—</span></td>
+          <td><span class="tag" style="background:rgba(148,163,184,.12);color:#64748b;border:1px solid rgba(148,163,184,.2);">Não iniciado</span></td>
+          <td class="td-valor" style="color:var(--text-muted); font-size:12px;">Aguardando</td>
+          <td><div class="td-resp"><div class="resp-avatar" style="width:22px;height:22px;font-size:9px;background:#e2e8f0;color:#64748b;">—</div><span style="font-size:12.5px;color:var(--text-xs);">Não atribuído</span></div></td>
+          <td class="td-action"><button class="btn-outline" style="height:28px;padding:0 10px;font-size:12px;border-radius:8px;">Abrir →</button></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+</div><!-- /page -->
+
+<script>
+  // Interatividade mínima de demo
+  document.querySelectorAll('.view-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.view-tab').forEach(t => t.classList.remove('active'))
+      tab.classList.add('active')
+    })
+  })
+  document.querySelectorAll('.card').forEach(card => {
+    card.addEventListener('click', () => {
+      card.style.transform = 'scale(0.98)'
+      setTimeout(() => card.style.transform = '', 120)
+    })
+  })
+  document.querySelectorAll('.page-btn:not([disabled])').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.page-btn').forEach(b => b.classList.remove('active'))
+      btn.classList.add('active')
+    })
+  })
+</script>
+</body>
+</html>

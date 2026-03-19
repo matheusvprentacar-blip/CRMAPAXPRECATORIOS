@@ -7,18 +7,39 @@ import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, DollarSign, CheckCircle2, Lock } from "@/components/icons"
+import { Loader2, DollarSign, CheckCircle2 } from "@/components/icons"
+
+type PrecatorioFechamento = {
+    fechamento_status?: string | null
+    data_aceite_proposta?: string | null
+    proposta_aceita?: boolean | null
+    saldo_liquido?: number | string | null
+    proposta_menor_valor?: number | string | null
+    proposta_maior_valor?: number | string | null
+    fechamento_valor_compra?: number | string | null
+    fechamento_comissao_operador?: number | string | null
+    fechamento_comissao_apax?: number | string | null
+    fechamento_escritura?: number | string | null
+    fechamento_procuracao?: number | string | null
+    fechamento_funrejus?: number | string | null
+    fechamento_certidoes?: number | string | null
+    fechamento_certidao_central?: number | string | null
+    fechamento_autenticacao?: number | string | null
+    fechamento_data?: string | null
+    dados_calculo?: {
+        proposta_escolhida_percentual?: number | string | null
+    } | null
+}
 
 interface AbaFechamentoProps {
     precatorioId: string
-    precatorio: any
+    precatorio: PrecatorioFechamento
     onUpdate: () => void
     userRole: string[]
 }
 
 export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: AbaFechamentoProps) {
-    const [loading, setLoading] = useState(false)
-    const [saving, setSaving] = useState(false)
+    const [savingAction, setSavingAction] = useState<"draft" | "finalize" | "clear" | null>(null)
 
     // States para os valores (number | undefined)
     const [valorCompra, setValorCompra] = useState<number | undefined>(undefined)
@@ -38,6 +59,11 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
     // Permissões: Admin e Financeiro
     const canEdit = userRole.some(r => ['admin', 'financeiro'].includes(r))
     const isFinalizado = precatorio.fechamento_status === 'finalizado'
+    const valorAceiteSugerido = resolveSuggestedPurchaseValue(precatorio)
+    const dataAceiteLabel = precatorio?.data_aceite_proposta
+        ? new Date(`${String(precatorio.data_aceite_proposta).slice(0, 10)}T00:00:00`).toLocaleDateString("pt-BR")
+        : null
+    const percentualAceiteSugerido = normalizePercent(precatorio?.dados_calculo?.proposta_escolhida_percentual)
 
     useEffect(() => {
         // Inicializar campos
@@ -45,9 +71,7 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
             // Se tiver valor salvo no fechamento, usa. Senão, tenta pegar da proposta aceita como sugestão
             const valorInicial = precatorio.fechamento_valor_compra
                 ? Number(precatorio.fechamento_valor_compra)
-                : precatorio.proposta_aceita_valor
-                    ? Number(precatorio.proposta_aceita_valor)
-                    : undefined
+                : resolveSuggestedPurchaseValue(precatorio)
 
             setValorCompra(valorInicial)
             setComissaoOperador(precatorio.fechamento_comissao_operador ? Number(precatorio.fechamento_comissao_operador) : undefined)
@@ -69,6 +93,47 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
         }
     }, [precatorio])
 
+    const buildPayload = () => ({
+        p_precatorio_id: precatorioId,
+        p_valor_compra: valorCompra || 0,
+        p_comissao_operador: comissaoOperador || 0,
+        p_comissao_apax: comissaoApax || 0,
+        p_escritura: escritura || 0,
+        p_procuracao: procuracao || 0,
+        p_funrejus: funrejus || 0,
+        p_certidoes: certidoes || 0,
+        p_certidao_central: certidaoCentral || 0,
+        p_autenticacao: autenticacao || 0,
+        p_data_pagamento: dataFechamento || null,
+    })
+
+    const handleSalvarRascunho = async () => {
+        setSavingAction("draft")
+        try {
+            const supabase = createBrowserClient()
+            if (!supabase) return
+
+            const { error } = await supabase.rpc("salvar_fechamento_precatorio", buildPayload())
+
+            if (error) throw error
+
+            toast({
+                title: "Rascunho salvo",
+                description: "Os valores ficaram salvos e podem ser editados a qualquer momento.",
+            })
+            onUpdate()
+        } catch (error: unknown) {
+            console.error("Erro ao salvar rascunho:", error)
+            toast({
+                title: "Erro",
+                description: getErrorMessage(error, "Erro ao salvar rascunho do fechamento."),
+                variant: "destructive",
+            })
+        } finally {
+            setSavingAction(null)
+        }
+    }
+
     const handleFinalizar = async () => {
         if (!valorCompra || !dataFechamento) {
             toast({
@@ -79,48 +144,83 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
             return
         }
 
-        if (!confirm("Tem certeza? Essa ação vai gerar os lançamentos no financeiro e não pode ser desfeita facilmente.")) {
+        if (!confirm("Confirmar atualização dos lançamentos automáticos do financeiro? Você poderá editar ou apagar depois.")) {
             return
         }
 
-        setSaving(true)
+        setSavingAction("finalize")
         try {
             const supabase = createBrowserClient()
             if (!supabase) return
 
-            const { error } = await supabase.rpc('finalizar_fechamento_precatorio', {
-                p_precatorio_id: precatorioId,
+            const { error } = await supabase.rpc("finalizar_fechamento_precatorio", {
+                ...buildPayload(),
                 p_valor_compra: valorCompra,
-                p_comissao_operador: comissaoOperador || 0,
-                p_comissao_apax: comissaoApax || 0,
-
-                p_escritura: escritura || 0,
-                p_procuracao: procuracao || 0,
-                p_funrejus: funrejus || 0,
-                p_certidoes: certidoes || 0,
-                p_certidao_central: certidaoCentral || 0,
-                p_autenticacao: autenticacao || 0,
-
-                p_data_pagamento: dataFechamento
+                p_data_pagamento: dataFechamento,
             })
 
             if (error) throw error
 
             toast({
-                title: "Fechamento Concluído",
-                description: "Dados salvos e lançamentos gerados no financeiro.",
+                title: "Fechamento atualizado",
+                description: "Dados salvos e lançamentos automáticos do financeiro atualizados.",
             })
             onUpdate()
 
-        } catch (error: any) {
+        } catch (error: unknown) {
             console.error("Erro ao finalizar fechamento:", error)
             toast({
                 title: "Erro",
-                description: error.message || "Erro ao processar fechamento.",
+                description: getErrorMessage(error, "Erro ao processar fechamento."),
                 variant: "destructive"
             })
         } finally {
-            setSaving(false)
+            setSavingAction(null)
+        }
+    }
+
+    const handleLimparFechamento = async () => {
+        if (!confirm("Deseja apagar todos os valores do fechamento e remover os lançamentos automáticos vinculados?")) {
+            return
+        }
+
+        setSavingAction("clear")
+        try {
+            const supabase = createBrowserClient()
+            if (!supabase) return
+
+            const { error } = await supabase.rpc("limpar_fechamento_precatorio", {
+                p_precatorio_id: precatorioId,
+                p_apagar_lancamentos: true,
+            })
+
+            if (error) throw error
+
+            setValorCompra(resolveSuggestedPurchaseValue(precatorio))
+            setComissaoOperador(undefined)
+            setComissaoApax(undefined)
+            setEscritura(undefined)
+            setProcuracao(undefined)
+            setFunrejus(undefined)
+            setCertidoes(undefined)
+            setCertidaoCentral(undefined)
+            setAutenticacao(undefined)
+            setDataFechamento(new Date().toISOString().split("T")[0])
+
+            toast({
+                title: "Fechamento apagado",
+                description: "Todos os valores do fechamento foram removidos.",
+            })
+            onUpdate()
+        } catch (error: unknown) {
+            console.error("Erro ao limpar fechamento:", error)
+            toast({
+                title: "Erro",
+                description: getErrorMessage(error, "Erro ao limpar fechamento."),
+                variant: "destructive",
+            })
+        } finally {
+            setSavingAction(null)
         }
     }
 
@@ -128,7 +228,8 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
     // Vou deixar readonly para quem não pode editar, mas visível para juridico talvez?
     // O user disse: "admin ou financeiro vão poder editar"
 
-    const isReadOnly = !canEdit || isFinalizado
+    const isReadOnly = !canEdit
+    const saving = savingAction !== null
 
     return (
         <div className="space-y-6">
@@ -140,10 +241,27 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
                         {isFinalizado && <CheckCircle2 className="h-5 w-5 text-green-600" />}
                     </CardTitle>
                     <CardDescription>
-                        Informe os valores finais da negociação para gerar os registros no módulo financeiro.
+                        Salve o rascunho para editar quando quiser e atualize o financeiro quando estiver pronto.
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
+                    {isFinalizado && (
+                        <div className="rounded-lg border border-green-300 bg-green-50 p-3 text-sm text-green-800">
+                            Fechamento finalizado. Os valores continuam editáveis e podem ser apagados de uma vez.
+                        </div>
+                    )}
+
+                    {precatorio?.proposta_aceita && (
+                        <div className="rounded-lg border border-emerald-200 bg-emerald-50/70 p-3 text-sm text-emerald-900">
+                            <p className="font-semibold">Aceite da proposta confirmado</p>
+                            <p className="mt-1">
+                                {dataAceiteLabel ? `Data do aceite: ${dataAceiteLabel}. ` : ""}
+                                {valorAceiteSugerido
+                                    ? `Sugestão para valor de compra: ${formatCurrency(valorAceiteSugerido)}${percentualAceiteSugerido !== null ? ` (${percentualAceiteSugerido.toFixed(2)}%)` : ""}.`
+                                    : "Sem valor sugerido calculado; informe manualmente no financeiro."}
+                            </p>
+                        </div>
+                    )}
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
 
@@ -219,23 +337,37 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
 
 
                     {/* Footer Actions */}
-                    <div className="pt-4 flex justify-end">
-                        {isFinalizado ? (
-                            <div className="flex items-center text-green-700 bg-green-100 px-4 py-2 rounded-md">
-                                <Lock className="h-4 w-4 mr-2" />
-                                Fechamento Finalizado em {new Date(dataFechamento).toLocaleDateString()}
-                            </div>
-                        ) : (
-                            canEdit && (
+                    <div className="pt-4 flex flex-wrap justify-end gap-2">
+                        {canEdit && (
+                            <>
+                                <Button
+                                    variant="outline"
+                                    onClick={handleSalvarRascunho}
+                                    disabled={saving}
+                                >
+                                    {savingAction === "draft" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Salvar Rascunho
+                                </Button>
+
+                                <Button
+                                    variant="outline"
+                                    onClick={handleLimparFechamento}
+                                    disabled={saving}
+                                    className="text-red-600 border-red-200 hover:text-red-700 hover:border-red-300"
+                                >
+                                    {savingAction === "clear" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    Apagar Tudo
+                                </Button>
+
                                 <Button
                                     onClick={handleFinalizar}
                                     disabled={saving}
                                     className="bg-green-600 hover:bg-green-700 text-white"
                                 >
-                                    {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                                    Finalizar Fechamento
+                                    {savingAction === "finalize" && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                                    {isFinalizado ? "Atualizar Financeiro" : "Finalizar e Gerar Financeiro"}
                                 </Button>
-                            )
+                            </>
                         )}
                     </div>
 
@@ -245,7 +377,48 @@ export function AbaFechamento({ precatorioId, precatorio, onUpdate, userRole }: 
     )
 }
 
-function ExpenseInput({ label, value, onChange, disabled }: any) {
+function normalizePercent(value: unknown): number | null {
+    if (value === null || value === undefined || value === "") return null
+    const numeric = Number(value)
+    if (!Number.isFinite(numeric) || numeric <= 0) return null
+    return numeric > 0 && numeric <= 1 ? numeric * 100 : numeric
+}
+
+function resolveSuggestedPurchaseValue(precatorio: PrecatorioFechamento): number | undefined {
+    if (!precatorio) return undefined
+
+    const saldoLiquido = Number(precatorio?.saldo_liquido || 0)
+    const percentualEscolhido = normalizePercent(precatorio?.dados_calculo?.proposta_escolhida_percentual)
+
+    if (percentualEscolhido !== null && saldoLiquido > 0) {
+        const valorDerivado = saldoLiquido * (percentualEscolhido / 100)
+        if (Number.isFinite(valorDerivado) && valorDerivado > 0) return valorDerivado
+    }
+
+    const propostaMenor = Number(precatorio?.proposta_menor_valor || 0)
+    if (Number.isFinite(propostaMenor) && propostaMenor > 0) return propostaMenor
+
+    const propostaMaior = Number(precatorio?.proposta_maior_valor || 0)
+    if (Number.isFinite(propostaMaior) && propostaMaior > 0) return propostaMaior
+
+    return undefined
+}
+
+function formatCurrency(value: number): string {
+    return new Intl.NumberFormat("pt-BR", {
+        style: "currency",
+        currency: "BRL",
+    }).format(Number.isFinite(value) ? value : 0)
+}
+
+type ExpenseInputProps = {
+    label: string
+    value: number | undefined
+    onChange: (value: number | undefined) => void
+    disabled: boolean
+}
+
+function ExpenseInput({ label, value, onChange, disabled }: ExpenseInputProps) {
     return (
         <div className="space-y-1">
             <label className="text-xs font-medium text-muted-foreground">{label}</label>
@@ -258,4 +431,13 @@ function ExpenseInput({ label, value, onChange, disabled }: any) {
             />
         </div>
     )
+}
+
+function getErrorMessage(error: unknown, fallback: string): string {
+    if (error instanceof Error && error.message) return error.message
+    if (typeof error === "object" && error !== null && "message" in error) {
+        const maybeMessage = (error as { message?: unknown }).message
+        if (typeof maybeMessage === "string" && maybeMessage.trim()) return maybeMessage
+    }
+    return fallback
 }

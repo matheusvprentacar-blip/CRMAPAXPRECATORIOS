@@ -183,6 +183,9 @@ export interface Precatorio {
   analise_itcmd_valor?: number | null
   analise_itcmd_percentual?: number | null
 
+  // Origem do lead (canal de captação)
+  origem_lead?: string | null
+
   // Timestamps
   created_at: string
   updated_at: string
@@ -260,4 +263,5 @@ export interface CredorView {
   total_precatorios: number
   valor_total_principal: number
   ultimo_precatorio_data: string | null
+  origem_lead?: string | null
 }

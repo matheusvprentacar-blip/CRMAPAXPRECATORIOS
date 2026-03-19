@@ -6,10 +6,6 @@ import CountUp from "react-countup"
 import {
   Accordion as HeroAccordion,
   Button as HeroButton,
-  Card,
-  CardContent as CardBody,
-  CardFooter,
-  CardHeader,
   Checkbox as HeroCheckbox,
   Chip as HeroChip,
   Dropdown as HeroDropdown,
@@ -20,7 +16,6 @@ import {
   Input as HeroInput,
   Modal as HeroModal,
   Separator,
-  Skeleton,
   Spinner as HeroSpinner,
   Tabs as HeroTabs,
   useOverlayState,
@@ -31,7 +26,6 @@ import { CredorView, Precatorio } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "sonner"
-import { SpotlightCard } from "@/components/ui/spotlight-card"
 
 type PrecatorioResumo = Precatorio & {
   status_kanban?: string | null
@@ -65,31 +59,26 @@ type ClienteFilterChip = {
   value: string
 }
 
-const glassCard =
-  "rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] backdrop-blur-xl"
+const glassCard = "rounded-3xl border border-border bg-background shadow-sm"
 
-const cardSoft =
-  "rounded-[1.25rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(var(--primary)/0.35)]"
+const cardSoft = "rounded-3xl border border-border bg-background shadow-sm"
 
-const clientGridRows = "auto-rows-[minmax(430px,auto)]"
-const clientCardHeight = "min-h-[430px]"
+const clientGridRows = ""
+const clientCardHeight = ""
 
 const modalWrapper = "z-[120] p-2 sm:p-4"
 const modalBackdrop = "bg-black/65"
 const modalBase =
-  "w-[min(96vw,72rem)] max-w-[96vw] rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1 dark:bg-content1 shadow-[0_30px_64px_-42px_hsl(var(--primary)/0.52)]"
+  "w-[min(96vw,72rem)] max-w-[96vw] rounded-3xl border border-border bg-background shadow-sm"
 const modalContentBase =
-  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-[1.35rem] bg-content1 dark:bg-content1"
+  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-3xl bg-background"
 
 const sheen = ""
 const carteiraAccentClass = "text-[#95c63d] dark:text-[#a7d75a] drop-shadow-[0_0_12px_rgba(149,198,61,0.16)]"
 
 const clienteModalInputClassNames =
-  "h-11 min-h-11 rounded-xl border border-default-200/70 bg-content2/40 px-3 " +
-  "text-foreground placeholder:text-foreground/55 hover:bg-content2/60"
+  "h-11 min-h-11 rounded-xl border border-border bg-muted/40 px-3 " +
+  "text-foreground placeholder:text-foreground/55 hover:bg-muted/60"
 
 const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
 
@@ -228,7 +217,7 @@ function Input({
         value={value}
         className={cx(
           sizeClass,
-          "w-full rounded-xl border border-default-200/70 bg-content2/50 px-3 text-foreground placeholder:text-foreground/55",
+          "w-full rounded-xl border border-border bg-muted/50 px-3 text-foreground placeholder:text-foreground/55",
           startContent ? "pl-10" : "",
           resolvedClassNames?.inputWrapper,
           resolvedClassNames?.input
@@ -646,7 +635,7 @@ function TableBody({
 
 function TableRow({ className, children, ...props }: React.HTMLAttributes<HTMLTableRowElement>) {
   return (
-    <tr className={cx("border-t border-default-200/60", className)} {...props}>
+    <tr className={cx("border-t border-border", className)} {...props}>
       {children}
     </tr>
   )
@@ -700,39 +689,35 @@ function KpiCard({
     : "text-3xl"
 
   return (
-    <motion.div whileHover={{ y: -3 }} transition={{ type: "spring", stiffness: 260, damping: 22 }}>
-      <Card
-        className="relative h-full overflow-hidden rounded-[1.15rem] border border-default-200/80 bg-content1 shadow-[0_18px_36px_-26px_hsl(222_35%_22%/0.26)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-[0_22px_44px_-32px_hsl(var(--primary)/0.44)]"
-      >
-        <div className="pointer-events-none absolute inset-0 hidden opacity-80 dark:block">
-          <div className="absolute -right-12 -top-10 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/22 to-transparent blur-2xl" />
-          <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
-        </div>
-        <CardBody className="relative z-10 p-4">
-          <div className="flex items-start justify-between gap-3">
-            <div className="space-y-1">
-              <div className="text-xs font-semibold uppercase tracking-wide text-foreground/60">{title}</div>
-              <div className={`${valueClassName} font-semibold tabular-nums ${toneClasses}`}>
-                {isLoading ? (
-                  <span className="inline-block h-8 w-24 animate-pulse rounded-lg bg-default-200/40" />
-                ) : (
-                  <CountUp
-                    end={Number.isFinite(value) ? value : 0}
-                    duration={0.9}
-                    decimals={decimals}
-                    prefix={formattedPrefix}
-                    formattingFn={(currentValue) => numberFormatter.format(currentValue)}
-                  />
-                )}
-              </div>
-              <div className="text-xs text-foreground/60">{subtitle}</div>
+    <motion.div
+      whileHover={{ y: -2 }}
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+      className="h-full"
+    >
+      <article className="flex h-full flex-col rounded-3xl border border-border bg-background p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
+            <div className={`mt-2 font-extrabold tabular-nums ${valueClassName} ${toneClasses}`}>
+              {isLoading ? (
+                <span className="inline-block h-8 w-28 animate-pulse rounded-lg bg-muted" />
+              ) : (
+                <CountUp
+                  end={Number.isFinite(value) ? value : 0}
+                  duration={0.9}
+                  decimals={decimals}
+                  prefix={formattedPrefix}
+                  formattingFn={(currentValue) => numberFormatter.format(currentValue)}
+                />
+              )}
             </div>
-            <div className="rounded-xl border border-primary/20 bg-primary/10 p-2.5 text-primary">
-              {icon}
-            </div>
+            <div className="mt-1 text-xs text-muted-foreground">{subtitle}</div>
           </div>
-        </CardBody>
-      </Card>
+          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
+            {icon}
+          </div>
+        </div>
+      </article>
     </motion.div>
   )
 }
@@ -758,165 +743,144 @@ function ClienteGridCard({
   const dt = credor.ultimo_precatorio_data
     ? new Date(credor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
     : null
-
   const carteira = Number(credor.valor_total_atualizado || credor.valor_total_principal || 0)
   const ultimo = Number(credor.ultimo_precatorio_valor || 0)
-  const descricaoPrincipal = cidadeUf || "Cidade/UF nao informado"
-  const descricaoSecundaria = dt ? `Ultima mov.: ${dt}` : "Sem movimentacao"
+
+  const avatarColors = [
+    "bg-gradient-to-br from-orange-200 to-orange-100 text-orange-700",
+    "bg-gradient-to-br from-blue-200 to-blue-100 text-blue-700",
+    "bg-gradient-to-br from-emerald-200 to-emerald-100 text-emerald-700",
+    "bg-gradient-to-br from-violet-200 to-violet-100 text-violet-700",
+  ]
+  const avatarColor = avatarColors[nome.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 4]
+  const initials = nome.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?"
+
+  const statusBadgeClass = cx(
+    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
+    statusClass(status),
+  )
 
   return (
     <motion.div
-      whileHover={{ y: -3 }}
+      whileHover={{ y: -2 }}
       whileTap={{ scale: 0.99 }}
-      transition={{ type: "spring", stiffness: 260, damping: 22 }}
-      className="h-full w-full min-w-0"
+      transition={{ type: "spring", stiffness: 300, damping: 24 }}
     >
-      <SpotlightCard className="h-full w-full rounded-[1.2rem]" spotlightColor="hsl(var(--primary) / 0.26)">
-        <Card
-          role="button"
-          tabIndex={0}
-          onClick={onOpen}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === " ") {
-              event.preventDefault()
-              onOpen()
-            }
-          }}
-          className={[
-            `${clientCardHeight} w-full min-w-0 rounded-[1.2rem] border border-default-200/80 bg-content1 shadow-[0_20px_40px_-30px_hsl(222_35%_22%/0.24)] dark:border-primary/22 dark:bg-zinc-900/72 dark:shadow-[0_26px_52px_-36px_hsl(var(--primary)/0.5)]`,
-            "flex flex-col",
-            "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
-            "hover:border-primary/38 transition",
-            "relative overflow-hidden",
-          ].join(" ")}
-        >
-          <div className="pointer-events-none absolute inset-0 hidden opacity-78 dark:block">
-            <div className="absolute -left-16 -bottom-12 h-28 w-28 rounded-full bg-gradient-to-br from-primary/24 to-transparent blur-2xl" />
-            <div className="absolute -right-14 -top-14 h-32 w-32 rounded-full bg-gradient-to-br from-orange-400/20 to-transparent blur-2xl" />
-            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
-          </div>
-          <div className="flex items-center justify-between px-4 pt-4">
-            <div className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-primary">
-              <FileText className="h-4 w-4" />
+      <article
+        role="button"
+        tabIndex={0}
+        onClick={onOpen}
+        onKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === " ") {
+            event.preventDefault()
+            onOpen()
+          }
+        }}
+        className="flex flex-col gap-4 rounded-3xl border border-border bg-background p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
+      >
+        {/* Header: avatar + nome + menu */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={cx("grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl text-sm font-bold", avatarColor)}>
+              {initials}
             </div>
-            <div
-              onClick={(event) => event.stopPropagation()}
-              onMouseDown={(event) => event.stopPropagation()}
-            >
-              <Dropdown>
-                <DropdownTrigger>
-                  <Button isIconOnly size="sm" variant="light" aria-label={`Acoes de ${nome}`} className="rounded-full">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </DropdownTrigger>
-                <DropdownPopover placement="bottom end">
-                  <DropdownMenu
-                    aria-label={`Acoes para ${nome}`}
-                    onAction={(key) => {
-                      if (String(key) === "detalhes") onOpen()
-                    }}
-                  >
-                    <DropdownItem id="detalhes">
-                      <span className="inline-flex items-center gap-2">
-                        <ChevronRight className="h-4 w-4" />
-                        Ver detalhes
-                      </span>
-                    </DropdownItem>
-                  </DropdownMenu>
-                </DropdownPopover>
-              </Dropdown>
+            <div className="min-w-0">
+              <p title={nome} className="truncate text-sm font-semibold leading-5 text-foreground">{nome}</p>
+              <p className="truncate text-xs text-muted-foreground">{cpf ?? "CPF/CNPJ não informado"}</p>
             </div>
           </div>
+          <div
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            className="flex-shrink-0"
+          >
+            <Dropdown>
+              <DropdownTrigger>
+                <button
+                  aria-label={`Ações de ${nome}`}
+                  className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
+                >
+                  <MoreVertical className="h-4 w-4" />
+                </button>
+              </DropdownTrigger>
+              <DropdownPopover placement="bottom end">
+                <DropdownMenu
+                  aria-label={`Ações para ${nome}`}
+                  onAction={(key) => {
+                    if (String(key) === "detalhes") onOpen()
+                  }}
+                >
+                  <DropdownItem id="detalhes">
+                    <span className="inline-flex items-center gap-2">
+                      <ChevronRight className="h-4 w-4" />
+                      Ver detalhes
+                    </span>
+                  </DropdownItem>
+                </DropdownMenu>
+              </DropdownPopover>
+            </Dropdown>
+          </div>
+        </div>
 
-          <CardHeader className="flex min-h-[92px] flex-col items-start gap-1 px-4 pb-3 pt-3">
-            <p
-              title={nome}
-              className="w-full break-words text-sm font-semibold leading-5 text-foreground"
-            >
-              {nome}
-            </p>
-            <p title={cpf ?? "CPF/CNPJ nao informado"} className="w-full break-words text-[12px] leading-4 text-foreground/60">
-              {cpf ?? "CPF/CNPJ nao informado"}
-            </p>
-            <p title={descricaoPrincipal} className="w-full break-words text-[12px] leading-4 text-foreground/60">
-              {descricaoPrincipal}
-            </p>
-            <p title={descricaoSecundaria} className="w-full break-words text-[12px] leading-4 text-foreground/50">
-              {descricaoSecundaria}
-            </p>
-          </CardHeader>
+        {/* Localização + data */}
+        {(cidadeUf || dt) && (
+          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
+            {cidadeUf && <span>{cidadeUf}</span>}
+            {dt && <span>Últ. mov.: {dt}</span>}
+          </div>
+        )}
 
-          <Separator className="opacity-60" />
+        {/* Status + contagem */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className={statusBadgeClass}>{formatStatus(status)}</span>
+          <span className="rounded-full border border-border px-2 py-0.5 text-xs font-mono text-muted-foreground">
+            {credor.total_precatorios ?? 0} proc.
+          </span>
+        </div>
 
-          <CardBody className="flex-1 space-y-3 px-4 py-3">
-            <div className="flex flex-wrap items-center gap-2">
-              <Chip size="sm" variant="flat" className={`max-w-[64%] border ${statusClass(status)}`}>
-                <span className="truncate">{formatStatus(status)}</span>
-              </Chip>
-              <Chip
-                size="sm"
-                variant="flat"
-                color="default"
-                className="max-w-[36%] rounded-full border border-default-200/65 bg-content2/55 font-mono tabular-nums"
-              >
-                <span className="truncate">{credor.total_precatorios ?? 0} proc.</span>
-              </Chip>
+        {/* Carteira */}
+        <div className="rounded-2xl border border-border bg-muted/40 p-3">
+          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Carteira atualizada</div>
+          <div className={cx("mt-1 truncate text-lg font-extrabold tabular-nums", carteiraAccentClass)}>
+            {carteira ? `R$ ${formatCurrency(carteira)}` : "R$ 0,00"}
+          </div>
+          {ultimo > 0 && (
+            <div className="mt-0.5 truncate text-xs text-muted-foreground">
+              Último: R$ {formatCurrency(ultimo)}
             </div>
+          )}
+        </div>
 
-            <div
-              className="rounded-xl border border-default-200/80 bg-content1/95 p-3 shadow-[0_12px_26px_-22px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-none"
-            >
-              <p className="text-[11px] uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
-              <p className={`truncate text-base font-semibold tabular-nums ${carteiraAccentClass}`}>
-                {carteira ? `R$ ${formatCurrency(carteira)}` : "R$ 0,00"}
-              </p>
-              <p className="truncate text-[11px] text-foreground/60">
-                {ultimo ? `Ultimo: R$ ${formatCurrency(ultimo)}` : "Sem ultimo valor"}
-              </p>
-            </div>
-
-            <div className="min-h-[42px] space-y-1 text-xs text-foreground/70">
-              {credor.telefone || credor.email ? (
-                <>
-                  {credor.telefone ? (
-                    <div className="inline-flex max-w-full items-center gap-1">
-                      <Phone className="h-3 w-3" />
-                      <span className="break-words">{credor.telefone}</span>
-                    </div>
-                  ) : null}
-                  {credor.email ? (
-                    <div className="inline-flex max-w-full items-center gap-1">
-                      <Mail className="h-3 w-3" />
-                      <span className="break-all">{credor.email}</span>
-                    </div>
-                  ) : null}
-                </>
-              ) : (
-                <div className="text-foreground/60">Sem contato</div>
+        {/* Contato */}
+        <div className="space-y-1 text-xs text-muted-foreground">
+          {credor.telefone || credor.email ? (
+            <>
+              {credor.telefone && (
+                <div className="flex items-center gap-1.5">
+                  <Phone className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{credor.telefone}</span>
+                </div>
               )}
-            </div>
-          </CardBody>
+              {credor.email && (
+                <div className="flex items-center gap-1.5">
+                  <Mail className="h-3 w-3 flex-shrink-0" />
+                  <span className="break-all">{credor.email}</span>
+                </div>
+              )}
+            </>
+          ) : (
+            <span>Sem contato cadastrado</span>
+          )}
+        </div>
 
-          <Separator className="opacity-60" />
-
-          <CardFooter className="mt-auto p-3">
-            <Button
-              size="sm"
-              variant="flat"
-              className="w-full rounded-full font-medium"
-              onPress={(event) => {
-                ; (event as { stopPropagation?: () => void } | undefined)?.stopPropagation?.()
-                onOpen()
-              }}
-            >
-              <span className="inline-flex items-center gap-2">
-                Abrir detalhes
-                <ChevronRight className="h-4 w-4" />
-              </span>
-            </Button>
-          </CardFooter>
-        </Card>
-      </SpotlightCard>
+        {/* Rodapé */}
+        <div className="mt-auto border-t border-border pt-3">
+          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
+            Abrir detalhes
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+        </div>
+      </article>
     </motion.div>
   )
 }
@@ -1643,16 +1607,9 @@ export default function ClientsPage() {
   return (
     <div className="clients-revamp relative w-full max-w-[100vw] px-4 py-6 lg:px-6">
       <div className="space-y-6">
-        <Card
-          className={`${glassCard} ${sheen} clients-hero-card relative overflow-hidden border-default-200/80 bg-content1 shadow-[0_24px_50px_-34px_hsl(222_35%_22%/0.24)] dark:border-primary/25 dark:bg-zinc-900/72 dark:shadow-[0_34px_72px_-50px_hsl(var(--primary)/0.48)]`}
-        >
-          <div className="pointer-events-none absolute inset-0 hidden opacity-85 dark:block">
-            <div className="absolute -left-20 -bottom-16 h-44 w-44 rounded-full bg-gradient-to-br from-primary/30 to-transparent blur-3xl" />
-            <div className="absolute -right-24 -top-20 h-48 w-48 rounded-full bg-gradient-to-br from-orange-400/24 to-transparent blur-3xl" />
-            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,rgba(255,128,26,0.18)_0%,transparent_58%)]" />
-          </div>
-          <CardBody className="relative gap-5 p-5 lg:p-6">
-            <div className="relative flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <section className="rounded-3xl border border-border bg-background shadow-sm">
+          <div className="flex flex-col gap-5 p-5 lg:p-6">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
               <div className="space-y-2.5">
                 <div className="flex items-center gap-3">
                   <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
@@ -1665,68 +1622,49 @@ export default function ClientsPage() {
                 </div>
                 <p className="text-sm text-foreground/70">Gerencie clientes, contatos e historico de processos de ponta a ponta.</p>
                 <div className="flex flex-wrap items-center gap-2">
-                  <Chip
-                    variant="flat"
-                    color="default"
-                    className="border border-default-200/65 bg-content2/55"
-                    startContent={<Users className="h-4 w-4" />}
-                  >
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                    <Users className="h-3.5 w-3.5" />
                     {credores.length} clientes
-                  </Chip>
-                  <Chip
-                    variant="flat"
-                    color="default"
-                    className="border border-default-200/65 bg-content2/55"
-                    startContent={<FileText className="h-4 w-4" />}
-                  >
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                    <FileText className="h-3.5 w-3.5" />
                     {resumo.totalPrecatorios} processos
-                  </Chip>
-                  <Chip
-                    variant="flat"
-                    color="default"
-                    className="border border-default-200/65 bg-content2/55"
-                    startContent={<Clock className="h-4 w-4" />}
-                  >
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
+                    <Clock className="h-3.5 w-3.5" />
                     Atualizado em {ultimaAtualizacaoLabel}
-                  </Chip>
+                  </span>
                 </div>
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Tooltip content="Limpar busca atual">
-                  <Button
-                    variant="flat"
-                    color="default"
-                    startContent={<X className="h-4 w-4" />}
-                    isDisabled={!searchTerm}
-                    onPress={() => setSearchTerm("")}
-                    className="h-11 rounded-xl border border-default-200/65 bg-content2/55"
-                  >
-                    Limpar busca
-                  </Button>
-                </Tooltip>
-                <Tooltip content="Recarregar lista de clientes">
-                  <Button
-                    color="primary"
-                    variant="solid"
-                    startContent={<RefreshCw className="h-4 w-4" />}
-                    isLoading={loading}
-                    onPress={() => loadCredores()}
-                    className="h-11 rounded-xl shadow-lg shadow-primary/20"
-                  >
-                    Atualizar
-                  </Button>
-                </Tooltip>
+                <button
+                  type="button"
+                  disabled={!searchTerm}
+                  onClick={() => setSearchTerm("")}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-muted px-4 text-sm font-medium text-muted-foreground transition hover:bg-muted/80 disabled:pointer-events-none disabled:opacity-40"
+                >
+                  <X className="h-4 w-4" />
+                  Limpar busca
+                </button>
+                <button
+                  type="button"
+                  disabled={loading}
+                  onClick={() => loadCredores()}
+                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60"
+                >
+                  <RefreshCw className={cx("h-4 w-4", loading ? "animate-spin" : "")} />
+                  Atualizar
+                </button>
                 {isAdmin ? (
-                  <Button
-                    variant="bordered"
-                    color="default"
-                    startContent={<Filter className="h-4 w-4" />}
-                    onPress={() => setAdvancedFiltersOpen(true)}
-                    className="h-11 rounded-xl border-default-200/70 bg-content2/35"
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFiltersOpen(true)}
+                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-muted"
                   >
+                    <Filter className="h-4 w-4" />
                     {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avancados"}
-                  </Button>
+                  </button>
                 ) : null}
               </div>
             </div>
@@ -1767,103 +1705,112 @@ export default function ClientsPage() {
                 isLoading={loading}
               />
             </div>
-          </CardBody>
-        </Card>
+          </div>
+        </section>
 
-        <Card className={`${glassCard} clients-search-card`}>
-          <CardBody className="space-y-4 p-5 lg:p-6">
-            <div className="sticky top-2 z-10 flex flex-col gap-3 rounded-2xl border border-default-200/65 bg-content1/86 dark:bg-black/80 p-3 backdrop-blur xl:flex-row xl:items-center xl:justify-between">
-              <div className="w-full xl:max-w-2xl">
-                <Input
+        <section className="rounded-3xl border border-border bg-background shadow-sm">
+          <div className="space-y-4 p-5 lg:p-6">
+            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/30 p-3 xl:flex-row xl:items-center xl:justify-between">
+              <div className="relative w-full xl:max-w-2xl">
+                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+                <input
                   aria-label="Buscar clientes"
                   placeholder="Buscar por nome, CPF/CNPJ, cidade, status, email ou telefone..."
                   value={searchTerm}
-                  onValueChange={setSearchTerm}
-                  isClearable
-                  onClear={() => setSearchTerm("")}
-                  startContent={<Search className="h-4 w-4 text-foreground/50" />}
-                  classNames={{
-                    inputWrapper:
-                      "h-11 min-h-11 rounded-xl border border-default-200/70 bg-content2/65 hover:bg-content2/80 transition shadow-[0_10px_22px_-18px_hsl(var(--primary)/0.35)]",
-                  }}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
                 />
+                {searchTerm ? (
+                  <button
+                    type="button"
+                    onClick={() => setSearchTerm("")}
+                    aria-label="Limpar"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:text-foreground"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                ) : null}
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Chip variant="flat" color="default" className="rounded-full border border-default-200/65 bg-content2/55">
+                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   {filteredCredores.length} exibidos
-                </Chip>
-                <Chip variant="flat" color="default" className="rounded-full border border-default-200/65 bg-content2/55">
+                </span>
+                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
                   {resumo.totalPrecatorios} processos
-                </Chip>
+                </span>
                 {isAdmin ? (
-                  <Button
-                    variant="bordered"
-                    color="default"
-                    startContent={<Filter className="h-4 w-4" />}
-                    onPress={() => setAdvancedFiltersOpen(true)}
-                    className="h-11 rounded-xl border-default-200/70 bg-content2/40"
+                  <button
+                    type="button"
+                    onClick={() => setAdvancedFiltersOpen(true)}
+                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition hover:bg-muted"
                   >
+                    <Filter className="h-4 w-4" />
                     Filtros avancados
-                  </Button>
+                  </button>
                 ) : null}
               </div>
             </div>
 
             {isAdmin && adminFilterChips.length > 0 ? (
               <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Filtros ativos:</span>
+                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filtros ativos:</span>
                 {adminFilterChips.map((chip) => (
-                  <Chip
+                  <span
                     key={chip.key}
-                    variant="flat"
-                    color="primary"
-                    className="max-w-full"
-                    onClose={() => removeAdminFilter(chip.key)}
+                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
                   >
-                    <span className="font-semibold">{chip.label}: </span>
-                    {chip.value}
-                  </Chip>
+                    <span className="font-semibold">{chip.label}:</span>
+                    <span className="truncate">{chip.value}</span>
+                    <button
+                      type="button"
+                      onClick={() => removeAdminFilter(chip.key)}
+                      aria-label={`Remover filtro ${chip.label}`}
+                      className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20"
+                    >
+                      <X className="h-2.5 w-2.5" />
+                    </button>
+                  </span>
                 ))}
-                <Button size="sm" variant="light" color="default" onPress={clearAdminFilters}>
+                <button
+                  type="button"
+                  onClick={clearAdminFilters}
+                  className="text-xs font-medium text-muted-foreground hover:text-foreground"
+                >
                   Limpar tudo
-                </Button>
+                </button>
               </div>
             ) : null}
 
-            <Divider className="opacity-60" />
+            <div className="border-t border-border" />
 
-            <div className={`grid grid-cols-1 ${clientGridRows} gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4`}>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
-                  <Card
-                    key={`cliente-skeleton-${idx}`}
-
-                    className={`${clientCardHeight} w-full min-w-0 ${cardSoft}`}
-                  >
-                    <CardBody className="space-y-3 p-4">
-                      <Skeleton className="h-5 w-3/4 rounded-lg" />
-                      <Skeleton className="h-3 w-1/2 rounded-lg" />
-                      <div className="flex gap-2">
-                        <Skeleton className="h-6 w-20 rounded-full" />
-                        <Skeleton className="h-6 w-24 rounded-full" />
+                  <div key={`cliente-skeleton-${idx}`} className="w-full rounded-3xl border border-border bg-background p-5 shadow-sm">
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-xl bg-muted animate-pulse flex-shrink-0" />
+                        <div className="flex-1 space-y-1.5">
+                          <div className="h-4 w-3/4 rounded-lg bg-muted animate-pulse" />
+                          <div className="h-3 w-1/2 rounded-lg bg-muted animate-pulse" />
+                        </div>
                       </div>
-                      <Skeleton className="h-10 w-full rounded-xl" />
-                    </CardBody>
-                  </Card>
+                      <div className="flex gap-2">
+                        <div className="h-6 w-20 rounded-full bg-muted animate-pulse" />
+                        <div className="h-6 w-24 rounded-full bg-muted animate-pulse" />
+                      </div>
+                      <div className="h-16 w-full rounded-2xl bg-muted animate-pulse" />
+                    </div>
+                  </div>
                 ))
               ) : filteredCredores.length === 0 ? (
-                <Card
-
-                  className={`${cardSoft} min-h-[320px] sm:col-span-2 xl:col-span-3 2xl:col-span-4`}
-                >
-                  <CardBody className="py-10 text-center">
-                    <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
-                    <p className="mt-1 text-xs text-foreground/60">
-                      Ajuste a busca ou remova filtros para visualizar resultados.
-                    </p>
-                  </CardBody>
-                </Card>
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-border bg-background shadow-sm sm:col-span-2 xl:col-span-3 2xl:col-span-4">
+                  <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Ajuste a busca ou remova filtros para visualizar resultados.
+                  </p>
+                </div>
               ) : (
                 paginatedCredores.map((credor) => (
                   <ClienteGridCard
@@ -1878,35 +1825,35 @@ export default function ClientsPage() {
               )}
             </div>
             {!loading && filteredCredores.length > 0 ? (
-              <div className="flex flex-col gap-3 border-t border-default-200/60 pt-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-foreground/70">
+              <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-muted-foreground">
                   Exibindo {rangeStart}-{rangeEnd} de {filteredCredores.length} clientes
                 </p>
                 <div className="flex items-center gap-2">
-                  <Button
-                    size="sm"
-                    variant="bordered"
-                    isDisabled={currentPage <= 1}
-                    onPress={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                  <button
+                    type="button"
+                    disabled={currentPage <= 1}
+                    onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                    className="h-8 rounded-lg border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
                   >
                     Anterior
-                  </Button>
-                  <span className="min-w-[120px] text-center text-xs font-medium text-foreground/70">
+                  </button>
+                  <span className="min-w-[120px] text-center text-xs font-medium text-muted-foreground">
                     Pagina {currentPage} de {totalPages}
                   </span>
-                  <Button
-                    size="sm"
-                    variant="bordered"
-                    isDisabled={currentPage >= totalPages}
-                    onPress={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                  <button
+                    type="button"
+                    disabled={currentPage >= totalPages}
+                    onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                    className="h-8 rounded-lg border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
                   >
                     Proxima
-                  </Button>
+                  </button>
                 </div>
               </div>
             ) : null}
-          </CardBody>
-        </Card>
+          </div>
+        </section>
       </div>
       {isAdmin ? (
         <Modal
@@ -1923,7 +1870,7 @@ export default function ClientsPage() {
         >
           <ModalContent className={modalContentBase}>
             <>
-              <ModalHeader className="shrink-0 flex flex-col gap-1 border-b border-default-200/70 dark:border-border px-6 pb-4 pt-5">
+              <ModalHeader className="shrink-0 flex flex-col gap-1 border-b border-border dark:border-border px-6 pb-4 pt-5">
                 <h2 className="text-xl font-semibold tracking-tight">Filtros avancados de clientes</h2>
                 <p className="text-sm text-foreground/70">
                   Refine a lista por status, periodo, faixa de carteira e contato.
@@ -1937,8 +1884,8 @@ export default function ClientsPage() {
                   className="gap-3"
                   itemClasses={{
                     base:
-                      "rounded-2xl border border-default-200/70 dark:border-border " +
-                      "bg-content1 dark:bg-content1 shadow-[0_12px_26px_-20px_hsl(var(--primary)/0.32)]",
+                      "rounded-2xl border border-border dark:border-border " +
+                      "bg-background",
                     title: "text-base font-semibold text-left",
                     trigger: "py-3 px-3",
                     content: "px-3 pb-4 pt-1",
@@ -1997,8 +1944,8 @@ export default function ClientsPage() {
                                   variant={selected ? "flat" : "bordered"}
                                   color={selected ? "primary" : "default"}
                                   className={[
-                                    "w-full justify-between border-default-200/70",
-                                    "bg-content2/50 hover:bg-content2/70",
+                                    "w-full justify-between border-border",
+                                    "bg-muted/50 hover:bg-muted/70",
                                     "transition",
                                     selected ? "border-primary/40" : "",
                                   ].join(" ")}
@@ -2030,8 +1977,8 @@ export default function ClientsPage() {
                             size="sm"
                             classNames={{
                               inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                                "bg-content2/50 hover:bg-content2/70 transition",
+                                "h-11 min-h-11 rounded-xl border border-border " +
+                                "bg-muted/50 hover:bg-muted/70 transition",
                               input: "text-sm text-foreground",
                             }}
                             value={adminFiltersDraft.cidade || ""}
@@ -2054,8 +2001,8 @@ export default function ClientsPage() {
                             size="sm"
                             classNames={{
                               inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                                "bg-content2/50 hover:bg-content2/70 transition",
+                                "h-11 min-h-11 rounded-xl border border-border " +
+                                "bg-muted/50 hover:bg-muted/70 transition",
                               input: "text-sm text-foreground",
                             }}
                             value={adminFiltersDraft.uf || ""}
@@ -2081,8 +2028,8 @@ export default function ClientsPage() {
                                 variant={isSelected ? "flat" : "bordered"}
                                 color={isSelected ? "primary" : "default"}
                                 className={[
-                                  "min-w-[48px] border-default-200/70",
-                                  "bg-content2/30 hover:bg-content2/60 transition",
+                                  "min-w-[48px] border-border",
+                                  "bg-muted/30 hover:bg-muted/60 transition",
                                   isSelected ? "border-primary/40" : "",
                                 ].join(" ")}
                                 onPress={() =>
@@ -2112,8 +2059,8 @@ export default function ClientsPage() {
                           size="sm"
                           classNames={{
                             inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                              "bg-content2/50 hover:bg-content2/70 transition",
+                              "h-11 min-h-11 rounded-xl border border-border " +
+                              "bg-muted/50 hover:bg-muted/70 transition",
                             input: "text-sm text-foreground",
                           }}
                           value={adminFiltersDraft.ultimaMovInicio || ""}
@@ -2135,8 +2082,8 @@ export default function ClientsPage() {
                           size="sm"
                           classNames={{
                             inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                              "bg-content2/50 hover:bg-content2/70 transition",
+                              "h-11 min-h-11 rounded-xl border border-border " +
+                              "bg-muted/50 hover:bg-muted/70 transition",
                             input: "text-sm text-foreground",
                           }}
                           value={adminFiltersDraft.ultimaMovFim || ""}
@@ -2165,8 +2112,8 @@ export default function ClientsPage() {
                           size="sm"
                           classNames={{
                             inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                              "bg-content2/50 hover:bg-content2/70 transition",
+                              "h-11 min-h-11 rounded-xl border border-border " +
+                              "bg-muted/50 hover:bg-muted/70 transition",
                             input: "text-sm text-foreground",
                           }}
                           value={adminFiltersDraft.carteiraMin?.toString() ?? ""}
@@ -2186,8 +2133,8 @@ export default function ClientsPage() {
                           size="sm"
                           classNames={{
                             inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                              "bg-content2/50 hover:bg-content2/70 transition",
+                              "h-11 min-h-11 rounded-xl border border-border " +
+                              "bg-muted/50 hover:bg-muted/70 transition",
                             input: "text-sm text-foreground",
                           }}
                           value={adminFiltersDraft.carteiraMax?.toString() ?? ""}
@@ -2212,8 +2159,8 @@ export default function ClientsPage() {
                             size="sm"
                             classNames={{
                               inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                                "bg-content2/50 hover:bg-content2/70 transition",
+                                "h-11 min-h-11 rounded-xl border border-border " +
+                                "bg-muted/50 hover:bg-muted/70 transition",
                               input: "text-sm text-foreground",
                             }}
                             value={adminFiltersDraft.qtdMin?.toString() ?? ""}
@@ -2233,8 +2180,8 @@ export default function ClientsPage() {
                             size="sm"
                             classNames={{
                               inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-default-200/70 " +
-                                "bg-content2/50 hover:bg-content2/70 transition",
+                                "h-11 min-h-11 rounded-xl border border-border " +
+                                "bg-muted/50 hover:bg-muted/70 transition",
                               input: "text-sm text-foreground",
                             }}
                             value={adminFiltersDraft.qtdMax?.toString() ?? ""}
@@ -2253,8 +2200,8 @@ export default function ClientsPage() {
                         }
                         classNames={{
                           base:
-                            "w-full max-w-full rounded-xl border border-default-200/70 " +
-                            "bg-content2/40 hover:bg-content2/60 transition px-3 py-3",
+                            "w-full max-w-full rounded-xl border border-border " +
+                            "bg-muted/40 hover:bg-muted/60 transition px-3 py-3",
                           label: "text-sm text-foreground/90",
                         }}
                       >
@@ -2265,7 +2212,7 @@ export default function ClientsPage() {
                 </Accordion>
               </ModalBody>
 
-              <ModalFooter className="shrink-0 border-t border-default-200/70 dark:border-border bg-content1 dark:bg-content1 px-6 py-4">
+              <ModalFooter className="shrink-0 border-t border-border bg-background px-6 py-4">
                 <Button variant="light" color="default" onPress={clearAdminFilters}>
                   Limpar
                 </Button>
@@ -2299,7 +2246,7 @@ export default function ClientsPage() {
       >
         <ModalContent className={modalContentBase}>
           <>
-            <ModalHeader className="shrink-0 border-b border-default-200/50 px-6 pb-4 pt-5">
+            <ModalHeader className="shrink-0 border-b border-border/50 px-6 pb-4 pt-5">
               <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-3">
                   <div className="rounded-full bg-primary/10 p-2.5 text-primary">
@@ -2315,12 +2262,12 @@ export default function ClientsPage() {
                         : "CPF/CNPJ nao informado"}
                     </p>
                     <div className="flex flex-wrap items-center gap-2">
-                      <Chip size="sm" variant="flat" color="primary">
+                      <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
                         {selectedCredor?.total_precatorios || 0} processos
-                      </Chip>
-                      <Chip size="sm" variant="flat" className={`border ${statusClass(selectedCredor?.ultimo_status)}`}>
+                      </span>
+                      <span className={cx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", statusClass(selectedCredor?.ultimo_status))}>
                         {formatStatus(selectedCredor?.ultimo_status)}
-                      </Chip>
+                      </span>
                     </div>
                   </div>
                 </div>
@@ -2363,35 +2310,29 @@ export default function ClientsPage() {
 
             <ModalBody className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <Card className="border border-default-200/70">
-                  <CardBody className="space-y-1 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Total processos</p>
-                    <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
-                  </CardBody>
-                </Card>
-                <Card className="border border-default-200/70">
-                  <CardBody className="space-y-1 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Carteira atualizada</p>
-                    <p className="text-2xl font-semibold tabular-nums text-success">
-                      {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
-                        ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
-                        : "R$ 0,00"}
+                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total processos</p>
+                  <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
+                </div>
+                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Carteira atualizada</p>
+                  <p className={cx("text-2xl font-semibold tabular-nums", carteiraAccentClass)}>
+                    {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
+                      ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
+                      : "R$ 0,00"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ultimo status</p>
+                  <span className={cx("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", statusClass(selectedCredor?.ultimo_status))}>
+                    {formatStatus(selectedCredor?.ultimo_status)}
+                  </span>
+                  <p className="text-xs text-muted-foreground">
+                    {selectedCredor?.ultimo_precatorio_data
+                      ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
+                      : "Sem movimentacao"}
                     </p>
-                  </CardBody>
-                </Card>
-                <Card className="border border-default-200/70">
-                  <CardBody className="space-y-1 p-4">
-                    <p className="text-xs font-semibold uppercase tracking-wide text-foreground/60">Ultimo status</p>
-                    <Chip size="sm" variant="flat" className={`w-fit border ${statusClass(selectedCredor?.ultimo_status)}`}>
-                      {formatStatus(selectedCredor?.ultimo_status)}
-                    </Chip>
-                    <p className="text-xs text-foreground/60">
-                      {selectedCredor?.ultimo_precatorio_data
-                        ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
-                        : "Sem movimentacao"}
-                    </p>
-                  </CardBody>
-                </Card>
+                  </div>
               </div>
 
               <Tabs
@@ -2403,28 +2344,27 @@ export default function ClientsPage() {
                 color="primary"
                 classNames={{
                   base: "w-full",
-                  tabList: "w-full gap-2 border-b border-default-200/60 px-1",
+                  tabList: "w-full gap-2 border-b border-border px-1",
                   tab: "h-10 px-3 data-[selected=true]:text-primary",
                   panel: "pt-4",
                 }}
               >
                 <Tab key="dados" title="Dados do cliente">
-                  <Card className="border border-default-200/70">
-                    <CardHeader className="flex items-center justify-between gap-3 pb-2">
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="mb-4 flex items-center justify-between gap-3">
                       <h3 className="text-base font-semibold tracking-tight">Dados do cliente</h3>
                       {editingCredor ? (
-                        <Button
-                          size="sm"
-                          variant="flat"
-                          color="primary"
-                          onPress={() => importCredorDataFromPrecatorios(true)}
-                          isDisabled={loadingDetails || credorPrecatorios.length === 0}
+                        <button
+                          type="button"
+                          onClick={() => importCredorDataFromPrecatorios(true)}
+                          disabled={loadingDetails || credorPrecatorios.length === 0}
+                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary transition hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
                         >
                           Importar do precatorio
-                        </Button>
+                        </button>
                       ) : null}
-                    </CardHeader>
-                    <CardBody className="space-y-4 pt-0">
+                    </div>
+                    <div className="space-y-4">
                       {editingCredor ? (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div className="space-y-1">
@@ -2521,18 +2461,17 @@ export default function ClientsPage() {
                           </div>
                         </div>
                       )}
-                    </CardBody>
-                  </Card>
+                    </div>
+                  </div>
                 </Tab>
 
                 <Tab key="processos" title={`Processos vinculados (${credorPrecatorios.length})`}>
-                  <Card className="border border-default-200/70">
-                    <CardBody className="p-0">
+                  <div className="rounded-2xl border border-border bg-background overflow-hidden">
                       <Table
                         aria-label="Tabela de processos do cliente"
                         isHeaderSticky
                         classNames={{
-                          wrapper: "w-full overflow-x-hidden rounded-xl border border-default-200/60 shadow-none",
+                          wrapper: "w-full overflow-x-hidden rounded-xl border border-border shadow-none",
                           table: "w-full table-fixed",
                           th: "bg-default-100/70 text-xs uppercase tracking-wide text-foreground/70",
                           td: "align-top",
@@ -2549,7 +2488,7 @@ export default function ClientsPage() {
                           isLoading={loadingDetails}
                           loadingContent={
                             <div className="flex items-center justify-center py-6">
-                              <HeroSpinner size="sm" />
+                              <div className="h-5 w-5 animate-spin rounded-full border-2 border-border border-t-primary" />
                             </div>
                           }
                           emptyContent="Nenhum processo encontrado para este cliente."
@@ -2575,7 +2514,7 @@ export default function ClientsPage() {
                                 </Chip>
                               </TableCell>
                               <TableCell>
-                                <span className="font-semibold tabular-nums text-success">
+                                <span className={cx("font-semibold tabular-nums", carteiraAccentClass)}>
                                   {precatorio.valor_atualizado || precatorio.valor_principal
                                     ? `R$ ${formatCurrency(precatorio.valor_atualizado || precatorio.valor_principal)}`
                                     : "R$ 0,00"}
@@ -2588,26 +2527,25 @@ export default function ClientsPage() {
                           ))}
                         </TableBody>
                       </Table>
-                    </CardBody>
-                  </Card>
+                  </div>
                 </Tab>
 
                 <Tab key="historico" title="Historico de atualizacoes">
-                  <Card className="border border-default-200/70">
-                    <CardBody className="space-y-3 p-4">
+                  <div className="rounded-2xl border border-border bg-background p-4">
+                    <div className="space-y-3">
                       {loadingDetails ? (
                         <div className="space-y-2">
-                          <Skeleton className="h-14 w-full rounded-lg" />
-                          <Skeleton className="h-14 w-full rounded-lg" />
-                          <Skeleton className="h-14 w-full rounded-lg" />
+                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
                         </div>
                       ) : credorPrecatorios.length === 0 ? (
-                        <p className="text-sm text-foreground/70">Sem movimentacoes registradas para este cliente.</p>
+                        <p className="text-sm text-muted-foreground">Sem movimentacoes registradas para este cliente.</p>
                       ) : (
                         credorPrecatorios.slice(0, 8).map((precatorio) => (
                           <div
                             key={`timeline-${precatorio.id}`}
-                            className="rounded-lg border border-default-200/70 bg-content2/50 px-4 py-3"
+                            className="rounded-xl border border-border bg-muted/30 px-4 py-3"
                           >
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
                               <p className="font-mono text-xs text-foreground/80">{precatorio.numero_processo || "Processo N/A"}</p>
@@ -2624,12 +2562,12 @@ export default function ClientsPage() {
                           </div>
                         ))
                       )}
-                    </CardBody>
-                  </Card>
+                    </div>
+                  </div>
                 </Tab>
               </Tabs>
             </ModalBody>
-            <ModalFooter className="shrink-0 border-t border-default-200/50 px-6 py-4">
+            <ModalFooter className="shrink-0 border-t border-border/50 px-6 py-4">
               <Button
                 variant="light"
                 color="default"

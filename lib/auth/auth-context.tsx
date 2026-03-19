@@ -9,6 +9,7 @@ import { useRouter } from "next/navigation"
 
 export type UserRole =
   | "admin"
+  | "tecnico_ti"
   | "operador_comercial"
   | "operador_calculo"
   | "operador"
@@ -27,6 +28,22 @@ interface UserProfile {
   role: UserRole[]  // Mudado para array - permite até 2 roles
   foto_url?: string
   telefone?: string
+}
+
+function normalizeProfileRoles(rawRole: unknown): UserRole[] {
+  const initialRoles = (Array.isArray(rawRole) ? rawRole : [rawRole])
+    .filter((role): role is string => typeof role === "string" && role.trim().length > 0)
+    .map((role) => role.trim().toLowerCase())
+
+  const roleSet = new Set<UserRole>()
+  initialRoles.forEach((role) => roleSet.add(role as UserRole))
+
+  // tecnico_ti deve ter acesso total no frontend como admin-like
+  if (roleSet.has("tecnico_ti")) {
+    roleSet.add("admin")
+  }
+
+  return Array.from(roleSet)
 }
 
 // ===== Funções Helper para Verificação de Roles =====
@@ -149,8 +166,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Perfil não encontrado")
       }
 
-      // Garantir que role seja array
-      const roleArray = Array.isArray(data.role) ? data.role : [data.role].filter(Boolean)
+      const roleArray = normalizeProfileRoles(data.role)
 
       setProfile({
         ...data,

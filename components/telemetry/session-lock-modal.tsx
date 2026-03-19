@@ -1,15 +1,11 @@
 "use client"
 
 import { useEffect, useRef, useState, type FormEvent } from "react"
-import {
-  Modal,
-  Button,
-  TextField,
-  Input,
-  Label,
-  Surface
-} from "@heroui/react"
-import { Lock } from "@/components/icons"
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Lock, Loader2 } from "@/components/icons"
 
 interface SessionLockModalProps {
   open: boolean
@@ -43,92 +39,76 @@ export function SessionLockModal({ open, loading, error, reason, onUnlock, onSig
   }
 
   return (
-    <Modal.Backdrop
-      isOpen={open}
-      onOpenChange={(isOpen) => !isOpen && !loading && onSignOut()}
-      isDismissable={false}
-    >
-      <Modal.Container placement="center" size="md">
-        <Modal.Dialog className="rounded-3xl border-none bg-white shadow-none outline-none dark:bg-zinc-900">
-          {() => (
-            <Surface
-              className="flex flex-col w-full max-w-full overflow-hidden border border-default-200 rounded-3xl shadow-2xl bg-white dark:bg-zinc-900 opacity-100"
-            >
-              <Modal.CloseTrigger className="absolute right-4 top-4" />
-              <Modal.Header className="flex flex-col gap-1 px-8 pt-8 font-bold">
-                <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/15 text-primary mb-3 font-semibold">
-                  <Lock className="h-6 w-6" />
-                </div>
-                <Modal.Heading className="text-2xl text-primary tracking-tight">Sessão bloqueada</Modal.Heading>
-                <p className="text-sm font-normal text-default-500 mt-1">
-                  {reason === "idle_timeout"
-                    ? "Detectamos inatividade e protegemos sua sessão. Digite sua senha para continuar de onde parou."
-                    : "Digite sua senha para desbloquear sua sessão."}
-                </p>
-              </Modal.Header>
+    <Dialog open={open}>
+      <DialogContent
+        className="sm:max-w-lg p-10 [&>button:last-child]:hidden"
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+      >
+        <DialogHeader className="gap-3">
+          <div className="flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 text-primary">
+            <Lock className="h-6 w-6" />
+          </div>
+          <DialogTitle className="text-xl text-primary">Sessão bloqueada</DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed">
+            {reason === "idle_timeout"
+              ? "Detectamos inatividade e protegemos sua sessão. Digite sua senha para continuar de onde parou."
+              : "Digite sua senha para desbloquear sua sessão."}
+          </DialogDescription>
+        </DialogHeader>
 
-              <Modal.Body className="px-8 py-6">
-                <form className="space-y-6" id="session-unlock-form" onSubmit={handleSubmit}>
-                  <input
-                    type="text"
-                    name="username"
-                    autoComplete="username"
-                    value="session-user"
-                    readOnly
-                    tabIndex={-1}
-                    aria-hidden="true"
-                    className="sr-only"
-                  />
-                  <TextField
-                    type="password"
-                    autoComplete="current-password"
-                    value={password}
-                    onChange={setPassword}
-                    isDisabled={loading}
-                    isRequired
-                    fullWidth
-                  >
-                    <Label className="text-[10px] font-bold uppercase tracking-widest text-default-400 mb-1.5">Senha de Acesso</Label>
-                    <Input
-                      ref={inputRef}
-                      value={password}
-                      placeholder="Sua senha secreta..."
-                      className="h-12 w-full px-4 rounded-xl bg-default-100 dark:bg-zinc-800 border border-default-200 focus:border-primary transition-colors font-medium text-foreground"
-                    />
-                  </TextField>
+        <form id="session-unlock-form" onSubmit={handleSubmit} className="flex flex-col gap-4 py-4">
+          <input
+            type="text"
+            name="username"
+            autoComplete="username"
+            value="session-user"
+            readOnly
+            tabIndex={-1}
+            aria-hidden="true"
+            className="sr-only"
+          />
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="session-password" className="text-xs font-bold uppercase tracking-widest text-muted-foreground">
+              Senha de Acesso
+            </Label>
+            <Input
+              ref={inputRef}
+              id="session-password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Sua senha secreta..."
+              disabled={loading}
+            />
+          </div>
 
-                  {error && (
-                    <p className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs text-destructive font-medium">
-                      {error}
-                    </p>
-                  )}
-                </form>
-              </Modal.Body>
-
-              <Modal.Footer className="px-8 pb-8 pt-2 flex items-center justify-between gap-4">
-                <Button
-                  variant="secondary"
-                  className="h-11 px-6 font-semibold rounded-full"
-                  onPress={() => void onSignOut()}
-                  isDisabled={loading}
-                >
-                  Sair da conta
-                </Button>
-                <Button
-                  variant="primary"
-                  className="h-11 px-10 font-bold bg-primary text-white rounded-full shadow-xl shadow-primary/30 hover:scale-[1.02] transition-transform active:scale-[0.98]"
-                  form="session-unlock-form"
-                  type="submit"
-                  isLoading={loading}
-                  isDisabled={password.trim().length === 0}
-                >
-                  Desbloquear
-                </Button>
-              </Modal.Footer>
-            </Surface>
+          {error && (
+            <p className="rounded-lg border border-destructive/20 bg-destructive/10 px-4 py-3 text-xs text-destructive font-medium">
+              {error}
+            </p>
           )}
-        </Modal.Dialog>
-      </Modal.Container>
-    </Modal.Backdrop>
+        </form>
+
+        <DialogFooter className="flex-row items-center justify-between sm:justify-between gap-4 pt-2">
+          <Button
+            variant="ghost"
+            onClick={() => void onSignOut()}
+            disabled={loading}
+          >
+            Sair da conta
+          </Button>
+          <Button
+            form="session-unlock-form"
+            type="submit"
+            disabled={loading || password.trim().length === 0}
+          >
+            {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Desbloquear
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   )
 }

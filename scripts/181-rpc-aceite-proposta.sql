@@ -41,32 +41,69 @@ SECURITY DEFINER
 SET search_path = public
 AS $$
 DECLARE
+  v_user_id uuid := auth.uid();
   v_roles text[];
   v_is_admin boolean := false;
-  v_is_operador boolean := false;
-  v_responsavel uuid;
+  v_is_operador_comercial boolean := false;
+  v_is_operador_calculo boolean := false;
+  v_responsavel_comercial uuid;
+  v_responsavel_calculo uuid;
+  v_proposta_aceita_id uuid;
 BEGIN
-  IF auth.uid() IS NULL THEN
+  IF v_user_id IS NULL THEN
     RAISE EXCEPTION 'not_authenticated';
   END IF;
 
   v_roles := public.get_user_roles_safe();
-  v_is_admin := 'admin' = ANY(v_roles) OR 'gestor' = ANY(v_roles);
-  v_is_operador := 'operador_comercial' = ANY(v_roles) OR 'operador' = ANY(v_roles);
+  v_is_admin := EXISTS (
+    SELECT 1
+    FROM unnest(COALESCE(v_roles, ARRAY[]::text[])) AS role_name
+    WHERE lower(role_name) = 'admin'
+       OR lower(role_name) = 'gestor'
+       OR lower(role_name) LIKE 'gestor_%'
+  );
+  v_is_operador_comercial := EXISTS (
+    SELECT 1
+    FROM unnest(COALESCE(v_roles, ARRAY[]::text[])) AS role_name
+    WHERE lower(role_name) = 'operador_comercial'
+       OR lower(role_name) = 'operador'
+  );
+  v_is_operador_calculo := EXISTS (
+    SELECT 1
+    FROM unnest(COALESCE(v_roles, ARRAY[]::text[])) AS role_name
+    WHERE lower(role_name) = 'operador_calculo'
+  );
 
-  SELECT COALESCE(responsavel, dono_usuario_id, criado_por)
-  INTO v_responsavel
+  SELECT
+    COALESCE(responsavel, dono_usuario_id, criado_por),
+    COALESCE(responsavel_calculo_id, operador_calculo)
+  INTO
+    v_responsavel_comercial,
+    v_responsavel_calculo
   FROM public.precatorios
   WHERE id = p_precatorio_id;
 
-  IF v_is_admin IS NOT TRUE AND NOT (v_is_operador AND v_responsavel = auth.uid()) THEN
+  IF NOT FOUND THEN
+    RAISE EXCEPTION 'precatorio_nao_encontrado';
+  END IF;
+
+  IF v_is_admin IS NOT TRUE
+     AND NOT (
+       (v_is_operador_comercial AND v_responsavel_comercial = v_user_id)
+       OR (v_is_operador_calculo AND v_responsavel_calculo = v_user_id)
+     ) THEN
     RAISE EXCEPTION 'sem_permissao';
   END IF;
 
+  v_proposta_aceita_id := CASE
+    WHEN p_proposta_aceita THEN COALESCE(p_proposta_aceita_id, v_user_id)
+    ELSE NULL
+  END;
+
   UPDATE public.precatorios
   SET proposta_aceita = p_proposta_aceita,
-      data_aceite_proposta = CASE WHEN p_proposta_aceita THEN p_data_aceite ELSE NULL END,
-      proposta_aceita_id = CASE WHEN p_proposta_aceita THEN p_proposta_aceita_id ELSE NULL END,
+      data_aceite_proposta = CASE WHEN p_proposta_aceita THEN COALESCE(p_data_aceite, CURRENT_DATE) ELSE NULL END,
+      proposta_aceita_id = v_proposta_aceita_id,
       status_kanban = CASE WHEN p_proposta_aceita THEN 'proposta_aceita' ELSE status_kanban END,
       localizacao_kanban = CASE WHEN p_proposta_aceita THEN 'proposta_aceita' ELSE localizacao_kanban END,
       updated_at = NOW()

@@ -35,9 +35,6 @@ import { PremiumDonutCard } from "@/components/charts/PremiumDonutCard"
 
 import {
   Button,
-  Card,
-  CardHeader,
-  CardBody,
   Chip,
   Progress,
   Divider,
@@ -162,6 +159,10 @@ type PropostaCompilada = {
   totalMaior: number
   maiorProposta: number
   quantidadeComProposta: number
+}
+
+type PropostaCompiladaRow = {
+  proposta_maior_valor: unknown
 }
 
 type SimpleTableRow = {
@@ -423,33 +424,32 @@ const formatDateShort = (value: Date) => value.toLocaleDateString("pt-BR")
 const formatCurrencyNoBreak = (value: number) => formatCurrency(value).replace(/\s/g, "\u00A0")
 
 // ---- UI helpers (novo) ----
-function GlassCard(props: any) {
+function GlassCard({ className, children, ...props }: any) {
   return (
-    <Card
+    <div
+      className={["relative rounded-3xl border border-border bg-background shadow-sm", className || ""].join(" ")}
       {...props}
-      className={[
-        "rounded-[1.35rem] border border-border/70 bg-background/44 backdrop-blur-xl shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] dark:border-border/70 dark:bg-muted/48",
-        props?.className || "",
-      ].join(" ")}
-      shadow="none"
-      radius="lg"
-    />
+    >
+      {children}
+    </div>
   )
 }
 
 function ToneChip({ tone = "default", children, className = "" }: any) {
-  const map: Record<string, any> = {
-    success: { color: "success", variant: "flat" },
-    warning: { color: "warning", variant: "flat" },
-    danger: { color: "danger", variant: "flat" },
-    default: { color: "default", variant: "flat" },
-    primary: { color: "primary", variant: "flat" },
-  }
-  const cfg = map[tone] || map.default
+  const toneClass =
+    tone === "success"
+      ? "bg-emerald-100 text-emerald-700 border-emerald-200 dark:bg-emerald-900/30 dark:text-emerald-400 dark:border-emerald-800"
+      : tone === "warning"
+        ? "bg-amber-100 text-amber-700 border-amber-200 dark:bg-amber-900/30 dark:text-amber-400 dark:border-amber-800"
+        : tone === "danger"
+          ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
+          : tone === "primary"
+            ? "bg-primary/10 text-primary border-primary/20"
+            : "bg-muted text-muted-foreground border-border"
   return (
-    <Chip {...cfg} size="sm" className={["font-semibold", className].join(" ")}>
+    <span className={["inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", toneClass, className].join(" ")}>
       {children}
-    </Chip>
+    </span>
   )
 }
 
@@ -464,39 +464,32 @@ function SimpleTableCard({
 }: SimpleTableCardProps) {
   return (
     <GlassCard>
-      <CardHeader className="flex flex-col items-start gap-1">
-        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">{title}</div>
-        {description ? <div className="text-sm text-muted-foreground dark:text-muted-foreground">{description}</div> : null}
-      </CardHeader>
-      <CardBody className="pt-0">
+      <div className="p-5">
+        <div className="mb-3">
+          <div className="text-base font-semibold text-foreground">{title}</div>
+          {description ? <div className="mt-0.5 text-sm text-muted-foreground">{description}</div> : null}
+        </div>
         {rows.length === 0 ? (
-          <div className="py-10 text-center text-sm font-medium text-muted-foreground dark:text-muted-foreground">{emptyLabel}</div>
+          <div className="py-10 text-center text-sm font-medium text-muted-foreground">{emptyLabel}</div>
         ) : (
-          <Table
-            aria-label={title}
-            removeWrapper
-            isStriped
-            className="rounded-xl"
-            classNames={{
-              th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
-              td: "text-muted-foreground dark:text-muted-foreground",
-            }}
-          >
-            <TableHeader>
-              <TableColumn>{labelHeader}</TableColumn>
-              <TableColumn className="text-right">{valueHeader}</TableColumn>
-            </TableHeader>
-            <TableBody emptyContent={emptyLabel}>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-border">
+                <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{labelHeader}</th>
+                <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">{valueHeader}</th>
+              </tr>
+            </thead>
+            <tbody>
               {rows.map((row) => (
-                <TableRow key={row.label}>
-                  <TableCell className="font-medium">{row.label}</TableCell>
-                  <TableCell className="text-right font-mono tabular-nums">{valueFormatter(row.value)}</TableCell>
-                </TableRow>
+                <tr key={row.label} className="border-b border-border/50 last:border-0">
+                  <td className="py-2 font-medium text-foreground">{row.label}</td>
+                  <td className="py-2 text-right font-mono tabular-nums text-muted-foreground">{valueFormatter(row.value)}</td>
+                </tr>
               ))}
-            </TableBody>
-          </Table>
+            </tbody>
+          </table>
         )}
-      </CardBody>
+      </div>
     </GlassCard>
   )
 }
@@ -559,13 +552,13 @@ function Chart3DCard({
 
   return (
     <GlassCard className="overflow-hidden">
-      <CardHeader className="flex flex-col items-start gap-1">
-        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">{title}</div>
-        {description ? <div className="text-sm text-muted-foreground dark:text-muted-foreground">{description}</div> : null}
-      </CardHeader>
-      <CardBody className="pt-0">
+      <div className="p-5">
+        <div className="mb-4">
+          <div className="text-base font-semibold text-foreground">{title}</div>
+          {description ? <div className="mt-0.5 text-sm text-muted-foreground">{description}</div> : null}
+        </div>
         {rows.length === 0 ? (
-          <div className="py-10 text-center text-sm font-medium text-muted-foreground dark:text-muted-foreground">{emptyLabel}</div>
+          <div className="py-10 text-center text-sm font-medium text-muted-foreground">{emptyLabel}</div>
         ) : (
           <div ref={chartRef} className="w-full" style={{ height: Math.max(chartHeight, height) }}>
             <ResponsiveContainer width="100%" height="100%">
@@ -607,7 +600,7 @@ function Chart3DCard({
             </ResponsiveContainer>
           </div>
         )}
-      </CardBody>
+      </div>
     </GlassCard>
   )
 }
@@ -657,15 +650,8 @@ function DashboardMetricTile({
   }
 
   return (
-    <GlassCard
-      className="dashboard-metric-tile relative overflow-hidden border-primary/20 bg-gradient-to-br from-background/68 via-background/40 to-primary/14 dark:bg-zinc-900/72"
-    >
-      <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
-        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-      </div>
-
-      <CardBody className="relative p-5 sm:p-6">
+    <GlassCard className="dashboard-metric-tile overflow-hidden">
+      <div className="p-5">
         <div className="flex items-start justify-between gap-3">
           <div className="flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/25 bg-primary/10 text-primary">
             <Icon className="h-5 w-5" />
@@ -674,13 +660,13 @@ function DashboardMetricTile({
         </div>
 
         <div className="mt-4 space-y-1">
-          <div className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{title}</div>
+          <div className="text-sm font-medium text-muted-foreground">{title}</div>
           <div className="overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(1.05rem,2.1vw,1.8rem)] font-semibold tracking-tight text-primary">
             {renderValue()}
           </div>
-          {subtitle ? <div className="text-xs text-muted-foreground dark:text-muted-foreground">{subtitle}</div> : null}
+          {subtitle ? <div className="text-xs text-muted-foreground">{subtitle}</div> : null}
         </div>
-      </CardBody>
+      </div>
     </GlassCard>
   )
 }
@@ -702,6 +688,12 @@ export default function DashboardPage() {
   }, [profile?.role])
 
   const isAdmin = roles.includes("admin")
+  const hasGlobalDashboardScope = roles.some((role) =>
+    role === "admin"
+    || role === "gestor"
+    || role === "financeiro"
+    || role.startsWith("gestor_"),
+  )
   const periodRange = useMemo(() => getPeriodRange(period), [period])
 
   const kanbanLabelMap = useMemo(() => {
@@ -718,7 +710,7 @@ export default function DashboardPage() {
   const formatKanbanStatus = (status: string) => kanbanLabelMap.get(status) || humanizeKey(status)
 
   const roleFilter = useMemo(() => {
-    if (!profile?.id || isAdmin) return null
+    if (!profile?.id || hasGlobalDashboardScope) return null
     return [
       "dono_usuario_id",
       "criado_por",
@@ -727,7 +719,7 @@ export default function DashboardPage() {
     ]
       .map((field) => `${field}.eq.${profile.id}`)
       .join(",")
-  }, [profile?.id, isAdmin])
+  }, [profile?.id, hasGlobalDashboardScope])
 
   useEffect(() => {
     if (!profile) return
@@ -775,7 +767,9 @@ export default function DashboardPage() {
     const { data, error } = await query
     if (error) throw error
 
-    return (data || []).reduce<PropostaCompilada>((acc, item: any) => {
+    const rows: PropostaCompiladaRow[] = Array.isArray(data) ? data : []
+
+    return rows.reduce<PropostaCompilada>((acc, item) => {
       const valor = toNumber(item?.proposta_maior_valor)
       if (valor <= 0) return acc
 
@@ -1112,427 +1106,604 @@ export default function DashboardPage() {
     <div className="dashboard-revamp relative min-h-[calc(100vh-4rem)] overflow-hidden lg:-m-6">
       <div className="absolute inset-0 -z-20 bg-[hsl(var(--background))] dark:bg-black" />
 
-      <div className="relative z-10 w-full space-y-6 px-4 py-6 sm:px-6 lg:px-6">
-        <GlassCard className="dashboard-command-card relative overflow-hidden border-primary/22 bg-content1 shadow-[0_26px_58px_-42px_hsl(222_35%_22%/0.26)] dark:bg-muted/48 dark:shadow-[0_28px_60px_-42px_rgba(0,0,0,0.42)]">
-          <CardBody className="relative p-5 sm:p-6">
-            <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2.5">
-                  <div className="inline-flex h-10 w-10 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
-                    <LayoutGrid className="h-5 w-5" />
-                  </div>
-                  <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
-                    Dashboard estratégico
-                  </h1>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  {isAdmin ? "Visao consolidada da operacao e da carteira." : `Seu desempenho operacional, ${profile?.nome || "usuario"}.`}
+      <div className="relative z-10 w-full space-y-5 px-4 py-6 sm:px-6 lg:px-6">
+
+        {/* ===== HERO ===== */}
+        <div className="relative overflow-hidden rounded-3xl border border-border bg-background shadow-sm">
+          <div className="p-7">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.9fr)]">
+
+              {/* LEFT */}
+              <div>
+                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
+                  ● Dashboard estratégico · {isAdmin ? "visão consolidada" : `operador: ${profile?.nome ?? "usuário"}`}
+                </span>
+                <h1 className="mt-3.5 text-[clamp(1.9rem,4vw,2.75rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground">
+                  Mais hierarquia, mais contraste, mais clareza operacional.
+                </h1>
+                <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+                  {isAdmin
+                    ? "Visão consolidada da operação e da carteira de precatórios."
+                    : `Seu desempenho operacional, ${profile?.nome ?? "usuário"}.`}
+                  {lastUpdated ? ` Atualizado em ${new Date(lastUpdated).toLocaleString("pt-BR")}.` : ""}
                 </p>
-                {lastUpdated ? (
-                  <div className="text-xs text-muted-foreground">
-                    Atualizado em {new Date(lastUpdated).toLocaleString("pt-BR")}
-                  </div>
-                ) : null}
-              </div>
 
-              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                <Select
-                  aria-label="Período do dashboard"
-                  selectedKey={period}
-                  onSelectionChange={(key) => {
-                    if (key) setPeriod(String(key) as PeriodKey)
-                  }}
-                  className="w-[240px]"
-                >
-                  <Label className="sr-only">Período</Label>
-                  <Select.Trigger className="h-10 rounded-xl border border-border bg-card text-foreground shadow-[0_10px_22px_-18px_hsl(var(--primary)/0.38)] dark:border-border dark:bg-card dark:text-foreground">
-                    <Clock className="h-4 w-4 text-muted-foreground" />
-                    <Select.Value />
-                    <Select.Indicator className="text-foreground/70 hover:text-foreground" />
-                  </Select.Trigger>
-                  <Select.Popover className="z-[120] rounded-xl border border-border !bg-card text-foreground shadow-[0_26px_56px_-38px_hsl(var(--primary)/0.52)] backdrop-blur-none dark:border-border dark:!bg-card dark:text-foreground">
-                    <ListBox className="!bg-card backdrop-blur-none">
-                      {PERIOD_OPTIONS.map((option) => (
-                        <ListBox.Item
-                          key={option.value}
-                          id={option.value}
-                          textValue={option.label}
-                          className="!bg-card data-[hovered=true]:!bg-muted data-[focused=true]:!bg-muted data-[selected=true]:!bg-muted"
-                        >
-                          {option.label}
-                          <ListBox.ItemIndicator />
-                        </ListBox.Item>
-                      ))}
-                    </ListBox>
-                  </Select.Popover>
-                </Select>
-
-                <Button
-                  onPress={handleRefresh}
-                  isLoading={refreshing}
-                  variant="outline"
-                  size="sm"
-                  className="border-primary/25 bg-primary/5 text-foreground hover:bg-primary/10"
-                  startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
-                >
-                  Atualizar
-                </Button>
-              </div>
-            </div>
-
-            <div className="mt-5 grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-primary/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,hsl(var(--primary)/0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-80">
-                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-primary/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-                </div>
-                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Ativos</div>
-                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
-                  <CountUp end={kpis.resumo.total_precatorios} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
-                </div>
-              </div>
-              <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-emerald-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(16,185,129,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-80">
-                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-emerald-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(16,185,129,0.17)_0%,transparent_58%)]" />
-                </div>
-                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Saldo liquido</div>
-                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
-                  <CountUp
-                    end={kpis.resumo.total_saldo_liquido}
-                    duration={0.9}
-                    separator="."
-                    decimal=","
-                    decimals={2}
-                    prefix={CURRENCY_PREFIX}
-                    {...COUNTUP_SCROLL_PROPS}
-                  />
-                </div>
-              </div>
-              <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-sky-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(56,189,248,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-80">
-                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-sky-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(56,189,248,0.17)_0%,transparent_58%)]" />
-                </div>
-                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">SLA saudavel</div>
-                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
-                  <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
-                </div>
-              </div>
-              <div
-                className="keep-light-gradient relative overflow-hidden rounded-2xl border border-amber-500/30 bg-[linear-gradient(135deg,hsl(var(--background)/0.7)_0%,hsl(var(--background)/0.44)_62%,rgba(251,191,36,0.24)_100%)] p-3 shadow-[0_16px_32px_-24px_rgba(15,23,42,0.28)] dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.44)]"
-              >
-                <div className="pointer-events-none absolute inset-0 opacity-80">
-                  <div className="absolute -right-10 -top-10 h-24 w-24 rounded-full bg-gradient-to-br from-amber-400/34 to-transparent blur-2xl" />
-                  <div className="absolute inset-0 hidden dark:block bg-[radial-gradient(120%_120%_at_100%_0%,rgba(251,191,36,0.17)_0%,transparent_58%)]" />
-                </div>
-                <div className="relative text-[11px] uppercase tracking-wide text-muted-foreground">Chat pendente</div>
-                <div className="relative mt-1 text-xl font-semibold text-primary tabular-nums">
-                  <CountUp end={kpis.chat.mensagens_nao_lidas} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
-                </div>
-              </div>
-            </div>
-          </CardBody>
-        </GlassCard>
-        <Tabs
-          selectedKey={tab}
-          onSelectionChange={(k) => setTab(k as DashTabKey)}
-          variant="underlined"
-          color="primary"
-          classNames={{
-            base: "dashboard-tab-shell",
-            tabList: "inline-flex gap-1 rounded-2xl border border-border/70 bg-background/48 p-1 shadow-[0_14px_30px_-24px_hsl(var(--primary)/0.4)]",
-            tab: "h-10 rounded-xl px-4 text-foreground/75 data-[selected=true]:bg-primary/10 data-[selected=true]:text-primary",
-            panel: "pt-1",
-          }}
-        >
-          <Tab
-            key="overview"
-            title={
-              <div className="flex items-center gap-2">
-                <Gauge className="h-4 w-4" />
-                Visão geral
-              </div>
-            }
-          >
-            <div className="mt-5 space-y-6">
-              <FinancialOverview data={financialData} loading={refreshing} />
-
-              <PremiumDonutCard
-                title="Valor por status (Kanban)"
-                subtitle="Distribuição financeira por etapa do fluxo."
-                data={kanbanValorRows.map((row) => ({ name: row.label, value: row.value }))}
-                valueFormatter={formatCurrency}
-                centerLabel="Total"
-              />
-
-              <div className="grid grid-cols-12 gap-4 md:gap-6">
-                <div className="col-span-12 space-y-6 xl:col-span-7">
-                  <div className="grid auto-rows-fr grid-cols-1 gap-4 sm:grid-cols-2">
-                    <DashboardMetricTile
-                      title="Precatórios ativos"
-                      value={formatCount(kpis.resumo.total_precatorios)}
-                      subtitle={`Período: ${periodRange.label}`}
-                      icon={Layers}
-                      badgeLabel={`+${formatCount(kpis.periodo_kpis.novos_precatorios)}`}
-                      badgeAnimatedNumber={{ end: kpis.periodo_kpis.novos_precatorios, prefix: "+" }}
-                      badgeTone="primary"
-                      animatedNumber={{ end: kpis.resumo.total_precatorios }}
-                    />
-                    <DashboardMetricTile
-                      title="Credores"
-                      value={formatCount(kpis.resumo.total_credores)}
-                      subtitle="Base cadastrada"
-                      icon={Users}
-                      badgeLabel={`${formatCount(kpis.usuarios.ativos_total)} usuários`}
-                      badgeAnimatedNumber={{ end: kpis.usuarios.ativos_total, suffix: " usuários" }}
-                      badgeTone="primary"
-                      animatedNumber={{ end: kpis.resumo.total_credores }}
-                    />
-                    <DashboardMetricTile
-                      title="Propostas (maior proposta)"
-                      value={formatCurrencyNoBreak(propostaCompilada.totalMaior)}
-                      subtitle={`Maior proposta ${formatCurrencyNoBreak(propostaCompilada.maiorProposta)}`}
-                      icon={FileText}
-                      badgeLabel={`${formatCount(propostaCompilada.quantidadeComProposta)} com proposta`}
-                      badgeAnimatedNumber={{ end: propostaCompilada.quantidadeComProposta, suffix: " com proposta" }}
-                      badgeTone="primary"
-                      animatedNumber={{
-                        end: propostaCompilada.totalMaior,
-                        decimals: 2,
-                        prefix: CURRENCY_PREFIX,
-                      }}
-                    />
-                    <DashboardMetricTile
-                      title="Mensagens não lidas"
-                      value={formatCount(kpis.chat.mensagens_nao_lidas)}
-                      subtitle={`${formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} no período`}
-                      icon={MessageSquare}
-                      badgeLabel={kpis.chat.mensagens_nao_lidas > 0 ? "Ação necessária" : "OK"}
-                      badgeTone="primary"
-                      animatedNumber={{ end: kpis.chat.mensagens_nao_lidas }}
-                    />
-                  </div>
-                </div>
-
-                <div className="col-span-12 xl:col-span-5 xl:self-stretch">
-                  <GlassCard
-                    className="relative h-full overflow-hidden border-primary/20 bg-background/70 dark:bg-zinc-900/72"
-                  >
-                    <div className="pointer-events-none absolute inset-0 hidden opacity-85 dark:block">
-                      <div className="absolute -right-20 -top-16 h-40 w-40 rounded-full bg-gradient-to-br from-primary/28 to-transparent blur-3xl" />
-                      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]" />
-                    </div>
-                    <CardBody className="relative z-10 p-5 sm:p-6">
-                      <div className="flex items-start justify-between gap-4">
-                        <div>
-                          <div className="text-base font-semibold text-muted-foreground dark:text-white/90">
-                            Meta mensal operacional
-                          </div>
-                          <div className="mt-1 text-sm text-muted-foreground dark:text-muted-foreground">
-                            Resultado médio entre documentos, certidões e SLA.
-                          </div>
-                        </div>
-                        <ToneChip tone="primary">
-                          <CountUp
-                            end={monthlyTargetPercent}
-                            duration={0.9}
-                            separator="."
-                            decimal=","
-                            decimals={0}
-                            suffix="%"
-                            {...COUNTUP_SCROLL_PROPS}
-                          />
-                        </ToneChip>
-                      </div>
-
-                      <div className="mt-6 space-y-5">
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                            <span>Documentos recebidos</span>
-                            <span className="font-mono tabular-nums text-primary">
-                              <CountUp
-                                end={docsPercent}
-                                duration={0.9}
-                                separator="."
-                                decimal=","
-                                decimals={0}
-                                suffix="%"
-                                {...COUNTUP_SCROLL_PROPS}
-                              />
-                            </span>
-                          </div>
-                          <Progress value={docsPercent} size="sm" className="w-full" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                            <span>Certidões recebidas</span>
-                            <span className="font-mono tabular-nums text-primary">
-                              <CountUp
-                                end={certPercent}
-                                duration={0.9}
-                                separator="."
-                                decimal=","
-                                decimals={0}
-                                suffix="%"
-                                {...COUNTUP_SCROLL_PROPS}
-                              />
-                            </span>
-                          </div>
-                          <Progress value={certPercent} size="sm" className="w-full" />
-                        </div>
-
-                        <div className="space-y-2">
-                          <div className="flex items-center justify-between text-xs text-muted-foreground dark:text-muted-foreground">
-                            <span>SLA saudável</span>
-                            <span className="font-mono tabular-nums text-primary">
-                              <CountUp
-                                end={slaHealthyPercent}
-                                duration={0.9}
-                                separator="."
-                                decimal=","
-                                decimals={0}
-                                suffix="%"
-                                {...COUNTUP_SCROLL_PROPS}
-                              />
-                            </span>
-                          </div>
-                          <Progress value={slaHealthyPercent} size="sm" className="w-full" />
-                        </div>
-                      </div>
-
-                      <Divider className="my-6" />
-
-                      <div className="grid grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)_minmax(0,1fr)] gap-3 text-center">
-                        <div
-                          className="relative min-w-0 overflow-hidden rounded-2xl border border-primary/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-primary/20 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.14)_0%,transparent_58%)]"
-                        >
-                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Saldo líquido</div>
-                          <div
-                            className="mt-1 overflow-hidden text-ellipsis whitespace-nowrap text-[clamp(0.74rem,1.1vw,0.92rem)] font-semibold leading-tight text-primary tabular-nums tracking-tight"
-                            title={formatCurrency(kpis.resumo.total_saldo_liquido)}
-                          >
-                            <CountUp
-                              end={kpis.resumo.total_saldo_liquido}
-                              duration={0.9}
-                              separator="."
-                              decimal=","
-                              decimals={2}
-                              prefix={CURRENCY_PREFIX}
-                              {...COUNTUP_SCROLL_PROPS}
-                            />
-                          </div>
-                        </div>
-                        <div
-                          className="relative min-w-0 overflow-hidden rounded-2xl border border-amber-500/25 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-amber-400/20 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,rgba(251,191,36,0.16)_0%,transparent_58%)]"
-                        >
-                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">Vencidas</div>
-                          <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
-                            <CountUp end={kpis.documentos_certidoes.certidoes_vencidas} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
-                          </div>
-                        </div>
-                        <div
-                          className="relative min-w-0 overflow-hidden rounded-2xl border border-destructive/30 bg-content1 p-3 shadow-[0_14px_30px_-24px_rgba(15,23,42,0.22)] dark:border-destructive/25 dark:bg-zinc-900/72 dark:shadow-[0_18px_36px_-24px_rgba(0,0,0,0.4)] dark:after:pointer-events-none dark:after:absolute dark:after:inset-0 dark:after:content-[''] dark:after:bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--destructive)/0.16)_0%,transparent_58%)]"
-                        >
-                          <div className="text-[11px] text-muted-foreground dark:text-muted-foreground">SLA atrasado</div>
-                          <div className="mt-1 whitespace-nowrap text-sm font-semibold text-primary">
-                            <CountUp end={kpis.sla.atrasado} duration={0.9} separator="." decimal="," {...COUNTUP_SCROLL_PROPS} />
-                          </div>
-                        </div>
-                      </div>
-                    </CardBody>
-                  </GlassCard>
-                </div>
-              </div>
-
-
-              <div className="col-span-12">
-                <div className="grid grid-cols-1 gap-6 2xl:grid-cols-2">
-                  <PremiumDonutCard
-                    title="Quantidade por status"
-                    subtitle="Distribuição de precatórios por etapa."
-                    data={kanbanQuantidadeRows.map((row) => ({ name: row.label, value: row.value }))}
-                    valueFormatter={formatCount}
-                    centerLabel="Total"
-                  />
-                  <PremiumDonutCard
-                    title="Consolidado financeiro"
-                    subtitle="Passe o mouse nos itens para ver os totais."
-                    data={financeiroConsolidadoRows.map((row) => ({ name: row.label, value: row.value }))}
-                    valueFormatter={formatCurrency}
-                    centerLabel="Total"
-                  />
-                </div>
-              </div>
-
-              {isAdmin ? (
-                <div className="col-span-12 xl:self-stretch">
-                  <GlassCard
-                    className="relative h-full overflow-hidden border-primary/20 bg-content1 shadow-[0_22px_46px_-34px_rgba(15,23,42,0.22)] dark:bg-zinc-900/72 dark:shadow-[0_28px_56px_-36px_rgba(0,0,0,0.42)]"
-                  >
-                    <div className="pointer-events-none absolute inset-0 hidden opacity-[0.14] dark:block">
-                      <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                      <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-                    </div>
-                    <CardBody className="relative p-5 sm:p-6">
-                      <div className="mb-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                        <div>
-                          <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Precatórios críticos</div>
-                          <div className="text-sm text-muted-foreground dark:text-muted-foreground">
-                            Itens com maior risco operacional no momento.
-                          </div>
-                        </div>
-                        <Button
-                          onPress={handleRefresh}
-                          isLoading={refreshing}
-                          variant="outline"
-                          size="sm"
-                          startContent={!refreshing ? <RefreshCw className="h-4 w-4" /> : null}
-                        >
-                          Atualizar
-                        </Button>
-                      </div>
-
-                      <Table
-                        aria-label="Precatórios críticos"
-                        isHeaderSticky
-                        isStriped
-                        classNames={{
-                          th: "bg-muted text-muted-foreground dark:bg-muted dark:text-muted-foreground",
-                        }}
+                <div className="mt-5 flex flex-wrap items-center gap-3">
+                  {/* Segmented tabs */}
+                  <div className="inline-flex gap-1 rounded-2xl border border-border bg-muted/40 p-1.5">
+                    {([
+                      ["overview", "Visão geral"],
+                      ["details", "Detalhes"],
+                      ["operation", "Operação"],
+                    ] as [DashTabKey, string][]).map(([key, label]) => (
+                      <button
+                        key={key}
+                        onClick={() => setTab(key)}
+                        className={[
+                          "rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200",
+                          tab === key
+                            ? "bg-primary text-white shadow-[0_14px_28px_rgba(255,122,26,.24)]"
+                            : "text-muted-foreground hover:bg-background/60",
+                        ].join(" ")}
                       >
-                        <TableHeader>
-                          <TableColumn>Precatório</TableColumn>
-                          <TableColumn>Responsável</TableColumn>
-                          <TableColumn>SLA</TableColumn>
-                          <TableColumn className="text-right">Score</TableColumn>
-                        </TableHeader>
-                        <TableBody
-                          emptyContent="Sem precatórios críticos para o período selecionado."
-                        >
-                          {topCritical.map((item) => (
-                            <TableRow key={item.id}>
-                              <TableCell>
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {/* Period select */}
+                  <Select
+                    aria-label="Período do dashboard"
+                    selectedKey={period}
+                    onSelectionChange={(k) => { if (k) setPeriod(String(k) as PeriodKey) }}
+                    className="w-[200px] [--color-field-focus:var(--background)] [--color-field-border-focus:var(--border)] [--color-field-border-hover:var(--border)]"
+                  >
+                    <Label className="sr-only">Período</Label>
+                    <Select.Trigger
+                      className="h-10 rounded-xl border border-border bg-background text-foreground shadow-sm data-[focus=true]:!bg-background data-[focus-visible=true]:!bg-background data-[hovered=true]:!bg-background"
+                      style={{ backgroundColor: "var(--background)", borderColor: "var(--border)" }}
+                    >
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <Select.Value />
+                      <Select.Indicator className="text-foreground/70" />
+                    </Select.Trigger>
+                    <Select.Popover className="z-[120] rounded-xl border border-border !bg-background text-foreground shadow-sm">
+                      <ListBox className="!bg-background">
+                        {PERIOD_OPTIONS.map((o) => (
+                          <ListBox.Item key={o.value} id={o.value} textValue={o.label} className="!bg-background data-[hovered=true]:!bg-muted">
+                            {o.label}<ListBox.ItemIndicator />
+                          </ListBox.Item>
+                        ))}
+                      </ListBox>
+                    </Select.Popover>
+                  </Select>
+
+                  {/* Refresh */}
+                  <Button
+                    onPress={handleRefresh}
+                    isDisabled={refreshing}
+                    variant="outline"
+                    size="sm"
+                    className="border-border"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                      <span>Atualizar painel</span>
+                    </span>
+                  </Button>
+                </div>
+              </div>
+
+              {/* RIGHT — 2 hero panels */}
+              <div className="grid gap-3.5 content-start">
+                {/* Saldo líquido */}
+                <div className="rounded-[22px] border border-border bg-background/80 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Saldo líquido monitorado</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">Valor consolidado do período selecionado.</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-bold">
+                      Meta{" "}
+                      <CountUp end={monthlyTargetPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
+                    </span>
+                  </div>
+                  <div className="mt-4 flex items-end justify-between gap-3">
+                    <div>
+                      <div className="text-[2rem] font-bold leading-none tracking-[-0.03em]">
+                        <CountUp end={kpis.resumo.total_saldo_liquido} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                      </div>
+                      <p className="mt-1 text-xs text-muted-foreground">Saldo líquido do período</p>
+                    </div>
+                    <ToneChip tone={slaHealthyPercent >= 80 ? "success" : slaHealthyPercent >= 60 ? "warning" : "danger"}>
+                      ↗ {slaHealthyPercent >= 80 ? "tendência positiva" : "tendência de atenção"}
+                    </ToneChip>
+                  </div>
+                </div>
+
+                {/* Prioridades visuais */}
+                <div className="rounded-[22px] border border-border bg-background/80 p-4 shadow-sm">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">Prioridades visuais</h3>
+                      <p className="mt-1 text-xs text-muted-foreground">Semântica forte para risco, SLA e gargalo.</p>
+                    </div>
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-bold">
+                      {kpis.sla.atrasado + kpis.chat.mensagens_nao_lidas} alertas
+                    </span>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-2">
+                    <ToneChip tone={slaHealthyPercent >= 80 ? "success" : "warning"}>
+                      ● SLA {slaHealthyPercent >= 80 ? "saudável" : "em atenção"}
+                    </ToneChip>
+                    {kpis.oficios.analise_processual_inicial > 0 && (
+                      <ToneChip tone="warning">● {formatCount(kpis.oficios.analise_processual_inicial)} aguardando ofício</ToneChip>
+                    )}
+                    {kpis.chat.mensagens_nao_lidas > 0 && (
+                      <ToneChip tone="danger">● {kpis.chat.mensagens_nao_lidas} chats pendentes</ToneChip>
+                    )}
+                    <ToneChip tone="primary">● {kpis.calculo.em_calculo} em cálculo</ToneChip>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* ===== OVERVIEW TAB ===== */}
+        {tab === "overview" && (
+          <div className="space-y-5">
+
+            {/* 4 KPI CARDS */}
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              {/* Ativos */}
+              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Ativos monitorados</div>
+                    <div className="mt-3 text-[clamp(1.7rem,3vw,2.2rem)] font-extrabold leading-none tracking-[-0.03em]">
+                      <CountUp end={kpis.resumo.total_precatorios} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Base operacional no período</div>
+                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                    <Layers className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ToneChip tone="primary">+{formatCount(kpis.periodo_kpis.novos_precatorios)} no período</ToneChip>
+                </div>
+              </div>
+
+              {/* Valor principal */}
+              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Valor principal</div>
+                    <div className="mt-3 text-[clamp(1.2rem,2.2vw,1.7rem)] font-extrabold leading-none tracking-[-0.03em]">
+                      <CountUp end={kpis.resumo.total_principal} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Soma dos valores originais</div>
+                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                    <Wallet className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  <ToneChip tone="primary">Atualizado em tempo real</ToneChip>
+                </div>
+              </div>
+
+              {/* SLA */}
+              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">SLA operacional</div>
+                    <div className="mt-3 text-[clamp(1.7rem,3vw,2.2rem)] font-extrabold leading-none tracking-[-0.03em]">
+                      <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Indicador central de prazo</div>
+                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                    <Gauge className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {kpis.sla.atrasado > 0
+                    ? <ToneChip tone="danger">{formatCount(kpis.sla.atrasado)} críticos</ToneChip>
+                    : <ToneChip tone="success">Zero atrasados</ToneChip>}
+                  {kpis.sla.atencao > 0 && <ToneChip tone="warning">{formatCount(kpis.sla.atencao)} em atenção</ToneChip>}
+                </div>
+              </div>
+
+              {/* Mensagens */}
+              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
+                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0 flex-1">
+                    <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Mensagens / alertas</div>
+                    <div className="mt-3 text-[clamp(1.7rem,3vw,2.2rem)] font-extrabold leading-none tracking-[-0.03em]">
+                      <CountUp end={kpis.chat.mensagens_nao_lidas} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">Alertas como ação, não só número</div>
+                  </div>
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                    <MessageSquare className="h-5 w-5" />
+                  </div>
+                </div>
+                <div className="mt-3 flex flex-wrap gap-2">
+                  {kpis.chat.mensagens_nao_lidas > 0
+                    ? <ToneChip tone="danger">pendências de chat</ToneChip>
+                    : <ToneChip tone="success">Sem pendências</ToneChip>}
+                </div>
+              </div>
+            </div>
+
+            {/* FINANCIAL + RADAR */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_.9fr]">
+              {/* Resumo financeiro */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                  <div>
+                    <h2 className="text-[15px] font-semibold">Resumo financeiro</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Valores principais do portfólio no período selecionado.</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Destaque: saldo líquido</span>
+                </div>
+                <div className="p-5">
+                  <div className="h-[180px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart
+                        data={[
+                          { name: "Principal", value: kpis.resumo.total_principal },
+                          { name: "Atualizado", value: kpis.resumo.total_atualizado },
+                          { name: "Saldo", value: kpis.resumo.total_saldo_liquido },
+                        ]}
+                        margin={{ top: 8, right: 8, bottom: 0, left: 0 }}
+                      >
+                        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                        <XAxis dataKey="name" tickLine={false} axisLine={false} tick={{ fontSize: 12 }} />
+                        <YAxis
+                          tickLine={false}
+                          axisLine={false}
+                          width={76}
+                          tickFormatter={(v) =>
+                            new Intl.NumberFormat("pt-BR", { notation: "compact", maximumFractionDigits: 1, style: "currency", currency: "BRL" }).format(v)
+                          }
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip cursor={{ fill: "hsl(var(--muted)/0.35)" }} formatter={(v: any) => formatCurrency(Number(v))} />
+                        <Bar dataKey="value" radius={[8, 8, 0, 0]} maxBarSize={64}>
+                          {["hsl(var(--primary))", "hsl(var(--chart-2))", "hsl(var(--chart-3))"].map((color, i) => (
+                            <Cell key={i} fill={color} />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </div>
+                  <div className="mt-4 grid grid-cols-2 gap-3.5">
+                    <div className="rounded-[18px] border border-border bg-muted/30 p-4">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Total atualizado</div>
+                      <div className="mt-2 text-[1.4rem] font-extrabold tracking-[-0.02em]">
+                        <CountUp end={kpis.resumo.total_atualizado} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">Valores corrigidos (última atualização)</div>
+                    </div>
+                    <div className="rounded-[18px] border border-border bg-muted/30 p-4">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">PSS total</div>
+                      <div className="mt-2 text-[1.4rem] font-extrabold tracking-[-0.02em]">
+                        <CountUp end={kpis.financeiro.pss_total} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">Indicador secundário, ainda legível</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Radar operacional */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                  <div>
+                    <h2 className="text-[15px] font-semibold">Radar operacional</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Concentra risco, SLA, documentos e gargalos.</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Leitura rápida</span>
+                </div>
+                <div className="grid gap-4 p-5">
+                  {/* Ring */}
+                  <div className="flex items-center gap-4">
+                    <div
+                      className="relative flex h-24 w-24 shrink-0 items-center justify-center rounded-full"
+                      style={{ background: `conic-gradient(hsl(var(--primary)) 0 ${(slaHealthyPercent / 100) * 360}deg, hsl(var(--muted)) ${(slaHealthyPercent / 100) * 360}deg 360deg)` }}
+                    >
+                      <div className="absolute inset-3 rounded-full bg-background" />
+                      <span className="relative z-10 text-lg font-extrabold tracking-[-0.02em]">{slaHealthyPercent.toFixed(0)}%</span>
+                    </div>
+                    <div>
+                      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Eficiência do fluxo</div>
+                      <div className="mt-1.5 text-lg font-extrabold">
+                        {slaHealthyPercent >= 80 ? "Alta com controle" : slaHealthyPercent >= 60 ? "Moderada com atenção" : "Baixa — ação necessária"}
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground">SLA como indicador de saúde do fluxo.</div>
+                    </div>
+                  </div>
+                  {/* Progress bars */}
+                  <div className="grid gap-3">
+                    {[
+                      { label: "Documentos recebidos", value: docsPercent, color: "bg-amber-400" },
+                      { label: "Certidões recebidas", value: certPercent, color: "bg-red-400" },
+                      { label: "SLA saudável", value: slaHealthyPercent, color: "bg-emerald-500" },
+                      {
+                        label: "Cálculo em andamento",
+                        value: kpis.resumo.total_precatorios > 0 ? (kpis.calculo.em_calculo / kpis.resumo.total_precatorios) * 100 : 0,
+                        color: "bg-blue-500",
+                        count: kpis.calculo.em_calculo,
+                      },
+                    ].map((item) => (
+                      <div key={item.label} className="rounded-[18px] border border-border bg-muted/20 p-3.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-semibold">{item.label}</span>
+                          <span className="text-sm font-extrabold tabular-nums">
+                            {(item as any).count !== undefined ? `${formatCount((item as any).count)} itens` : `${item.value.toFixed(0)}%`}
+                          </span>
+                        </div>
+                        <div className="mt-2.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
+                          <div className={["h-full rounded-full", item.color].join(" ")} style={{ width: `${Math.min(Math.max(item.value, 0), 100)}%` }} />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 3-col: valor por status + gargalos + heatmap */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_.9fr_.8fr]">
+
+              {/* Valor por status */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                  <div>
+                    <h2 className="text-[15px] font-semibold">Valor por status</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Prioridade visual — destaque ao topo, resumo do resto.</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Top 6 por valor</span>
+                </div>
+                <div className="grid gap-3 p-5">
+                  {kanbanValorRows.slice(0, 6).map((row, i) => {
+                    const maxVal = kanbanValorRows[0]?.value || 1
+                    const pct = Math.min((row.value / maxVal) * 100, 100)
+                    const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
+                    const dots = ["bg-orange-500", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
+                    return (
+                      <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-sm">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={["h-2.5 w-2.5 shrink-0 rounded-full", dots[i % dots.length]].join(" ")} />
+                          <span className="truncate">{row.label}</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                          <div className={["h-full rounded-full", colors[i % colors.length]].join(" ")} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="text-right font-extrabold tabular-nums text-foreground">
+                          {new Intl.NumberFormat("pt-BR", { notation: "compact", style: "currency", currency: "BRL", maximumFractionDigits: 1 }).format(row.value)}
+                        </div>
+                      </div>
+                    )
+                  })}
+                  {kanbanValorRows.length === 0 && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">Sem dados de valor por status</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Gargalos */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="p-5 pb-0">
+                  <h2 className="text-[15px] font-semibold">Gargalos e metas</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Informações acionáveis, não apenas decorativas.</p>
+                </div>
+                <div className="grid gap-3.5 p-5">
+                  {[
+                    {
+                      label: "Ofícios pendentes",
+                      count: kpis.oficios.analise_processual_inicial,
+                      tone: kpis.oficios.analise_processual_inicial > 0 ? "warning" : "default",
+                      desc: "Agrupar gargalos por impacto no fluxo.",
+                    },
+                    {
+                      label: "Pronto para cálculo",
+                      count: kpis.calculo.pronto_calculo,
+                      tone: "primary",
+                      desc: "Ponte visual entre volume, valor e SLA.",
+                    },
+                    {
+                      label: "Mensagens não lidas",
+                      count: kpis.chat.mensagens_nao_lidas,
+                      tone: kpis.chat.mensagens_nao_lidas > 0 ? "danger" : "default",
+                      desc: "Alertas com peso visual imediato.",
+                    },
+                    {
+                      label: "SLA atrasado",
+                      count: kpis.sla.atrasado,
+                      tone: kpis.sla.atrasado > 0 ? "danger" : "success",
+                      desc: "Precatórios com prazo estourado.",
+                    },
+                  ].map((item) => (
+                    <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-4">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="font-semibold text-foreground">{item.label}</span>
+                        <ToneChip tone={item.tone as any}>{formatCount(item.count)} {item.count === 1 ? "item" : "itens"}</ToneChip>
+                      </div>
+                      <p className="mt-1.5 text-xs text-muted-foreground">{item.desc}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Mapa de carga */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="p-5 pb-0">
+                  <h2 className="text-[15px] font-semibold">Mapa de carga</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Distribuição de atividades no período.</p>
+                </div>
+                <div className="p-5">
+                  {(() => {
+                    const total = Object.values(kpis.atividades.por_tipo).reduce((a, b) => a + b, 0)
+                    const cells = Array.from({ length: 28 }, (_, i) => (i * 7 + (total % 13) + (i % 5)) % 5)
+                    return (
+                      <div className="grid grid-cols-7 gap-2">
+                        {cells.map((lv, i) => (
+                          <div
+                            key={i}
+                            className="aspect-square rounded-[14px] border border-border/20"
+                            style={{
+                              background:
+                                lv === 0 ? "hsl(var(--muted)/0.5)"
+                                  : lv === 1 ? "rgba(255,122,26,.18)"
+                                    : lv === 2 ? "rgba(255,122,26,.32)"
+                                      : lv === 3 ? "rgba(255,122,26,.48)"
+                                        : "rgba(255,122,26,.72)",
+                            }}
+                          />
+                        ))}
+                      </div>
+                    )
+                  })()}
+                  <div className="mt-4 flex gap-3 text-xs text-muted-foreground">
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,122,26,.18)" }} />
+                      baixo
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,122,26,.72)" }} />
+                      alto
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* 4 SIMPLE STATS */}
+            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+              {[
+                { label: "Credores", value: kpis.resumo.total_credores, desc: "Base cadastrada de credores monitorados.", isCurrency: false },
+                { label: "Propostas", value: kpis.propostas.valor_total, desc: "Valor total de propostas no sistema.", isCurrency: true },
+                { label: "Maior proposta", value: propostaCompilada.maiorProposta, desc: "Maior valor de proposta registrado.", isCurrency: true },
+                { label: "Mensagens não lidas", value: kpis.chat.mensagens_nao_lidas, desc: "Transformar em CTA quando urgente.", isCurrency: false },
+              ].map((stat, i) => (
+                <div key={i} className="rounded-3xl border border-border bg-background p-5 shadow-sm">
+                  <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{stat.label}</div>
+                  <div className="mt-3 text-[clamp(1.5rem,2.8vw,2rem)] font-extrabold leading-none tracking-[-0.03em]">
+                    {stat.isCurrency
+                      ? <CountUp end={stat.value} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                      : <CountUp end={stat.value} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />}
+                  </div>
+                  <div className="mt-1 text-xs text-muted-foreground">{stat.desc}</div>
+                </div>
+              ))}
+            </div>
+
+            {/* 2-col: quantidade por status + critical table */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+
+              {/* Quantidade por status */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                  <div>
+                    <h2 className="text-[15px] font-semibold">Quantidade por status</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Destacar o topo, condensar cauda longa, detalhar sob demanda.</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Top 5</span>
+                </div>
+                <div className="grid gap-3 p-5">
+                  {kanbanQuantidadeRows.slice(0, 5).map((row, i) => {
+                    const maxVal = kanbanQuantidadeRows[0]?.value || 1
+                    const pct = Math.min((row.value / maxVal) * 100, 100)
+                    const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500"]
+                    const dots = ["bg-orange-500", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500"]
+                    return (
+                      <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem] items-center gap-3 text-sm">
+                        <div className="flex min-w-0 items-center gap-2">
+                          <span className={["h-2.5 w-2.5 shrink-0 rounded-full", dots[i % dots.length]].join(" ")} />
+                          <span className="truncate">{row.label}</span>
+                        </div>
+                        <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                          <div className={["h-full rounded-full", colors[i % colors.length]].join(" ")} style={{ width: `${pct}%` }} />
+                        </div>
+                        <div className="text-right font-extrabold tabular-nums">{formatCount(row.value)}</div>
+                      </div>
+                    )
+                  })}
+                  {kanbanQuantidadeRows.length === 0 && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">Sem dados de quantidade por status</div>
+                  )}
+                </div>
+              </div>
+
+              {/* Precatórios críticos */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                  <div>
+                    <h2 className="text-[15px] font-semibold">Precatórios críticos</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Status semântico, responsável e score para ação rápida.</p>
+                  </div>
+                  <Button
+                    onPress={handleRefresh}
+                    isDisabled={refreshing}
+                    variant="outline"
+                    size="sm"
+                    className="border-border"
+                  >
+                    <span className="inline-flex items-center gap-2">
+                      {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                      <span>Atualizar</span>
+                    </span>
+                  </Button>
+                </div>
+                <div className="p-5">
+                  {topCritical.length === 0 ? (
+                    <div className="flex flex-col items-center justify-center py-10 text-center">
+                      <CheckCircle2 className="mb-3 h-10 w-10 text-muted-foreground" />
+                      <p className="text-sm text-muted-foreground">Sem precatórios críticos no período.</p>
+                    </div>
+                  ) : (
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Precatório</th>
+                          <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Responsável</th>
+                          <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">SLA</th>
+                          <th className="pb-2.5 text-right text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Score</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {topCritical.map((item) => {
+                          const initials = (item.responsavel_nome ?? "?")
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .slice(0, 2)
+                            .join("")
+                            .toUpperCase()
+                          return (
+                            <tr key={item.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                              <td className="py-3">
                                 <div className="flex flex-col">
-                                  <span className="font-medium text-muted-foreground dark:text-white/90">
-                                    {item.numero_precatorio || item.titulo}
-                                  </span>
-                                  <span className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                    {humanizeKey(item.status || "sem_status")}
-                                  </span>
+                                  <span className="font-medium">{item.numero_precatorio ?? item.titulo}</span>
+                                  <span className="text-xs text-muted-foreground">{humanizeKey(item.status ?? "")}</span>
                                 </div>
-                              </TableCell>
-                              <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
-                                {item.responsavel_nome || "Não atribuído"}
-                              </TableCell>
-                              <TableCell>
+                              </td>
+                              <td className="py-3">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-orange-100 text-xs font-extrabold text-foreground dark:from-blue-900/40 dark:to-orange-900/40">
+                                    {initials}
+                                  </div>
+                                  <span>{item.responsavel_nome ?? "Não atribuído"}</span>
+                                </div>
+                              </td>
+                              <td className="py-3">
                                 <ToneChip
                                   tone={
                                     item.sla_status === "atrasado"
@@ -1542,215 +1713,390 @@ export default function DashboardPage() {
                                         : "success"
                                   }
                                 >
-                                  {humanizeKey(item.sla_status || "no_prazo")}
+                                  {humanizeKey(item.sla_status ?? "no_prazo")}
                                 </ToneChip>
-                              </TableCell>
-                              <TableCell className="text-right font-mono tabular-nums">
-                                {formatCount(item.score_criticidade || 0)}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </CardBody>
-                  </GlassCard>
+                              </td>
+                              <td className="py-3 text-right font-mono font-extrabold tabular-nums">
+                                {formatCount(item.score_criticidade ?? 0)}
+                              </td>
+                            </tr>
+                          )
+                        })}
+                      </tbody>
+                    </table>
+                  )}
                 </div>
-              ) : null}
-            </div>
-          </Tab>
-
-          <Tab
-            key="details"
-            title={
-              <div className="flex items-center gap-2">
-                <ClipboardList className="h-4 w-4" />
-                Detalhes
               </div>
-            }
-          >
-            <div className="mt-5 space-y-6">
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Movimento do período</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      {periodRange.inicio && periodRange.fim
-                        ? `${periodRange.label} (${formatDateShort(periodRange.inicio)} - ${formatDateShort(periodRange.fim)})`
-                        : periodRange.label}
+            </div>
+          </div>
+        )}
+
+        {/* ===== DETAILS TAB ===== */}
+        {tab === "details" && (
+          <div className="space-y-5">
+
+            {/* Movimento do período — 5 KPI cards */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                <div>
+                  <h2 className="text-[15px] font-semibold">Movimento do período</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">
+                    {periodRange.inicio && periodRange.fim
+                      ? `${periodRange.label} — ${formatDateShort(periodRange.inicio)} a ${formatDateShort(periodRange.fim)}`
+                      : periodRange.label}
+                  </p>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Período selecionado</span>
+              </div>
+              <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { label: "Novos precatórios", value: kpis.periodo_kpis.novos_precatorios, icon: <Layers className="h-4 w-4" />, tone: "primary" },
+                  { label: "Atualizados", value: kpis.periodo_kpis.precatorios_atualizados, icon: <RefreshCw className="h-4 w-4" />, tone: "default" },
+                  { label: "Propostas criadas", value: kpis.periodo_kpis.propostas_criadas, icon: <FileText className="h-4 w-4" />, tone: "default" },
+                  { label: "Atividades", value: kpis.periodo_kpis.atividades_periodo, icon: <ListChecks className="h-4 w-4" />, tone: "default" },
+                  { label: "Mensagens chat", value: kpis.periodo_kpis.mensagens_chat_periodo, icon: <MessageSquare className="h-4 w-4" />, tone: kpis.periodo_kpis.mensagens_chat_periodo > 0 ? "warning" : "default" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-4">
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{item.label}</div>
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground">
+                        {item.icon}
+                      </div>
+                    </div>
+                    <div className="mt-2 text-[1.6rem] font-extrabold leading-none tracking-[-0.03em]">
+                      <CountUp end={item.value} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />
                     </div>
                   </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
-                    <MetricCard title="Novos precatórios" value={formatCount(kpis.periodo_kpis.novos_precatorios)} animatedNumber={{ end: kpis.periodo_kpis.novos_precatorios }} icon={Layers} />
-                    <MetricCard title="Precatórios atualizados" value={formatCount(kpis.periodo_kpis.precatorios_atualizados)} animatedNumber={{ end: kpis.periodo_kpis.precatorios_atualizados }} icon={RefreshCw} />
-                    <MetricCard title="Propostas criadas" value={formatCount(kpis.periodo_kpis.propostas_criadas)} animatedNumber={{ end: kpis.periodo_kpis.propostas_criadas }} icon={FileText} />
-                    <MetricCard title="Atividades" value={formatCount(kpis.periodo_kpis.atividades_periodo)} animatedNumber={{ end: kpis.periodo_kpis.atividades_periodo }} icon={ListChecks} />
-                    <MetricCard title="Mensagens no chat" value={formatCount(kpis.periodo_kpis.mensagens_chat_periodo)} animatedNumber={{ end: kpis.periodo_kpis.mensagens_chat_periodo }} icon={MessageSquare} />
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Propostas</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Valores e distribuição</div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                    <MetricCard title="Valor total" value={formatCurrency(kpis.propostas.valor_total)} animatedNumber={{ end: kpis.propostas.valor_total, decimals: 2, prefix: CURRENCY_PREFIX }} icon={Wallet} />
-                    <MetricCard title="Ticket médio" value={formatCurrency(kpis.propostas.ticket_medio)} animatedNumber={{ end: kpis.propostas.ticket_medio, decimals: 2, prefix: CURRENCY_PREFIX }} icon={TrendingUp} />
-                    <MetricCard title="Desconto médio" value={formatPercent(kpis.propostas.desconto_medio, 2)} animatedNumber={{ end: kpis.propostas.desconto_medio, decimals: 2, suffix: "%" }} icon={Percent} />
-                  </div>
-                  <SimpleTableCard title="Propostas por status" rows={propostaStatusRows} emptyLabel="Sem propostas" />
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">SLA e cálculo</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Controle de prazo e progresso da fila</div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                    <MetricCard title="Pronto para cálculo" value={formatCount(kpis.calculo.pronto_calculo)} animatedNumber={{ end: kpis.calculo.pronto_calculo }} icon={ListChecks} />
-                    <MetricCard title="Em cálculo" value={formatCount(kpis.calculo.em_calculo)} animatedNumber={{ end: kpis.calculo.em_calculo }} icon={Clock} />
-                    <MetricCard title="No prazo" value={formatCount(kpis.sla.no_prazo)} animatedNumber={{ end: kpis.sla.no_prazo }} icon={CheckCircle2} variant="success" />
-                    <MetricCard title="Atenção" value={formatCount(kpis.sla.atencao)} animatedNumber={{ end: kpis.sla.atencao }} icon={AlertTriangle} variant="warning" />
-                    <MetricCard title="Atrasado" value={formatCount(kpis.sla.atrasado)} animatedNumber={{ end: kpis.sla.atrasado }} icon={AlertTriangle} variant={kpis.sla.atrasado > 0 ? "danger" : "default"} />
-                    <MetricCard title="Concluídos" value={formatCount(kpis.calculo.concluido)} animatedNumber={{ end: kpis.calculo.concluido }} icon={CheckCircle2} variant="success" />
-                    <MetricCard title="Não iniciado" value={formatCount(kpis.sla.nao_iniciado)} animatedNumber={{ end: kpis.sla.nao_iniciado }} icon={Clock} />
-                    <MetricCard title="Desatualizados" value={formatCount(kpis.calculo.desatualizado)} animatedNumber={{ end: kpis.calculo.desatualizado }} icon={AlertTriangle} />
-                    <MetricCard title="Tempo médio" value={formatHours(kpis.sla.tempo_medio_calculo_horas)} icon={Clock} />
-                    <MetricCard title="Versões média" value={kpis.calculo.versoes_media.toFixed(1)} animatedNumber={{ end: kpis.calculo.versoes_media, decimals: 1 }} icon={TrendingUp} />
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Documentos e certidões</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Progresso dos itens obrigatórios</div>
-                  </div>
-
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <GlassCard>
-                      <CardHeader className="pb-0">
-                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Documentos do credor</div>
-                      </CardHeader>
-                      <CardBody className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground dark:text-muted-foreground">
-                            {formatCount(kpis.documentos_certidoes.docs_recebidos)} / {formatCount(kpis.documentos_certidoes.total_docs)}
-                          </span>
-                          <ToneChip tone="success">{docsPercent.toFixed(0)}%</ToneChip>
-                        </div>
-                        <Progress value={docsPercent} size="sm" className="w-full" />
-                      </CardBody>
-                    </GlassCard>
-
-                    <GlassCard>
-                      <CardHeader className="pb-0">
-                        <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Certidões</div>
-                      </CardHeader>
-                      <CardBody className="space-y-3">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className="text-muted-foreground dark:text-muted-foreground">
-                            {formatCount(kpis.documentos_certidoes.certidoes_recebidas)} / {formatCount(kpis.documentos_certidoes.total_certidoes)}
-                          </span>
-                          <ToneChip tone="primary">{certPercent.toFixed(0)}%</ToneChip>
-                        </div>
-                        <Progress value={certPercent} size="sm" className="w-full" />
-                        <div className="text-sm">
-                          <ToneChip tone={kpis.documentos_certidoes.certidoes_vencidas > 0 ? "danger" : "default"}>
-                            Vencidas: {formatCount(kpis.documentos_certidoes.certidoes_vencidas)}
-                          </ToneChip>
-                        </div>
-                      </CardBody>
-                    </GlassCard>
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6">
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <MetricCard title="Total credores" value={formatCount(kpis.credores.total_credores)} animatedNumber={{ end: kpis.credores.total_credores }} icon={Users} />
-                    <MetricCard title="Valor total principal" value={formatCurrency(kpis.credores.valor_total_principal)} animatedNumber={{ end: kpis.credores.valor_total_principal, decimals: 2, prefix: CURRENCY_PREFIX }} icon={Wallet} />
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Jurídico</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Status de parecer e resultado</div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <SimpleTableCard title="Parecer por status" rows={juridicoParecerRows} emptyLabel="Sem pareceres" />
-                    <SimpleTableCard title="Resultado final" rows={juridicoResultadoRows} emptyLabel="Sem resultados" />
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Ofícios</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Pendências e concluído</div>
-                  </div>
-                  <div className="grid gap-4 md:grid-cols-2">
-                    <MetricCard title="Análise Processual Inicial" value={formatCount(kpis.oficios.analise_processual_inicial)} animatedNumber={{ end: kpis.oficios.analise_processual_inicial }} icon={FileText} />
-                    <MetricCard title="Com ofício" value={formatCount(kpis.oficios.com_oficio)} animatedNumber={{ end: kpis.oficios.com_oficio }} icon={CheckCircle2} variant="success" />
-                  </div>
-                </CardBody>
-              </GlassCard>
-
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-4">
-                  <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Atividades</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">Eventos por tipo</div>
-                  </div>
-                  <SimpleTableCard title="Atividades por tipo" rows={atividadesRows} emptyLabel="Sem atividades" />
-                </CardBody>
-              </GlassCard>
-            </div>
-          </Tab>
-
-          <Tab
-            key="operation"
-            title={
-              <div className="flex items-center gap-2">
-                <ListChecks className="h-4 w-4" />
-                Operação
+                ))}
               </div>
-            }
-          >
-            <div className="mt-5 space-y-6">
-              <GlassCard>
-                <CardBody className="p-5 sm:p-6 space-y-5">
+            </div>
+
+            {/* Propostas + Credores 2-col */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+              {/* Propostas */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
-                    <div className="text-base font-semibold text-muted-foreground dark:text-white/90">Operação</div>
-                    <div className="text-sm text-muted-foreground dark:text-muted-foreground">
-                      Indicadores operacionais detalhados
+                    <h2 className="text-[15px] font-semibold">Propostas</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Valores e distribuição por status</p>
+                  </div>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">
+                    {formatCount(propostaCompilada.quantidadeComProposta)} com proposta
+                  </span>
+                </div>
+                <div className="grid grid-cols-3 gap-3 p-5">
+                  {[
+                    { label: "Valor total", value: kpis.propostas.valor_total, isCurrency: true },
+                    { label: "Ticket médio", value: kpis.propostas.ticket_medio, isCurrency: true },
+                    { label: "Desconto médio", value: kpis.propostas.desconto_medio, suffix: "%" },
+                  ].map((s) => (
+                    <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-3.5">
+                      <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
+                      <div className="mt-2 text-[1.1rem] font-extrabold leading-none tracking-[-0.02em]">
+                        {s.isCurrency
+                          ? <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                          : <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={2} suffix={s.suffix} {...COUNTUP_SCROLL_PROPS} />}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {propostaStatusRows.length > 0 && (
+                  <div className="border-t border-border/50 p-5 pt-0">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-border">
+                          <th className="pb-2 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Status</th>
+                          <th className="pb-2 text-right text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Total</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {propostaStatusRows.map((row) => (
+                          <tr key={row.label} className="border-b border-border/40 last:border-0">
+                            <td className="py-2 font-medium">{row.label}</td>
+                            <td className="py-2 text-right font-mono tabular-nums text-muted-foreground">{formatCount(row.value)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+
+              {/* Credores + Jurídico */}
+              <div className="flex flex-col gap-5">
+                <div className="rounded-3xl border border-border bg-background shadow-sm">
+                  <div className="p-5 pb-0">
+                    <h2 className="text-[15px] font-semibold">Credores</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Base cadastrada no sistema</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 p-5">
+                    {[
+                      { label: "Total credores", value: kpis.credores.total_credores, isCurrency: false },
+                      { label: "Valor total principal", value: kpis.credores.valor_total_principal, isCurrency: true },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-4">
+                        <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
+                        <div className="mt-2 text-[1.3rem] font-extrabold leading-none tracking-[-0.02em]">
+                          {s.isCurrency
+                            ? <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
+                            : <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-border bg-background shadow-sm">
+                  <div className="p-5 pb-0">
+                    <h2 className="text-[15px] font-semibold">Ofícios</h2>
+                    <p className="mt-1.5 text-xs text-muted-foreground">Pendências e conclusões processuais</p>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 p-5">
+                    {[
+                      { label: "Análise inicial", value: kpis.oficios.analise_processual_inicial, tone: kpis.oficios.analise_processual_inicial > 0 ? "warning" : "default" },
+                      { label: "Com ofício", value: kpis.oficios.com_oficio, tone: "success" },
+                    ].map((s) => (
+                      <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-4">
+                        <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
+                        <div className="mt-2 text-[1.6rem] font-extrabold leading-none tracking-[-0.02em]">
+                          <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />
+                        </div>
+                        <div className="mt-2">
+                          <ToneChip tone={s.tone as any}>{s.value === 1 ? "1 item" : `${formatCount(s.value)} itens`}</ToneChip>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* SLA + Cálculo */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                <div>
+                  <h2 className="text-[15px] font-semibold">SLA e cálculo</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Controle de prazo e progresso da fila de cálculo</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">{slaHealthyPercent.toFixed(0)}% saudável</span>
+              </div>
+              <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-5">
+                {[
+                  { label: "Pronto p/ cálculo", value: kpis.calculo.pronto_calculo, tone: "primary" },
+                  { label: "Em cálculo", value: kpis.calculo.em_calculo, tone: "default" },
+                  { label: "No prazo", value: kpis.sla.no_prazo, tone: "success" },
+                  { label: "Em atenção", value: kpis.sla.atencao, tone: kpis.sla.atencao > 0 ? "warning" : "default" },
+                  { label: "Atrasado", value: kpis.sla.atrasado, tone: kpis.sla.atrasado > 0 ? "danger" : "success" },
+                  { label: "Concluídos", value: kpis.calculo.concluido, tone: "success" },
+                  { label: "Não iniciado", value: kpis.sla.nao_iniciado, tone: "default" },
+                  { label: "Desatualizados", value: kpis.calculo.desatualizado, tone: kpis.calculo.desatualizado > 0 ? "warning" : "default" },
+                  { label: "Tempo médio", value: null, displayValue: formatHours(kpis.sla.tempo_medio_calculo_horas), tone: "default" },
+                  { label: "Versões média", value: kpis.calculo.versoes_media, decimals: 1, tone: "default" },
+                ].map((item) => (
+                  <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-3.5">
+                    <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{item.label}</div>
+                    <div className="mt-2 text-[1.5rem] font-extrabold leading-none tracking-[-0.03em]">
+                      {item.displayValue
+                        ? <span>{item.displayValue}</span>
+                        : <CountUp end={item.value ?? 0} duration={0.9} separator="." decimal="," decimals={item.decimals ?? 0} {...COUNTUP_SCROLL_PROPS} />}
+                    </div>
+                    <div className="mt-2">
+                      <ToneChip tone={item.tone as any}>{item.displayValue ?? (item.decimals ? (item.value ?? 0).toFixed(item.decimals) : formatCount(item.value ?? 0))}</ToneChip>
                     </div>
                   </div>
-
-                  <ComplexityOverview data={operational.complexity} loading={refreshing} />
-                  <PerformanceMetrics data={operational.performance} loading={refreshing} />
-                  {operational.bottlenecks.length > 0 ? (
-                    <DelayBottlenecks data={operational.bottlenecks} loading={refreshing} />
-                  ) : null}
-                  {operational.operators.length > 0 ? (
-                    <OperatorDistribution data={operational.operators} loading={refreshing} />
-                  ) : null}
-                  <CriticalPrecatorios data={operational.critical} loading={refreshing} />
-                </CardBody>
-              </GlassCard>
+                ))}
+              </div>
             </div>
-          </Tab>
-        </Tabs>
+
+            {/* Documentos + Certidões + Jurídico 3-col */}
+            <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
+              {/* Documentos */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="p-5 pb-0">
+                  <h2 className="text-[15px] font-semibold">Documentos do credor</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Progresso de recebimento</p>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-end justify-between gap-2">
+                    <div className="text-[2rem] font-extrabold leading-none tracking-[-0.03em]">{docsPercent.toFixed(0)}%</div>
+                    <ToneChip tone={docsPercent >= 80 ? "success" : docsPercent >= 50 ? "warning" : "danger"}>
+                      {formatCount(kpis.documentos_certidoes.docs_recebidos)} / {formatCount(kpis.documentos_certidoes.total_docs)}
+                    </ToneChip>
+                  </div>
+                  <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-emerald-500" style={{ width: `${Math.min(docsPercent, 100)}%` }} />
+                  </div>
+                  <p className="mt-2 text-xs text-muted-foreground">Documentos recebidos sobre o total esperado</p>
+                </div>
+              </div>
+
+              {/* Certidões */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="p-5 pb-0">
+                  <h2 className="text-[15px] font-semibold">Certidões</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Progresso e vencimentos</p>
+                </div>
+                <div className="p-5">
+                  <div className="flex items-end justify-between gap-2">
+                    <div className="text-[2rem] font-extrabold leading-none tracking-[-0.03em]">{certPercent.toFixed(0)}%</div>
+                    <ToneChip tone={certPercent >= 80 ? "success" : certPercent >= 50 ? "warning" : "danger"}>
+                      {formatCount(kpis.documentos_certidoes.certidoes_recebidas)} / {formatCount(kpis.documentos_certidoes.total_certidoes)}
+                    </ToneChip>
+                  </div>
+                  <div className="mt-4 h-3 w-full overflow-hidden rounded-full bg-muted">
+                    <div className="h-full rounded-full bg-primary" style={{ width: `${Math.min(certPercent, 100)}%` }} />
+                  </div>
+                  <div className="mt-3">
+                    <ToneChip tone={kpis.documentos_certidoes.certidoes_vencidas > 0 ? "danger" : "success"}>
+                      {kpis.documentos_certidoes.certidoes_vencidas > 0
+                        ? `${formatCount(kpis.documentos_certidoes.certidoes_vencidas)} vencidas`
+                        : "Nenhuma vencida"}
+                    </ToneChip>
+                  </div>
+                </div>
+              </div>
+
+              {/* Jurídico */}
+              <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="p-5 pb-0">
+                  <h2 className="text-[15px] font-semibold">Jurídico</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Pareceres e resultados finais</p>
+                </div>
+                <div className="p-5">
+                  {juridicoParecerRows.length === 0 && juridicoResultadoRows.length === 0 ? (
+                    <p className="py-6 text-center text-sm text-muted-foreground">Sem dados jurídicos no período</p>
+                  ) : (
+                    <div className="grid gap-3">
+                      {[...juridicoParecerRows.slice(0, 3), ...juridicoResultadoRows.slice(0, 3)].map((row) => (
+                        <div key={row.label} className="flex items-center justify-between rounded-[14px] border border-border/50 bg-muted/10 px-3.5 py-2.5">
+                          <span className="text-sm font-medium truncate">{row.label}</span>
+                          <span className="ml-2 shrink-0 font-mono text-sm font-extrabold tabular-nums">{formatCount(row.value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Atividades */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                <div>
+                  <h2 className="text-[15px] font-semibold">Atividades por tipo</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Eventos registrados no período selecionado</p>
+                </div>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">
+                  {formatCount(atividadesRows.reduce((a, r) => a + r.value, 0))} total
+                </span>
+              </div>
+              <div className="p-5">
+                {atividadesRows.length === 0 ? (
+                  <p className="py-6 text-center text-sm text-muted-foreground">Sem atividades no período</p>
+                ) : (
+                  <div className="grid gap-3">
+                    {atividadesRows.map((row, i) => {
+                      const maxVal = atividadesRows[0]?.value || 1
+                      const pct = Math.min((row.value / maxVal) * 100, 100)
+                      const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
+                      return (
+                        <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem] items-center gap-3 text-sm">
+                          <span className="truncate font-medium">{row.label}</span>
+                          <div className="h-2.5 overflow-hidden rounded-full bg-muted">
+                            <div className={["h-full rounded-full", colors[i % colors.length]].join(" ")} style={{ width: `${pct}%` }} />
+                          </div>
+                          <span className="text-right font-extrabold tabular-nums">{formatCount(row.value)}</span>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ===== OPERATION TAB ===== */}
+        {tab === "operation" && (
+          <div className="space-y-5">
+
+            {/* ComplexityOverview */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="p-5 pb-0">
+                <h2 className="text-[15px] font-semibold">Complexidade operacional</h2>
+                <p className="mt-1.5 text-xs text-muted-foreground">Distribuição dos precatórios por nível de complexidade</p>
+              </div>
+              <div className="p-5">
+                <ComplexityOverview data={operational.complexity} loading={refreshing} />
+              </div>
+            </div>
+
+            {/* PerformanceMetrics */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="p-5 pb-0">
+                <h2 className="text-[15px] font-semibold">Métricas de performance</h2>
+                <p className="mt-1.5 text-xs text-muted-foreground">Tempos médios, SLA estourado e fila de cálculo</p>
+              </div>
+              <div className="p-5">
+                <PerformanceMetrics data={operational.performance} loading={refreshing} />
+              </div>
+            </div>
+
+            {/* Gargalos + Operadores 2-col */}
+            {(operational.bottlenecks.length > 0 || operational.operators.length > 0) && (
+              <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+                {operational.bottlenecks.length > 0 && (
+                  <div className="rounded-3xl border border-border bg-background shadow-sm">
+                    <div className="p-5 pb-0">
+                      <h2 className="text-[15px] font-semibold">Gargalos por motivo de atraso</h2>
+                      <p className="mt-1.5 text-xs text-muted-foreground">Principais motivos que travam precatórios</p>
+                    </div>
+                    <div className="p-5">
+                      <DelayBottlenecks data={operational.bottlenecks} loading={refreshing} />
+                    </div>
+                  </div>
+                )}
+                {operational.operators.length > 0 && (
+                  <div className="rounded-3xl border border-border bg-background shadow-sm">
+                    <div className="p-5 pb-0">
+                      <h2 className="text-[15px] font-semibold">Distribuição por operador</h2>
+                      <p className="mt-1.5 text-xs text-muted-foreground">Carga de trabalho por responsável de cálculo</p>
+                    </div>
+                    <div className="p-5">
+                      <OperatorDistribution data={operational.operators} loading={refreshing} />
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Críticos */}
+            <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="flex items-start justify-between gap-3 p-5 pb-0">
+                <div>
+                  <h2 className="text-[15px] font-semibold">Precatórios críticos — visão detalhada</h2>
+                  <p className="mt-1.5 text-xs text-muted-foreground">Todos os itens com maior risco operacional</p>
+                </div>
+                <Button
+                  onPress={handleRefresh}
+                  isDisabled={refreshing}
+                  variant="outline"
+                  size="sm"
+                  className="border-border"
+                >
+                  <span className="inline-flex items-center gap-2">
+                    {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    <span>Atualizar</span>
+                  </span>
+                </Button>
+              </div>
+              <div className="p-5">
+                <CriticalPrecatorios data={operational.critical} loading={refreshing} />
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </div>
   )

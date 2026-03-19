@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Clientes — Antigravity Preview</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;0,9..40,700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+<style>
+:root{
+  --bg:#f6f5f3;--surface:#fff;--surface2:#f1f0ee;--border:rgba(0,0,0,.075);--border-md:rgba(0,0,0,.12);
+  --text:#1c1c19;--text2:#5c5b57;--text3:#9a9891;
+  --pri:#e8651a;--pri-bg:rgba(232,101,26,.09);--pri-bd:rgba(232,101,26,.20);
+  --grn:#4e9618;--grn-bg:rgba(78,150,24,.09);--grn-bd:rgba(78,150,24,.20);--grn-tx:#3d7e10;
+  --amb:#b87212;--amb-bg:rgba(184,114,18,.09);--amb-bd:rgba(184,114,18,.20);
+  --blu:#1758a0;--blu-bg:rgba(23,88,160,.08);--blu-bd:rgba(23,88,160,.18);
+  --red:#b83030;--red-bg:rgba(184,48,48,.08);--red-bd:rgba(184,48,48,.18);
+  --sh:0 1px 3px rgba(0,0,0,.055),0 4px 14px rgba(0,0,0,.045);
+  --sh2:0 2px 8px rgba(0,0,0,.08),0 10px 30px rgba(0,0,0,.08);
+  --r:14px;--rs:8px;--rp:999px;
+  font-family:'DM Sans',system-ui,sans-serif;
+}
+[data-theme=dark]{
+  --bg:#0f0f0e;--surface:#1a1a18;--surface2:#232320;--border:rgba(255,255,255,.07);--border-md:rgba(255,255,255,.12);
+  --text:#edece5;--text2:#a6a59d;--text3:#686760;
+  --pri:#f07228;--pri-bg:rgba(240,114,40,.12);--pri-bd:rgba(240,114,40,.25);
+  --grn:#72c038;--grn-bg:rgba(114,192,56,.11);--grn-bd:rgba(114,192,56,.24);--grn-tx:#8ed450;
+  --amb:#d4961e;--amb-bg:rgba(212,150,30,.11);--amb-bd:rgba(212,150,30,.24);
+  --blu:#4d96e0;--blu-bg:rgba(77,150,224,.11);--blu-bd:rgba(77,150,224,.22);
+  --red:#e05555;--red-bg:rgba(224,85,85,.10);--red-bd:rgba(224,85,85,.22);
+  --sh:0 2px 8px rgba(0,0,0,.28),0 8px 28px rgba(0,0,0,.24);
+  --sh2:0 4px 16px rgba(0,0,0,.34),0 14px 44px rgba(0,0,0,.30);
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;min-height:100vh}
+
+.page{max-width:1300px;margin:0 auto;padding:28px 24px 72px}
+
+/* THEME BTN */
+.tbtn{position:fixed;top:14px;right:14px;z-index:99;background:var(--surface);border:1px solid var(--border-md);border-radius:var(--rp);padding:5px 13px;font-size:11px;font-weight:600;color:var(--text2);cursor:pointer;font-family:inherit;letter-spacing:.02em}
+.tbtn:hover{color:var(--text)}
+
+/* PAGE HEADER */
+.ph-row{display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap;margin-bottom:26px}
+.ph-bc{font-size:10.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:5px}
+.ph-bc span{color:var(--pri)}
+.ph-title{font-size:26px;font-weight:700;letter-spacing:-.03em;color:var(--text)}
+.ph-sub{font-size:13px;color:var(--text2);margin-top:2px}
+.ph-actions{display:flex;gap:8px;align-items:center}
+
+/* BUTTONS */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:7px 15px;border-radius:var(--rs);font-size:13px;font-weight:500;cursor:pointer;border:none;transition:.14s;white-space:nowrap;font-family:inherit}
+.btn-pri{background:var(--pri);color:#fff}
+.btn-pri:hover{filter:brightness(1.08)}
+.btn-ghost{background:var(--surface);color:var(--text2);border:1px solid var(--border-md)}
+.btn-ghost:hover{color:var(--text);background:var(--surface2)}
+.btn-sm{padding:6px 12px;font-size:12px;border-radius:7px}
+
+/* KPI GRID */
+.kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:24px}
+@media(max-width:860px){.kpi-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.kpi-grid{grid-template-columns:1fr}}
+
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:18px 20px;box-shadow:var(--sh);transition:.18s;position:relative;overflow:hidden;cursor:default}
+.kpi:hover{transform:translateY(-2px);box-shadow:var(--sh2)}
+.kpi-glow{position:absolute;right:-18px;top:-18px;width:80px;height:80px;border-radius:50%;opacity:.11}
+.kpi-ico{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;border:1px solid transparent}
+.kpi-ico.o{background:var(--pri-bg);color:var(--pri);border-color:var(--pri-bd)}
+.kpi-ico.g{background:var(--grn-bg);color:var(--grn);border-color:var(--grn-bd)}
+.kpi-ico.b{background:var(--blu-bg);color:var(--blu);border-color:var(--blu-bd)}
+.kpi-ico.a{background:var(--amb-bg);color:var(--amb);border-color:var(--amb-bd)}
+.kpi-lbl{font-size:10.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:6px}
+.kpi-val{font-size:27px;font-weight:700;letter-spacing:-.03em;line-height:1;margin-bottom:4px}
+.kpi-val.o{color:var(--pri)}.kpi-val.g{color:var(--grn-tx)}.kpi-val.b{color:var(--blu)}.kpi-val.a{color:var(--amb)}
+.kpi-s{font-size:11.5px;color:var(--text3)}
+
+/* FILTER BAR */
+.fbar{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);padding:12px 14px;margin-bottom:18px;box-shadow:var(--sh);display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.srch{flex:1;min-width:200px;position:relative;display:flex;align-items:center}
+.srch svg{position:absolute;left:10px;color:var(--text3);width:14px;height:14px;pointer-events:none}
+.srch input{width:100%;height:36px;padding:0 10px 0 32px;border:1px solid var(--border-md);border-radius:9px;background:var(--surface2);color:var(--text);font-size:13px;font-family:inherit;outline:none;transition:.15s}
+.srch input::placeholder{color:var(--text3)}
+.srch input:focus{border-color:var(--pri)}
+.fsep{width:1px;height:26px;background:var(--border);flex-shrink:0}
+.fchips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.fc{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:var(--rp);font-size:11.5px;font-weight:500;white-space:nowrap;border:1px solid transparent;cursor:pointer;transition:.14s}
+.fc-d{background:var(--surface2);color:var(--text2);border-color:var(--border)}
+.fc-d:hover{color:var(--text)}
+.fc-a{background:var(--pri-bg);color:var(--pri);border-color:var(--pri-bd)}
+.vtog{display:flex;gap:2px;background:var(--surface2);border-radius:8px;padding:2px;border:1px solid var(--border)}
+.vbtn{width:28px;height:26px;border-radius:6px;border:none;background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.14s}
+.vbtn.on{background:var(--surface);color:var(--text);box-shadow:0 1px 3px rgba(0,0,0,.1)}
+
+/* META ROW */
+.meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.meta-ct{font-size:12px;color:var(--text3)}
+.meta-ct strong{color:var(--text2);font-weight:600}
+.meta-sort{font-size:12px;color:var(--text2);background:none;border:none;outline:none;cursor:pointer;font-family:inherit}
+
+/* GRID */
+.cgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(268px,1fr));gap:12px}
+
+/* CLIENT CARD */
+.cc{background:var(--surface);border:1px solid var(--border);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden;cursor:pointer;transition:transform .18s,box-shadow .18s,border-color .18s;display:flex;flex-direction:column}
+.cc:hover{transform:translateY(-3px);box-shadow:var(--sh2);border-color:var(--pri-bd)}
+
+/* Card top */
+.ct{padding:14px 14px 10px;display:flex;align-items:flex-start;gap:10px}
+.av{flex-shrink:0;width:38px;height:38px;border-radius:9px;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;letter-spacing:.01em;border:1px solid transparent}
+.av.o{background:var(--pri-bg);color:var(--pri);border-color:var(--pri-bd)}
+.av.b{background:var(--blu-bg);color:var(--blu);border-color:var(--blu-bd)}
+.av.g{background:var(--grn-bg);color:var(--grn);border-color:var(--grn-bd)}
+.av.a{background:var(--amb-bg);color:var(--amb);border-color:var(--amb-bd)}
+.cn-blk{flex:1;min-width:0}
+.cn{font-size:14px;font-weight:600;color:var(--text);line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;margin-bottom:2px}
+.ccpf{font-size:10.5px;color:var(--text3);font-family:'DM Mono',monospace}
+.cmb{width:26px;height:26px;border-radius:6px;border:none;background:none;color:var(--text3);cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.14s;flex-shrink:0;margin-top:-1px}
+.cmb:hover{background:var(--surface2);color:var(--text)}
+
+/* Carteira block */
+.cw{margin:0 14px 10px;background:var(--surface2);border-radius:9px;padding:10px 12px;border:1px solid var(--border)}
+.cw-lbl{font-size:9.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
+.cw-val{font-size:19px;font-weight:700;color:var(--grn-tx);letter-spacing:-.025em;line-height:1;font-family:'DM Mono',monospace}
+.cw-sub{font-size:10.5px;color:var(--text3);margin-top:2px}
+.cw-sub span{color:var(--text2)}
+
+/* Tags */
+.ctags{padding:0 14px 9px;display:flex;gap:5px;flex-wrap:wrap}
+.tag{display:inline-flex;align-items:center;padding:3px 8px;border-radius:var(--rp);font-size:11px;font-weight:500;border:1px solid transparent}
+.tg{background:var(--grn-bg);color:var(--grn-tx);border-color:var(--grn-bd)}
+.ta{background:var(--amb-bg);color:var(--amb);border-color:var(--amb-bd)}
+.tr{background:var(--red-bg);color:var(--red);border-color:var(--red-bd)}
+.tb{background:var(--blu-bg);color:var(--blu);border-color:var(--blu-bd)}
+.td{background:var(--surface2);color:var(--text2);border-color:var(--border-md)}
+.tp{background:var(--surface2);color:var(--text2);border-color:var(--border);font-family:'DM Mono',monospace;font-size:10.5px}
+
+/* Contact */
+.ccon{padding:0 14px 10px;display:flex;flex-direction:column;gap:3px}
+.crow{display:flex;align-items:center;gap:5px;font-size:11.5px;color:var(--text2)}
+.crow svg{width:12px;height:12px;color:var(--text3);flex-shrink:0}
+.cnoc{font-size:11.5px;color:var(--text3);padding:0 14px 10px}
+
+/* Divider */
+.cdiv{height:1px;background:var(--border)}
+
+/* Footer */
+.cfoot{padding:9px 14px;display:flex;align-items:center;justify-content:space-between;gap:6px}
+.cloc{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text3)}
+.cloc svg{width:11px;height:11px}
+.ccta{display:inline-flex;align-items:center;gap:4px;font-size:11.5px;font-weight:500;color:var(--pri);background:var(--pri-bg);border:none;padding:5px 12px;border-radius:var(--rp);cursor:pointer;transition:.14s;font-family:inherit}
+.ccta:hover{background:rgba(232,101,26,.16)}
+.ccta svg{width:11px;height:11px}
+
+/* PAGINATION */
+.pagi{display:flex;align-items:center;justify-content:space-between;margin-top:28px;flex-wrap:wrap;gap:10px}
+.pagi-info{font-size:12px;color:var(--text3)}
+.pagi-ctrl{display:flex;gap:3px;align-items:center}
+.pb{min-width:30px;height:30px;border-radius:7px;border:1px solid var(--border);background:var(--surface);color:var(--text2);font-size:12.5px;font-weight:500;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:.14s;font-family:inherit;padding:0 7px}
+.pb:hover{border-color:var(--pri-bd);color:var(--pri)}
+.pb.on{background:var(--pri);color:#fff;border-color:var(--pri)}
+.pb:disabled{opacity:.35;cursor:not-allowed}
+</style>
+</head>
+<body>
+
+<button class="tbtn" onclick="document.documentElement.setAttribute('data-theme',document.documentElement.getAttribute('data-theme')==='dark'?'':'dark')">☀ / ☾</button>
+
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="ph-row">
+    <div>
+      <div class="ph-bc">CRM Operacional / <span>Clientes</span></div>
+      <h1 class="ph-title">Clientes</h1>
+      <p class="ph-sub">Gerencie clientes, carteiras e histórico de processos de ponta a ponta.</p>
+    </div>
+    <div class="ph-actions">
+      <button class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="5" cy="5" r="3.5"/><path d="M8 8l2.5 2.5"/></svg>
+        Limpar busca
+      </button>
+      <button class="btn btn-pri">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 1v10M1 6h10"/></svg>
+        Adicionar
+      </button>
+      <button class="btn btn-ghost btn-sm">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M1 3h10M3 6h6M5 9h2"/></svg>
+        Filtros avançados
+      </button>
+    </div>
+  </div>
+
+  <!-- KPIs -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="kpi-ico o"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="7" cy="7" r="5.5"/><circle cx="7" cy="7" r="2"/></svg></div>
+      <div class="kpi-lbl">Total de Clientes</div>
+      <div class="kpi-val o">1.000</div>
+      <div class="kpi-s">Base de credores</div>
+      <div class="kpi-glow" style="background:var(--pri)"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-ico g"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="1.5" y="3" width="12" height="9" rx="1.8"/><path d="M1.5 6.5h12"/></svg></div>
+      <div class="kpi-lbl">Carteira Atualizada</div>
+      <div class="kpi-val g" style="font-size:21px">R$ 4,70 Bi</div>
+      <div class="kpi-s">média R$ 4,70M / cliente</div>
+      <div class="kpi-glow" style="background:var(--grn)"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-ico a"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="7.5" cy="7.5" r="5.5"/><path d="M7.5 4.5v3l2 2"/></svg></div>
+      <div class="kpi-lbl">Clientes com Cópito</div>
+      <div class="kpi-val a">84</div>
+      <div class="kpi-s">5% com contrato ativo</div>
+      <div class="kpi-glow" style="background:var(--amb)"></div>
+    </div>
+    <div class="kpi">
+      <div class="kpi-ico b"><svg width="15" height="15" viewBox="0 0 15 15" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7.5 1.5a6 6 0 1 1 0 12 6 6 0 0 1 0-12z"/><path d="M7.5 5v3l2 1.5"/></svg></div>
+      <div class="kpi-lbl">Clientes c/ Status</div>
+      <div class="kpi-val b">1.000</div>
+      <div class="kpi-s">51 status distintos</div>
+      <div class="kpi-glow" style="background:var(--blu)"></div>
+    </div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div class="fbar">
+    <div class="srch">
+      <svg viewBox="0 0 14 14" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="5.5" cy="5.5" r="4"/><path d="M9 9 13 13"/></svg>
+      <input type="text" placeholder="Buscar por nome, CPF/CNPJ, cidade, email ou telefone…" />
+    </div>
+    <div class="fsep"></div>
+    <div class="fchips">
+      <div class="fc fc-a">100 entidades ✓</div>
+      <div class="fc fc-d">128 processos</div>
+      <div class="fc fc-d">Atualizado 15/03/26</div>
+    </div>
+    <div class="fsep"></div>
+    <div class="vtog">
+      <button class="vbtn on" title="Grade">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="currentColor"><rect x="0" y="0" width="4.5" height="4.5" rx="1.2"/><rect x="7.5" y="0" width="4.5" height="4.5" rx="1.2"/><rect x="0" y="7.5" width="4.5" height="4.5" rx="1.2"/><rect x="7.5" y="7.5" width="4.5" height="4.5" rx="1.2"/></svg>
+      </button>
+      <button class="vbtn" title="Lista">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M1 2.5h10M1 6h10M1 9.5h10"/></svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- META -->
+  <div class="meta">
+    <p class="meta-ct">Exibindo <strong>24</strong> de <strong>1.000</strong> clientes — Página 1 de 42</p>
+    <select class="meta-sort">
+      <option>Maior carteira</option>
+      <option>Nome A–Z</option>
+      <option>Última movimentação</option>
+    </select>
+  </div>
+
+  <!-- CARDS -->
+  <div class="cgrid" id="cgrid"></div>
+
+  <!-- PAGINATION -->
+  <div class="pagi">
+    <span class="pagi-info">Subtotal: 1 de 1.000 clientes</span>
+    <div class="pagi-ctrl">
+      <button class="pb" disabled>‹</button>
+      <button class="pb on">1</button>
+      <button class="pb">2</button>
+      <button class="pb">3</button>
+      <span style="color:var(--text3);font-size:13px;padding:0 3px">…</span>
+      <button class="pb">42</button>
+      <button class="pb">›</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const avCls=['o','b','g','a','o','b','a','g','o','b','g','a']
+const statuses=[
+  {l:'Negociação',c:'ta'},
+  {l:'Contrato Assinado',c:'tg'},
+  {l:'Aguardando Docs',c:'tb'},
+  {l:'Cancelado',c:'tr'},
+  {l:'Em Análise',c:'tb'},
+  {l:'Finalizado',c:'tg'},
+  {l:'Proposta Enviada',c:'ta'},
+  {l:'N/I',c:'td'},
+]
+const names=[
+  'C.R. Almeida S.A.','Espólio de S. Palmeira e outros','ADNR Almeida da Silva',
+  'Antonio Albino Ramos de Oliveira','Fundo de Inv. Créditos Não Performados','Bastos Com e Rep Equip Hospitalares',
+  'CCG Administração e Participações','Maurício Valle e outros','Adv Proença Cammarce e outros',
+  'Amelia Jacinta Mendes e outros','José Augusto Bastos','Bp Serviços Entrelaças Spe S.A.',
+  'Engstran Construtora de Obras Ltda','Legal — Fundo Inv. Créditos','Norte Ambiental Trat. Resíduos',
+  'Aline Tatiana e outros','Sebastião Mourura e outros','Amabilis Dineis e outros',
+  'Tades Sobornhuit Junior e outros','Minhoz Legal Crédito Não Performados','Antônio Sílvio Brandão Nascimento',
+  'Cristina S.A. e Engenharia Construções','Espólio Francisco Paula Xavier Neto','ADNR Silva e outros',
+]
+const carts=[
+  'R$ 1.200.199.862,00','R$ 67.942.091,00','R$ 505.366.490,65','R$ 1.188.251,45',
+  'R$ 57.547.100,00','R$ 22.148.770,45','R$ 16.383.875,00','R$ 10.099.878,20',
+  'R$ 13.460.055,85','R$ 1.161.111,10','R$ 47.147.799,00','R$ 62.534.171,04',
+  'R$ 1.118.196,75','R$ 1.365.891,20','R$ 22.148.770,46','R$ 34.492.544,65',
+  'R$ 4.747.179,00','R$ 28.321.311,35','R$ 19.317.284,55','R$ 19.298.350,00',
+  'R$ 13.286.199,01','R$ 22.023.850,90','R$ 17.285.841,05','R$ 16.298.200,55',
+]
+const cities=['São Paulo/SP','Curitiba/PR','Maringá/PR','Rio de Janeiro/RJ','Londrina/PR','Belo Horizonte/MG',null,null]
+const phones=['(11) 94523-2200','(41) 99871-0011','(44) 98765-4321',null,null]
+const emails=['cliente@gmail.com','contato@empresa.com.br',null,null]
+
+function ini(n){return n.split(' ').filter(Boolean).slice(0,2).map(w=>w[0].toUpperCase()).join('')}
+
+function card(i){
+  const nm=names[i]||names[i%names.length]
+  const st=statuses[i%statuses.length]
+  const city=cities[i%cities.length]
+  const ph=phones[i%phones.length]
+  const em=emails[i%emails.length]
+  const cart=carts[i%carts.length]
+  const cartSmall=carts[(i+1)%carts.length]
+  const procs=Math.floor((i*7+3)%6)+1
+  const ac=avCls[i%avCls.length]
+  const cpf=i%5===0?null:(i%2===0?`${100+i}.${200+i}.${300+i}-${10+i%80}`:`${10+i}.${300+i}.${400+i}/0001-${50+i%40}`)
+  const hasCon=ph||em
+  const dt=`${String(5+i%25).padStart(2,'0')}/0${1+(i%3)}/2026`
+
+  return`<div class="cc">
+  <div class="ct">
+    <div class="av ${ac}">${ini(nm)}</div>
+    <div class="cn-blk">
+      <div class="cn">${nm}</div>
+      <div class="ccpf">${cpf||'CPF/CNPJ não informado'}</div>
+    </div>
+    <button class="cmb" onclick="event.stopPropagation()">
+      <svg width="13" height="13" viewBox="0 0 13 13" fill="currentColor"><circle cx="6.5" cy="2" r="1.2"/><circle cx="6.5" cy="6.5" r="1.2"/><circle cx="6.5" cy="11" r="1.2"/></svg>
+    </button>
+  </div>
+  <div class="cw">
+    <div class="cw-lbl">Carteira Atualizada</div>
+    <div class="cw-val">${cart}</div>
+    <div class="cw-sub">Último: <span>${cartSmall.split(',')[0]},00</span></div>
+  </div>
+  <div class="ctags">
+    <span class="tag ${st.c}">${st.l}</span>
+    <span class="tag tp">${procs} proc.</span>
+  </div>
+  ${hasCon?`<div class="ccon">
+    ${ph?`<div class="crow"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M11 8.5c-.7.7-2.1.7-2.8 0L7 7.3c-.7-.7-.7-2.1 0-2.8l.9-.9c.7-.7.7-2.1 0-2.8L5.5 2c-.7-.7-2.1-.7-2.8 0L2 2.7C1.3 3.4 1.2 4.6 1.7 5.8L4.4 9.9C5 11 6.2 11.7 7.4 11.7c1 0 2-.4 2.7-1.1l.7-.7c.7-.7.7-2.1 0-2.8z"/></svg>${ph}</div>`:''}
+    ${em?`<div class="crow"><svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="1" y="2.5" width="10" height="7" rx="1.2"/><path d="M1 2.5l5 4 5-4"/></svg>${em}</div>`:''}
+  </div>`:`<p class="cnoc">Sem contato registrado</p>`}
+  <div class="cdiv"></div>
+  <div class="cfoot">
+    <div class="cloc">
+      <svg viewBox="0 0 12 12" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M6 1C3.8 1 2 2.8 2 5c0 3 4 7 4 7s4-4 4-7c0-2.2-1.8-4-4-4z"/><circle cx="6" cy="5" r="1.3"/></svg>
+      ${city||'—'}
+    </div>
+    <button class="ccta">
+      Ver detalhes
+      <svg viewBox="0 0 10 10" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M2 5h6M5.5 2 8.5 5 5.5 8"/></svg>
+    </button>
+  </div>
+</div>`
+}
+
+const g=document.getElementById('cgrid')
+let h=''
+for(let i=0;i<24;i++)h+=card(i)
+g.innerHTML=h
+</script>
+</body>
+</html>

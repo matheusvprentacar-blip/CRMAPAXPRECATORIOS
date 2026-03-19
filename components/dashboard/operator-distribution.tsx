@@ -12,7 +12,7 @@ interface OperatorDistributionProps {
 }
 
 export function OperatorDistribution({ data, loading }: OperatorDistributionProps) {
-  const surfaceClass = "border-border/70 bg-background/42 backdrop-blur-xl dark:bg-muted/48"
+  const surfaceClass = ""
 
   if (loading) {
     return (

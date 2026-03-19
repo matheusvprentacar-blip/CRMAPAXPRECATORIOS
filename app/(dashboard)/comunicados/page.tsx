@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Button as HeroButton, Spinner as HeroSpinner } from "@heroui/react"
+import { Button as HeroButton } from "@heroui/react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -120,6 +120,7 @@ function normalizeRoles(value: unknown): string[] {
 
 const ROLE_LABELS: Record<string, string> = {
   admin: "Admin",
+  tecnico_ti: "Tecnico de T.I",
   operador_comercial: "Operador comercial",
   operador_calculo: "Operador de calculo",
   operador: "Operador",

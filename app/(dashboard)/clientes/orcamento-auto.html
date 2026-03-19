@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Orçamento de Serviços Automotivos</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface2: #222222;
+    --border: #2e2e2e;
+    --accent: #f59e0b;
+    --accent2: #d97706;
+    --text: #e8e8e8;
+    --muted: #777;
+    --danger: #ef4444;
+    --green: #22c55e;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 24px;
+  }
+
+  /* ─── TOOLBAR ─────────────────────────────── */
+  .toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 28px;
+    gap: 12px;
+    flex-wrap: wrap;
+  }
+
+  .toolbar-title {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2rem;
+    letter-spacing: 3px;
+    color: var(--accent);
+  }
+
+  .toolbar-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  .btn {
+    display: flex; align-items: center; gap: 8px;
+    padding: 10px 20px;
+    border: none; border-radius: 6px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+    letter-spacing: 0.5px;
+  }
+
+  .btn-primary {
+    background: var(--accent); color: #000;
+  }
+  .btn-primary:hover { background: var(--accent2); transform: translateY(-1px); }
+
+  .btn-ghost {
+    background: var(--surface2); color: var(--text);
+    border: 1px solid var(--border);
+  }
+  .btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+  .btn-danger {
+    background: transparent; color: var(--danger);
+    border: 1px solid var(--danger);
+    padding: 6px 12px; font-size: 0.78rem;
+  }
+  .btn-danger:hover { background: var(--danger); color: #fff; }
+
+  .btn-add {
+    background: transparent; color: var(--green);
+    border: 1px dashed var(--green);
+    width: 100%; margin-top: 8px;
+    padding: 10px;
+    border-radius: 6px; font-size: 0.875rem; font-weight: 600;
+    cursor: pointer; transition: all 0.18s;
+  }
+  .btn-add:hover { background: rgba(34,197,94,0.08); }
+
+  /* ─── DOCUMENT ─────────────────────────────── */
+  .doc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    max-width: 960px;
+    margin: 0 auto;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  /* ─── HEADER STRIP ──────────────────────────── */
+  .doc-header {
+    background: linear-gradient(135deg, #1a1a1a 0%, #111 100%);
+    border-bottom: 3px solid var(--accent);
+    padding: 32px 36px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+    align-items: start;
+  }
+
+  .company-name-input {
+    font-family: 'Bebas Neue', sans-serif;
+    font-size: 2.8rem;
+    letter-spacing: 4px;
+    color: var(--accent);
+    background: transparent;
+    border: none;
+    border-bottom: 2px dashed rgba(245,158,11,0.3);
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .company-name-input:focus { border-bottom-color: var(--accent); }
+
+  .company-sub {
+    display: flex; flex-direction: column; gap: 6px;
+    margin-top: 8px;
+  }
+
+  .doc-meta {
+    text-align: right;
+    display: flex; flex-direction: column; gap: 6px;
+    min-width: 200px;
+  }
+
+  .meta-row {
+    display: flex; align-items: center; gap: 10px; justify-content: flex-end;
+  }
+
+  .meta-label {
+    font-size: 0.7rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  .meta-value {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem; color: var(--text);
+    background: transparent; border: none;
+    border-bottom: 1px dashed var(--border);
+    outline: none; text-align: right;
+    width: 140px; color: var(--text);
+    transition: border-color 0.2s;
+  }
+  .meta-value:focus { border-bottom-color: var(--accent); }
+
+  /* ─── SECTION ──────────────────────────────── */
+  .section {
+    padding: 28px 36px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .section-label {
+    font-size: 0.65rem; letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--accent); font-weight: 600; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px;
+  }
+  .section-label::after {
+    content: ''; flex: 1; height: 1px; background: var(--border);
+  }
+
+  /* ─── GRID FIELDS ───────────────────────────── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 16px; }
+
+  .field { display: flex; flex-direction: column; gap: 5px; }
+
+  .field label {
+    font-size: 0.68rem; letter-spacing: 1.2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  .field input, .field textarea, .field select {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 9px 12px;
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.9rem;
+    outline: none;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+  }
+  .field input:focus, .field textarea:focus, .field select:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(245,158,11,0.1);
+  }
+  .field textarea { resize: vertical; min-height: 80px; }
+  .field select option { background: var(--surface2); }
+
+  /* ─── SERVICES TABLE ────────────────────────── */
+  .table-wrap { overflow-x: auto; }
+
+  table {
+    width: 100%; border-collapse: collapse;
+    font-size: 0.875rem;
+  }
+
+  thead th {
+    background: #111;
+    padding: 10px 12px;
+    text-align: left;
+    font-size: 0.65rem; letter-spacing: 1.5px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+    border-bottom: 1px solid var(--border);
+  }
+
+  tbody tr { border-bottom: 1px solid var(--border); transition: background 0.15s; }
+  tbody tr:hover { background: rgba(255,255,255,0.02); }
+
+  tbody td { padding: 8px 12px; vertical-align: middle; }
+
+  .td-num { width: 40px; text-align: center; color: var(--muted); font-family: 'DM Mono', monospace; font-size: 0.8rem; }
+  .td-desc { min-width: 220px; }
+  .td-qty  { width: 80px; }
+  .td-unit { width: 130px; }
+  .td-total{ width: 130px; font-family: 'DM Mono', monospace; color: var(--accent); }
+  .td-del  { width: 60px; text-align: center; }
+
+  .table-input {
+    background: transparent;
+    border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--text);
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.875rem;
+    padding: 4px 6px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .table-input:focus { border-bottom-color: var(--accent); }
+  .table-input.num { font-family: 'DM Mono', monospace; text-align: right; }
+
+  .row-total {
+    font-family: 'DM Mono', monospace;
+    color: var(--accent); font-weight: 500;
+  }
+
+  /* ─── TOTALS ────────────────────────────────── */
+  .totals-section {
+    padding: 24px 36px;
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 24px;
+  }
+
+  .notes-area { display: flex; flex-direction: column; gap: 8px; }
+  .notes-area label {
+    font-size: 0.65rem; letter-spacing: 2px; text-transform: uppercase;
+    color: var(--muted); font-weight: 600;
+  }
+
+  .totals-box {
+    min-width: 280px;
+    display: flex; flex-direction: column; gap: 1px;
+    background: var(--border);
+    border-radius: 8px; overflow: hidden;
+    align-self: start;
+  }
+
+  .total-row {
+    display: flex; align-items: center; justify-content: space-between;
+    background: var(--surface2);
+    padding: 10px 16px; gap: 16px;
+  }
+
+  .total-row.grand {
+    background: var(--accent);
+    color: #000;
+  }
+
+  .total-label {
+    font-size: 0.75rem; letter-spacing: 1px; text-transform: uppercase;
+    font-weight: 600; color: var(--muted);
+  }
+  .total-row.grand .total-label { color: rgba(0,0,0,0.7); }
+
+  .total-val {
+    font-family: 'DM Mono', monospace;
+    font-size: 1rem; font-weight: 600;
+  }
+  .total-row.grand .total-val { font-size: 1.2rem; color: #000; }
+
+  .discount-input, .tax-input {
+    font-family: 'DM Mono', monospace;
+    font-size: 0.9rem;
+    background: transparent; border: none;
+    border-bottom: 1px dashed var(--border);
+    color: var(--text); text-align: right;
+    width: 80px; outline: none;
+    transition: border-color 0.2s;
+  }
+  .discount-input:focus, .tax-input:focus { border-bottom-color: var(--accent); }
+
+  /* ─── FOOTER ────────────────────────────────── */
+  .doc-footer {
+    padding: 20px 36px;
+    border-top: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: space-between;
+    background: #111; gap: 20px; flex-wrap: wrap;
+  }
+
+  .validity-row { display: flex; align-items: center; gap: 12px; }
+  .validity-row label { font-size: 0.75rem; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+
+  .status-select {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 6px; color: var(--text);
+    font-family: 'DM Sans', sans-serif; font-size: 0.875rem;
+    padding: 6px 12px; outline: none; cursor: pointer;
+  }
+  .status-select:focus { border-color: var(--accent); }
+
+  .status-dot {
+    width: 8px; height: 8px; border-radius: 50%;
+    display: inline-block; margin-right: 6px;
+  }
+
+  /* ─── PRINT ─────────────────────────────────── */
+  @media print {
+    body { background: #fff !important; color: #000 !important; padding: 0; }
+    .toolbar { display: none !important; }
+    .doc { box-shadow: none; border: none; max-width: 100%; }
+    :root {
+      --bg: #fff; --surface: #fff; --surface2: #f5f5f5;
+      --border: #ddd; --accent: #c47a00; --text: #111; --muted: #555;
+    }
+    .btn-add, .btn-danger, .td-del { display: none !important; }
+    .company-name-input, .field input, .field textarea, .field select,
+    .table-input, .meta-value, .discount-input, .tax-input, .status-select {
+      border: none !important; box-shadow: none !important;
+      -webkit-print-color-adjust: exact;
+    }
+    .doc-header { background: #f5f5f5 !important; }
+    .total-row.grand { background: #c47a00 !important; -webkit-print-color-adjust: exact; }
+    thead th { background: #f5f5f5 !important; -webkit-print-color-adjust: exact; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ─── TOOLBAR ───────────────────────────────────────────── -->
+<div class="toolbar">
+  <div class="toolbar-title">⚙ AutoOrçamento</div>
+  <div class="toolbar-actions">
+    <button class="btn btn-ghost" onclick="clearForm()">🗑 Limpar</button>
+    <button class="btn btn-ghost" onclick="window.print()">🖨 Imprimir</button>
+    <button class="btn btn-primary" onclick="downloadPDF()">⬇ Baixar PDF</button>
+  </div>
+</div>
+
+<!-- ─── DOCUMENT ──────────────────────────────────────────── -->
+<div class="doc" id="document">
+
+  <!-- HEADER -->
+  <div class="doc-header">
+    <div>
+      <input class="company-name-input" id="companyName" type="text" placeholder="NOME DA OFICINA" value="">
+      <div class="company-sub">
+        <div class="field"><input type="text" id="companyCNPJ" placeholder="CNPJ: 00.000.000/0001-00" style="background:transparent;border:none;border-bottom:1px dashed rgba(255,255,255,0.15);color:var(--muted);font-size:0.8rem;outline:none;padding:4px 0;width:100%;"></div>
+        <div class="field"><input type="text" id="companyAddr" placeholder="Endereço • Telefone • E-mail" style="background:transparent;border:none;border-bottom:1px dashed rgba(255,255,255,0.15);color:var(--muted);font-size:0.8rem;outline:none;padding:4px 0;width:100%;"></div>
+      </div>
+    </div>
+
+    <div class="doc-meta">
+      <div class="meta-row">
+        <span class="meta-label">Orçamento Nº</span>
+        <input class="meta-value" id="docNumber" type="text" value="001" />
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Data</span>
+        <input class="meta-value" id="docDate" type="date" />
+      </div>
+      <div class="meta-row">
+        <span class="meta-label">Válido até</span>
+        <input class="meta-value" id="validUntil" type="date" />
+      </div>
+      <div class="meta-row" style="margin-top:8px;">
+        <span class="meta-label">Status</span>
+        <select class="status-select" id="docStatus" onchange="updateStatus()">
+          <option value="orcamento">📋 Orçamento</option>
+          <option value="aprovado">✅ Aprovado</option>
+          <option value="reprovado">❌ Reprovado</option>
+          <option value="execucao">🔧 Em Execução</option>
+          <option value="concluido">🏁 Concluído</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- CLIENTE -->
+  <div class="section">
+    <div class="section-label">Dados do Cliente</div>
+    <div class="grid-3" style="gap:16px;">
+      <div class="field" style="grid-column: span 2;">
+        <label>Nome Completo</label>
+        <input type="text" id="clientName" placeholder="Nome do cliente">
+      </div>
+      <div class="field">
+        <label>CPF / CNPJ</label>
+        <input type="text" id="clientDoc" placeholder="000.000.000-00">
+      </div>
+      <div class="field">
+        <label>Telefone</label>
+        <input type="tel" id="clientPhone" placeholder="(00) 00000-0000">
+      </div>
+      <div class="field">
+        <label>E-mail</label>
+        <input type="email" id="clientEmail" placeholder="cliente@email.com">
+      </div>
+      <div class="field">
+        <label>Cidade / Estado</label>
+        <input type="text" id="clientCity" placeholder="Cidade – UF">
+      </div>
+    </div>
+  </div>
+
+  <!-- VEÍCULO -->
+  <div class="section">
+    <div class="section-label">Dados do Veículo</div>
+    <div class="grid-4">
+      <div class="field" style="grid-column: span 2;">
+        <label>Modelo / Marca</label>
+        <input type="text" id="carModel" placeholder="Ex: Toyota Corolla">
+      </div>
+      <div class="field">
+        <label>Ano</label>
+        <input type="text" id="carYear" placeholder="2023">
+      </div>
+      <div class="field">
+        <label>Cor</label>
+        <input type="text" id="carColor" placeholder="Prata">
+      </div>
+      <div class="field">
+        <label>Placa</label>
+        <input type="text" id="carPlate" placeholder="ABC-1D23" style="text-transform:uppercase;" oninput="this.value=this.value.toUpperCase()">
+      </div>
+      <div class="field">
+        <label>Chassi / VIN</label>
+        <input type="text" id="carChassi" placeholder="9BWZZZ377VT004251">
+      </div>
+      <div class="field">
+        <label>KM Atual</label>
+        <input type="text" id="carKm" placeholder="85.000 km">
+      </div>
+      <div class="field">
+        <label>Combustível</label>
+        <select id="carFuel">
+          <option value="">— Selecione —</option>
+          <option>Gasolina</option>
+          <option>Etanol</option>
+          <option>Flex</option>
+          <option>Diesel</option>
+          <option>GNV</option>
+          <option>Elétrico</option>
+          <option>Híbrido</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <!-- SERVIÇOS -->
+  <div class="section">
+    <div class="section-label">Serviços e Peças</div>
+    <div class="table-wrap">
+      <table id="servicesTable">
+        <thead>
+          <tr>
+            <th class="td-num">#</th>
+            <th class="td-desc">Descrição</th>
+            <th>Tipo</th>
+            <th class="td-qty">Qtd</th>
+            <th class="td-unit">Valor Unit. (R$)</th>
+            <th class="td-total">Total (R$)</th>
+            <th class="td-del"></th>
+          </tr>
+        </thead>
+        <tbody id="serviceRows">
+          <!-- rows inserted by JS -->
+        </tbody>
+      </table>
+    </div>
+    <button class="btn-add" onclick="addRow()">+ Adicionar linha</button>
+  </div>
+
+  <!-- TOTALS + NOTES -->
+  <div class="totals-section">
+    <div class="notes-area">
+      <label>Observações / Condições</label>
+      <textarea class="field" id="notes" placeholder="Ex: Garantia de 90 dias nos serviços. Peças com garantia de fábrica. Pagamento em até 3x sem juros…" style="background:var(--surface2);border:1px solid var(--border);border-radius:6px;padding:12px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:0.875rem;outline:none;resize:vertical;min-height:120px;transition:border-color 0.2s;" onfocus="this.style.borderColor='var(--accent)'" onblur="this.style.borderColor='var(--border)'"></textarea>
+    </div>
+
+    <div class="totals-box">
+      <div class="total-row">
+        <span class="total-label">Subtotal</span>
+        <span class="total-val" id="subtotal">R$ 0,00</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Desconto (%)</span>
+        <input class="discount-input" id="discount" type="number" min="0" max="100" value="0" oninput="recalc()">
+      </div>
+      <div class="total-row">
+        <span class="total-label">Desc. (R$)</span>
+        <span class="total-val" id="discountVal" style="color:var(--danger);">- R$ 0,00</span>
+      </div>
+      <div class="total-row">
+        <span class="total-label">Acréscimo (%)</span>
+        <input class="tax-input" id="tax" type="number" min="0" max="100" value="0" oninput="recalc()">
+      </div>
+      <div class="total-row">
+        <span class="total-label">Acréscimo (R$)</span>
+        <span class="total-val" id="taxVal" style="color:var(--green);">+ R$ 0,00</span>
+      </div>
+      <div class="total-row grand">
+        <span class="total-label">TOTAL GERAL</span>
+        <span class="total-val" id="grandTotal">R$ 0,00</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- FOOTER -->
+  <div class="doc-footer">
+    <div style="color:var(--muted);font-size:0.78rem;max-width:380px;">
+      Este orçamento não constitui ordem de serviço. A execução dos serviços está condicionada à aprovação formal do cliente.
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:6px;">
+      <div style="width:200px;border-top:1px solid var(--border);"></div>
+      <span style="font-size:0.75rem;color:var(--muted);">Assinatura do Responsável</span>
+    </div>
+  </div>
+
+</div><!-- /doc -->
+
+<script>
+  // ── Init date ────────────────────────────────
+  const today = new Date();
+  const fmt = d => d.toISOString().split('T')[0];
+  document.getElementById('docDate').value = fmt(today);
+  const valid = new Date(today); valid.setDate(valid.getDate() + 30);
+  document.getElementById('validUntil').value = fmt(valid);
+
+  // ── Row management ───────────────────────────
+  let rowCount = 0;
+
+  function addRow(desc='', tipo='Serviço', qty=1, unit=0) {
+    rowCount++;
+    const n = rowCount;
+    const tbody = document.getElementById('serviceRows');
+    const tr = document.createElement('tr');
+    tr.id = 'row-' + n;
+    tr.innerHTML = `
+      <td class="td-num">${n}</td>
+      <td class="td-desc">
+        <input class="table-input" type="text" placeholder="Descrição do serviço ou peça" value="${desc}" oninput="recalc()">
+      </td>
+      <td>
+        <select class="table-input" style="font-size:0.8rem;" onchange="recalc()">
+          <option${tipo==='Serviço'?' selected':''}>Serviço</option>
+          <option${tipo==='Peça'?' selected':''}>Peça</option>
+          <option${tipo==='Mão de obra'?' selected':''}>Mão de obra</option>
+          <option${tipo==='Fluido'?' selected':''}>Fluido</option>
+          <option${tipo==='Outro'?' selected':''}>Outro</option>
+        </select>
+      </td>
+      <td class="td-qty">
+        <input class="table-input num" type="number" min="0.01" step="0.01" value="${qty}" oninput="recalc()" data-row="${n}">
+      </td>
+      <td class="td-unit">
+        <input class="table-input num" type="number" min="0" step="0.01" value="${unit.toFixed(2)}" oninput="recalc()" data-row="${n}">
+      </td>
+      <td class="td-total row-total" id="rt-${n}">R$ 0,00</td>
+      <td class="td-del"><button class="btn btn-danger" onclick="removeRow(${n})">✕</button></td>
+    `;
+    tbody.appendChild(tr);
+    recalc();
+  }
+
+  function removeRow(n) {
+    const tr = document.getElementById('row-' + n);
+    if (tr) tr.remove();
+    recalc();
+    renumber();
+  }
+
+  function renumber() {
+    document.querySelectorAll('#serviceRows tr').forEach((tr, i) => {
+      tr.querySelector('.td-num').textContent = i + 1;
+    });
+  }
+
+  // ── Calculation ──────────────────────────────
+  function fmt(n) {
+    return 'R$ ' + n.toFixed(2).replace('.', ',').replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+  }
+
+  function recalc() {
+    let sub = 0;
+    document.querySelectorAll('#serviceRows tr').forEach(tr => {
+      const inputs = tr.querySelectorAll('input[type="number"]');
+      const qty  = parseFloat(inputs[0]?.value) || 0;
+      const unit = parseFloat(inputs[1]?.value) || 0;
+      const total = qty * unit;
+      const id = tr.id.replace('row-', '');
+      const cell = document.getElementById('rt-' + id);
+      if (cell) cell.textContent = fmt(total);
+      sub += total;
+    });
+
+    const disc = Math.max(0, Math.min(100, parseFloat(document.getElementById('discount').value) || 0));
+    const tax  = Math.max(0, Math.min(100, parseFloat(document.getElementById('tax').value) || 0));
+    const discVal = sub * disc / 100;
+    const taxVal  = (sub - discVal) * tax / 100;
+    const grand   = sub - discVal + taxVal;
+
+    document.getElementById('subtotal').textContent   = fmt(sub);
+    document.getElementById('discountVal').textContent = '- ' + fmt(discVal);
+    document.getElementById('taxVal').textContent      = '+ ' + fmt(taxVal);
+    document.getElementById('grandTotal').textContent  = fmt(grand);
+  }
+
+  // ── Status update ────────────────────────────
+  function updateStatus() {}
+
+  // ── Clear ────────────────────────────────────
+  function clearForm() {
+    if (!confirm('Limpar todos os dados do orçamento?')) return;
+    document.getElementById('serviceRows').innerHTML = '';
+    rowCount = 0;
+    ['companyName','companyCNPJ','companyAddr','clientName','clientDoc',
+     'clientPhone','clientEmail','clientCity','carModel','carYear',
+     'carColor','carPlate','carChassi','carKm','notes'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.value = '';
+    });
+    document.getElementById('discount').value = 0;
+    document.getElementById('tax').value = 0;
+    document.getElementById('docNumber').value = '001';
+    const t = new Date(); document.getElementById('docDate').value = fmt(t);
+    const v = new Date(t); v.setDate(v.getDate()+30);
+    document.getElementById('validUntil').value = fmt(v);
+    recalc();
+    addDefaultRows();
+  }
+
+  // ── PDF Download ─────────────────────────────
+  function downloadPDF() {
+    const toolbar = document.querySelector('.toolbar');
+    toolbar.style.display = 'none';
+    document.querySelectorAll('.btn-add, .btn-danger, .td-del').forEach(el => el.style.display = 'none');
+
+    // Temporarily override styles for print
+    const orig = document.body.style.cssText;
+    document.body.style.background = '#fff';
+    document.body.style.color = '#000';
+
+    window.print();
+
+    // Restore
+    setTimeout(() => {
+      toolbar.style.display = '';
+      document.querySelectorAll('.btn-add, .btn-danger').forEach(el => el.style.display = '');
+      document.querySelectorAll('.td-del').forEach(el => el.style.display = '');
+      document.body.style.cssText = orig;
+    }, 100);
+  }
+
+  // ── Default rows ─────────────────────────────
+  function addDefaultRows() {
+    addRow('', 'Serviço', 1, 0);
+    addRow('', 'Peça', 1, 0);
+    addRow('', 'Mão de obra', 1, 0);
+  }
+
+  addDefaultRows();
+</script>
+</body>
+</html>

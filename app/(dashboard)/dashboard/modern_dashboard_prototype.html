@@ -1,0 +1,1077 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard Estratégico — Proposta Moderna</title>
+  <style>
+    :root {
+      --bg: #f6f7fb;
+      --panel: rgba(255,255,255,.82);
+      --panel-strong: #ffffff;
+      --line: rgba(15, 23, 42, 0.08);
+      --text: #0f172a;
+      --muted: #667085;
+      --brand: #ff7a1a;
+      --brand-2: #ffb36b;
+      --blue: #4f7cff;
+      --cyan: #16b1ff;
+      --green: #0db57a;
+      --yellow: #ffb21d;
+      --red: #f25555;
+      --purple: #7c5cff;
+      --shadow-xl: 0 30px 80px rgba(15, 23, 42, 0.08);
+      --shadow-md: 0 12px 30px rgba(15, 23, 42, 0.08);
+      --shadow-sm: 0 8px 18px rgba(15, 23, 42, 0.06);
+      --radius-xl: 28px;
+      --radius-lg: 22px;
+      --radius-md: 16px;
+      --radius-sm: 12px;
+      --sidebar-w: 92px;
+      --content-max: 1460px;
+    }
+
+    * { box-sizing: border-box; }
+    html, body { margin: 0; padding: 0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: var(--bg); color: var(--text); }
+    body::before,
+    body::after {
+      content: "";
+      position: fixed;
+      inset: auto;
+      z-index: 0;
+      pointer-events: none;
+      filter: blur(80px);
+      opacity: .45;
+    }
+    body::before {
+      width: 360px; height: 360px; right: -80px; top: -40px;
+      background: radial-gradient(circle, rgba(255,122,26,.25), transparent 60%);
+    }
+    body::after {
+      width: 440px; height: 440px; left: -120px; bottom: -120px;
+      background: radial-gradient(circle, rgba(79,124,255,.16), transparent 62%);
+    }
+
+    .app {
+      position: relative;
+      z-index: 1;
+      display: grid;
+      grid-template-columns: var(--sidebar-w) minmax(0, 1fr);
+      min-height: 100vh;
+    }
+
+    .sidebar {
+      position: sticky;
+      top: 0;
+      height: 100vh;
+      padding: 18px 14px;
+      border-right: 1px solid var(--line);
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.70));
+      backdrop-filter: blur(18px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .brand {
+      width: 52px;
+      height: 52px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--brand), #ff9c4b);
+      box-shadow: 0 16px 36px rgba(255,122,26,.32);
+      display: grid;
+      place-items: center;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 800;
+    }
+
+    .nav-group { display: grid; gap: 10px; width: 100%; }
+    .nav-btn {
+      width: 100%;
+      height: 48px;
+      border: 1px solid transparent;
+      background: rgba(255,255,255,.75);
+      border-radius: 16px;
+      display: grid;
+      place-items: center;
+      color: #475467;
+      box-shadow: var(--shadow-sm);
+      transition: .22s ease;
+      cursor: default;
+      font-size: 18px;
+    }
+    .nav-btn.active {
+      background: linear-gradient(180deg, rgba(255,122,26,.16), rgba(255,122,26,.08));
+      color: var(--brand);
+      border-color: rgba(255,122,26,.18);
+      transform: translateY(-1px);
+    }
+
+    .main {
+      padding: 26px;
+    }
+
+    .container {
+      max-width: var(--content-max);
+      margin: 0 auto;
+      display: grid;
+      gap: 22px;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .topbar-actions { display: flex; align-items: center; gap: 12px; }
+    .avatar, .icon-chip {
+      width: 42px; height: 42px; border-radius: 14px;
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.86);
+      box-shadow: var(--shadow-sm);
+      display: grid; place-items: center;
+      font-weight: 700;
+    }
+    .avatar { background: linear-gradient(135deg, var(--brand), #ff9d51); color: white; }
+
+    .hero {
+      position: relative;
+      overflow: hidden;
+      padding: 28px;
+      border-radius: 30px;
+      background:
+        radial-gradient(circle at top right, rgba(255,122,26,.18), transparent 30%),
+        radial-gradient(circle at left center, rgba(79,124,255,.10), transparent 34%),
+        linear-gradient(180deg, rgba(255,255,255,.88), rgba(255,255,255,.80));
+      border: 1px solid rgba(255,255,255,.72);
+      box-shadow: var(--shadow-xl);
+      backdrop-filter: blur(22px);
+    }
+
+    .hero-grid {
+      display: grid;
+      grid-template-columns: minmax(0, 1.35fr) minmax(360px, .9fr);
+      gap: 22px;
+      align-items: stretch;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(255,122,26,.10);
+      color: #cb5f10;
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: .02em;
+    }
+
+    h1 { margin: 14px 0 10px; font-size: clamp(30px, 4vw, 44px); line-height: 1.05; letter-spacing: -.03em; }
+    .subtitle { margin: 0; color: var(--muted); max-width: 850px; font-size: 15px; line-height: 1.6; }
+
+    .toolbar {
+      margin-top: 20px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .segmented,
+    .button,
+    .select,
+    .ghost-button,
+    .search {
+      border: 1px solid var(--line);
+      background: rgba(255,255,255,.82);
+      box-shadow: var(--shadow-sm);
+      border-radius: 16px;
+      min-height: 46px;
+    }
+
+    .search {
+      flex: 1 1 280px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      color: var(--muted);
+    }
+
+    .segmented {
+      display: inline-flex;
+      padding: 5px;
+      gap: 5px;
+    }
+
+    .segmented button,
+    .button,
+    .ghost-button {
+      appearance: none;
+      border: 0;
+      background: transparent;
+      padding: 11px 16px;
+      border-radius: 12px;
+      font-weight: 700;
+      color: #475467;
+      cursor: pointer;
+      transition: .2s ease;
+    }
+
+    .segmented button.active,
+    .button {
+      background: linear-gradient(135deg, var(--brand), #ff9843);
+      color: white;
+      box-shadow: 0 14px 28px rgba(255,122,26,.24);
+    }
+
+    .ghost-button:hover,
+    .segmented button:hover { background: rgba(15,23,42,.04); }
+
+    .select {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      color: #344054;
+      min-width: 170px;
+    }
+
+    .hero-side {
+      display: grid;
+      gap: 14px;
+      align-content: start;
+    }
+
+    .hero-panel {
+      padding: 18px;
+      border-radius: 22px;
+      background: linear-gradient(180deg, rgba(255,255,255,.86), rgba(255,255,255,.72));
+      border: 1px solid rgba(15, 23, 42, 0.06);
+      box-shadow: var(--shadow-md);
+    }
+
+    .hero-panel h3,
+    .section-title,
+    .card-title { margin: 0; font-size: 15px; }
+    .hero-panel p,
+    .section-subtitle,
+    .card-subtitle { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.5; }
+
+    .hero-metric {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: end;
+      gap: 12px;
+    }
+
+    .hero-metric strong { font-size: 34px; line-height: 1; letter-spacing: -.03em; }
+    .trend {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 12px;
+      border-radius: 14px;
+      background: rgba(13,181,122,.10);
+      color: #0a8f61;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .grid-kpis {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.82));
+      border: 1px solid rgba(15,23,42,.06);
+      border-radius: 26px;
+      box-shadow: var(--shadow-md);
+      overflow: hidden;
+    }
+
+    .card-inner { padding: 20px; }
+
+    .kpi {
+      position: relative;
+      isolation: isolate;
+      min-height: 168px;
+    }
+    .kpi::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      z-index: -1;
+      background: radial-gradient(circle at top right, rgba(255,122,26,.15), transparent 36%);
+      opacity: 1;
+    }
+
+    .kpi-top,
+    .row-between {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .label { font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: .08em; color: #667085; }
+    .value-xl { margin-top: 12px; font-size: clamp(28px, 3vw, 36px); font-weight: 800; letter-spacing: -.03em; }
+    .muted { color: var(--muted); }
+    .tiny { font-size: 12px; line-height: 1.5; }
+
+    .icon-badge {
+      width: 48px; height: 48px; border-radius: 16px; display: grid; place-items: center;
+      background: rgba(255,255,255,.9); border: 1px solid rgba(15,23,42,.06);
+      box-shadow: var(--shadow-sm); font-size: 20px;
+    }
+
+    .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .chip {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 9px 12px; border-radius: 999px; font-size: 12px; font-weight: 700;
+      border: 1px solid rgba(15,23,42,.06);
+      background: rgba(255,255,255,.8);
+      color: #475467;
+    }
+    .chip.success { color: #087a53; background: rgba(13,181,122,.10); }
+    .chip.warning { color: #a16800; background: rgba(255,178,29,.12); }
+    .chip.danger  { color: #b42318; background: rgba(242,85,85,.11); }
+    .chip.info    { color: #175cd3; background: rgba(79,124,255,.10); }
+
+    .section-grid-2,
+    .section-grid-3,
+    .section-grid-4 {
+      display: grid;
+      gap: 18px;
+    }
+    .section-grid-2 { grid-template-columns: 1.3fr .9fr; }
+    .section-grid-3 { grid-template-columns: 1.1fr .9fr .8fr; }
+    .section-grid-4 { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+
+    .card-header {
+      padding: 20px 20px 0;
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      align-items: start;
+    }
+
+    .card-content { padding: 18px 20px 20px; }
+
+    .legend {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+    .dot {
+      width: 10px; height: 10px; border-radius: 999px; display: inline-block;
+    }
+
+    .line-chart {
+      width: 100%; height: 280px; border-radius: 22px;
+      background:
+        linear-gradient(180deg, rgba(255,255,255,.56), rgba(255,255,255,.20)),
+        repeating-linear-gradient(180deg, rgba(15,23,42,.04), rgba(15,23,42,.04) 1px, transparent 1px, transparent 58px),
+        linear-gradient(180deg, rgba(255,122,26,.04), rgba(79,124,255,.02));
+      border: 1px solid rgba(15,23,42,.06);
+      overflow: hidden;
+      position: relative;
+    }
+    .line-chart svg { width: 100%; height: 100%; display: block; }
+
+    .mini-grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+      margin-top: 16px;
+    }
+
+    .mini-stat {
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.76);
+      border: 1px solid rgba(15,23,42,.06);
+    }
+
+    .mini-stat strong { display: block; margin-top: 8px; font-size: 22px; letter-spacing: -.02em; }
+
+    .status-list { display: grid; gap: 12px; }
+    .status-item {
+      padding: 16px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(15,23,42,.06);
+      background: rgba(255,255,255,.74);
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(15,23,42,.06);
+      overflow: hidden;
+      margin-top: 10px;
+    }
+    .progress-fill {
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--brand), #ffab5d);
+    }
+    .progress-fill.blue { background: linear-gradient(90deg, var(--blue), #8eb4ff); }
+    .progress-fill.green { background: linear-gradient(90deg, var(--green), #78e3b8); }
+    .progress-fill.yellow { background: linear-gradient(90deg, #ff9800, #ffd17a); }
+    .progress-fill.red { background: linear-gradient(90deg, #ef4444, #ff9e9e); }
+
+    .ring-wrap { display: flex; gap: 16px; align-items: center; }
+    .ring {
+      width: 96px; height: 96px; border-radius: 50%;
+      background: conic-gradient(var(--brand) 0 72%, rgba(15,23,42,.08) 72% 100%);
+      display: grid; place-items: center;
+      position: relative;
+      flex: 0 0 auto;
+    }
+    .ring::after {
+      content: "";
+      position: absolute;
+      inset: 12px;
+      background: white;
+      border-radius: inherit;
+      box-shadow: inset 0 0 0 1px rgba(15,23,42,.05);
+    }
+    .ring strong {
+      position: relative;
+      z-index: 1;
+      font-size: 18px;
+      letter-spacing: -.02em;
+    }
+
+    .bars { display: grid; gap: 12px; margin-top: 10px; }
+    .bar-item {
+      display: grid;
+      grid-template-columns: 220px minmax(0, 1fr) 96px;
+      gap: 12px;
+      align-items: center;
+      font-size: 14px;
+    }
+    .bar-label {
+      display: flex; align-items: center; gap: 10px;
+      min-width: 0;
+      white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .bar-value {
+      text-align: right;
+      color: #344054;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .stack-card {
+      background: linear-gradient(180deg, rgba(255,255,255,.84), rgba(255,255,255,.72));
+      border: 1px solid rgba(15,23,42,.06);
+      border-radius: 22px;
+      padding: 16px;
+      display: grid;
+      gap: 14px;
+    }
+
+    .heat-card {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      margin-top: 10px;
+    }
+    .heat-day {
+      aspect-ratio: 1 / 1;
+      border-radius: 14px;
+      background: rgba(15,23,42,.05);
+      border: 1px solid rgba(15,23,42,.04);
+    }
+    .heat-day.lv1 { background: rgba(255,122,26,.18); }
+    .heat-day.lv2 { background: rgba(255,122,26,.32); }
+    .heat-day.lv3 { background: rgba(255,122,26,.48); }
+    .heat-day.lv4 { background: rgba(255,122,26,.72); }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 14px 12px;
+      text-align: left;
+      border-bottom: 1px solid rgba(15,23,42,.06);
+    }
+    th {
+      font-size: 12px;
+      color: #667085;
+      text-transform: uppercase;
+      letter-spacing: .08em;
+    }
+    tbody tr:hover { background: rgba(15,23,42,.02); }
+
+    .person {
+      display: flex; align-items: center; gap: 10px;
+    }
+    .person-badge {
+      width: 36px; height: 36px; border-radius: 12px;
+      display: grid; place-items: center;
+      background: linear-gradient(135deg, rgba(79,124,255,.16), rgba(255,122,26,.14));
+      font-weight: 800;
+      color: #344054;
+    }
+
+    .footer-note {
+      padding: 14px 18px;
+      border-radius: 18px;
+      background: rgba(255,255,255,.72);
+      border: 1px dashed rgba(15,23,42,.10);
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.6;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(15,23,42,.06);
+    }
+
+    .mobile-only { display: none; }
+
+    @media (max-width: 1280px) {
+      .hero-grid,
+      .section-grid-2,
+      .section-grid-3,
+      .grid-kpis,
+      .section-grid-4 {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+      .hero-grid > *:first-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 860px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar {
+        position: relative;
+        height: auto;
+        width: calc(100% - 24px);
+        margin: 12px auto 0;
+        border-radius: 22px;
+        flex-direction: row;
+        justify-content: space-between;
+      }
+      .nav-group { display: flex; width: auto; }
+      .main { padding: 14px; }
+      .container, .hero-grid, .section-grid-2, .section-grid-3, .section-grid-4, .grid-kpis { grid-template-columns: 1fr; }
+      .bar-item { grid-template-columns: 1fr; }
+      .topbar { flex-direction: column; align-items: stretch; }
+      .topbar-actions { justify-content: space-between; }
+      .mobile-only { display: inline-flex; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">⌘</div>
+      <div class="nav-group">
+        <div class="nav-btn active">◫</div>
+        <div class="nav-btn">◌</div>
+        <div class="nav-btn">⌁</div>
+        <div class="nav-btn">◴</div>
+        <div class="nav-btn">☰</div>
+      </div>
+      <div class="nav-group">
+        <div class="nav-btn">⚙</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <div class="container">
+        <div class="topbar">
+          <div>
+            <div class="eyebrow">● Nova direção visual aprovada para avaliação</div>
+          </div>
+          <div class="topbar-actions">
+            <div class="icon-chip">🔔</div>
+            <div class="icon-chip">⟳</div>
+            <div class="avatar">MI</div>
+          </div>
+        </div>
+
+        <section class="hero">
+          <div class="hero-grid">
+            <div>
+              <span class="eyebrow">Dashboard estratégico · versão premium</span>
+              <h1>Mais hierarquia, mais contraste, mais clareza operacional.</h1>
+              <p class="subtitle">
+                A proposta abaixo transforma o painel atual em uma experiência moderna, com foco em leitura rápida, inteligência visual, microinterações discretas, agrupamento por contexto e destaque real para risco, gargalo, valor e ação.
+              </p>
+
+              <div class="toolbar">
+                <div class="segmented" id="tabs">
+                  <button class="active" data-view="overview">Visão geral</button>
+                  <button data-view="details">Detalhes</button>
+                  <button data-view="operation">Operação</button>
+                </div>
+                <div class="search">⌕ Buscar credor, precatório, status, responsável...</div>
+                <div class="select">Últimos 30 dias ▾</div>
+                <button class="ghost-button">Exportar</button>
+                <button class="button">Atualizar painel</button>
+              </div>
+            </div>
+
+            <div class="hero-side">
+              <div class="hero-panel">
+                <div class="row-between">
+                  <div>
+                    <h3>Saldo líquido monitorado</h3>
+                    <p>Valor consolidado com leitura forte e sem ruído visual.</p>
+                  </div>
+                  <span class="pill">Meta 94%</span>
+                </div>
+                <div class="hero-metric">
+                  <div>
+                    <strong>R$ 244,8 mi</strong>
+                    <p class="tiny muted">+12,4% vs período anterior</p>
+                  </div>
+                  <span class="trend">↗ tendência positiva</span>
+                </div>
+              </div>
+
+              <div class="hero-panel">
+                <div class="row-between">
+                  <div>
+                    <h3>Prioridades visuais</h3>
+                    <p>Semântica forte para risco, SLA e gargalo.</p>
+                  </div>
+                  <span class="pill">3 alertas</span>
+                </div>
+                <div class="chip-row">
+                  <span class="chip success">● SLA saudável</span>
+                  <span class="chip warning">● 16 aguardando ofício</span>
+                  <span class="chip danger">● 2 chats pendentes</span>
+                  <span class="chip info">● 7 em cálculo</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="grid-kpis">
+          <article class="card kpi">
+            <div class="card-inner">
+              <div class="kpi-top">
+                <div>
+                  <div class="label">Ativos monitorados</div>
+                  <div class="value-xl">1.546</div>
+                  <div class="tiny muted">Base operacional filtrada no período selecionado</div>
+                </div>
+                <div class="icon-badge">◫</div>
+              </div>
+              <div class="chip-row">
+                <span class="chip success">+37 no período</span>
+                <span class="chip">taxa de entrada estável</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card kpi">
+            <div class="card-inner">
+              <div class="kpi-top">
+                <div>
+                  <div class="label">Valor principal</div>
+                  <div class="value-xl">R$ 4,60 bi</div>
+                  <div class="tiny muted">Leitura forte com escala e peso visual adequados</div>
+                </div>
+                <div class="icon-badge">◌</div>
+              </div>
+              <div class="chip-row">
+                <span class="chip info">Atualizado em tempo real</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card kpi">
+            <div class="card-inner">
+              <div class="kpi-top">
+                <div>
+                  <div class="label">SLA operacional</div>
+                  <div class="value-xl">92%</div>
+                  <div class="tiny muted">Indicador transformado em elemento central, não periférico</div>
+                </div>
+                <div class="icon-badge">⌁</div>
+              </div>
+              <div class="chip-row">
+                <span class="chip success">Apenas 2% críticos</span>
+                <span class="chip warning">7% em atenção</span>
+              </div>
+            </div>
+          </article>
+
+          <article class="card kpi">
+            <div class="card-inner">
+              <div class="kpi-top">
+                <div>
+                  <div class="label">Mensagens / alertas</div>
+                  <div class="value-xl">2</div>
+                  <div class="tiny muted">Alertas precisam aparecer como ação, não só número</div>
+                </div>
+                <div class="icon-badge">☰</div>
+              </div>
+              <div class="chip-row">
+                <span class="chip danger">pendências de chat</span>
+                <span class="chip">1 ação urgente</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="section-grid-2">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Resumo financeiro com narrativa visual</h2>
+                <p class="section-subtitle">Substitui áreas monótonas por uma combinação de tendência, contexto e indicadores comparáveis.</p>
+              </div>
+              <span class="pill">Destaque: saldo líquido</span>
+            </div>
+            <div class="card-content">
+              <div class="line-chart">
+                <svg viewBox="0 0 800 280" preserveAspectRatio="none" aria-hidden="true">
+                  <defs>
+                    <linearGradient id="area1" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(255,122,26,.36)"/>
+                      <stop offset="100%" stop-color="rgba(255,122,26,0)"/>
+                    </linearGradient>
+                    <linearGradient id="area2" x1="0" x2="0" y1="0" y2="1">
+                      <stop offset="0%" stop-color="rgba(79,124,255,.25)"/>
+                      <stop offset="100%" stop-color="rgba(79,124,255,0)"/>
+                    </linearGradient>
+                  </defs>
+                  <path d="M0 188 C75 166, 120 122, 170 136 S280 208, 330 178 S442 98, 495 116 S610 176, 660 146 S760 96, 800 74 L800 280 L0 280 Z" fill="url(#area1)"></path>
+                  <path d="M0 220 C70 210, 122 190, 172 194 S280 230, 334 212 S444 170, 500 182 S612 216, 670 204 S768 176, 800 154 L800 280 L0 280 Z" fill="url(#area2)"></path>
+                  <path d="M0 188 C75 166, 120 122, 170 136 S280 208, 330 178 S442 98, 495 116 S610 176, 660 146 S760 96, 800 74" stroke="#ff7a1a" stroke-width="4" fill="none" stroke-linecap="round"></path>
+                  <path d="M0 220 C70 210, 122 190, 172 194 S280 230, 334 212 S444 170, 500 182 S612 216, 670 204 S768 176, 800 154" stroke="#4f7cff" stroke-width="4" fill="none" stroke-linecap="round" opacity=".95"></path>
+                </svg>
+              </div>
+              <div class="legend">
+                <span><i class="dot" style="background:var(--brand)"></i> Total atualizado</span>
+                <span><i class="dot" style="background:var(--blue)"></i> Propostas aceitas</span>
+                <span><i class="dot" style="background:var(--green)"></i> Meta financeira</span>
+              </div>
+              <div class="mini-grid">
+                <div class="mini-stat">
+                  <div class="label">Total atualizado</div>
+                  <strong>R$ 363,5 mi</strong>
+                  <div class="tiny muted">Leitura resumida com comparativo embutido</div>
+                </div>
+                <div class="mini-stat">
+                  <div class="label">PSS total</div>
+                  <strong>R$ 6,4 mi</strong>
+                  <div class="tiny muted">Indicador secundário, porém ainda legível</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Radar operacional</h2>
+                <p class="section-subtitle">Concentra risco, SLA, documentos e gargalos sem repetir widgets iguais.</p>
+              </div>
+              <span class="pill">Leitura rápida</span>
+            </div>
+            <div class="card-content" style="display:grid;gap:16px;">
+              <div class="ring-wrap">
+                <div class="ring"><strong>72%</strong></div>
+                <div>
+                  <div class="label">Eficiência do fluxo</div>
+                  <div style="font-size:22px;font-weight:800;margin-top:6px;">Alta com pontos de fricção</div>
+                  <div class="tiny muted" style="margin-top:6px;">O anel substitui números soltos e dá contexto visual imediato.</div>
+                </div>
+              </div>
+              <div class="status-list">
+                <div class="status-item">
+                  <div class="row-between"><strong>Documentos recebidos</strong><strong>7%</strong></div>
+                  <div class="progress-track"><div class="progress-fill yellow" style="width:7%"></div></div>
+                </div>
+                <div class="status-item">
+                  <div class="row-between"><strong>Certidões recebidas</strong><strong>2%</strong></div>
+                  <div class="progress-track"><div class="progress-fill red" style="width:2%"></div></div>
+                </div>
+                <div class="status-item">
+                  <div class="row-between"><strong>SLA saudável</strong><strong>92%</strong></div>
+                  <div class="progress-track"><div class="progress-fill green" style="width:92%"></div></div>
+                </div>
+                <div class="status-item">
+                  <div class="row-between"><strong>Cálculo em andamento</strong><strong>7 itens</strong></div>
+                  <div class="progress-track"><div class="progress-fill blue" style="width:44%"></div></div>
+                </div>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="section-grid-3">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Valor por status com prioridade visual</h2>
+                <p class="section-subtitle">Em vez de uma lista longa e sem hierarquia, priorize o topo, resuma o resto e permita expandir.</p>
+              </div>
+              <span class="pill">Top 6 por valor</span>
+            </div>
+            <div class="card-content">
+              <div class="bars">
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#ff8b2c"></i> Entrada / Pré-cadastro</div>
+                  <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+                  <div class="bar-value">R$ 1,39 bi</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#ffb21d"></i> Cálculo concluído</div>
+                  <div class="progress-track"><div class="progress-fill yellow" style="width:72%"></div></div>
+                  <div class="bar-value">R$ 204 mi</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#30c48d"></i> Pausados</div>
+                  <div class="progress-track"><div class="progress-fill green" style="width:51%"></div></div>
+                  <div class="bar-value">R$ 135 mi</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#4f7cff"></i> Triagem</div>
+                  <div class="progress-track"><div class="progress-fill blue" style="width:34%"></div></div>
+                  <div class="bar-value">R$ 92 mi</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#7c5cff"></i> Proposta / Negociação</div>
+                  <div class="progress-track"><div class="progress-fill" style="width:28%"></div></div>
+                  <div class="bar-value">R$ 78 mi</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#ef4444"></i> Aguardando ofício</div>
+                  <div class="progress-track"><div class="progress-fill red" style="width:24%"></div></div>
+                  <div class="bar-value">R$ 65 mi</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Gargalos e metas</h2>
+                <p class="section-subtitle">Bloco lateral com informações acionáveis, não apenas decorativas.</p>
+              </div>
+            </div>
+            <div class="card-content" style="display:grid;gap:14px;">
+              <div class="stack-card">
+                <div class="row-between"><strong>Ofícios pendentes</strong><span class="chip warning">16 itens</span></div>
+                <div class="tiny muted">Agrupar gargalos por impacto no fluxo e não por simples contagem.</div>
+              </div>
+              <div class="stack-card">
+                <div class="row-between"><strong>Pronto para cálculo</strong><span class="chip info">14 itens</span></div>
+                <div class="tiny muted">Criar ponte visual entre volume, valor e SLA.</div>
+              </div>
+              <div class="stack-card">
+                <div class="row-between"><strong>Mensagens não lidas</strong><span class="chip danger">2 alertas</span></div>
+                <div class="tiny muted">Alertas devem ter peso visual imediato.</div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Mapa de carga</h2>
+                <p class="section-subtitle">Uma alternativa moderna para blocos repetitivos.</p>
+              </div>
+            </div>
+            <div class="card-content">
+              <div class="heat-card">
+                <div class="heat-day lv3"></div><div class="heat-day lv1"></div><div class="heat-day lv4"></div><div class="heat-day lv2"></div><div class="heat-day lv1"></div><div class="heat-day lv3"></div><div class="heat-day lv2"></div>
+                <div class="heat-day lv2"></div><div class="heat-day lv1"></div><div class="heat-day lv3"></div><div class="heat-day lv4"></div><div class="heat-day lv2"></div><div class="heat-day lv1"></div><div class="heat-day lv2"></div>
+                <div class="heat-day lv1"></div><div class="heat-day lv2"></div><div class="heat-day lv3"></div><div class="heat-day lv2"></div><div class="heat-day lv4"></div><div class="heat-day lv2"></div><div class="heat-day lv1"></div>
+                <div class="heat-day lv2"></div><div class="heat-day lv4"></div><div class="heat-day lv3"></div><div class="heat-day lv1"></div><div class="heat-day lv2"></div><div class="heat-day lv2"></div><div class="heat-day lv3"></div>
+              </div>
+              <div class="legend" style="margin-top:16px;">
+                <span><i class="dot" style="background:rgba(255,122,26,.18)"></i> baixo</span>
+                <span><i class="dot" style="background:rgba(255,122,26,.72)"></i> alto</span>
+              </div>
+            </div>
+          </article>
+        </section>
+
+        <section class="section-grid-4">
+          <article class="card"><div class="card-inner"><div class="label">Credores</div><div class="value-xl">1.281</div><div class="tiny muted">Contador com mais contraste e menos área morta.</div></div></article>
+          <article class="card"><div class="card-inner"><div class="label">Propostas</div><div class="value-xl">R$ 92,6 mi</div><div class="tiny muted">Valor com peso visual proporcional à relevância.</div></div></article>
+          <article class="card"><div class="card-inner"><div class="label">Maior proposta</div><div class="value-xl">R$ 5,2 mi</div><div class="tiny muted">Badge contextual, sem poluição de interface.</div></div></article>
+          <article class="card"><div class="card-inner"><div class="label">Mensagens não lidas</div><div class="value-xl">2</div><div class="tiny muted">Transformar em CTA quando houver urgência.</div></div></article>
+        </section>
+
+        <section class="section-grid-2">
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Quantidade por status simplificada</h2>
+                <p class="section-subtitle">Troque repetição por síntese: destacar o topo, condensar cauda longa e abrir detalhes sob demanda.</p>
+              </div>
+              <span class="pill">Top 5</span>
+            </div>
+            <div class="card-content">
+              <div class="bars">
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#ff8b2c"></i> Entrada / Pré-cadastro</div>
+                  <div class="progress-track"><div class="progress-fill" style="width:100%"></div></div>
+                  <div class="bar-value">1.184</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#ffb21d"></i> Reprovado / não elegível</div>
+                  <div class="progress-track"><div class="progress-fill yellow" style="width:24%"></div></div>
+                  <div class="bar-value">87</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#30c48d"></i> Cálculo concluído</div>
+                  <div class="progress-track"><div class="progress-fill green" style="width:22%"></div></div>
+                  <div class="bar-value">87</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#4f7cff"></i> Triagem</div>
+                  <div class="progress-track"><div class="progress-fill blue" style="width:14%"></div></div>
+                  <div class="bar-value">48</div>
+                </div>
+                <div class="bar-item">
+                  <div class="bar-label"><i class="dot" style="background:#7c5cff"></i> Pausados</div>
+                  <div class="progress-track"><div class="progress-fill" style="width:12%"></div></div>
+                  <div class="bar-value">41</div>
+                </div>
+              </div>
+            </div>
+          </article>
+
+          <article class="card">
+            <div class="card-header">
+              <div>
+                <h2 class="section-title">Precatórios críticos</h2>
+                <p class="section-subtitle">Tabela com status semântico, responsável e score visível para ação rápida.</p>
+              </div>
+              <button class="ghost-button mobile-only">Atualizar</button>
+            </div>
+            <div class="card-content">
+              <table>
+                <thead>
+                  <tr>
+                    <th>Precatório</th>
+                    <th>Responsável</th>
+                    <th>SLA</th>
+                    <th>Risco</th>
+                    <th>Score</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td>#PR-10244 · Jurídico de fechamento</td>
+                    <td>
+                      <div class="person">
+                        <div class="person-badge">AL</div>
+                        <div>Ana Lima</div>
+                      </div>
+                    </td>
+                    <td><span class="chip danger">Atrasado</span></td>
+                    <td>Documento pendente</td>
+                    <td>91</td>
+                  </tr>
+                  <tr>
+                    <td>#PR-10311 · Cálculo em andamento</td>
+                    <td>
+                      <div class="person">
+                        <div class="person-badge">MB</div>
+                        <div>Marcos Bento</div>
+                      </div>
+                    </td>
+                    <td><span class="chip warning">Atenção</span></td>
+                    <td>Dependência externa</td>
+                    <td>74</td>
+                  </tr>
+                  <tr>
+                    <td>#PR-10389 · Aguardando ofício</td>
+                    <td>
+                      <div class="person">
+                        <div class="person-badge">CS</div>
+                        <div>Carla Souza</div>
+                      </div>
+                    </td>
+                    <td><span class="chip info">Monitorado</span></td>
+                    <td>Prazo sensível</td>
+                    <td>68</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </article>
+        </section>
+
+        <div class="footer-note">
+          <strong>Direção recomendada para aprovação:</strong> manter a identidade laranja do produto, mas elevar o dashboard com mais contraste, tipografia de peso, grupos por contexto, métricas principais no topo, menos repetição de donuts/listas, alertas com semântica real e leitura clara do que exige ação agora.
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    const tabs = document.querySelectorAll('#tabs button');
+    const heroTitle = document.querySelector('h1');
+    const heroSubtitle = document.querySelector('.subtitle');
+
+    const content = {
+      overview: {
+        title: 'Mais hierarquia, mais contraste, mais clareza operacional.',
+        text: 'A proposta abaixo transforma o painel atual em uma experiência moderna, com foco em leitura rápida, inteligência visual, microinterações discretas, agrupamento por contexto e destaque real para risco, gargalo, valor e ação.'
+      },
+      details: {
+        title: 'Detalhes visuais sem poluição e com navegação mais inteligente.',
+        text: 'A visão detalhada deve usar cards de apoio, tabelas enxutas, filtros persistentes e componentes reutilizáveis, reduzindo a sensação de repetição e tornando a consulta técnica mais agradável.'
+      },
+      operation: {
+        title: 'Operação guiada por prioridade, não por volume de informação.',
+        text: 'A aba operacional precisa destacar riscos, travas e SLAs críticos primeiro. O usuário deve enxergar o que fazer agora em segundos, sem varrer a tela inteira.'
+      }
+    };
+
+    tabs.forEach(btn => {
+      btn.addEventListener('click', () => {
+        tabs.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        const key = btn.dataset.view;
+        heroTitle.textContent = content[key].title;
+        heroSubtitle.textContent = content[key].text;
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,7 +7,6 @@ import { Description, Label as FieldsetLabel } from "@/components/fieldset"
 import { Label } from "@/components/ui/label"
 import { Input } from "@/components/ui/input"
 import { Switch, SwitchField } from "@/components/switch"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 import { Loader2, Printer, CheckCircle2, Percent, Save, Edit, User, Scale } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -19,6 +18,16 @@ import {
     DialogHeader,
     DialogTitle,
 } from "@/components/ui/dialog"
+import {
+    AlertDialog,
+    AlertDialogAction,
+    AlertDialogCancel,
+    AlertDialogContent,
+    AlertDialogDescription,
+    AlertDialogFooter,
+    AlertDialogHeader,
+    AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 
 import { Textarea } from "@/components/ui/textarea"
 import { ProposalConfigModal } from "./proposal-config-modal"
@@ -53,8 +62,7 @@ export function AbaProposta({
     const [savingAceite, setSavingAceite] = useState(false)
     const [propostaAceita, setPropostaAceita] = useState<boolean>(!!precatorio?.proposta_aceita)
     const [dataAceite, setDataAceite] = useState<string>(precatorio?.data_aceite_proposta ? String(precatorio.data_aceite_proposta).slice(0, 10) : "")
-    const [propostaAceitaId, setPropostaAceitaId] = useState<string>(precatorio?.proposta_aceita_id || "")
-    const [propostasList, setPropostasList] = useState<any[]>([])
+    const [showAceiteConfirmDialog, setShowAceiteConfirmDialog] = useState(false)
     const [herdeiros, setHerdeiros] = useState<Herdeiro[]>([])
     const [herdeirosLoading, setHerdeirosLoading] = useState(false)
 
@@ -69,6 +77,10 @@ export function AbaProposta({
             ? adjustPercent(precatorio.dados_calculo.proposta_advogado_percentual)
             : ""
     )
+    const [valorCredorInput, setValorCredorInput] = useState("")
+    const [valorAdvogadoInput, setValorAdvogadoInput] = useState("")
+    const [isValorCredorFocused, setIsValorCredorFocused] = useState(false)
+    const [isValorAdvogadoFocused, setIsValorAdvogadoFocused] = useState(false)
 
     const [isEditing, setIsEditing] = useState(false)
     const [showPrintDialog, setShowPrintDialog] = useState(false)
@@ -86,8 +98,7 @@ export function AbaProposta({
     useEffect(() => {
         setPropostaAceita(!!precatorio?.proposta_aceita)
         setDataAceite(precatorio?.data_aceite_proposta ? String(precatorio.data_aceite_proposta).slice(0, 10) : "")
-        setPropostaAceitaId(precatorio?.proposta_aceita_id || "")
-    }, [precatorio?.proposta_aceita, precatorio?.data_aceite_proposta, precatorio?.proposta_aceita_id])
+    }, [precatorio?.proposta_aceita, precatorio?.data_aceite_proposta])
 
     useEffect(() => {
         async function loadHerdeiros() {
@@ -109,7 +120,7 @@ export function AbaProposta({
                 console.error("[AbaProposta] Erro ao carregar herdeiros:", error)
                 toast({
                     title: "Erro ao carregar herdeiros",
-                    description: error.message || "Nao foi possivel carregar os herdeiros.",
+                    description: error.message || "Não foi possível carregar os herdeiros.",
                     variant: "destructive",
                 })
             } finally {
@@ -118,33 +129,6 @@ export function AbaProposta({
         }
 
         loadHerdeiros()
-    }, [precatorioId])
-
-    useEffect(() => {
-        async function loadPropostas() {
-            try {
-                const supabase = createBrowserClient()
-                if (!supabase) return
-                const { data, error } = await supabase
-                    .from("propostas")
-                    .select("id, valor_proposta, percentual_desconto, status, created_at")
-                    .eq("precatorio_id", precatorioId)
-                    .order("created_at", { ascending: false })
-
-                if (error) {
-                    console.error("[Propostas] Erro ao carregar lista:", error)
-                    return
-                }
-
-                setPropostasList(data || [])
-            } catch (err) {
-                console.error("[Propostas] Erro ao buscar propostas:", err)
-            }
-        }
-
-        if (precatorioId) {
-            loadPropostas()
-        }
     }, [precatorioId])
 
     // Valores Base
@@ -156,6 +140,9 @@ export function AbaProposta({
 
     const tetoPercentual = adjustPercent(precatorio.proposta_maior_percentual || 0)
     const tetoMaximoCredor = tetoPercentual > 0 ? tetoPercentual : 100
+    const valorMaximoCredor = Math.max(0, saldoLiquidoCredor * (tetoMaximoCredor / 100))
+    const percentualMaximoAdvogado = 100
+    const valorMaximoAdvogado = Math.max(0, honorariosValor)
 
     const clampCredorPercentual = (valor: number) => {
         if (!Number.isFinite(valor)) return valor
@@ -176,27 +163,139 @@ export function AbaProposta({
         setPercentualCredor(clamped === numeric ? valor : clamped.toString())
     }
 
+    const clampAdvogadoPercentual = (valor: number) => {
+        if (!Number.isFinite(valor)) return valor
+        return Math.min(Math.max(valor, 0), 100)
+    }
+
+    const handlePercentualAdvogadoChange = (valor: string) => {
+        if (valor === "") {
+            setPercentualAdvogado("")
+            return
+        }
+        const numeric = Number(valor)
+        if (Number.isNaN(numeric)) {
+            setPercentualAdvogado(valor)
+            return
+        }
+        const clamped = clampAdvogadoPercentual(numeric)
+        setPercentualAdvogado(clamped === numeric ? valor : clamped.toString())
+    }
+
+    const parseCurrencyInput = (valor: string) => {
+        const raw = (valor || "").trim()
+        if (!raw) return null
+
+        const cleaned = raw.replace(/[^\d,.-]/g, "")
+        if (!cleaned) return null
+
+        const lastComma = cleaned.lastIndexOf(",")
+        const lastDot = cleaned.lastIndexOf(".")
+
+        let normalized = cleaned
+        if (lastComma > lastDot) {
+            normalized = cleaned.replace(/\./g, "").replace(",", ".")
+        } else if (lastDot > lastComma) {
+            normalized = cleaned.replace(/,/g, "")
+        } else {
+            normalized = cleaned.replace(",", ".")
+        }
+
+        const numeric = Number(normalized)
+        return Number.isFinite(numeric) ? numeric : null
+    }
+
+    const parseCurrencyFromTyping = (valor: string) => {
+        const digits = (valor || "").replace(/\D/g, "")
+        if (!digits) return null
+
+        const numeric = Number(digits)
+        return Number.isFinite(numeric) ? numeric : null
+    }
+
+    const handleValorCredorChange = (valor: string) => {
+        const numeric = parseCurrencyFromTyping(valor)
+        if (numeric === null) {
+            setValorCredorInput("")
+            setPercentualCredor("")
+            return
+        }
+
+        if (numeric < 0) return
+
+        setValorCredorInput(formatCurrencyTyping(numeric))
+
+        if (saldoLiquidoCredor <= 0) {
+            setPercentualCredor("")
+            return
+        }
+
+        const percentualCalculado = (numeric / saldoLiquidoCredor) * 100
+        const clamped = clampCredorPercentual(percentualCalculado)
+        setPercentualCredor(clamped.toFixed(6))
+    }
+
+    const handleValorAdvogadoChange = (valor: string) => {
+        const numeric = parseCurrencyFromTyping(valor)
+        if (numeric === null) {
+            setValorAdvogadoInput("")
+            setPercentualAdvogado("")
+            return
+        }
+
+        if (numeric < 0) return
+
+        setValorAdvogadoInput(formatCurrencyTyping(numeric))
+
+        if (honorariosValor <= 0) {
+            setPercentualAdvogado("")
+            return
+        }
+
+        const percentualCalculado = (numeric / honorariosValor) * 100
+        const clamped = clampAdvogadoPercentual(percentualCalculado)
+        setPercentualAdvogado(clamped.toFixed(6))
+    }
+
     // Cálculos em tempo real
-    const valorPropostaCredor = saldoLiquidoCredor * (Number(percentualCredor) / 100)
-    const valorPropostaAdvogado = honorariosValor * (Number(percentualAdvogado) / 100)
+    const percentualCredorNumerico = Number(percentualCredor)
+    const percentualAdvogadoNumerico = Number(percentualAdvogado)
+    const hasPercentualCredor = percentualCredor !== "" && Number.isFinite(percentualCredorNumerico)
+    const hasPercentualAdvogado = percentualAdvogado !== "" && Number.isFinite(percentualAdvogadoNumerico)
+    const percentualCredorCalculado = hasPercentualCredor ? percentualCredorNumerico : 0
+    const percentualAdvogadoCalculado = hasPercentualAdvogado ? percentualAdvogadoNumerico : 0
+    const valorPropostaCredor = saldoLiquidoCredor * (percentualCredorCalculado / 100)
+    const valorPropostaAdvogado = honorariosValor * (percentualAdvogadoCalculado / 100)
+
+    useEffect(() => {
+        if (!isValorCredorFocused) {
+            setValorCredorInput(hasPercentualCredor ? formatCurrency(valorPropostaCredor) : "")
+        }
+    }, [hasPercentualCredor, valorPropostaCredor, isValorCredorFocused])
+
+    useEffect(() => {
+        if (!isValorAdvogadoFocused) {
+            setValorAdvogadoInput(hasPercentualAdvogado ? formatCurrency(valorPropostaAdvogado) : "")
+        }
+    }, [hasPercentualAdvogado, valorPropostaAdvogado, isValorAdvogadoFocused])
 
     const valorPropostaCredorFmt = formatCurrency(valorPropostaCredor)
     const valorPropostaAdvogadoFmt = formatCurrency(valorPropostaAdvogado)
 
-    // Handlers de Negociacao
+    // Handlers de Negociação
     async function saveNegociacao() {
-        if (propostaAceita) {
+        if (hasRoleSignal && propostaAceita && !canOverrideAceiteLock) {
             toast({
                 title: "Proposta bloqueada",
-                description: "A proposta foi aceita e nao pode mais ser alterada.",
+                description: "A proposta foi aceita e só pode ser ajustada por admin ou operador de cálculo responsável.",
                 variant: "destructive",
             })
             return
         }
-        if (!isOperadorComercial || !isResponsavelComercial) {
+        if (hasRoleSignal && !canManagePropostaByRole) {
             toast({
-                title: "Sem permissao",
-                description: "A proposta so pode ser ajustada pelo operador comercial responsavel.",
+                title: "Sem permissão",
+                description: "A proposta só pode ser ajustada pelo operador comercial responsável, operador de cálculo responsável ou admin.",
                 variant: "destructive",
             })
             return
@@ -216,7 +315,7 @@ export function AbaProposta({
         if (tetoPercentual > 0 && pCredor > tetoPercentual + 0.01) {
             toast({
                 title: "Valor Credor acima do permitido",
-                description: `A proposta do credor nao pode exceder o teto de ${tetoPercentual.toFixed(2)}%.`,
+                description: `A proposta do credor não pode exceder o teto de ${tetoPercentual.toFixed(2)}%.`,
                 variant: "destructive",
             })
             return
@@ -225,8 +324,8 @@ export function AbaProposta({
         if (pCredor <= 0 && !percentualAdvogado) {
             if (pAdvogado <= 0) {
                 toast({
-                    title: "Valores invalidos",
-                    description: "Defina pelo menos uma proposta valida.",
+                    title: "Valores inválidos",
+                    description: "Defina pelo menos uma proposta válida.",
                     variant: "destructive",
                 })
                 return
@@ -246,17 +345,80 @@ export function AbaProposta({
                 proposta_advogado_percentual: pAdvogado > 0 ? pAdvogado : null
             }
 
-            const { error: updateError } = await supabase
-                .from("precatorios")
-                .update({
-                    dados_calculo: novosDadosCalculo,
-                    status_kanban: "proposta_negociacao",
-                    localizacao_kanban: "proposta_negociacao",
-                    updated_at: new Date().toISOString()
-                })
-                .eq("id", precatorioId)
+            let savedWithRpc = false
+            const { error: rpcError } = await supabase.rpc("registrar_negociacao_proposta", {
+                p_precatorio_id: precatorioId,
+                p_percentual_credor: pCredor > 0 ? pCredor : null,
+                p_percentual_advogado: pAdvogado > 0 ? pAdvogado : null,
+            })
 
-            if (updateError) throw updateError
+            if (!rpcError) {
+                savedWithRpc = true
+            } else {
+                const rpcMsg = String(rpcError?.message || "").toLowerCase()
+                const functionMissing =
+                    rpcMsg.includes("registrar_negociacao_proposta")
+                    && (rpcMsg.includes("does not exist") || rpcMsg.includes("não existe"))
+
+                if (!functionMissing) {
+                    if (rpcMsg.includes("sem_permissao")) {
+                        toast({
+                            title: "Sem permissão",
+                            description: "Seu usuário não tem permissão para alterar esta proposta.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                    if (rpcMsg.includes("proposta_bloqueada")) {
+                        toast({
+                            title: "Proposta bloqueada",
+                            description: "A proposta foi aceita e não pode mais ser alterada.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                    if (rpcMsg.includes("not_authenticated")) {
+                        toast({
+                            title: "Sessão expirada",
+                            description: "Faça login novamente para salvar a proposta.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                    throw rpcError
+                }
+            }
+
+            if (!savedWithRpc) {
+                const updatePayload: Record<string, unknown> = {
+                    dados_calculo: novosDadosCalculo,
+                    updated_at: new Date().toISOString(),
+                }
+
+                const etapaAtual = String(precatorio?.status_kanban || precatorio?.localizacao_kanban || "").trim().toLowerCase()
+                if (!etapaAtual || etapaAtual === "calculo_concluido" || etapaAtual === "proposta_negociacao") {
+                    updatePayload.status_kanban = "proposta_negociacao"
+                    updatePayload.localizacao_kanban = "proposta_negociacao"
+                }
+
+                const { error: updateError } = await supabase
+                    .from("precatorios")
+                    .update(updatePayload)
+                    .eq("id", precatorioId)
+
+                if (updateError) {
+                    const msg = String(updateError?.message || "").toLowerCase()
+                    if (updateError?.code === "42501" || msg.includes("permission denied")) {
+                        toast({
+                            title: "Sem permissão",
+                            description: "Seu usuário não tem permissão para alterar esta proposta.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                    throw updateError
+                }
+            }
 
             const alvoCredor = hasHerdeiros ? "Herdeiros" : "Credor"
             if (pCredor > 0) {
@@ -280,16 +442,16 @@ export function AbaProposta({
             }
 
             toast({
-                title: "Negociacao registrada",
+                title: "Negociação registrada",
                 description: "As propostas foram salvas com sucesso.",
             })
             setIsEditing(false)
             setShowPrintDialog(true)
             onUpdate()
         } catch (error: any) {
-            console.error("[Negociacao] Erro:", error)
+            console.error("[Negociação] Erro:", error)
             toast({
-                title: "Erro ao salvar negociacao",
+                title: "Erro ao salvar negociação",
                 description: error.message || "Ocorreu um erro inesperado.",
                 variant: "destructive",
             })
@@ -299,10 +461,10 @@ export function AbaProposta({
     }
 
     async function saveAceiteProposta() {
-        if (!((isOperadorComercial && isResponsavelComercial) || isAdminLike)) {
+        if (hasRoleSignal && !canEditAceiteByRole) {
             toast({
-                title: "Sem permissao",
-                description: "Somente o operador comercial responsavel ou o admin pode registrar o aceite.",
+                title: "Sem permissão",
+                description: "Somente o operador responsável (comercial/cálculo) ou admin pode registrar o aceite.",
                 variant: "destructive",
             })
             return
@@ -315,33 +477,15 @@ export function AbaProposta({
             })
             return
         }
-        if (propostaAceita) {
-            if (!dataAceite) {
-                toast({
-                    title: "Data do aceite obrigatoria",
-                    description: "Informe a data em que o credor aceitou a proposta.",
-                    variant: "destructive",
-                })
-                return
-            }
-            if (!propostaAceitaId) {
-                toast({
-                    title: "Proposta aceita obrigatoria",
-                    description: "Selecione a proposta aceita para continuar.",
-                    variant: "destructive",
-                })
-                return
-            }
 
-            const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-            if (!uuidRegex.test(propostaAceitaId)) {
-                toast({
-                    title: "ID invalido",
-                    description: "O ID da proposta aceita precisa ser um UUID valido.",
-                    variant: "destructive",
-                })
-                return
-            }
+        const dataAceiteEfetiva = propostaAceita
+            ? (dataAceite || new Date().toISOString().slice(0, 10))
+            : null
+        const aceiteResponsavelId = propostaAceita
+            ? (resolvedUserId || precatorio?.proposta_aceita_id || null)
+            : null
+        if (propostaAceita && !dataAceite) {
+            setDataAceite(dataAceiteEfetiva || "")
         }
 
         setSavingAceite(true)
@@ -349,47 +493,116 @@ export function AbaProposta({
             const supabase = createBrowserClient()
             if (!supabase) return
 
+            const fallbackAceiteAdmin = async () => {
+                const fallbackPayload: Record<string, unknown> = {
+                    proposta_aceita: propostaAceita,
+                    data_aceite_proposta: dataAceiteEfetiva,
+                    proposta_aceita_id: aceiteResponsavelId,
+                    updated_at: new Date().toISOString(),
+                }
+
+                if (propostaAceita) {
+                    fallbackPayload.status_kanban = "proposta_aceita"
+                    fallbackPayload.localizacao_kanban = "proposta_aceita"
+                }
+
+                const { data: fallbackData, error: fallbackError } = await supabase
+                    .from("precatorios")
+                    .update(fallbackPayload)
+                    .eq("id", precatorioId)
+                    .select("id")
+
+                if (fallbackError) throw fallbackError
+                return Array.isArray(fallbackData) ? fallbackData[0] : fallbackData
+            }
+
             const { data, error } = await supabase.rpc("registrar_aceite_proposta", {
                 p_precatorio_id: precatorioId,
                 p_proposta_aceita: propostaAceita,
-                p_data_aceite: propostaAceita ? dataAceite : null,
-                p_proposta_aceita_id: propostaAceita ? propostaAceitaId : null,
+                p_data_aceite: dataAceiteEfetiva,
+                p_proposta_aceita_id: aceiteResponsavelId,
             })
+
+            let updated: { id?: string } | null = null
 
             if (error) {
                 const msg = (error.message || "").toLowerCase()
                 if (msg.includes("function") || msg.includes("does not exist")) {
+                    if (isAdminLike) {
+                        updated = await fallbackAceiteAdmin()
+                    } else {
+                        toast({
+                            title: "RPC não instalada",
+                            description: "Execute o script 181-rpc-aceite-proposta.sql no Supabase.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                }
+                else if (msg.includes("sem_permissao")) {
+                    if (isAdminLike) {
+                        updated = await fallbackAceiteAdmin()
+                    } else {
+                        toast({
+                            title: "Sem permissão",
+                            description: "Usuário sem permissão para registrar o aceite.",
+                            variant: "destructive",
+                        })
+                        return
+                    }
+                }
+                else if (msg.includes("not_authenticated")) {
                     toast({
-                        title: "RPC nao instalada",
-                        description: "Execute o script 181-rpc-aceite-proposta.sql no Supabase.",
+                        title: "Sessão expirada",
+                        description: "Faça login novamente para salvar o aceite.",
                         variant: "destructive",
                     })
                     return
+                } else if (isAdminLike) {
+                    updated = await fallbackAceiteAdmin()
+                } else {
+                    throw error
                 }
-                if (msg.includes("sem_permissao")) {
-                    toast({
-                        title: "Sem permissao",
-                        description: "Usuario sem permissao para registrar o aceite.",
-                        variant: "destructive",
-                    })
-                    return
-                }
-                if (msg.includes("not_authenticated")) {
-                    toast({
-                        title: "Sessao expirada",
-                        description: "Faca login novamente para salvar o aceite.",
-                        variant: "destructive",
-                    })
-                    return
-                }
-                throw error
             }
-
-            const updated = Array.isArray(data) ? data[0] : data
+            else {
+                updated = Array.isArray(data) ? data[0] : data
+            }
             if (!updated) {
                 toast({
-                    title: "Sem permissao para salvar",
-                    description: "Nao foi possivel atualizar este precatorio. Verifique as permissoes do operador.",
+                    title: "Sem permissão para salvar",
+                    description: "Não foi possível atualizar este precatório. Verifique as permissões do operador.",
+                    variant: "destructive",
+                })
+                return
+            }
+
+            const { data: persistedRow, error: persistedError } = await supabase
+                .from("precatorios")
+                .select("id, proposta_aceita, data_aceite_proposta, status_kanban, localizacao_kanban")
+                .eq("id", precatorioId)
+                .maybeSingle()
+
+            if (persistedError) throw persistedError
+
+            const persistedAceite = !!persistedRow?.proposta_aceita
+            const persistedDataAceite = persistedRow?.data_aceite_proposta
+                ? String(persistedRow.data_aceite_proposta).slice(0, 10)
+                : null
+            const expectedDataAceite = dataAceiteEfetiva ? String(dataAceiteEfetiva).slice(0, 10) : null
+
+            if (propostaAceita && (!persistedAceite || persistedDataAceite !== expectedDataAceite)) {
+                toast({
+                    title: "Aceite não persistido",
+                    description: "O sistema não confirmou a gravação do aceite. Revise os dados e tente novamente.",
+                    variant: "destructive",
+                })
+                return
+            }
+
+            if (!propostaAceita && persistedAceite) {
+                toast({
+                    title: "Aceite não removido",
+                    description: "A remoção do aceite não foi confirmada. Tente novamente.",
                     variant: "destructive",
                 })
                 return
@@ -404,7 +617,7 @@ export function AbaProposta({
             console.error("[Proposta Aceita] Erro:", error)
             toast({
                 title: "Erro ao salvar aceite",
-                description: error.message || "Nao foi possivel salvar o aceite.",
+                description: error.message || "Não foi possível salvar o aceite.",
                 variant: "destructive",
             })
         } finally {
@@ -412,7 +625,12 @@ export function AbaProposta({
         }
     }
 
-    const resolvedRole = userRole ?? profile?.role ?? user?.app_metadata?.role ?? null
+    const hasUserRoleProp =
+        Array.isArray(userRole)
+            ? userRole.length > 0
+            : typeof userRole === "string"
+                ? userRole.trim().length > 0
+                : !!userRole
     const resolvedUserId = currentUserId ?? profile?.id ?? user?.id ?? null
 
     const normalizeRoleTokens = (value: unknown): string[] => {
@@ -436,35 +654,82 @@ export function AbaProposta({
                 : trimmed
             return normalized
                 .split(",")
-                .map((item) => item.trim())
+                .map((item) =>
+                    item
+                        .trim()
+                        .replace(/^[\[\]{}"']+|[\[\]{}"']+$/g, "")
+                        .replace(/^"+|"+$/g, "")
+                        .replace(/^'+|'+$/g, ""),
+                )
                 .filter(Boolean)
         }
         return [String(value)]
     }
 
-    const roles = normalizeRoleTokens(resolvedRole)
+    const roleCandidates = [
+        ...(hasUserRoleProp ? normalizeRoleTokens(userRole) : []),
+        ...normalizeRoleTokens(profile?.role),
+        ...normalizeRoleTokens(user?.app_metadata?.role),
+    ]
+    const roles = Array.from(new Set(roleCandidates.map((role) => role.trim()).filter(Boolean)))
     const normalizedRoles = roles
-        .map((r) => (r ?? "").toString().trim().toLowerCase().replace(/\s+/g, "_"))
+        .map((r) =>
+            (r ?? "")
+                .toString()
+                .trim()
+                .replace(/^[\[\]{}"']+|[\[\]{}"']+$/g, "")
+                .replace(/^"+|"+$/g, "")
+                .replace(/^'+|'+$/g, "")
+                .toLowerCase()
+                .replace(/\s+/g, "_"),
+        )
         .filter(Boolean)
     const isOperadorComercial = normalizedRoles.some((role) => role === "operador_comercial" || role === "operador")
+    const isOperadorCalculo = normalizedRoles.some((role) => role === "operador_calculo")
     const isAdminLike = normalizedRoles.some(
         (role) => role === "admin" || role === "gestor" || role.startsWith("gestor_") || role.includes("admin"),
     )
+    const hasRoleSignal = normalizedRoles.length > 0
     const responsavelComercialId = precatorio?.responsavel || precatorio?.dono_usuario_id || precatorio?.criado_por || null
     const isResponsavelComercial = responsavelComercialId ? responsavelComercialId === resolvedUserId : true
+    const responsavelCalculoId = precatorio?.responsavel_calculo_id || precatorio?.operador_calculo || null
+    const isResponsavelCalculo = responsavelCalculoId ? responsavelCalculoId === resolvedUserId : true
+    const canOverrideAceiteLock = isAdminLike || (isOperadorCalculo && isResponsavelCalculo)
+    const canManagePropostaByRole =
+        isAdminLike
+        || (isOperadorComercial && isResponsavelComercial)
+        || (isOperadorCalculo && isResponsavelCalculo)
+    const canEditAceiteByRole =
+        isAdminLike
+        || (isOperadorComercial && isResponsavelComercial)
+        || (isOperadorCalculo && isResponsavelCalculo)
 
-    const canEditProposta = isOperadorComercial && isResponsavelComercial && !propostaAceita
-    const canEditAceite = isAdminLike || (isOperadorComercial && isResponsavelComercial)
+    const canEditProposta = (!propostaAceita || canOverrideAceiteLock) && (
+        !hasRoleSignal
+            ? !!resolvedUserId
+            : canManagePropostaByRole
+    )
+    const canEditAceite = !hasRoleSignal
+        ? !!resolvedUserId
+        : canEditAceiteByRole
     const isRemovingAceite = !propostaAceita && !!precatorio?.proposta_aceita
     const canSubmitAceite =
         canEditAceite &&
-        (isRemovingAceite || (propostaAceita && !!dataAceite && !!propostaAceitaId))
+        (isRemovingAceite || propostaAceita)
     const hasPropostaDefined = !!precatorio.dados_calculo?.proposta_escolhida_percentual || !!precatorio.dados_calculo?.proposta_advogado_percentual
 
     // Função intermediária para abrir o modal de edição
     function initiatePrint(tipo: "credor" | "honorarios") {
         setPendingPrintType(tipo)
         setShowDescriptionModal(true)
+    }
+
+    function handleSaveAceiteClick() {
+        if (propostaAceita && !isRemovingAceite) {
+            setShowAceiteConfirmDialog(true)
+            return
+        }
+        void saveAceiteProposta()
     }
 
     // Função real de impressão
@@ -892,22 +1157,39 @@ export function AbaProposta({
                                                 value={percentualCredor}
                                                 onChange={(e: any) => handlePercentualCredorChange(e.target.value)}
                                                 className="bg-background pr-8 font-medium"
-                                                placeholder="Ex: 60.00"
+                                                placeholder={`Máx permitido: ${formatPercent(tetoMaximoCredor)}%`}
                                                 disabled={!canEditProposta}
                                             />
                                             <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         </div>
-                                        <p className="text-[11px] text-muted-foreground">
-                                            {"M\u00e1ximo permitido: "} {tetoMaximoCredor.toFixed(2)}%
-                                        </p>
                                     </div>
                                     <div className="grid gap-2 flex-1">
-                                        <Label className="text-xs font-bold">Valor Final Calculado</Label>
-                                        <div className="h-10 flex items-center px-3 bg-muted border rounded-md font-bold text-primary text-lg">
-                                            {valorPropostaCredorFmt}
-                                        </div>
+                                        <Label htmlFor="valorCredor" className="text-xs font-bold">Valor Final (R$)</Label>
+                                        <Input
+                                            id="valorCredor"
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={valorCredorInput}
+                                            onChange={(e) => handleValorCredorChange(e.target.value)}
+                                            onFocus={() => {
+                                                setIsValorCredorFocused(true)
+                                                const numeric = parseCurrencyInput(valorCredorInput)
+                                                setValorCredorInput(numeric !== null ? formatCurrencyTyping(numeric) : "")
+                                            }}
+                                            onBlur={() => {
+                                                setIsValorCredorFocused(false)
+                                                const numeric = parseCurrencyInput(valorCredorInput)
+                                                setValorCredorInput(numeric !== null ? formatCurrency(numeric) : "")
+                                            }}
+                                            className="bg-background font-medium text-primary"
+                                            placeholder={`Máx permitido: ${formatCurrency(valorMaximoCredor)}`}
+                                            disabled={!canEditProposta}
+                                        />
                                     </div>
                                 </div>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Ao informar percentual ou valor fechado, o outro campo é recalculado automaticamente.
+                                </p>
                             </div>
 
                             {hasHerdeiros && (
@@ -972,21 +1254,41 @@ export function AbaProposta({
                                                 max="100"
                                                 step="0.01"
                                                 value={percentualAdvogado}
-                                                onChange={(e: any) => setPercentualAdvogado(e.target.value)}
+                                                onChange={(e: any) => handlePercentualAdvogadoChange(e.target.value)}
                                                 className="bg-background pr-8"
-                                                placeholder="Ex: 80.00"
+                                                placeholder={`Máx permitido: ${formatPercent(percentualMaximoAdvogado)}%`}
                                                 disabled={!canEditProposta}
                                             />
                                             <Percent className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                                         </div>
                                     </div>
                                     <div className="grid gap-2 flex-1">
-                                        <Label className="text-xs font-bold">Valor Calculado</Label>
-                                        <div className="h-10 flex items-center px-3 bg-muted border rounded-md font-bold text-orange-600">
-                                            {valorPropostaAdvogadoFmt}
-                                        </div>
+                                        <Label htmlFor="valorAdvogado" className="text-xs font-bold">Valor (R$)</Label>
+                                        <Input
+                                            id="valorAdvogado"
+                                            type="text"
+                                            inputMode="decimal"
+                                            value={valorAdvogadoInput}
+                                            onChange={(e) => handleValorAdvogadoChange(e.target.value)}
+                                            onFocus={() => {
+                                                setIsValorAdvogadoFocused(true)
+                                                const numeric = parseCurrencyInput(valorAdvogadoInput)
+                                                setValorAdvogadoInput(numeric !== null ? formatCurrencyTyping(numeric) : "")
+                                            }}
+                                            onBlur={() => {
+                                                setIsValorAdvogadoFocused(false)
+                                                const numeric = parseCurrencyInput(valorAdvogadoInput)
+                                                setValorAdvogadoInput(numeric !== null ? formatCurrency(numeric) : "")
+                                            }}
+                                            className="bg-background text-orange-600 dark:text-orange-400 font-medium"
+                                            placeholder={`Máx permitido: ${formatCurrency(valorMaximoAdvogado)}`}
+                                            disabled={!canEditProposta}
+                                        />
                                     </div>
                                 </div>
+                                <p className="text-[11px] text-muted-foreground">
+                                    Regra de três automática: valor informado gera percentual exato sobre a base de honorários.
+                                </p>
                             </div>
 
                             <div className="flex items-center justify-end gap-2 pt-4">
@@ -1037,54 +1339,17 @@ export function AbaProposta({
                         />
                     </SwitchField>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                            <Label htmlFor="dataAceite">Data do aceite</Label>
-                            <Input
-                                id="dataAceite"
-                                type="date"
-                                value={dataAceite}
-                                onChange={(e) => setDataAceite(e.target.value)}
-                                disabled={!canEditAceite || !propostaAceita}
-                                className="bg-white/80 dark:bg-zinc-900/50"
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Proposta aceita</Label>
-                            {propostasList.length > 0 ? (
-                                <Select
-                                    value={propostaAceitaId}
-                                    onValueChange={setPropostaAceitaId}
-                                    disabled={!canEditAceite || !propostaAceita}
-                                >
-                                    <SelectTrigger className="bg-white/80 dark:bg-zinc-900/50">
-                                        <SelectValue placeholder="Selecione a proposta" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                        {propostasList.map((p) => (
-                                            <SelectItem key={p.id} value={p.id}>
-                                                {formatCurrency(p.valor_proposta || 0)} • {p.status}
-                                            </SelectItem>
-                                        ))}
-                                    </SelectContent>
-                                </Select>
-                            ) : (
-                                <Input
-                                    value={propostaAceitaId}
-                                    onChange={(e) => setPropostaAceitaId(e.target.value)}
-                                    placeholder="UUID da proposta aceita"
-                                    disabled={!canEditAceite || !propostaAceita}
-                                    className="bg-white/80 dark:bg-zinc-900/50"
-                                />
-                            )}
-                        </div>
-                    </div>
+                    {propostaAceita && (
+                        <p className="text-xs text-emerald-900/70 dark:text-emerald-200/70">
+                            Ao confirmar o aceite, a edição fica bloqueada para operador comercial. Admin e operador de cálculo responsável ainda podem ajustar.
+                        </p>
+                    )}
 
                     {!canSubmitAceite && (
                         <p className="text-xs text-emerald-900/70 dark:text-emerald-200/70">
                             {canEditAceite
                                 ? propostaAceita
-                                    ? "Preencha a data e selecione a proposta para habilitar o salvamento."
+                                    ? "Confirme o aceite para finalizar e bloquear a edição."
                                     : isRemovingAceite
                                         ? "Desativar o aceite liberará o salvamento."
                                         : "Ative o aceite do credor para continuar."
@@ -1094,7 +1359,7 @@ export function AbaProposta({
 
                     <div className="flex justify-end pt-2">
                         <Button
-                            onClick={saveAceiteProposta}
+                            onClick={handleSaveAceiteClick}
                             disabled={savingAceite || !canSubmitAceite}
                             className="bg-emerald-600 hover:bg-emerald-700 text-white disabled:opacity-60"
                         >
@@ -1103,11 +1368,34 @@ export function AbaProposta({
                             ) : (
                                 <Save className="h-4 w-4 mr-2" />
                             )}
-                            Salvar Aceite
+                            {isRemovingAceite ? "Remover Aceite" : "Confirmar Aceite"}
                         </Button>
                     </div>
                 </CardContent>
             </Card>
+
+            <AlertDialog open={showAceiteConfirmDialog} onOpenChange={setShowAceiteConfirmDialog}>
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle>Confirmar aceite da proposta?</AlertDialogTitle>
+                        <AlertDialogDescription>
+                            Ao confirmar, a proposta será marcada como aceita e ficará bloqueada para edição comercial.
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                        <AlertDialogAction
+                            className="bg-emerald-600 hover:bg-emerald-700 text-white"
+                            onClick={() => {
+                                setShowAceiteConfirmDialog(false)
+                                void saveAceiteProposta()
+                            }}
+                        >
+                            Confirmar aceite
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
 
 
             {/* Modal de Sucesso + Escolha de Impressão */}
@@ -1196,7 +1484,22 @@ function formatCurrency(value: number) {
     }).format(value || 0)
 }
 
+function formatCurrencyTyping(value: number) {
+    return `R$ ${new Intl.NumberFormat("pt-BR", {
+        maximumFractionDigits: 0,
+    }).format(Math.max(0, Number.isFinite(value) ? value : 0))}`
+}
+
+function formatPercent(value: number) {
+    return new Intl.NumberFormat("pt-BR", {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    }).format(Number.isFinite(value) ? value : 0)
+}
+
 function adjustPercent(val: number) {
     // Se vier 0.65 -> 65. Se vier 65 -> 65
     return (val > 0 && val <= 1) ? val * 100 : val
 }
+
+

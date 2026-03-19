@@ -13,6 +13,7 @@ import { Loader2, Save } from "@/components/icons"
 
 const AVAILABLE_ROLES = [
     { value: "admin", label: "Administrador" },
+    { value: "tecnico_ti", label: "Tecnico de T.I" },
     { value: "operador_comercial", label: "Operador Comercial" },
     { value: "operador_calculo", label: "Operador de Cálculo" },
     { value: "operador", label: "Operador" },
@@ -98,8 +99,12 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
 
             toast({ title: "Perfil atualizado", description: "As informações foram salvas com sucesso." })
             onUpdate()
-        } catch (error: any) {
-            toast({ title: "Erro ao salvar", description: error.message, variant: "destructive" })
+        } catch (error: unknown) {
+            const message =
+                error instanceof Error && error.message
+                    ? error.message
+                    : "Nao foi possivel salvar o perfil."
+            toast({ title: "Erro ao salvar", description: message, variant: "destructive" })
         } finally {
             setLoading(false)
         }

@@ -37,6 +37,51 @@ type Herdeiro = {
   percentual_participacao: number | null
 }
 
+function normalizeRoles(value: unknown): string[] {
+  if (Array.isArray(value)) {
+    return value
+      .map((item) => String(item).trim())
+      .filter(Boolean)
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim()
+    if (!trimmed) return []
+
+    if (trimmed.startsWith("[") && trimmed.endsWith("]")) {
+      try {
+        const parsed = JSON.parse(trimmed)
+        if (Array.isArray(parsed)) {
+          return parsed
+            .map((item) => String(item).trim())
+            .filter(Boolean)
+        }
+      } catch {
+        // fallback below
+      }
+    }
+
+    if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+      return trimmed
+        .slice(1, -1)
+        .split(",")
+        .map((item) => item.replace(/^"+|"+$/g, "").trim())
+        .filter(Boolean)
+    }
+
+    if (trimmed.includes(",")) {
+      return trimmed
+        .split(",")
+        .map((item) => item.trim())
+        .filter(Boolean)
+    }
+
+    return [trimmed]
+  }
+
+  return []
+}
+
 export function ModalDetalhesKanban({
   open,
   onOpenChange,
@@ -50,6 +95,7 @@ export function ModalDetalhesKanban({
   const [activeTab, setActiveTab] = useState("geral")
   const [userRole, setUserRole] = useState<string[] | string | null>(null)
   const [currentUserId, setCurrentUserId] = useState<string | null>(null)
+  const [savingOrigem, setSavingOrigem] = useState(false)
 
   useEffect(() => {
     if (!open || !precatorioId) return
@@ -76,8 +122,30 @@ export function ModalDetalhesKanban({
     if (!supabase) return
 
     const { data } = await supabase.auth.getUser()
-    setUserRole(data.user?.app_metadata?.role || null)
-    setCurrentUserId(data.user?.id || null)
+    const currentId = data.user?.id || null
+    const metadataRoles = normalizeRoles(data.user?.app_metadata?.role)
+    setCurrentUserId(currentId)
+
+    if (!currentId) {
+      setUserRole(metadataRoles.length ? metadataRoles : null)
+      return
+    }
+
+    const { data: usuarioData, error } = await supabase
+      .from("usuarios")
+      .select("role")
+      .eq("id", currentId)
+      .maybeSingle()
+
+    if (error) {
+      console.error("[Modal Detalhes] Erro ao carregar role do usuário:", error)
+      setUserRole(metadataRoles.length ? metadataRoles : null)
+      return
+    }
+
+    const dbRoles = normalizeRoles(usuarioData?.role)
+    const mergedRoles = Array.from(new Set([...dbRoles, ...metadataRoles]))
+    setUserRole(mergedRoles.length ? mergedRoles : null)
   }
 
   async function loadPrecatorio() {
@@ -125,6 +193,26 @@ export function ModalDetalhesKanban({
   function handleUpdate() {
     loadPrecatorio()
     onUpdate()
+  }
+
+  async function handleSaveOrigem(value: string) {
+    if (!precatorioId) return
+    setSavingOrigem(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) return
+      const { error } = await supabase
+        .from("precatorios")
+        .update({ origem_lead: value || null })
+        .eq("id", precatorioId)
+      if (error) throw error
+      setPrecatorio((prev: any) => ({ ...prev, origem_lead: value || null }))
+      onUpdate()
+    } catch (err) {
+      console.error("[Modal Detalhes] Erro ao salvar origem_lead:", err)
+    } finally {
+      setSavingOrigem(false)
+    }
   }
 
   if (loading) {
@@ -217,6 +305,36 @@ export function ModalDetalhesKanban({
               <div>
                 <label className="text-sm font-medium">Processo</label>
                 <p className="text-sm text-muted-foreground">{precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}</p>
+              </div>
+              <div className="col-span-2">
+                <label className="text-sm font-medium">
+                  Origem do Lead{" "}
+                  {podeEditarItens && savingOrigem && (
+                    <Loader2 className="inline h-3 w-3 animate-spin ml-1" />
+                  )}
+                </label>
+                {podeEditarItens ? (
+                  <select
+                    value={precatorio.origem_lead || ""}
+                    onChange={(e) => handleSaveOrigem(e.target.value)}
+                    disabled={savingOrigem}
+                    className="mt-1 w-full rounded-md border border-input bg-background px-3 py-1.5 text-sm text-foreground outline-none focus:border-ring disabled:opacity-60"
+                  >
+                    <option value="">Nao informada</option>
+                    <option value="Indicação">Indicação</option>
+                    <option value="Google">Google</option>
+                    <option value="Instagram">Instagram</option>
+                    <option value="Facebook">Facebook</option>
+                    <option value="WhatsApp">WhatsApp</option>
+                    <option value="Site/Landing page">Site/Landing page</option>
+                    <option value="LinkedIn">LinkedIn</option>
+                    <option value="Evento">Evento</option>
+                    <option value="Parceiro comercial">Parceiro comercial</option>
+                    <option value="Outro">Outro</option>
+                  </select>
+                ) : (
+                  <p className="text-sm text-muted-foreground">{precatorio.origem_lead || "Nao informada"}</p>
+                )}
               </div>
             </div>
 

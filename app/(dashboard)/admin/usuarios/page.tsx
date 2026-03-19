@@ -69,6 +69,7 @@ import { useRouter } from "next/navigation"
 
 const AVAILABLE_ROLES = [
   { value: "admin", label: "Administrador" },
+  { value: "tecnico_ti", label: "Tecnico de T.I" },
   { value: "operador_comercial", label: "Operador Comercial" },
   { value: "operador_calculo", label: "Operador de Cálculo" },
   { value: "operador", label: "Operador" },

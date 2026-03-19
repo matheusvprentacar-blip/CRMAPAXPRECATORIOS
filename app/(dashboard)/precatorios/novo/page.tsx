@@ -73,6 +73,10 @@ export default function NovoPrecatorioPage() {
         toast.error("Preencha o Nome e CPF/CNPJ do Credor")
         return
       }
+      if (!formData.origem_lead) {
+        toast.error("Informe a origem do lead.")
+        return
+      }
     }
     if (currentStep === 3) {
       if (!formData.valor_principal) {
@@ -359,6 +363,26 @@ export default function NovoPrecatorioPage() {
                         onChange={e => setFormData({ ...formData, credor_uf: e.target.value.toUpperCase() })}
                       />
                     </div>
+                    <div className="space-y-2 md:col-span-2">
+                      <Label>Origem do Lead *</Label>
+                      <select
+                        value={formData.origem_lead || ""}
+                        onChange={e => setFormData({ ...formData, origem_lead: e.target.value })}
+                        className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+                      >
+                        <option value="">Selecione a origem</option>
+                        <option value="Indicação">Indicação</option>
+                        <option value="Google">Google</option>
+                        <option value="Instagram">Instagram</option>
+                        <option value="Facebook">Facebook</option>
+                        <option value="WhatsApp">WhatsApp</option>
+                        <option value="Site/Landing page">Site/Landing page</option>
+                        <option value="LinkedIn">LinkedIn</option>
+                        <option value="Evento">Evento</option>
+                        <option value="Parceiro comercial">Parceiro comercial</option>
+                        <option value="Outro">Outro</option>
+                      </select>
+                    </div>
                   </CardContent>
                 </Card>
 
@@ -545,6 +569,9 @@ export default function NovoPrecatorioPage() {
                           <p className="text-sm">Telefone: {formData.credor_telefone}</p>
                         )}
                         <p className="text-sm">{formData.credor_cidade} - {formData.credor_uf}</p>
+                        {formData.origem_lead && (
+                          <p className="text-sm">Origem: {formData.origem_lead}</p>
+                        )}
                       </CardContent>
                     </Card>
                   <Card>

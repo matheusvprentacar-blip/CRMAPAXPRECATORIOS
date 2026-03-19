@@ -6,7 +6,6 @@ import { useRouter } from "next/navigation"
 import {
   AlertDialog,
   Button as HeroButton,
-  Card as HeroCard,
   Checkbox as HeroCheckbox,
   Chip as HeroChip,
   Dropdown as HeroDropdown,
@@ -96,9 +95,9 @@ function Badge({ children, className, variant }: { children?: ReactNode; classNa
 
 function Card({ children, className, ...props }: { children?: ReactNode; className?: string;[key: string]: unknown }) {
   return (
-    <HeroCard {...(props as Record<string, unknown>)} className={cx("border border-default-200/60 shadow-sm", className)}>
+    <div className={cx("rounded-3xl border border-border bg-background shadow-sm", className)} {...(props as Record<string, unknown>)}>
       {children}
-    </HeroCard>
+    </div>
   )
 }
 
@@ -180,7 +179,7 @@ function Dialog({
       </HeroModal.Trigger>
       <HeroModal.Backdrop className="bg-black/60" />
       <HeroModal.Container className="p-3">
-        <HeroModal.Dialog className="w-[min(90vw,32rem)] rounded-2xl border border-default-200/70 bg-content1 shadow-xl">
+        <HeroModal.Dialog className="w-[min(90vw,32rem)] rounded-2xl border border-border bg-background shadow-sm">
           {children}
         </HeroModal.Dialog>
       </HeroModal.Container>
@@ -212,6 +211,479 @@ function AnimatedListItem({
   index: number
 }) {
   return <div data-index={index}>{children}</div>
+}
+
+const currencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  maximumFractionDigits: 2,
+})
+
+const compactCurrencyFormatter = new Intl.NumberFormat("pt-BR", {
+  style: "currency",
+  currency: "BRL",
+  notation: "compact",
+  maximumFractionDigits: 1,
+})
+
+type ToneKey = "urgent" | "attention" | "healthy" | "neutral"
+
+function formatMoney(value: number) {
+  return currencyFormatter.format(value || 0)
+}
+
+function formatCompactMoney(value: number) {
+  return compactCurrencyFormatter.format(value || 0)
+}
+
+function formatShortDate(value?: string | null) {
+  if (!value) return "Nao informado"
+  const date = new Date(value)
+  return Number.isNaN(date.getTime()) ? "Nao informado" : date.toLocaleDateString("pt-BR")
+}
+
+function getHeadline(precatorio: Precatorio) {
+  return precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio || ""}`.trim()
+}
+
+function getInitials(value?: string | null) {
+  const source = (value || "").trim()
+  if (!source) return "PR"
+  return source
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || "")
+    .join("")
+}
+
+function getResponsavelNome(precatorio: Precatorio) {
+  return precatorio.responsavel_nome || precatorio.responsavel_calculo_nome || "Sem responsável"
+}
+
+function getValorDisplay(precatorio: Precatorio) {
+  const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+  const valorPrincipal = Number(precatorio.valor_principal || 0)
+  const value = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
+  const label = valorAtualizado > 0 ? "Atualizado" : valorPrincipal > 0 ? "Principal" : "Valor"
+  const valueClass = valorAtualizado > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-orange-500 dark:text-orange-300"
+  return { value, label, formatted: value > 0 ? formatMoney(value) : "Aguardando", valueClass }
+}
+
+function getComplexidadeMeta(precatorio: Precatorio) {
+  if (precatorio.nivel_complexidade === "alta") {
+    return { label: "Alta ▲", className: "text-rose-500 dark:text-rose-400" }
+  }
+  if (precatorio.nivel_complexidade === "media") {
+    return { label: "Média ●", className: "text-amber-500 dark:text-amber-400" }
+  }
+  return { label: "Baixa ▼", className: "text-emerald-600 dark:text-emerald-400" }
+}
+
+function getOrigemLeadLabel(origemLead?: string | null) {
+  if (!origemLead) return "Nao informada"
+  return origemLead
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (char) => char.toUpperCase())
+}
+
+function getStatusLabel(precatorio: Precatorio) {
+  return STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
+}
+
+function getStatusTagClass(status?: Precatorio["status"]) {
+  switch (status) {
+    case "em_calculo":
+      return "border-blue-200 bg-blue-500/10 text-blue-600 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300"
+    case "concluido":
+      return "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+    case "em_andamento":
+    case "pendente_distribuicao":
+    case "em_contato":
+    case "aguardando_cliente":
+      return "border-orange-200 bg-orange-500/10 text-orange-700 dark:border-orange-500/25 dark:bg-orange-500/10 dark:text-orange-300"
+    case "cancelado":
+      return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+    default:
+      return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+  }
+}
+
+function getPriorityTagClass(prioridade?: Precatorio["prioridade"], urgente?: boolean) {
+  if (urgente || prioridade === "urgente") {
+    return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+  }
+  if (prioridade === "alta") {
+    return "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+  }
+  return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+}
+
+function getSlaMeta(precatorio: Precatorio) {
+  switch (precatorio.sla_status) {
+    case "atrasado":
+      return {
+        tone: "urgent" as ToneKey,
+        tagLabel: "SLA atrasado",
+        tagClass: "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300",
+        barClass: "bg-rose-500",
+        progress: 100,
+        detail: precatorio.motivo_atraso_calculo || "Ação imediata",
+        detailClass: "text-rose-600 dark:text-rose-300",
+      }
+    case "atencao":
+      return {
+        tone: "attention" as ToneKey,
+        tagLabel: "Atenção SLA",
+        tagClass: "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300",
+        barClass: "bg-amber-500",
+        progress: 78,
+        detail: precatorio.sla_horas ? `${precatorio.sla_horas}h de SLA` : "Prazo em observação",
+        detailClass: "text-amber-600 dark:text-amber-300",
+      }
+    case "concluido":
+      return {
+        tone: "healthy" as ToneKey,
+        tagLabel: "Concluído",
+        tagClass: "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+        barClass: "bg-emerald-500",
+        progress: 100,
+        detail: "Cálculo concluído",
+        detailClass: "text-emerald-600 dark:text-emerald-300",
+      }
+    case "nao_iniciado":
+      return {
+        tone: "neutral" as ToneKey,
+        tagLabel: "Não iniciado",
+        tagClass: "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
+        barClass: "bg-slate-400 dark:bg-slate-500",
+        progress: 16,
+        detail: "Aguardando entrada em cálculo",
+        detailClass: "text-slate-500 dark:text-slate-400",
+      }
+    default:
+      return {
+        tone: "healthy" as ToneKey,
+        tagLabel: "No prazo",
+        tagClass: "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+        barClass: "bg-emerald-500",
+        progress: 56,
+        detail: precatorio.sla_horas ? `${precatorio.sla_horas}h de SLA` : "Dentro do prazo",
+        detailClass: "text-emerald-600 dark:text-emerald-300",
+      }
+  }
+}
+
+function getToneClasses(tone: ToneKey) {
+  switch (tone) {
+    case "urgent":
+      return {
+        line: "bg-rose-500",
+        avatar: "bg-rose-500/12 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
+        border: "border-rose-500/15 hover:border-rose-500/25",
+      }
+    case "attention":
+      return {
+        line: "bg-amber-500",
+        avatar: "bg-amber-500/12 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
+        border: "border-amber-500/15 hover:border-amber-500/25",
+      }
+    case "healthy":
+      return {
+        line: "bg-emerald-500",
+        avatar: "bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
+        border: "border-emerald-500/15 hover:border-emerald-500/25",
+      }
+    default:
+      return {
+        line: "bg-blue-500",
+        avatar: "bg-blue-500/12 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
+        border: "border-border hover:border-orange-500/25",
+      }
+  }
+}
+
+function TagPill({
+  children,
+  className,
+}: {
+  children: ReactNode
+  className: string
+}) {
+  return (
+    <span className={cx("inline-flex items-center rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.04em]", className)}>
+      {children}
+    </span>
+  )
+}
+
+function PrecatorioDeleteMenu({
+  onDelete,
+}: {
+  onDelete: () => void
+}) {
+  return (
+    <HeroDropdown>
+      <HeroDropdownTrigger>
+        <span
+          role="button"
+          tabIndex={0}
+          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        >
+          <MoreVertical className="h-4 w-4" />
+        </span>
+      </HeroDropdownTrigger>
+      <HeroDropdownPopover className={deleteActionPopoverClassName}>
+        <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
+          <HeroDropdownItem
+            key="delete"
+            className={deleteActionItemClassName}
+            style={deleteActionItemStyle}
+            textValue="Excluir item"
+            onPress={onDelete}
+          >
+            <div className={deleteActionContentClassName}>
+              <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger">
+                <Trash2 className="h-4 w-4" />
+              </div>
+              <div className="flex flex-1 flex-col justify-center">
+                <p className="text-sm font-semibold text-white">Excluir item</p>
+              </div>
+            </div>
+          </HeroDropdownItem>
+        </HeroDropdownMenu>
+      </HeroDropdownPopover>
+    </HeroDropdown>
+  )
+}
+
+function PrecatorioVisualCard({
+  precatorio,
+  selected,
+  selectable,
+  onToggleSelect,
+  onDelete,
+  onOpen,
+}: {
+  precatorio: Precatorio
+  selected: boolean
+  selectable: boolean
+  onToggleSelect: () => void
+  onDelete: () => void
+  onOpen: () => void
+}) {
+  const headline = getHeadline(precatorio)
+  const statusLabel = getStatusLabel(precatorio)
+  const responsavelNome = getResponsavelNome(precatorio)
+  const initials = getInitials(headline)
+  const valor = getValorDisplay(precatorio)
+  const complexidade = getComplexidadeMeta(precatorio)
+  const sla = getSlaMeta(precatorio)
+  const tone = getToneClasses(sla.tone)
+
+  return (
+    <Card
+      className={cx(
+        "group relative cursor-pointer overflow-hidden rounded-[18px] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_16px_48px_-20px_rgba(249,115,22,0.22)] dark:bg-[#18181b]",
+        tone.border,
+        selected && "ring-2 ring-orange-200 dark:ring-orange-900/60"
+      )}
+      onClick={onOpen}
+    >
+      <div className={cx("absolute inset-x-0 top-0 h-[3px]", tone.line)} />
+      <CardContent className="space-y-4">
+        <div className="flex flex-wrap items-center gap-2">
+          {(precatorio.urgente || precatorio.prioridade === "urgente") && (
+            <TagPill className={getPriorityTagClass(precatorio.prioridade, precatorio.urgente)}>
+              <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+              Urgente
+            </TagPill>
+          )}
+          <TagPill className={sla.tagClass}>
+            <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+            {sla.tagLabel}
+          </TagPill>
+          <TagPill className={getStatusTagClass(precatorio.status)}>
+            <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+            {statusLabel}
+          </TagPill>
+        </div>
+
+        <div className="flex gap-4">
+          {selectable && (
+            <div className="pt-1" onClick={(event) => event.stopPropagation()}>
+              <Checkbox
+                checked={selected}
+                onCheckedChange={onToggleSelect}
+                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+              />
+            </div>
+          )}
+
+          <div className="flex-1 space-y-4">
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0 flex-1">
+                <div className="flex items-start gap-3">
+                  <div className={cx("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold", tone.avatar)}>
+                    {initials}
+                  </div>
+                  <div className="min-w-0">
+                    <h3 className="truncate text-[15px] font-bold text-slate-900 dark:text-slate-50">{headline}</h3>
+                    <div className="mt-1 text-[11.5px] font-medium text-slate-500 dark:text-slate-400">
+                      {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : precatorio.numero_precatorio || "Sem número"}
+                    </div>
+                    <div className="mt-1 text-[11.5px] text-slate-400 dark:text-slate-500">
+                      Devedor: {precatorio.devedor || "Não informado"}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="shrink-0 text-right">
+                <div className={cx("text-lg font-extrabold leading-none tracking-[-0.02em]", valor.valueClass)}>
+                  {valor.formatted}
+                </div>
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                  {valor.label}
+                </div>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2 rounded-[10px] bg-[#f4f5f8] p-3 dark:bg-[#09090b]">
+              <div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Tribunal</div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-slate-900 dark:text-slate-100">{precatorio.tribunal || "Não informado"}</div>
+              </div>
+              <div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Data-base</div>
+                <div className="mt-1 text-[12px] font-semibold text-slate-900 dark:text-slate-100">{formatShortDate(precatorio.data_base)}</div>
+              </div>
+              <div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Complexidade</div>
+                <div className={cx("mt-1 text-[12px] font-semibold", complexidade.className)}>{complexidade.label}</div>
+              </div>
+              <div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Origem do lead</div>
+                <div className="mt-1 inline-flex items-center rounded-full border border-violet-200 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+                  {getOrigemLeadLabel(precatorio.origem_lead)}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f4f5f8] dark:bg-[#09090b]">
+                <div className={cx("h-full rounded-full transition-[width] duration-300", sla.barClass)} style={{ width: `${sla.progress}%` }} />
+              </div>
+              <span className={cx("w-[92px] shrink-0 text-right text-[10.5px] font-bold", sla.detailClass)}>{sla.detail}</span>
+            </div>
+
+            <div className="flex items-center justify-between gap-3">
+              <div className="flex items-center gap-2">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-[10px] font-bold text-white">
+                  {getInitials(responsavelNome)}
+                </div>
+                <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{responsavelNome}</span>
+              </div>
+              <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
+                {selectable ? <PrecatorioDeleteMenu onDelete={onDelete} /> : null}
+                <span className="text-[12px] font-bold text-orange-500 transition-opacity duration-200 group-hover:opacity-100 md:opacity-0">
+                  Ver detalhes →
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function PrecatoriosTableView({
+  precatorios,
+  selectedIds,
+  canDelete,
+  toggleSelection,
+  openDeleteDialog,
+  openDetails,
+}: {
+  precatorios: Precatorio[]
+  selectedIds: Set<string>
+  canDelete: (precatorio: Precatorio) => boolean
+  toggleSelection: (id: string) => void
+  openDeleteDialog: (precatorio: Precatorio) => void
+  openDetails: (id: string) => void
+}) {
+  return (
+    <div className="overflow-x-auto rounded-[18px] border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:bg-[#18181b]">
+      <table className="min-w-[980px] w-full border-collapse">
+        <thead className="bg-[#f4f5f8] dark:bg-[#09090b]">
+          <tr>
+            <th className="w-[44px] px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400" />
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Credor</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Status</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">SLA</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Tribunal</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Processo</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Responsável</th>
+            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Valor</th>
+            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Ações</th>
+          </tr>
+        </thead>
+        <tbody>
+          {precatorios.map((precatorio) => {
+            const statusLabel = getStatusLabel(precatorio)
+            const sla = getSlaMeta(precatorio)
+            const valor = getValorDisplay(precatorio)
+            const selectable = canDelete(precatorio)
+
+            return (
+              <tr
+                key={precatorio.id}
+                className="cursor-pointer border-t border-slate-900/5 transition hover:bg-orange-500/[0.03] dark:border-white/5 dark:hover:bg-orange-500/[0.04]"
+                onClick={() => openDetails(precatorio.id)}
+              >
+                <td className="px-4 py-3 align-middle" onClick={(event) => event.stopPropagation()}>
+                  {selectable ? (
+                    <Checkbox
+                      checked={selectedIds.has(precatorio.id)}
+                      onCheckedChange={() => toggleSelection(precatorio.id)}
+                      className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
+                    />
+                  ) : null}
+                </td>
+                <td className="px-4 py-3 align-middle">
+                  <div className="font-semibold text-slate-900 dark:text-slate-50">{getHeadline(precatorio)}</div>
+                  <div className="mt-1 text-[11.5px] text-slate-500 dark:text-slate-400">{precatorio.numero_precatorio || "Sem número"}</div>
+                </td>
+                <td className="px-4 py-3 align-middle">
+                  <TagPill className={getStatusTagClass(precatorio.status)}>{statusLabel}</TagPill>
+                </td>
+                <td className="px-4 py-3 align-middle">
+                  <div className="flex min-w-[150px] items-center gap-2">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f4f5f8] dark:bg-[#09090b]">
+                      <div className={cx("h-full rounded-full", sla.barClass)} style={{ width: `${sla.progress}%` }} />
+                    </div>
+                    <span className={cx("text-[11px] font-semibold", sla.detailClass)}>{sla.tagLabel}</span>
+                  </div>
+                </td>
+                <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">{precatorio.tribunal || "-"}</td>
+                <td className="px-4 py-3 align-middle text-[12px] font-mono text-slate-500 dark:text-slate-400">
+                  {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
+                </td>
+                <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">{getResponsavelNome(precatorio)}</td>
+                <td className="px-4 py-3 align-middle text-right">
+                  <div className={cx("font-semibold", valor.valueClass)}>{valor.value > 0 ? formatMoney(valor.value) : "-"}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{valor.label}</div>
+                </td>
+                <td className="px-4 py-3 align-middle text-right" onClick={(event) => event.stopPropagation()}>
+                  {selectable ? <PrecatorioDeleteMenu onDelete={() => openDeleteDialog(precatorio)} /> : null}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </div>
+  )
 }
 
 export default function PrecatoriosPage() {
@@ -252,6 +724,7 @@ export default function PrecatoriosPage() {
     filtrosAtivos,
     refetch,
   } = usePrecatoriosSearch({}, searchOptions)
+  const precatoriosList = precatorios as unknown as Precatorio[]
 
   const calculadosCount = summary.calculados
   const emCalculoOuNovoCount = summary.emCalculoOuNovo
@@ -454,13 +927,13 @@ export default function PrecatoriosPage() {
   }
 
   function toggleSelectAll() {
-    if (selectedIds.size === precatorios.filter(p => canDelete(p)).length) {
-      setSelectedIds(new Set())
+    if (selectedIds.size === precatoriosList.filter((p) => canDelete(p)).length) {
+      setSelectedIds(new Set<string>())
     } else {
-      const allDeletable = new Set(
-        precatorios
-          .filter(p => canDelete(p))
-          .map(p => p.id)
+      const allDeletable = new Set<string>(
+        precatoriosList
+          .filter((p) => canDelete(p))
+          .map((p) => p.id)
       )
       setSelectedIds(allDeletable)
     }
@@ -503,7 +976,7 @@ export default function PrecatoriosPage() {
       }
 
       await refetch()
-      setSelectedIds(new Set())
+      setSelectedIds(new Set<string>())
       setBatchDeleteDialogOpen(false)
     } catch (error: any) {
       console.error("Erro na exclusão em lote:", error)
@@ -517,7 +990,13 @@ export default function PrecatoriosPage() {
     }
   }
 
-  const deletableCount = precatorios.filter((p) => canDelete(p)).length
+  const deletableCount = precatoriosList.filter((p) => canDelete(p)).length
+  const slaAtrasadoCount = precatoriosList.filter((precatorio) => precatorio.sla_status === "atrasado").length
+  const valorExibidoTotal = precatoriosList.reduce((total, precatorio) => {
+    const valorAtualizado = Number(precatorio.valor_atualizado || 0)
+    const valorPrincipal = Number(precatorio.valor_principal || 0)
+    return total + (valorAtualizado > 0 ? valorAtualizado : valorPrincipal)
+  }, 0)
 
   if (loading && !initialized) {
     return (
@@ -528,222 +1007,220 @@ export default function PrecatoriosPage() {
   }
 
   return (
-    <div className="container mx-auto max-w-7xl p-4 pb-24 md:p-6 space-y-6">
-      {/* Header de Módulo */}
-      <section className="relative overflow-hidden rounded-3xl border border-border dark:border-border bg-gradient-to-br from-white via-white to-orange-50/70 dark:from-zinc-950/90 dark:via-zinc-950/85 dark:to-orange-950/30 p-5 md:p-6 shadow-[0_20px_60px_-40px_rgba(15,23,42,0.8)]">
-        <div className="pointer-events-none absolute -top-16 right-4 h-44 w-44 rounded-full bg-primary/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-16 left-8 h-40 w-40 rounded-full bg-primary/15 blur-3xl" />
-        <div className="relative space-y-5">
+    <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-6 pb-24 sm:px-5">
+      <section className="relative overflow-hidden rounded-[24px] border border-slate-900/10 bg-[linear-gradient(135deg,#ffffff_60%,#fff7ed_100%)] px-5 py-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[linear-gradient(135deg,#18181b_60%,rgba(124,45,18,0.35)_100%)] sm:px-8">
+        <div className="pointer-events-none absolute -right-5 -top-16 h-[200px] w-[200px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.14)_0%,transparent_70%)]" />
+        <div className="pointer-events-none absolute -bottom-12 left-4 h-[160px] w-[160px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.10)_0%,transparent_70%)]" />
+        <div className="relative z-10">
           <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
             <div>
-              <p className="text-[11px] uppercase tracking-[0.22em] text-muted-foreground dark:text-muted-foreground">Carteira ativa</p>
-              <h1 className="mt-1 text-3xl md:text-4xl font-semibold tracking-tight bg-gradient-to-r from-orange-500 via-orange-400 to-amber-300 dark:from-orange-300 dark:via-amber-200 dark:to-orange-100 bg-clip-text text-transparent drop-shadow-[0_0_14px_rgba(251,146,60,0.28)]">
+              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Carteira ativa</p>
+              <h1 className="mt-1 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
                 Precatórios
               </h1>
-              <p className="mt-2 text-sm font-medium text-muted-foreground dark:text-muted-foreground max-w-2xl">
+              <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-slate-500 dark:text-slate-400">
                 Gerencie a carteira com visão operacional clara, atalhos rápidos e filtros inteligentes.
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-2 lg:pt-1">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <Button
                 variant="outline"
                 onClick={() => setImportJsonOpen(true)}
-                className="h-10 rounded-xl border-border dark:border-border bg-background/85 dark:bg-muted shadow-sm"
+                className="rounded-xl border-slate-900/10 bg-white text-slate-500 shadow-[0_1px_4px_rgba(15,23,42,0.06)] hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
               >
-                <FileJson className="h-4 w-4 mr-2" />
+                <FileJson className="mr-2 h-4 w-4" />
                 Importar
               </Button>
               <Button
                 onClick={() => router.push("/precatorios/novo")}
-                className="h-10 rounded-xl bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-[0_14px_28px_-18px_rgba(251,146,60,0.95)] hover:from-orange-400 hover:to-amber-400"
+                className="rounded-xl border-none bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-[0_8px_24px_-10px_rgba(249,115,22,0.70)] hover:from-orange-400 hover:to-amber-500"
               >
-                <Plus className="h-4 w-4 mr-2" />
+                <Plus className="mr-2 h-4 w-4" />
                 Novo Precatório
               </Button>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-2 sm:grid-cols-3">
-            <div className="rounded-2xl border border-border dark:border-border bg-background/80 dark:bg-muted px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-muted-foreground dark:text-muted-foreground">Total</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-muted-foreground dark:text-muted-foreground">{totalPrecatorios}</p>
+          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+            <div className="rounded-[14px] border border-slate-900/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#18181b]">
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Total</div>
+              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-900 dark:text-slate-50">{totalPrecatorios}</div>
+              <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">precatórios na carteira</div>
             </div>
-            <div className="rounded-2xl border border-emerald-500/35 dark:border-emerald-400/35 bg-emerald-500/12 dark:bg-emerald-400/12 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-600 dark:text-emerald-300">Calculados</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-emerald-600 dark:text-emerald-300">{calculadosCount}</p>
+            <div className="rounded-[14px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Calculados</div>
+              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700 dark:text-emerald-300">{calculadosCount}</div>
+              <div className="mt-1 text-[11px] text-emerald-700/80 dark:text-emerald-300/80">cálculo concluído</div>
             </div>
-            <div className="rounded-2xl border border-primary/40 dark:border-primary/40 bg-primary/15 dark:bg-primary/15 px-4 py-3">
-              <p className="text-[10px] uppercase tracking-[0.2em] text-primary dark:text-primary">Em cálculo / Novo</p>
-              <p className="mt-1 text-2xl font-semibold font-mono tabular-nums text-primary dark:text-primary">{emCalculoOuNovoCount}</p>
+            <div className="rounded-[14px] border border-orange-500/25 bg-orange-500/10 px-4 py-3">
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">Em cálculo / Novo</div>
+              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-orange-600 dark:text-orange-300">{emCalculoOuNovoCount}</div>
+              <div className="mt-1 text-[11px] text-orange-700/80 dark:text-orange-300/80">em andamento agora</div>
+            </div>
+            <div className="rounded-[14px] border border-rose-500/25 bg-rose-500/10 px-4 py-3">
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">SLA atrasado</div>
+              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-rose-600 dark:text-rose-300">{slaAtrasadoCount}</div>
+              <div className="mt-1 text-[11px] text-rose-700/80 dark:text-rose-300/80">na página atual</div>
+            </div>
+            <div className="rounded-[14px] border border-blue-500/25 bg-blue-500/10 px-4 py-3">
+              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Valor exibido</div>
+              <div className="mt-1 text-[18px] font-bold leading-none tabular-nums text-blue-600 dark:text-blue-300">{formatCompactMoney(valorExibidoTotal)}</div>
+              <div className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">portfólio desta página</div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* Toolbar de Filtros e Busca */}
-      <div className="relative overflow-hidden rounded-2xl border border-border dark:border-border bg-muted dark:bg-muted backdrop-blur-md shadow-[0_20px_50px_-40px_rgba(15,23,42,0.85)]">
-        <div className="pointer-events-none absolute inset-y-0 right-0 w-56 bg-gradient-to-l from-orange-500/10 to-transparent dark:from-orange-400/12" />
-        <div className="relative p-4 md:p-5 space-y-4">
-          <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
-            <div className="flex-1">
-              <SearchBar
-                value={searchInput}
-                onChange={setSearchInput}
-                onSubmit={(value) => {
-                  setSearchInput(value)
-                  setTermo(value)
-                }}
-                onClear={() => setSearchInput("")}
-                placeholder="Busque por título, número, credor ou processo..."
-                autoSearch={false}
-                showButton={true}
-              />
-            </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <HeroDropdown>
-                <HeroDropdownTrigger>
-                  <span
-                    role="button"
-                    tabIndex={0}
-                    className="inline-flex h-11 w-[190px] items-center justify-between rounded-xl border border-default-200/70 bg-content1 px-3 text-sm font-medium text-foreground shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                  >
-                    {statusSelectValue === "todos"
-                      ? "Todos os status"
-                      : STATUS_OPTIONS.find((o) => o.value === statusSelectValue)?.label || "Status"}
-                  </span>
-                </HeroDropdownTrigger>
-                <HeroDropdownPopover>
-                  <HeroDropdownMenu aria-label="Filtro status">
-                    <HeroDropdownItem
-                      key="todos"
-                      onPress={() => handleStatusFilterChange("todos")}
-                    >
-                      Todos
+      <div className="rounded-[18px] border border-slate-900/10 bg-white p-4 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b] md:p-5">
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-center">
+          <div className="flex-1">
+            <SearchBar
+              value={searchInput}
+              onChange={setSearchInput}
+              onSubmit={(value) => {
+                setSearchInput(value)
+                setTermo(value)
+              }}
+              onClear={() => setSearchInput("")}
+              placeholder="Busque por título, número, credor ou processo..."
+              autoSearch={false}
+              showButton={true}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-2">
+            <HeroDropdown>
+              <HeroDropdownTrigger>
+                <span
+                  role="button"
+                  tabIndex={0}
+                  className="inline-flex h-11 w-[190px] items-center justify-between rounded-xl border border-slate-900/10 bg-[#f4f5f8] px-3 text-sm font-medium text-slate-500 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                >
+                  {statusSelectValue === "todos"
+                    ? "Todos os status"
+                    : STATUS_OPTIONS.find((option) => option.value === statusSelectValue)?.label || "Status"}
+                </span>
+              </HeroDropdownTrigger>
+              <HeroDropdownPopover>
+                <HeroDropdownMenu aria-label="Filtro status">
+                  <HeroDropdownItem key="todos" onPress={() => handleStatusFilterChange("todos")}>
+                    Todos
+                  </HeroDropdownItem>
+                  {STATUS_OPTIONS.map((option) => (
+                    <HeroDropdownItem key={option.value} onPress={() => handleStatusFilterChange(option.value)}>
+                      {option.label}
                     </HeroDropdownItem>
-                    {STATUS_OPTIONS.map((option) => (
-                      <HeroDropdownItem
-                        key={option.value}
-                        onPress={() => handleStatusFilterChange(option.value)}
-                      >
-                        {option.label}
-                      </HeroDropdownItem>
-                    ))}
-                  </HeroDropdownMenu>
-                </HeroDropdownPopover>
-              </HeroDropdown>
-              <AdvancedFilters
-                filtros={filtros}
-                onFilterChange={updateFiltros}
-                onClearFilters={handleClearAllFiltros}
-                totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
-                responsaveis={responsaveis}
-                showResponsavelFilter={!!userRole?.includes("admin")}
-              />
+                  ))}
+                </HeroDropdownMenu>
+              </HeroDropdownPopover>
+            </HeroDropdown>
+            <AdvancedFilters
+              filtros={filtros}
+              onFilterChange={updateFiltros}
+              onClearFilters={handleClearAllFiltros}
+              totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
+              responsaveis={responsaveis}
+              showResponsavelFilter={!!userRole?.includes("admin")}
+            />
+          </div>
+          <div className="flex flex-wrap items-center gap-3 xl:ml-auto xl:justify-end">
+            <div className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-[#f4f5f8] px-3 py-1.5 text-[12.5px] font-medium text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
+              <span>{totalPrecatorios} registros</span>
+              {loading && initialized ? (
+                <span className="inline-flex items-center gap-1 text-xs">
+                  <Loader2 className="h-3 w-3 animate-spin" />
+                  Atualizando...
+                </span>
+              ) : null}
             </div>
-            <div className="flex items-center justify-between gap-3 xl:ml-auto">
-              <div className="inline-flex items-center gap-2 rounded-full px-3 py-1 ring-1 ring-ring dark:ring-ring bg-background/80 dark:bg-muted text-sm font-medium text-muted-foreground dark:text-muted-foreground">
-                <span>{totalPrecatorios} registros</span>
-                {loading && initialized && (
-                  <span className="inline-flex items-center gap-1 text-xs text-muted-foreground dark:text-muted-foreground">
-                    <Loader2 className="h-3 w-3 animate-spin" />
-                    Atualizando...
-                  </span>
+            <div className="inline-flex items-center rounded-full border border-slate-900/10 bg-[#f4f5f8] p-1 dark:border-white/10 dark:bg-[#09090b]">
+              <button
+                type="button"
+                onClick={() => setViewMode("cards")}
+                className={cx(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                  viewMode === "cards"
+                    ? "bg-orange-500/15 text-orange-600 shadow-[0_2px_8px_rgba(249,115,22,0.18)] dark:text-orange-300"
+                    : "text-slate-500 hover:text-orange-500 dark:text-slate-300 dark:hover:text-orange-300"
                 )}
-              </div>
-              <div className="hidden md:inline-flex items-center rounded-full border border-border dark:border-border bg-background/80 dark:bg-muted p-1 shadow-sm">
-                <button
-                  type="button"
-                  onClick={() => setViewMode("cards")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${viewMode === "cards"
-                    ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                    : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
-                    }`}
-                >
-                  <LayoutGrid className="h-3.5 w-3.5" />
-                  Cards
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setViewMode("table")}
-                  className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition ${viewMode === "table"
-                    ? "bg-primary/15 text-white shadow-[0_8px_20px_-14px_rgba(249,115,22,0.9)]"
-                    : "text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
-                    }`}
-                >
-                  <List className="h-3.5 w-3.5" />
-                  Tabela
-                </button>
-              </div>
+              >
+                <LayoutGrid className="h-3.5 w-3.5" />
+                Cards
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewMode("table")}
+                className={cx(
+                  "inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold transition",
+                  viewMode === "table"
+                    ? "bg-orange-500/15 text-orange-600 shadow-[0_2px_8px_rgba(249,115,22,0.18)] dark:text-orange-300"
+                    : "text-slate-500 hover:text-orange-500 dark:text-slate-300 dark:hover:text-orange-300"
+                )}
+              >
+                <List className="h-3.5 w-3.5" />
+                Tabela
+              </button>
             </div>
           </div>
-
-          {temFiltrosAtivos && (
-            <div className="flex items-center gap-2 flex-wrap pt-4 border-t border-border dark:border-border">
-              <span className="text-[11px] font-semibold text-muted-foreground dark:text-muted-foreground uppercase tracking-[0.2em] mr-1">Filtros</span>
-              {responsavelAtivo && (
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border"
-                >
-                  <span className="font-semibold">Responsável:</span>
-                  <span>{responsavelAtivo}</span>
-                  <button
-                    onClick={() => handleRemoveFiltro("responsavel_id")}
-                    className="ml-1 hover:text-destructive transition-colors"
-                    type="button"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              )}
-              {filtrosAtivos.map((filtro: any, index: number) => (
-                <Badge
-                  key={index}
-                  variant="secondary"
-                  className="flex items-center gap-1.5 rounded-full px-3 py-1 bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border"
-                >
-                  <span className="font-semibold">{filtro.label}:</span>
-                  <span>{filtro.displayValue}</span>
-                  <button
-                    onClick={() => handleRemoveFiltro(filtro.key)}
-                    className="ml-1 hover:text-destructive transition-colors"
-                    type="button"
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              ))}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleClearAllFiltros}
-                className="h-7 rounded-full text-xs text-muted-foreground dark:text-muted-foreground hover:text-muted-foreground dark:hover:text-muted-foreground"
-              >
-                Limpar
-              </Button>
-            </div>
-          )}
         </div>
+
+        {temFiltrosAtivos ? (
+          <div className="mt-4 flex flex-wrap items-center gap-2 border-t border-slate-900/10 pt-4 dark:border-white/10">
+            <span className="mr-1 text-[10px] font-bold uppercase tracking-[0.18em] text-slate-400 dark:text-slate-500">Filtros ativos</span>
+            {responsavelAtivo ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full border border-slate-900/10 bg-white px-3 py-1 text-[12px] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
+                <span className="font-semibold text-slate-900 dark:text-slate-100">Responsável:</span>
+                <span>{responsavelAtivo}</span>
+                <button onClick={() => handleRemoveFiltro("responsavel_id")} type="button" className="ml-1 transition-colors hover:text-rose-500">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ) : null}
+            {filtrosAtivos.map((filtro: any, index: number) => (
+              <span
+                key={index}
+                className="inline-flex items-center gap-1.5 rounded-full border border-slate-900/10 bg-white px-3 py-1 text-[12px] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+              >
+                <span className="font-semibold text-slate-900 dark:text-slate-100">{filtro.label}:</span>
+                <span>{filtro.displayValue}</span>
+                <button onClick={() => handleRemoveFiltro(filtro.key)} type="button" className="ml-1 transition-colors hover:text-rose-500">
+                  <X className="h-3 w-3" />
+                </button>
+              </span>
+            ))}
+            <button
+              type="button"
+              onClick={handleClearAllFiltros}
+              className="h-7 rounded-lg border border-slate-900/10 bg-white px-2.5 text-[12px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+            >
+              Limpar tudo
+            </button>
+          </div>
+        ) : null}
       </div>
 
       {/* Lista */}
       {
         precatorios.length === 0 ? (
-          <div className="relative overflow-hidden flex flex-col items-center justify-center py-24 text-center rounded-2xl border border-dashed border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/70 dark:from-zinc-950/80 dark:to-zinc-900/75">
-            <div className="pointer-events-none absolute -top-12 right-10 h-32 w-32 rounded-full bg-primary/15 blur-3xl" />
-            <div className="relative bg-background/85 dark:bg-muted p-4 rounded-2xl border border-border dark:border-border mb-4">
-              {searchTerm || temFiltrosAtivos ? <Filter className="h-8 w-8 text-muted-foreground" /> : <FileText className="h-8 w-8 text-muted-foreground" />}
+          <div className="relative overflow-hidden rounded-[18px] border-2 border-dashed border-slate-900/10 bg-white/90 px-6 py-20 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
+            <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl" />
+            <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-amber-400/10 blur-3xl" />
+            <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
+              {searchTerm || temFiltrosAtivos ? (
+                <Filter className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+              ) : (
+                <FileText className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+              )}
             </div>
-            <h3 className="relative text-lg font-semibold text-muted-foreground dark:text-muted-foreground mb-2">
+            <h3 className="relative text-lg font-bold text-slate-900 dark:text-slate-50">
               {searchTerm || temFiltrosAtivos ? "Nenhum resultado encontrado" : "Sua lista está vazia"}
             </h3>
-            <p className="relative text-muted-foreground dark:text-muted-foreground max-w-sm mb-6">
+            <p className="relative mx-auto mt-2 mb-6 max-w-sm text-[13.5px] leading-6 text-slate-500 dark:text-slate-400">
               {searchTerm || temFiltrosAtivos
                 ? "Tente ajustar os filtros ou termo de busca para encontrar o que procura."
                 : "Comece adicionando novos precatórios para gerenciá-los aqui."}
             </p>
             {!searchTerm && !temFiltrosAtivos && (
-              <Button onClick={() => router.push("/precatorios/novo")}>
+              <Button onClick={() => router.push("/precatorios/novo")} className="shadow-[0_8px_24px_-10px_rgba(249,115,22,0.7)]">
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar Precatório
               </Button>
@@ -752,8 +1229,8 @@ export default function PrecatoriosPage() {
         ) : (
           <>
             {deletableCount > 0 && (
-              <div className="flex items-center justify-between text-sm text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border bg-background/70 dark:bg-muted px-3 py-2">
-                <label className="flex items-center gap-2 font-medium">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-slate-900/10 bg-white/90 px-4 py-3 text-sm text-slate-500 shadow-[0_4px_18px_-12px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#18181b] dark:text-slate-400">
+                <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
                   <Checkbox
                     checked={selectedIds.size > 0 && selectedIds.size === deletableCount}
                     onCheckedChange={toggleSelectAll}
@@ -761,461 +1238,63 @@ export default function PrecatoriosPage() {
                   Selecionar página
                 </label>
                 {selectedIds.size > 0 && (
-                  <span className="text-sm font-medium text-muted-foreground dark:text-muted-foreground">{selectedIds.size} selecionado(s)</span>
+                  <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-orange-600 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300">
+                    {selectedIds.size} selecionado(s)
+                  </span>
                 )}
               </div>
             )}
 
-            {/* Cards sempre no mobile */}
-            <div className="grid gap-4 md:hidden">
-              {precatorios.map((precatorio, index) => {
-                const valorAtualizado = Number(precatorio.valor_atualizado || 0)
-                const valorPrincipal = Number(precatorio.valor_principal || 0)
-                const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
-                const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
-                const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
-
-                return (
-                  <AnimatedListItem key={precatorio.id} index={index}>
-                    <Card
-                      className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-content1 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
-                      onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                    >
-                      <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
-                        <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                        <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-                      </div>
-                      <CardContent className="relative z-10 p-5">
-                        <div className="flex gap-4">
-                          {canDelete(precatorio) && (
-                            <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                              <Checkbox
-                                checked={selectedIds.has(precatorio.id)}
-                                onCheckedChange={() => toggleSelection(precatorio.id)}
-                                className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                              />
-                            </div>
-                          )}
-
-                          <div className="flex-1 space-y-4">
-                            <div className="flex flex-col gap-3">
-                              <div className="flex items-start justify-between gap-4">
-                                <div className="space-y-1">
-                                  <div className="flex items-center gap-2 flex-wrap">
-                                    <h3 className="text-base font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
-                                      {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
-                                    </h3>
-                                    <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                      {statusLabel}
-                                    </Badge>
-                                    {precatorio.urgente && (
-                                      <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                        Urgente
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  {precatorio.titulo && (
-                                    <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
-                                  )}
-                                  {responsavelNome && (
-                                    <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                      Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
-                                    </p>
-                                  )}
-                                </div>
-                                <div className="text-right">
-                                  <div className={`text-xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
-                                    {valorExibido > 0
-                                      ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
-                                      : "Aguardando"}
-                                  </div>
-                                  <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
-                                    {valorExibido > 0 ? valorLabel : "Valor"}
-                                  </div>
-                                </div>
-                              </div>
-
-                              <div className="grid grid-cols-1 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border !bg-background/95 dark:!bg-muted/95 p-3">
-                                {precatorio.tribunal && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
-                                  </div>
-                                )}
-                                {precatorio.numero_precatorio && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Precatório</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
-                                  </div>
-                                )}
-                                {precatorio.numero_processo && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Processo</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
-                                  </div>
-                                )}
-                                {precatorio.devedor && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
-                                  </div>
-                                )}
-                                {precatorio.data_base && (
-                                  <div>
-                                    <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
-                                    <div className="font-medium text-muted-foreground dark:text-muted-foreground">
-                                      {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-
-                              <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
-                                <div className="flex flex-wrap gap-2 text-xs">
-                                  {precatorio.prioridade && (
-                                    <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                      Prioridade {precatorio.prioridade}
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                  {canDelete(precatorio) && (
-                                    <HeroDropdown placement="bottom-end" disableAnimation>
-                                      <HeroDropdownTrigger>
-                                        <span
-                                          role="button"
-                                          tabIndex={0}
-                                          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                                        >
-                                          <MoreVertical className="h-4 w-4" />
-                                        </span>
-                                      </HeroDropdownTrigger>
-                                      <HeroDropdownPopover className={deleteActionPopoverClassName}>
-                                        <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
-                                          <HeroDropdownItem
-                                            key="delete"
-                                            className={deleteActionItemClassName}
-                                            style={deleteActionItemStyle}
-                                            textValue="Excluir item"
-                                            onPress={() => {
-                                              setPrecatorioToDelete(precatorio)
-                                              setDeleteDialogOpen(true)
-                                            }}
-                                          >
-                                            <div className={deleteActionContentClassName}>
-                                              <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
-                                                <Trash2 className="w-4 h-4" />
-                                              </div>
-                                              <div className="flex flex-1 flex-col justify-center">
-                                                <p className="text-sm font-semibold text-white">Excluir item</p>
-                                              </div>
-                                            </div>
-                                          </HeroDropdownItem>
-                                        </HeroDropdownMenu>
-                                      </HeroDropdownPopover>
-                                    </HeroDropdown>
-                                  )}
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </AnimatedListItem>
-                )
-              })}
-            </div>
-
-            {/* Tabela no desktop */}
-            <div className="hidden md:block">
+            {/* Visualização controlada por clique */}
+            <div>
               {viewMode === "table" ? (
-                <div className="rounded-2xl border border-border dark:border-border bg-gradient-to-br from-white/90 to-zinc-50/80 dark:from-zinc-950/85 dark:to-zinc-900/80 shadow-[0_18px_42px_-30px_rgba(15,23,42,0.9)] overflow-hidden">
-                  <Table>
-                    <TableHeader>
-                      <TableRow className="bg-muted dark:bg-muted">
-                        <TableHead className="w-[40px]"></TableHead>
-                        <TableHead>Credor</TableHead>
-                        <TableHead>Status</TableHead>
-                        <TableHead>Tribunal</TableHead>
-                        <TableHead>Processo</TableHead>
-                        <TableHead>Valor</TableHead>
-                        <TableHead>Atualização</TableHead>
-                        <TableHead className="text-right">Ações</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {precatorios.map((precatorio) => {
-                        const valorAtualizado = Number(precatorio.valor_atualizado || 0)
-                        const valorPrincipal = Number(precatorio.valor_principal || 0)
-                        const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
-                        const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                        const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                        const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                        const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
-
-                        return (
-                          <TableRow
-                            key={precatorio.id}
-                            className="cursor-pointer hover:bg-primary/15 dark:hover:bg-muted"
-                            onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                          >
-                            <TableCell onClick={(e) => e.stopPropagation()}>
-                              {canDelete(precatorio) && (
-                                <Checkbox
-                                  checked={selectedIds.has(precatorio.id)}
-                                  onCheckedChange={() => toggleSelection(precatorio.id)}
-                                  className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                />
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <div className="font-medium text-primary dark:text-primary">{precatorio.credor_nome || precatorio.titulo}</div>
-                              {precatorio.numero_precatorio && (
-                                <div className="text-xs text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                {statusLabel}
-                              </Badge>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal || "-"}</TableCell>
-                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
-                              {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
-                            </TableCell>
-                            <TableCell>
-                              <div className={`font-mono tabular-nums ${valorColorClass}`}>
-                                {valorExibido > 0
-                                  ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
-                                  : "-"}
-                              </div>
-                              <div className={`text-[10px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>{valorLabel}</div>
-                            </TableCell>
-                            <TableCell className="text-sm text-muted-foreground dark:text-muted-foreground">
-                              {new Date(precatorio.updated_at || precatorio.created_at).toLocaleDateString("pt-BR")}
-                            </TableCell>
-                            <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                              {canDelete(precatorio) && (
-                                <HeroDropdown placement="bottom-end" disableAnimation>
-                                  <HeroDropdownTrigger>
-                                    <span
-                                      role="button"
-                                      tabIndex={0}
-                                      className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                                    >
-                                      <MoreVertical className="h-4 w-4" />
-                                    </span>
-                                  </HeroDropdownTrigger>
-                                  <HeroDropdownPopover className={deleteActionPopoverClassName}>
-                                    <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
-                                      <HeroDropdownItem
-                                        key="delete"
-                                        className={deleteActionItemClassName}
-                                        style={deleteActionItemStyle}
-                                        textValue="Excluir item"
-                                        onPress={() => {
-                                          setPrecatorioToDelete(precatorio)
-                                          setDeleteDialogOpen(true)
-                                        }}
-                                      >
-                                        <div className={deleteActionContentClassName}>
-                                          <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
-                                            <Trash2 className="w-4 h-4" />
-                                          </div>
-                                          <div className="flex flex-1 flex-col justify-center">
-                                            <p className="text-sm font-semibold text-white">Excluir item</p>
-                                          </div>
-                                        </div>
-                                      </HeroDropdownItem>
-                                    </HeroDropdownMenu>
-                                  </HeroDropdownPopover>
-                                </HeroDropdown>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        )
-                      })}
-                    </TableBody>
-                  </Table>
-                </div>
+                <PrecatoriosTableView
+                  precatorios={precatoriosList}
+                  selectedIds={selectedIds}
+                  canDelete={canDelete}
+                  toggleSelection={toggleSelection}
+                  openDeleteDialog={(precatorio) => {
+                    setPrecatorioToDelete(precatorio)
+                    setDeleteDialogOpen(true)
+                  }}
+                  openDetails={(id) => router.push(`/precatorios/detalhes?id=${id}`)}
+                />
               ) : (
-                <div className="grid gap-4">
-                  {precatorios.map((precatorio, index) => {
-                    const valorAtualizado = Number(precatorio.valor_atualizado || 0)
-                    const valorPrincipal = Number(precatorio.valor_principal || 0)
-                    const valorExibido = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
-                    const valorLabel = valorAtualizado > 0 ? "Atualizado" : "Principal"
-                    const valorColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                    const valorLabelColorClass = valorAtualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-primary dark:text-primary"
-                    const statusLabel = STATUS_LABELS[precatorio.status || ""] || precatorio.status?.replace(/_/g, " ") || "Novo"
-                    const responsavelNome = precatorio.responsavel_nome || precatorio.responsavel_calculo_nome
-
-                    return (
-                      <AnimatedListItem key={precatorio.id} index={index}>
-                        <Card
-                          className="group relative cursor-pointer overflow-hidden rounded-2xl border border-primary/20 bg-content1 shadow-[0_16px_38px_-28px_rgba(15,23,42,0.9)] hover:shadow-[0_22px_50px_-32px_rgba(249,115,22,0.45)] hover:-translate-y-[1px] transition dark:bg-zinc-900/72"
-                          onClick={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
-                        >
-                          <div className="pointer-events-none absolute inset-0 hidden dark:block dark:opacity-[0.16]">
-                            <div className="absolute -right-14 -top-14 h-40 w-40 rounded-full bg-gradient-to-br from-primary/38 to-transparent blur-3xl" />
-                            <div className="absolute inset-0 bg-[radial-gradient(120%_120%_at_100%_0%,hsl(var(--primary)/0.16)_0%,transparent_58%)]" />
-                          </div>
-                          <CardContent className="relative z-10 p-5">
-                            <div className="flex gap-4">
-                              {canDelete(precatorio) && (
-                                <div className="pt-1" onClick={(e) => e.stopPropagation()}>
-                                  <Checkbox
-                                    checked={selectedIds.has(precatorio.id)}
-                                    onCheckedChange={() => toggleSelection(precatorio.id)}
-                                    className="data-[state=checked]:bg-primary data-[state=checked]:border-primary"
-                                  />
-                                </div>
-                              )}
-
-                              <div className="flex-1 space-y-4">
-                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                  <div className="space-y-1">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h3 className="text-lg font-semibold bg-gradient-to-r from-orange-500 to-amber-500 dark:from-orange-300 dark:to-amber-200 bg-clip-text text-transparent">
-                                        {precatorio.credor_nome || precatorio.titulo || `Precatório ${precatorio.numero_precatorio}`}
-                                      </h3>
-                                      <Badge className="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                        {statusLabel}
-                                      </Badge>
-                                      {precatorio.urgente && (
-                                        <Badge variant="destructive" className="px-2 py-0.5 text-[10px] uppercase tracking-wider">
-                                          Urgente
-                                        </Badge>
-                                      )}
-                                    </div>
-                                    {precatorio.titulo && (
-                                      <p className="text-sm text-muted-foreground dark:text-muted-foreground">{precatorio.titulo}</p>
-                                    )}
-                                    {responsavelNome && (
-                                      <p className="text-xs text-muted-foreground dark:text-muted-foreground">
-                                        Responsável: <span className="font-medium text-muted-foreground dark:text-muted-foreground">{responsavelNome}</span>
-                                      </p>
-                                    )}
-                                  </div>
-
-                                  <div className="text-left md:text-right">
-                                    <div className={`text-2xl font-semibold font-mono tabular-nums ${valorColorClass}`}>
-                                      {valorExibido > 0
-                                        ? new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(valorExibido)
-                                        : "Aguardando"}
-                                    </div>
-                                    <div className={`mt-1 text-[11px] uppercase tracking-wide font-semibold ${valorLabelColorClass}`}>
-                                      {valorExibido > 0 ? valorLabel : "Valor"}
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 text-[13px] text-muted-foreground dark:text-muted-foreground rounded-xl border border-border dark:border-border !bg-background/95 dark:!bg-muted/95 p-3">
-                                  {precatorio.tribunal && (
-                                    <div>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Tribunal</div>
-                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.tribunal}</div>
-                                    </div>
-                                  )}
-                                  {precatorio.numero_precatorio && (
-                                    <div>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Precatório</div>
-                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.numero_precatorio}</div>
-                                    </div>
-                                  )}
-                                  {precatorio.numero_processo && (
-                                    <div>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Nº Processo</div>
-                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{maskProcesso(precatorio.numero_processo)}</div>
-                                    </div>
-                                  )}
-                                  {precatorio.devedor && (
-                                    <div>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Devedor</div>
-                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">{precatorio.devedor}</div>
-                                    </div>
-                                  )}
-                                  {precatorio.data_base && (
-                                    <div>
-                                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground dark:text-muted-foreground">Data-base</div>
-                                      <div className="font-medium text-muted-foreground dark:text-muted-foreground">
-                                        {new Date(precatorio.data_base).toLocaleDateString("pt-BR")}
-                                      </div>
-                                    </div>
-                                  )}
-                                </div>
-
-                                <div className="flex items-center justify-between gap-3 pt-3 border-t border-border dark:border-border">
-                                  <div className="flex flex-wrap gap-2 text-xs">
-                                    {precatorio.prioridade && (
-                                      <Badge className="bg-muted dark:bg-muted text-muted-foreground dark:text-muted-foreground border border-border dark:border-border">
-                                        Prioridade {precatorio.prioridade}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                  <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
-                                    {canDelete(precatorio) && (
-                                      <HeroDropdown placement="bottom-end" disableAnimation>
-                                        <HeroDropdownTrigger>
-                                          <span
-                                            role="button"
-                                            tabIndex={0}
-                                            className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground hover:bg-default-200/60 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
-                                          >
-                                            <MoreVertical className="h-4 w-4" />
-                                          </span>
-                                        </HeroDropdownTrigger>
-                                        <HeroDropdownPopover className={deleteActionPopoverClassName}>
-                                          <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
-                                            <HeroDropdownItem
-                                              key="delete"
-                                              className={deleteActionItemClassName}
-                                              style={deleteActionItemStyle}
-                                              textValue="Excluir item"
-                                              onPress={() => {
-                                                setPrecatorioToDelete(precatorio)
-                                                setDeleteDialogOpen(true)
-                                              }}
-                                            >
-                                              <div className={deleteActionContentClassName}>
-                                                <div className="flex shrink-0 items-center justify-center rounded-lg bg-danger/10 text-danger w-8 h-8">
-                                                  <Trash2 className="w-4 h-4" />
-                                                </div>
-                                                <div className="flex flex-1 flex-col justify-center">
-                                                  <p className="text-sm font-semibold text-white">Excluir item</p>
-                                                </div>
-                                              </div>
-                                            </HeroDropdownItem>
-                                          </HeroDropdownMenu>
-                                        </HeroDropdownPopover>
-                                      </HeroDropdown>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      </AnimatedListItem>
-                    )
-                  })}
+                <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))" }}>
+                  {precatoriosList.map((precatorio, index) => (
+                    <AnimatedListItem key={precatorio.id} index={index}>
+                      <PrecatorioVisualCard
+                        precatorio={precatorio}
+                        selected={selectedIds.has(precatorio.id)}
+                        selectable={canDelete(precatorio)}
+                        onToggleSelect={() => toggleSelection(precatorio.id)}
+                        onDelete={() => {
+                          setPrecatorioToDelete(precatorio)
+                          setDeleteDialogOpen(true)
+                        }}
+                        onOpen={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
+                      />
+                    </AnimatedListItem>
+                  ))}
                 </div>
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-xl border border-default-200/70 bg-content1 px-4 py-3">
-              <span className="text-sm text-foreground/70">
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-slate-900/10 bg-white/90 px-4 py-3 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
+              <span className="text-sm text-slate-500 dark:text-slate-400">
                 Exibindo {rangeStart}-{rangeEnd} de {totalPrecatorios} precatórios
               </span>
               <div className="flex items-center gap-2">
-                <Button variant="outline" size="sm" disabled={currentPage <= 1} onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  disabled={currentPage <= 1}
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="border-slate-900/10 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                >
                   Anterior
                 </Button>
-                <span className="min-w-[110px] text-center text-xs font-medium text-foreground/70">
+                <span className="inline-flex min-w-[120px] items-center justify-center rounded-full border border-slate-900/10 bg-[#f4f5f8] px-4 py-2 text-center text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
                   Página {currentPage} de {totalPages}
                 </span>
                 <Button
@@ -1223,6 +1302,7 @@ export default function PrecatoriosPage() {
                   size="sm"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  className="border-slate-900/10 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
                 >
                   Próxima
                 </Button>
@@ -1235,31 +1315,61 @@ export default function PrecatoriosPage() {
       {
         selectedIds.size > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex flex-wrap items-center gap-2 rounded-full border border-border dark:border-border bg-background/95 dark:bg-muted shadow-[0_20px_45px_-30px_rgba(15,23,42,0.9)] px-4 py-2 backdrop-blur">
-              <span className="text-sm font-semibold text-muted-foreground dark:text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-900/10 bg-white/95 px-4 py-2 shadow-[0_16px_48px_-20px_rgba(249,115,22,0.22)] backdrop-blur dark:border-white/10 dark:bg-[#18181b]/95">
+              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
                 {selectedIds.size} selecionado(s)
               </span>
-              <div className="h-6 w-px bg-muted" />
-              <Button variant="outline" size="sm" disabled title="Em breve">
+              <div className="h-6 w-px bg-slate-900/10 dark:bg-white/10" />
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                title="Em breve"
+                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+              >
                 Exportar
               </Button>
-              <Button variant="outline" size="sm" disabled title="Em breve">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                title="Em breve"
+                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+              >
                 Mover status
               </Button>
-              <Button variant="outline" size="sm" disabled title="Em breve">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                title="Em breve"
+                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+              >
                 Atribuir responsável
               </Button>
-              <Button variant="outline" size="sm" disabled title="Em breve">
+              <Button
+                variant="outline"
+                size="sm"
+                disabled
+                title="Em breve"
+                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+              >
                 Gerar PDF
               </Button>
               <Button
                 variant="destructive"
                 size="sm"
                 onClick={() => setBatchDeleteDialogOpen(true)}
+                className="shadow-[0_8px_20px_-12px_rgba(244,63,94,0.65)]"
               >
                 Excluir
               </Button>
-              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())}>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setSelectedIds(new Set<string>())}
+                className="text-slate-500 dark:text-slate-300"
+              >
                 Limpar
               </Button>
             </div>
@@ -1287,7 +1397,8 @@ export default function PrecatoriosPage() {
                 <HeroButton slot="close" variant="tertiary" onPress={() => setDeleteDialogOpen(false)}>
                   Cancelar
                 </HeroButton>
-                <HeroButton slot="close" variant="danger" onPress={handleDeletePrecatorio} isLoading={deleting}>
+                <HeroButton slot="close" variant="danger" onPress={handleDeletePrecatorio} isDisabled={deleting}>
+                  {deleting ? <HeroSpinner size="sm" /> : null}
                   Excluir item
                 </HeroButton>
               </AlertDialog.Footer>

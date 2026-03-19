@@ -365,11 +365,11 @@ const KanbanCardItem = memo(function KanbanCardItem({
   return (
     <Card
       onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
-      className={`cursor-grab active:cursor-grabbing min-h-[9.5rem] rounded-2xl border bg-content1/92 dark:bg-zinc-950/70 backdrop-blur-sm shadow-[0_10px_24px_-16px_rgba(0,0,0,0.9)] group hover:shadow-[0_20px_36px_-24px_rgba(0,0,0,0.95)] hover:border-primary/35 transition-all duration-200 select-none ${isDragging
+      className={`cursor-grab active:cursor-grabbing min-h-[9.5rem] rounded-2xl border bg-background group hover:border-primary/35 transition-all duration-200 select-none ${isDragging
         ? "shadow-2xl ring-2 ring-primary/60"
         : precatorio.motivo_atraso_calculo
           ? "border-red-500/80 dark:border-red-500/80 ring-1 ring-red-500/25"
-          : "border-default-200/70 dark:border-zinc-700/50"
+          : "border-border"
         }`}
     >
       <CardContent className="p-3.5">
@@ -457,7 +457,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
           </div>
 
           {temValor && (
-            <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-xl border border-default-200/70 dark:border-zinc-700/50 bg-content2/60 dark:bg-zinc-900/60 px-2.5 py-2">
+            <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-xl border border-border bg-muted/60 px-2.5 py-2">
               <span className={`text-[0.625rem] uppercase tracking-wide leading-none font-medium ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
                 {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
               </span>
@@ -469,7 +469,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
 
           <div className="pt-0.5 flex items-center justify-between gap-2 min-w-0">
             <div
-              className="min-w-0 flex items-center gap-1 text-[0.6875rem] text-foreground/65 dark:text-zinc-400 bg-content2/65 dark:bg-zinc-900/70 px-2 py-1 rounded-lg max-w-[58%]"
+              className="min-w-0 flex items-center gap-1 text-[0.6875rem] text-foreground/65 dark:text-zinc-400 bg-muted/60 px-2 py-1 rounded-lg max-w-[58%]"
               title={`Responsável: ${precatorio.responsavel_perfil?.nome || "Não definido"}`}
             >
               <User className="h-3 w-3 shrink-0" />
@@ -486,7 +486,7 @@ const KanbanCardItem = memo(function KanbanCardItem({
               </div>
             ) : (
               <div
-                className="h-7 shrink-0 px-2.5 rounded-lg border border-default-200/70 dark:border-zinc-700/60 bg-content2/65 dark:bg-zinc-900/70 text-[0.625rem] text-foreground/70 dark:text-zinc-400 inline-flex items-center"
+                className="h-7 shrink-0 px-2.5 rounded-lg border border-border bg-muted/60 text-[0.625rem] text-foreground/70 dark:text-zinc-400 inline-flex items-center"
                 title="Cálculo bloqueado até cumprir os requisitos"
               >
                 <Lock className="h-3 w-3 mr-1.5" />
@@ -538,10 +538,10 @@ const KanbanColumn = memo(function KanbanColumn({
           <Card
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex flex-col h-full rounded-2xl ring-1 ${c.ring} bg-gradient-to-b from-content1/95 to-content2/72 dark:from-zinc-950/90 dark:to-zinc-950/70 border border-default-200/70 dark:border-zinc-700/50 shadow-[0_18px_36px_-28px_rgba(0,0,0,0.95)]`}
+            className={`flex flex-col h-full rounded-2xl ring-1 ${c.ring} bg-background/95 border border-border`}
           >
             <CardHeader
-              className={`p-0 z-10 rounded-t-2xl sticky top-0 shadow-sm ring-1 ${c.ring} ${c.bg} border-b border-default-200/70 dark:border-zinc-700/50 backdrop-blur-md`}
+              className={`p-0 z-10 rounded-t-2xl sticky top-0 shadow-sm ring-1 ${c.ring} ${c.bg} border-b border-border`}
             >
               <GlareHover
                 glareColor="#ffffff"
@@ -583,7 +583,7 @@ const KanbanColumn = memo(function KanbanColumn({
                 className={`space-y-2.5 p-2.5 h-full max-h-[65vh] md:max-h-[68vh] xl:max-h-[72vh] min-h-[7.5rem] overflow-y-auto overscroll-contain pr-3 rounded-b-2xl transition-all duration-200 [&_[data-rfd-placeholder-context-id]]:rounded-xl [&_[data-rfd-placeholder-context-id]]:border-2 [&_[data-rfd-placeholder-context-id]]:border-dashed [&_[data-rfd-placeholder-context-id]]:border-primary/45 [&_[data-rfd-placeholder-context-id]]:bg-primary/10 [&_[data-rfd-placeholder-context-id]]:transition-all [&_[data-rfd-placeholder-context-id]]:duration-200 ${
                   snapshot.isDraggingOver
                     ? "bg-primary/10 ring-2 ring-primary/30"
-                    : "bg-content1/55 dark:bg-zinc-950/40"
+                    : "bg-muted/40"
                 }`}
                 style={{ scrollbarGutter: "stable both-edges" }}
               >
@@ -1546,7 +1546,7 @@ export default function KanbanPageNewGates() {
   return (
     <div className="min-w-0 w-full max-w-full overflow-hidden px-3 md:px-4 lg:px-5 py-3 h-full min-h-0 flex flex-col space-y-4">
       {/* Header Premium */}
-      <div className="flex flex-col gap-3 border-b border-default-200/70 dark:border-zinc-800/70 pb-4">
+      <div className="flex flex-col gap-3 border-b border-border dark:border-zinc-800/70 pb-4">
         <div className="min-w-0 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
           <div className="min-w-0">
             <h1 className="text-2xl md:text-4xl font-bold tracking-tight w-fit">
@@ -1577,22 +1577,22 @@ export default function KanbanPageNewGates() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant="secondary" className="px-2.5 py-1 rounded-full bg-content2/75 text-foreground border border-default-200/70 dark:bg-zinc-800/90 dark:text-zinc-100 dark:border-zinc-700/60">
+          <Badge variant="secondary" className="px-2.5 py-1 rounded-full bg-muted text-foreground border border-border">
             Total: {precatorios.length}
           </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-default-200/70 text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
+          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Visíveis: {filteredPrecatorios.length}
           </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-default-200/70 text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
+          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Entrada: {grupos.entrada?.length || 0}
           </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-default-200/70 text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
+          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Pronto cálculo: {grupos.pronto_calculo?.length || 0}
           </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-default-200/70 text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
+          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Em cálculo: {grupos.calculo_andamento?.length || 0}
           </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-default-200/70 text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
+          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Encerrados: {(grupos.fechado?.length || 0) + (grupos.encerrados?.length || 0)}
           </Badge>
         </div>
@@ -1683,7 +1683,7 @@ export default function KanbanPageNewGates() {
               <button
                 type="button"
                 onClick={() => scrollContainerRef.current?.scrollBy({ left: -300, behavior: "smooth" })}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-default-200/70 dark:border-zinc-700/60 bg-content1/90 dark:bg-zinc-950/80 backdrop-blur shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
+                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
                 aria-label="Scroll para a esquerda"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -1693,7 +1693,7 @@ export default function KanbanPageNewGates() {
               <button
                 type="button"
                 onClick={() => scrollContainerRef.current?.scrollBy({ left: 300, behavior: "smooth" })}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-default-200/70 dark:border-zinc-700/60 bg-content1/90 dark:bg-zinc-950/80 backdrop-blur shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
+                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
                 aria-label="Scroll para a direita"
               >
                 <ChevronRight className="h-4 w-4" />
