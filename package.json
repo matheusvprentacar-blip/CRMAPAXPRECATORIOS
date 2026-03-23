@@ -1,6 +1,6 @@
 {
   "name": "Blackbox AI clone",
-  "version": "1.6.42",
+  "version": "1.6.43",
   "private": true,
   "scripts": {
     "dev": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",

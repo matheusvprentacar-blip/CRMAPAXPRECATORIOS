@@ -75,6 +75,10 @@ jobs:
           $notes >> $env:GITHUB_OUTPUT
           "EOF" >> $env:GITHUB_OUTPUT
 
+      - name: Align Tauri Rust Lockfile
+        shell: pwsh
+        run: cargo update -p tauri --precise 2.9.5 --manifest-path src-tauri/Cargo.toml
+
       - name: Build Tauri and Create Release
         uses: tauri-apps/tauri-action@v0
         env:
