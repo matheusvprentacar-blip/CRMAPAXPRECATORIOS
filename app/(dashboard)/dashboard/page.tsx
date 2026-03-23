@@ -715,6 +715,7 @@ export default function DashboardPage() {
       "dono_usuario_id",
       "criado_por",
       "responsavel",
+      "responsavel_juridico_id",
       "responsavel_calculo_id",
     ]
       .map((field) => `${field}.eq.${profile.id}`)
@@ -1101,7 +1102,6 @@ export default function DashboardPage() {
     kpis.sla.no_prazo + kpis.sla.atencao + kpis.sla.atrasado + kpis.sla.nao_iniciado + kpis.sla.concluido
 
   const slaHealthyPercent = slaBase > 0 ? ((kpis.sla.no_prazo + kpis.sla.concluido) / slaBase) * 100 : 0
-  const monthlyTargetPercent = Math.round((docsPercent + certPercent + slaHealthyPercent) / 3)
   return (
     <div className="dashboard-revamp relative min-h-[calc(100vh-4rem)] overflow-hidden lg:-m-6">
       <div className="absolute inset-0 -z-20 bg-[hsl(var(--background))] dark:bg-black" />
@@ -1116,15 +1116,20 @@ export default function DashboardPage() {
               {/* LEFT */}
               <div>
                 <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
-                  ● Dashboard estratégico · {isAdmin ? "visão consolidada" : `operador: ${profile?.nome ?? "usuário"}`}
+                  ● CRM Precatórios · {isAdmin ? "visão consolidada" : roles.includes("juridico") ? `jurídico: ${profile?.nome ?? "usuário"}` : `operador: ${profile?.nome ?? "usuário"}`}
                 </span>
-                <h1 className="mt-3.5 text-[clamp(1.9rem,4vw,2.75rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground">
-                  Mais hierarquia, mais contraste, mais clareza operacional.
+                <p className="mt-3 text-[clamp(2.1rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
+                  Dashboard estratégico
+                </p>
+                <h1 className="mt-3 text-[clamp(1.35rem,3vw,2.2rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground">
+                  Carteira, operação e prioridades em um só painel.
                 </h1>
                 <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
                   {isAdmin
-                    ? "Visão consolidada da operação e da carteira de precatórios."
-                    : `Seu desempenho operacional, ${profile?.nome ?? "usuário"}.`}
+                    ? "Acompanhe volumes, valores, gargalos e andamento da carteira de precatórios com visão consolidada da operação."
+                    : roles.includes("juridico")
+                      ? `Acompanhe sua fila jurídica, seus próximos passos e os casos sob sua responsabilidade, ${profile?.nome ?? "usuário"}.`
+                      : `Acompanhe sua fila, produtividade e próximos passos, ${profile?.nome ?? "usuário"}.`}
                   {lastUpdated ? ` Atualizado em ${new Date(lastUpdated).toLocaleString("pt-BR")}.` : ""}
                 </p>
 
@@ -1204,8 +1209,8 @@ export default function DashboardPage() {
                       <p className="mt-1 text-xs text-muted-foreground">Valor consolidado do período selecionado.</p>
                     </div>
                     <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-bold">
-                      Meta{" "}
-                      <CountUp end={monthlyTargetPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
+                      SLA saudável{" "}
+                      <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
                     </span>
                   </div>
                   <div className="mt-4 flex items-end justify-between gap-3">

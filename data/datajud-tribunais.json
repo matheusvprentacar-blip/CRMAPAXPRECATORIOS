@@ -1,0 +1,831 @@
+{
+  "generatedAt": "2026-03-23T05:44:20.471Z",
+  "source": {
+    "table": "public.precatorios",
+    "rowsLoaded": 1614,
+    "mappedByProcess": 747,
+    "mappedByText": 829,
+    "note": "Database values are messy; counts prefer CNJ process numbers and fall back to tribunal text only when the alias is unambiguous."
+  },
+  "categories": {
+    "superior": 4,
+    "federal": 6,
+    "estadual": 27,
+    "trabalhista": 24,
+    "eleitoral": 27,
+    "militar": 3
+  },
+  "tribunais": [
+    {
+      "alias": "stj",
+      "category": "superior",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_stj/_search",
+      "registrosNaBase": 2,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "STJ",
+        "SUPERIOR TRIBUNAL DE JUSTIÇA – BRASÍLIA/DF"
+      ]
+    },
+    {
+      "alias": "stm",
+      "category": "superior",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_stm/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tse",
+      "category": "superior",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tse/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tst",
+      "category": "superior",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tst/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trf1",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf1/_search",
+      "registrosNaBase": 5,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRF1"
+      ]
+    },
+    {
+      "alias": "trf2",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf2/_search",
+      "registrosNaBase": 17,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "11ª VF DO RIO DE JANEIRO",
+        "29 VARA FEDERAL DO RIO DE JANEIRO",
+        "4ª VARA FEDERAL DE NITERÓI (JUÍZO SUBSTITUTO DA 4ª VF DE NITERÓI)",
+        "JUÍZO FEDERAL DA 28ª VF DO RIO DE JANEIRO",
+        "1ª VF DE SÃO PEDRO DA ALDEIA"
+      ]
+    },
+    {
+      "alias": "trf3",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf3/_search",
+      "registrosNaBase": 3,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "21VARA CIVIL FEDERAL DE SÃO PAULO"
+      ]
+    },
+    {
+      "alias": "trf4",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf4/_search",
+      "registrosNaBase": 13,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRF4",
+        "JUÍZO FEDERAL DA 2ª VF DE UMUARAMA",
+        "JUÍZO SUBSTITUTO DA 23ª VF DE PORTO ALEGRE",
+        "4 VARA FAMILIA DE CURITIBA"
+      ]
+    },
+    {
+      "alias": "trf5",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf5/_search",
+      "registrosNaBase": 4,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRF5",
+        "10ª VARA FEDERAL DA SEÇÃO JUDICIÁRIA DO ESTADO DE PERNAMBUCO."
+      ]
+    },
+    {
+      "alias": "trf6",
+      "category": "federal",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trf6/_search",
+      "registrosNaBase": 4,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "5 VARA FEDERAL CIVEL DE BELO HORIZONTE",
+        "AO JUÍZO DA 5ª VARA FEDERAL CÍVEL DA SSJ DE BELO HORIZONTE/MG"
+      ]
+    },
+    {
+      "alias": "tjac",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjac/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjal",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjal/_search",
+      "registrosNaBase": 5,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "ESTADO DE ALAGOAS",
+        "ESTADOS DE ALAGOAS"
+      ]
+    },
+    {
+      "alias": "tjam",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjam/_search",
+      "registrosNaBase": 647,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJAM"
+      ]
+    },
+    {
+      "alias": "tjap",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjap/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "3º JUIZADO ESPECIAL DE FAZENDA PÚBLICA – COMARCA DE MACAPÁ"
+      ]
+    },
+    {
+      "alias": "tjba",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjba/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJBA"
+      ]
+    },
+    {
+      "alias": "tjce",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjce/_search",
+      "registrosNaBase": 2,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJCE"
+      ]
+    },
+    {
+      "alias": "tjdft",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjdft/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjes",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjes/_search",
+      "registrosNaBase": 8,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "VITÓRIA - VARA ESPECIALIZADA ACIDENTES TRABALHO",
+        "JUIZO UNICO DE VILHA VELHA",
+        "1 VARA DA AFZ PUBLICA  ESTADUAL PRIVATIVA DAS EXECUCOES",
+        "4 VARA FAZENDA PUBLICA ESTADUAL",
+        "TJES"
+      ]
+    },
+    {
+      "alias": "tjgo",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjgo/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjma",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjma/_search",
+      "registrosNaBase": 2,
+      "presenteNaBase": true,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjmg",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjmg/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "UNIDADE JURISDICIONAL DA FAZENDA PÚBLICA DA COMARCA DE DIAMANTINA – MG"
+      ]
+    },
+    {
+      "alias": "tjms",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjms/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJMS"
+      ]
+    },
+    {
+      "alias": "tjmt",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjmt/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJMT"
+      ]
+    },
+    {
+      "alias": "tjpa",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjpa/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjpb",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjpb/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjpe",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjpe/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjpi",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjpi/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjpr",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjpr/_search",
+      "registrosNaBase": 787,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TJPR",
+        "VARA CÍVEL, DA FAZENDA PÚBLICA, ACIDENTES DO TRABALHO, REGISTROS PÚBLICOS E CORREGEDORIA DO FORO EXTRAJUDICIAL, JUIZADO ESPECIAL CÍVEL E JUIZADO ESPECIAL DA FAZENDA PÚBLICA - PINHÃO",
+        "JUÍZO ÚNICO - SANTA HELENA",
+        "VARA UNICA DE CERRO AZUL",
+        "1ª VARA DA FAZENDA PÚBLICA - FORO CENTRAL DA COMARCA DA REGIÃO METROPOLITANA DE MARINGÁ"
+      ]
+    },
+    {
+      "alias": "tjrj",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjrj/_search",
+      "registrosNaBase": 8,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "ESTADO DO RIO DE JANEIRO",
+        "ESTADO RJ COMARCA DE NOVA IGUAÇU 7 VARA CÍVEL",
+        "10ª VARA DA FAZENDA PÚBLICA",
+        "PJERJ",
+        "TJRJ"
+      ]
+    },
+    {
+      "alias": "tjrn",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjrn/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjro",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjro/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjrr",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjrr/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjrs",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjrs/_search",
+      "registrosNaBase": 6,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRIBUNAL DO RIO GRANDE DO SUL",
+        "22ª VARA DA FAZENDA PÚBLICA DO FORO CENTRA",
+        "TJRS"
+      ]
+    },
+    {
+      "alias": "tjsc",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjsc/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRF4"
+      ]
+    },
+    {
+      "alias": "tjse",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjse/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjsp",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjsp/_search",
+      "registrosNaBase": 47,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "COMARCA DE RIBEIRÃO PRETO",
+        "7ª VARA DE FAZENDA PÚBLICA, SÃO PAULO",
+        "FORO DE ARARAS",
+        "3ª VARA DO JUIZADO ESPECIAL DA FAZENDA PÚBLICA DA CAPITAL"
+      ]
+    },
+    {
+      "alias": "tjto",
+      "category": "estadual",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjto/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt1",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt1/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt10",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt10/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt11",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt11/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt12",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt12/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRT12"
+      ]
+    },
+    {
+      "alias": "trt13",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt13/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt14",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt14/_search",
+      "registrosNaBase": 2,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRT14"
+      ]
+    },
+    {
+      "alias": "trt15",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt15/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "15 REGIAO VARA DO TRABALHO DE REGISTRO"
+      ]
+    },
+    {
+      "alias": "trt16",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt16/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt17",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt17/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt18",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt18/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt19",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt19/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt2",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt2/_search",
+      "registrosNaBase": 4,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "77 VDARA O TRABA;HO DE SAO PAULO",
+        "2 VARA TRABALHO DE SANTOS"
+      ]
+    },
+    {
+      "alias": "trt20",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt20/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt21",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt21/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt22",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt22/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt23",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt23/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt24",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt24/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt3",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt3/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt4",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt4/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "1ª VARA DO TRABALHO DE GRAVATAÍ"
+      ]
+    },
+    {
+      "alias": "trt5",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt5/_search",
+      "registrosNaBase": 1,
+      "presenteNaBase": true,
+      "exemplosBanco": [
+        "TRT5"
+      ]
+    },
+    {
+      "alias": "trt6",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt6/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt7",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt7/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt8",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt8/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "trt9",
+      "category": "trabalhista",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_trt9/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ac",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ac/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-al",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-al/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-am",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-am/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ap",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ap/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ba",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ba/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ce",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ce/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-dft",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-dft/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-es",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-es/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-go",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-go/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ma",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ma/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-mg",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-mg/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ms",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ms/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-mt",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-mt/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-pa",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-pa/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-pb",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-pb/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-pe",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-pe/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-pi",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-pi/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-pr",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-pr/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-rj",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-rj/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-rn",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-rn/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-ro",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-ro/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-rr",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-rr/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-rs",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-rs/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-sc",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-sc/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-se",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-se/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-sp",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-sp/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tre-to",
+      "category": "eleitoral",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tre-to/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjmmg",
+      "category": "militar",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjmmg/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjmrs",
+      "category": "militar",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjmrs/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    },
+    {
+      "alias": "tjmsp",
+      "category": "militar",
+      "endpoint": "https://api-publica.datajud.cnj.jus.br/api_publica_tjmsp/_search",
+      "registrosNaBase": 0,
+      "presenteNaBase": false,
+      "exemplosBanco": []
+    }
+  ]
+}

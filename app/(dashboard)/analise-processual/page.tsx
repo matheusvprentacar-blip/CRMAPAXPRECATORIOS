@@ -21,11 +21,11 @@ import { getSupabase } from "@/lib/supabase/client"
 
 const glassCard =
   "rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] backdrop-blur-xl"
+  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(240_30%_40%/0.18)] backdrop-blur-xl"
 
 const cardSoft =
   "rounded-[1.25rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(var(--primary)/0.35)]"
+  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(240_20%_40%/0.14)]"
 
 interface PrecatorioAnalise {
   id: string
@@ -467,7 +467,7 @@ export default function AnaliseProcessualPage() {
                   <Chip size="sm" className="rounded-full" variant="primary">Fila Jurídica</Chip>
                   <Chip size="sm" className="rounded-full" variant="secondary">Pré-cálculo</Chip>
                 </div>
-                <h1 className="text-3xl font-bold tracking-tight text-orange-500">Análise Processual</h1>
+                <h1 className="text-3xl font-bold tracking-tight">Análise Processual</h1>
                 <p className="text-sm text-foreground/70">
                   Triagem jurídica antes do cálculo com foco em viabilidade, pendências e descontos processuais.
                 </p>
@@ -543,14 +543,14 @@ export default function AnaliseProcessualPage() {
 
         <div className="grid grid-cols-1 gap-4 xl:grid-cols-2 2xl:grid-cols-3">
           {filteredPrecatorios.map((p, index) => (
-            <SpotlightCard key={p.id} className="h-full w-full rounded-[1.2rem]" spotlightColor="hsl(var(--primary) / 0.26)">
+            <SpotlightCard key={p.id} className="h-full w-full rounded-[1.2rem]" spotlightColor="hsl(230 60% 55% / 0.18)">
               <Card
                 className={[
                   "group h-full cursor-pointer overflow-hidden rounded-[1.2rem] border border-default-200/80 bg-content1/95 transition-all duration-200",
-                  "hover:-translate-y-[1px] hover:border-primary/40 hover:shadow-medium",
+                  "hover:-translate-y-[1px] hover:border-slate-400/40 dark:hover:border-slate-500/40 hover:shadow-medium",
                   "relative",
                   "before:pointer-events-none before:absolute before:inset-0 before:opacity-80",
-                  "before:bg-[linear-gradient(145deg,rgba(255,255,255,0.2)_0%,transparent_26%,transparent_72%,rgba(255,166,63,0.15)_100%)]",
+                  "before:bg-[linear-gradient(145deg,rgba(255,255,255,0.14)_0%,transparent_26%,transparent_72%,rgba(148,163,184,0.07)_100%)]",
                 ].join(" ")}
                 onClick={() => handleAbrir(p.id)}
               >
@@ -565,7 +565,7 @@ export default function AnaliseProcessualPage() {
                         <div className="flex items-center gap-1 text-[11px] font-semibold uppercase tracking-wide text-foreground/50">
                           <User className="h-3 w-3" /> Credor
                         </div>
-                        <p className="truncate text-sm font-semibold text-orange-600 dark:text-orange-400" title={p.credor_nome || undefined}>
+                        <p className="truncate text-sm font-semibold text-foreground" title={p.credor_nome || undefined}>
                           {p.credor_nome || "Não informado"}
                         </p>
                         <p className="truncate font-mono text-xs text-foreground/60" title={p.credor_cpf_cnpj || undefined}>

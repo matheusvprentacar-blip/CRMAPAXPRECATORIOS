@@ -36,6 +36,7 @@ import {
   ArrowRight,
   RotateCcw,
   Calculator,
+  FileSearch,
   Scale,
   CheckSquare,
   Percent,
@@ -62,6 +63,7 @@ import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
 import CalculadoraPrecatorios from "@/components/calculador-precatorios"
 import { ResumoCalculoDetalhado } from "@/components/precatorios/resumo-calculo-detalhado"
 import { ProjecaoComparativoPanel } from "@/components/precatorios/comparativo/projecao-comparativo-panel"
+import { DataJudConsultaPanel } from "@/components/precatorios/datajud-panel"
 
 import { AbaProposta } from "@/components/kanban/aba-proposta"
 import { OficioViewer } from "@/components/kanban/oficio-viewer"
@@ -492,6 +494,7 @@ export default function PrecatorioDetailPage() {
     const key = `precatorio-tab:${id}:page`
     const allowedTabs = new Set([
       "detalhes",
+      "datajud",
       "oficio",
       "documentos",
       "certidoes",
@@ -1982,6 +1985,13 @@ export default function PrecatorioDetailPage() {
                   Geral
                 </TabsTrigger>
                 <TabsTrigger
+                  value="datajud"
+                  className={dashboardTabsTriggerClass}
+                >
+                  <FileSearch className="h-4 w-4 mr-2" />
+                  DataJud
+                </TabsTrigger>
+                <TabsTrigger
                   value="documentos"
                   className={dashboardTabsTriggerClass}
                 >
@@ -3398,6 +3408,15 @@ export default function PrecatorioDetailPage() {
                     </Card>
                   </div>
                 </div>
+              </TabsContent>
+
+              {/* Tab: DataJud */}
+              <TabsContent value="datajud" className="mt-0">
+                <DataJudConsultaPanel
+                  numeroProcesso={precatorio?.numero_processo || null}
+                  tribunal={precatorio?.tribunal || null}
+                  titulo={precatorio?.titulo || null}
+                />
               </TabsContent>
 
               {/* Tab: Documentos */}

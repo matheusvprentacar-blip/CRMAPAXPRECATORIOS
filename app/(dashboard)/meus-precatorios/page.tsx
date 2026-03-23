@@ -17,6 +17,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 
+function normalizeRoles(role?: string | string[] | null): string[] {
+  if (!role) return []
+  if (Array.isArray(role)) return role.filter(Boolean)
+  return [role].filter(Boolean)
+}
+
 export default function MeusPrecatoriosPage() {
   const router = useRouter()
   const [precatorios, setPrecatorios] = useState<Precatorio[]>([])
@@ -37,10 +43,27 @@ export default function MeusPrecatoriosPage() {
       } = await supabase.auth.getUser()
       if (!user) return
 
+      const { data: perfil } = await supabase
+        .from("usuarios")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+
+      const roles = new Set([
+        ...normalizeRoles(user.app_metadata?.role),
+        ...normalizeRoles(perfil?.role),
+      ])
+
+      const ownershipFilters = [`responsavel.eq.${user.id}`]
+      if (roles.has("juridico")) {
+        ownershipFilters.push(`responsavel_juridico_id.eq.${user.id}`)
+      }
+
       const { data } = await supabase
-        .from("precatorios_cards")
+        .from("precatorios")
         .select("*")
-        .eq("responsavel", user.id)
+        .or(ownershipFilters.join(","))
+        .is("deleted_at", null)
         .neq("status", "em_calculo")
         .order("created_at", { ascending: false })
 
@@ -77,7 +100,7 @@ export default function MeusPrecatoriosPage() {
           <h1 className="text-3xl font-bold tracking-tight text-foreground bg-gradient-to-r from-primary to-primary/60 bg-clip-text text-transparent w-fit">
             Meus Precatórios
           </h1>
-          <p className="text-muted-foreground mt-1">Precatórios sob sua responsabilidade direta</p>
+          <p className="text-muted-foreground mt-1">Precatórios sob sua responsabilidade</p>
         </div>
         <Button onClick={() => router.push("/precatorios/novo")} className="shadow-md hover:shadow-lg transition-all">
           <Plus className="h-4 w-4 mr-2" />
@@ -108,12 +131,12 @@ export default function MeusPrecatoriosPage() {
               {searchTerm ? <Filter className="h-8 w-8 text-muted-foreground" /> : <User className="h-8 w-8 text-muted-foreground" />}
             </div>
             <h3 className="text-lg font-semibold mb-2">
-              {searchTerm ? "Nenhum resultado encontrado" : "Nenhum precatório em sua carteira"}
+              {searchTerm ? "Nenhum resultado encontrado" : "Nenhum precatório atribuído"}
             </h3>
             <p className="text-muted-foreground max-w-sm mb-6">
               {searchTerm
                 ? "Tente ajustar o termo de busca para encontrar o que procura."
-                : "Você ainda não tem precatórios em negociação. Crie um novo para começar."}
+                : "Ainda não há precatórios vinculados à sua conta."}
             </p>
             {!searchTerm && (
               <Button onClick={() => router.push("/precatorios/novo")}>

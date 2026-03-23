@@ -140,7 +140,12 @@ BEGIN
       ('operador_calculo' = ANY(v_user_roles) AND (p.responsavel_calculo_id = v_user_id OR p.responsavel = v_user_id OR p.criado_por = v_user_id)) OR
       ('gestor_certidoes' = ANY(v_user_roles) AND (p.responsavel_certidoes_id = v_user_id)) OR
       ('gestor_oficio' = ANY(v_user_roles) AND (p.responsavel_oficio_id = v_user_id)) OR
-      ('juridico' = ANY(v_user_roles) AND (p.responsavel_juridico_id = v_user_id))
+      ('juridico' = ANY(v_user_roles) AND (
+        p.responsavel_juridico_id = v_user_id OR
+        p.responsavel = v_user_id OR
+        p.criado_por = v_user_id OR
+        p.dono_usuario_id = v_user_id
+      ))
     )
     AND (
       p_termo IS NULL OR

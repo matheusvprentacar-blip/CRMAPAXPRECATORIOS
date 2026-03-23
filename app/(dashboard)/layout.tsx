@@ -71,7 +71,7 @@ const navigation = [
     name: "Dashboard",
     href: "/dashboard",
     icon: LayoutDashboard,
-    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor"],
+    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor", "juridico"],
   },
   {
     name: "Clientes (CRM)",
@@ -83,13 +83,13 @@ const navigation = [
     name: "Precatórios",
     href: "/precatorios",
     icon: FileText,
-    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor"],
+    roles: ["admin", "operador_comercial", "operador_calculo", "operador", "gestor", "juridico"],
   },
   {
     name: "Kanban",
     href: "/kanban",
     icon: Kanban,
-    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor", "gestor_escrituras"],
+    roles: ["admin", "operador_comercial", "operador", "operador_calculo", "gestor", "gestor_escrituras", "juridico"],
   },
   {
     name: "Chat",

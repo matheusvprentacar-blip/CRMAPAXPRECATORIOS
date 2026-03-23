@@ -520,8 +520,8 @@ function PrecatorioVisualCard({
           )}
 
           <div className="flex-1 space-y-4">
-            <div className="flex items-start justify-between gap-3">
-              <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
+              <div className="min-w-0 flex-1 basis-[220px]">
                 <div className="flex items-start gap-3">
                   <div className={cx("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold", tone.avatar)}>
                     {initials}
@@ -538,8 +538,8 @@ function PrecatorioVisualCard({
                 </div>
               </div>
 
-              <div className="shrink-0 text-right">
-                <div className={cx("text-lg font-extrabold leading-none tracking-[-0.02em]", valor.valueClass)}>
+              <div className="ml-auto min-w-0 max-w-full text-right sm:max-w-[48%]">
+                <div className={cx("break-all text-[clamp(1rem,1.9vw,1.125rem)] font-extrabold leading-tight tracking-[-0.02em]", valor.valueClass)}>
                   {valor.formatted}
                 </div>
                 <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
@@ -1260,7 +1260,7 @@ export default function PrecatoriosPage() {
                   openDetails={(id) => router.push(`/precatorios/detalhes?id=${id}`)}
                 />
               ) : (
-                <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(310px, 1fr))" }}>
+                <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))" }}>
                   {precatoriosList.map((precatorio, index) => (
                     <AnimatedListItem key={precatorio.id} index={index}>
                       <PrecatorioVisualCard

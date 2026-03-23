@@ -83,6 +83,17 @@ const STATUS_VALIDOS = new Set([
   'sem_interesse'
 ])
 
+function normalizeRoles(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value]
+  return Array.from(
+    new Set(
+      values
+        .filter((role): role is string => typeof role === 'string' && role.trim().length > 0)
+        .map((role) => role.trim().toLowerCase())
+    )
+  )
+}
+
 export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonModalProps) {
   const [uploading, setUploading] = useState(false)
   const [preview, setPreview] = useState<any>(null)
@@ -626,6 +637,13 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
       }
 
       if (!user) throw new Error('Usuario nao autenticado')
+      const { data: perfil } = await supabase
+        .from("usuarios")
+        .select("role")
+        .eq("id", user.id)
+        .maybeSingle()
+      const userRoles = Array.from(new Set([...normalizeRoles(user.app_metadata?.role), ...normalizeRoles(perfil?.role)]))
+      const isJuridico = userRoles.includes("juridico")
 
       const itemsToCreate = preview.preview
         .filter((p: any) => selectedIndices.has(p.index))
@@ -656,6 +674,7 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
             criado_por: user.id,
             responsavel: user.id,
             dono_usuario_id: user.id,
+            ...(isJuridico ? { responsavel_juridico_id: user.id } : {}),
             status: 'novo',
             status_kanban: 'entrada',
             localizacao_kanban: 'entrada',

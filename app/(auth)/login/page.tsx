@@ -2,6 +2,7 @@
 
 import type React from "react"
 import { useState } from "react"
+import Link from "next/link"
 import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -17,6 +18,7 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [rememberMe, setRememberMe] = useState(true)
+  const showConnectionHelp = /supabase|conectar|fetch|dns|vpn|firewall|test-connection/i.test(error)
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -95,7 +97,12 @@ export default function LoginPage() {
             </div>
             {error && (
               <div className="text-sm text-destructive dark:text-destructive bg-destructive/15 dark:bg-destructive/15 p-3 rounded-md">
-                {error}
+                <p>{error}</p>
+                {showConnectionHelp && (
+                  <Link href="/test-connection" className="mt-2 inline-block font-medium underline underline-offset-4">
+                    Abrir diagnostico de conexao
+                  </Link>
+                )}
               </div>
             )}
             <Button type="submit" className="w-full" disabled={loading}>

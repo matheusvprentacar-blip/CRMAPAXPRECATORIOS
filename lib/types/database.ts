@@ -137,8 +137,10 @@ export interface Precatorio {
   // Responsáveis
   criado_por?: string
   responsavel?: string
+  dono_usuario_id?: string
   responsavel_calculo_id?: string
   responsavel_escrituras_id?: string
+  responsavel_juridico_id?: string
 
   // Escrituras
   status_escrituras?: "nao_iniciado" | "em_andamento" | "pendente_assinatura" | "concluido" | null

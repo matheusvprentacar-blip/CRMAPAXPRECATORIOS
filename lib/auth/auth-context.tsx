@@ -4,7 +4,7 @@ import type React from "react"
 
 import { createContext, useContext, useEffect, useState } from "react"
 import type { User } from "@supabase/supabase-js"
-import { createBrowserClient } from "@/lib/supabase/client"
+import { createBrowserClient, getSupabasePublicConfig, probeSupabaseAuthConnectivity } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
 
 export type UserRole =
@@ -81,6 +81,37 @@ interface AuthContextType {
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
+
+function isFetchConnectivityError(error: unknown) {
+  if (error instanceof TypeError) return true
+  if (!(error instanceof Error)) return false
+
+  return /failed to fetch|networkerror|load failed|fetch/i.test(error.message)
+}
+
+async function mapSupabaseAuthError(error: unknown) {
+  if (!isFetchConnectivityError(error)) {
+    return error instanceof Error ? error : new Error("Erro inesperado durante a autenticacao.")
+  }
+
+  const { url } = getSupabasePublicConfig()
+  const probe = await probeSupabaseAuthConnectivity()
+
+  if (!probe.ok) {
+    if (probe.reason === "missing_config") {
+      return new Error("Supabase nao esta configurado corretamente. Verifique NEXT_PUBLIC_SUPABASE_URL e NEXT_PUBLIC_SUPABASE_ANON_KEY.")
+    }
+
+    const targetHost = probe.host || url || "host do Supabase"
+    return new Error(
+      `Nao foi possivel conectar ao servidor de autenticacao do Supabase (${targetHost}). Verifique internet, DNS, VPN/firewall e abra /test-connection para diagnostico.`
+    )
+  }
+
+  return new Error(
+    `A autenticacao do Supabase respondeu de forma inesperada (HTTP ${probe.status}). Abra /test-connection para diagnostico.`
+  )
+}
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
@@ -193,21 +224,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   async function signIn(email: string, password: string) {
     if (!supabase) throw new Error("Supabase não está configurado")
 
-    const { error } = await supabase.auth.signInWithPassword({ email, password })
-    if (error) throw error
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email, password })
+      if (error) throw error
 
-    localStorage.removeItem("SHOW_REAUTH")
-    router.push("/dashboard")
+      localStorage.removeItem("SHOW_REAUTH")
+      router.push("/dashboard")
+    } catch (error) {
+      console.error("[Auth] Falha no signIn:", error)
+      throw await mapSupabaseAuthError(error)
+    }
   }
 
   async function reAuthenticate(password: string) {
     if (!supabase) throw new Error("Supabase não está configurado")
     if (!user?.email) throw new Error("Usuário sem e-mail para reautenticação")
 
-    const { error } = await supabase.auth.signInWithPassword({ email: user.email, password })
-    if (error) throw error
+    try {
+      const { error } = await supabase.auth.signInWithPassword({ email: user.email, password })
+      if (error) throw error
 
-    localStorage.removeItem("SHOW_REAUTH")
+      localStorage.removeItem("SHOW_REAUTH")
+    } catch (error) {
+      console.error("[Auth] Falha na reautenticacao:", error)
+      throw await mapSupabaseAuthError(error)
+    }
   }
 
   async function signUp(email: string, password: string, nome: string, role: UserRole[] = ["operador_comercial"]) {

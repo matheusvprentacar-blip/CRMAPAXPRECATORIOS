@@ -17,7 +17,6 @@ import {
   ChevronRight,
   Clock3,
   FileCheck,
-  FileText,
   MapPin,
   Paperclip,
   ScrollText,
@@ -34,7 +33,6 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
 import { SpotlightCard } from "@/components/ui/spotlight-card"
 import {
   Select,
@@ -62,14 +60,11 @@ interface PrecatOficio {
 
 const glassCard =
   "rounded-[1.35rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(var(--primary)/0.42)] backdrop-blur-xl"
+  "bg-content1/92 dark:bg-black/95 shadow-[0_24px_50px_-34px_hsl(240_30%_40%/0.18)] backdrop-blur-xl"
 
 const cardSoft =
   "rounded-[1.25rem] border border-default-200/75 dark:border-border/75 " +
-  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(var(--primary)/0.35)]"
-
-const oficiosGridRows = "auto-rows-auto items-stretch"
-const oficiosCardHeight = "h-full min-h-[388px]"
+  "bg-content1/82 dark:bg-black/75 shadow-[0_18px_38px_-30px_hsl(240_20%_40%/0.14)]"
 
 const STATUS_OFICIO_LABELS: Record<string, string> = {
   pendente: "Pendente",
@@ -247,72 +242,60 @@ export default function GestaoOficiosPage() {
   }
 
   return (
-    <div className="oficios-revamp container mx-auto max-w-[1400px] space-y-4 p-4 md:space-y-5 md:p-6">
-      <Card className={`${glassCard} oficios-hero-card`}>
-        <CardContent className="space-y-5 p-5 md:p-6">
-          <div className="flex flex-wrap items-start justify-between gap-3">
-            <div className="space-y-1">
-              <h1 className="text-2xl font-bold tracking-tight md:text-3xl">Gestão de Ofícios</h1>
-              <p className="max-w-3xl text-sm text-foreground/70 md:text-base">
-                Fila operacional para anexar ofício requisitório com ação rápida e leitura de contexto.
-              </p>
+    <div className="oficios-revamp container mx-auto max-w-[1400px] space-y-5 p-4 md:p-6">
+
+      {/* ── HERO ── */}
+      <div className={`${glassCard} oficios-hero-card p-5 md:p-6`}>
+        {/* Título + descrição + contagem */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div>
+            <p className="text-[11px] font-semibold uppercase tracking-widest text-foreground/40 mb-1">
+              Fila Operacional · Ofícios
+            </p>
+            <h1 className="text-3xl font-bold tracking-tight">Gestão de Ofícios</h1>
+            <p className="mt-1 text-sm text-foreground/60 max-w-lg">
+              Fila operacional para anexar ofício requisitório com ação rápida e leitura de contexto.
+            </p>
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            <span className="text-5xl font-black tabular-nums leading-none text-foreground">{resumo.total}</span>
+            <span className="text-xs text-foreground/50 uppercase tracking-wide">na fila</span>
+          </div>
+        </div>
+
+        {/* Stats */}
+        <div className="grid grid-cols-3 divide-x divide-default-200/60 rounded-2xl border border-default-200/60 bg-content2/30 overflow-hidden">
+          <div className="flex flex-col gap-0.5 px-5 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-md bg-default-100 p-1.5 text-foreground/60">
+                <Users2 className="h-3.5 w-3.5" />
+              </div>
+              <span className="text-[11px] uppercase tracking-wide text-foreground/50">Sem responsável</span>
             </div>
-            <Badge variant="secondary" className="h-9 rounded-full px-4 text-sm font-semibold">
-              {resumo.total} na fila
-            </Badge>
+            <span className="text-3xl font-bold tabular-nums text-foreground">{resumo.semResponsavel}</span>
           </div>
-
-          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <Card className="border border-default-200/75 bg-content1/90">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-primary/10 text-primary">
-                  <FileText className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-foreground/65">Total</p>
-                  <p className="text-xl font-semibold">{resumo.total}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-default-200/75 bg-content1/90">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-default-100 text-foreground/80">
-                  <Users2 className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-foreground/65">Sem responsável</p>
-                  <p className="text-xl font-semibold">{resumo.semResponsavel}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-default-200/75 bg-content1/90">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-success/10 text-success">
-                  <User className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-foreground/65">Com responsável</p>
-                  <p className="text-xl font-semibold">{resumo.comResponsavel}</p>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-default-200/75 bg-content1/90">
-              <CardContent className="flex items-center gap-3 p-3">
-                <div className="flex h-9 w-9 items-center justify-center rounded-md bg-warning/10 text-warning">
-                  <Clock3 className="h-4 w-4" />
-                </div>
-                <div>
-                  <p className="text-xs uppercase tracking-wide text-foreground/65">Mais antigo</p>
-                  <p className="text-xl font-semibold">{resumo.diasMaisAntigo}d</p>
-                </div>
-              </CardContent>
-            </Card>
+          <div className="flex flex-col gap-0.5 px-5 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-md bg-success/10 p-1.5 text-success">
+                <User className="h-3.5 w-3.5" />
+              </div>
+              <span className="text-[11px] uppercase tracking-wide text-foreground/50">Com responsável</span>
+            </div>
+            <span className="text-3xl font-bold tabular-nums text-foreground">{resumo.comResponsavel}</span>
           </div>
-        </CardContent>
-      </Card>
+          <div className="flex flex-col gap-0.5 px-5 py-4">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="rounded-md bg-warning/10 p-1.5 text-warning">
+                <Clock3 className="h-3.5 w-3.5" />
+              </div>
+              <span className="text-[11px] uppercase tracking-wide text-foreground/50">Processo mais antigo</span>
+            </div>
+            <span className="text-3xl font-bold tabular-nums text-foreground">
+              {resumo.diasMaisAntigo}<span className="text-lg font-medium text-foreground/50 ml-1">d</span>
+            </span>
+          </div>
+        </div>
+      </div>
 
       {error && (
         <Alert variant="destructive">
@@ -321,186 +304,165 @@ export default function GestaoOficiosPage() {
         </Alert>
       )}
 
-      <Card className={`${glassCard} oficios-search-card`}>
-        <CardContent className="p-3 md:p-4">
-          <div className="grid gap-3 lg:grid-cols-[1fr_220px_auto]">
-            <div className="relative">
-              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/60" />
-              <Input
-                value={searchTerm}
-                onChange={(event) => setSearchTerm(event.target.value)}
-                placeholder="Buscar por credor, CPF/CNPJ, processo, precatório, cidade ou responsável..."
-                className="h-11 border-default-200/70 bg-content2/55 pl-9"
-              />
-            </div>
-
+      {/* ── BUSCA ── */}
+      <div className={`${glassCard} oficios-search-card p-3 md:p-4`}>
+        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+          <div className="relative flex-1">
+            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-foreground/50" />
+            <Input
+              value={searchTerm}
+              onChange={(event) => setSearchTerm(event.target.value)}
+              placeholder="Credor, CPF/CNPJ, processo, precatório, cidade ou responsável..."
+              className="h-10 border-default-200/70 bg-content2/50 pl-9 pr-3"
+            />
+          </div>
+          <div className="flex items-center gap-2 shrink-0">
             <Select value={statusFiltro} onValueChange={setStatusFiltro}>
-              <SelectTrigger className="h-11 border-default-200/70 bg-content2/55">
+              <SelectTrigger className="h-10 w-[160px] border-default-200/70 bg-content2/50">
                 <div className="flex items-center gap-2">
-                  <SlidersHorizontal className="h-4 w-4 text-foreground/65" />
+                  <SlidersHorizontal className="h-3.5 w-3.5 text-foreground/50" />
                   <SelectValue placeholder="Status" />
                 </div>
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="todos">Todos os status</SelectItem>
-                {Object.entries(STATUS_OFICIO_LABELS).map(([status, label]) => (
-                  <SelectItem key={status} value={status}>
-                    {label}
-                  </SelectItem>
+                <SelectItem value="todos">Todos</SelectItem>
+                {Object.entries(STATUS_OFICIO_LABELS).map(([s, l]) => (
+                  <SelectItem key={s} value={s}>{l}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
-
-            <Button
-              variant="ghost"
-              className="h-11 px-4"
-              disabled={!filtrosAtivos}
-              onClick={() => {
-                setSearchTerm("")
-                setStatusFiltro("todos")
-              }}
-            >
-              Limpar filtros
-            </Button>
+            <span className="text-sm text-foreground/50 tabular-nums whitespace-nowrap">
+              {precatoriosFiltrados.length}/{precatorios.length}
+            </span>
+            {filtrosAtivos && (
+              <Button variant="ghost" size="sm" className="h-10 px-3 text-foreground/55"
+                onClick={() => { setSearchTerm(""); setStatusFiltro("todos") }}>
+                Limpar
+              </Button>
+            )}
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
 
+      {/* ── LISTA ── */}
       {precatoriosFiltrados.length === 0 ? (
-        <Card className={`${cardSoft} min-h-[280px]`}>
-          <CardContent className="flex h-full flex-col items-center justify-center gap-3 p-8 text-center text-foreground/70">
-            <ScrollText className="h-12 w-12 opacity-50" />
-            <p className="text-lg font-medium text-foreground">
-              {precatorios.length === 0 ? "Nenhum precatório nesta fila" : "Nenhum resultado para os filtros aplicados"}
-            </p>
-            <p className="text-sm">
-              {precatorios.length === 0
-                ? 'Processos em "Aguardando ofício" aparecerão aqui.'
-                : "Ajuste o termo da busca ou o status selecionado para ampliar os resultados."}
-            </p>
-          </CardContent>
-        </Card>
+        <div className={`${cardSoft} flex flex-col items-center justify-center gap-3 py-16 text-center`}>
+          <div className="rounded-2xl border border-default-200/60 bg-content2/50 p-4">
+            <ScrollText className="h-8 w-8 text-foreground/35" />
+          </div>
+          <p className="text-base font-semibold text-foreground">
+            {precatorios.length === 0 ? "Fila vazia" : "Nenhum resultado"}
+          </p>
+          <p className="text-sm text-foreground/55">
+            {precatorios.length === 0
+              ? 'Processos em "Aguardando ofício" aparecerão aqui.'
+              : "Ajuste o filtro ou o termo de busca."}
+          </p>
+        </div>
       ) : (
-        <div className={`grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 ${oficiosGridRows}`}>
+        <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {precatoriosFiltrados.map((p, index) => {
             const statusKey = p.file_url ? "anexado" : "pendente"
             const statusLabel = STATUS_OFICIO_LABELS[statusKey]
             const statusClass = STATUS_BADGE_CLASSES[statusKey]
-            const dataEntrada = format(new Date(p.created_at), "dd/MM/yyyy", { locale: ptBR })
+            const dataEntrada = format(new Date(p.created_at), "dd/MM/yy", { locale: ptBR })
+            const diasNaFila = Math.max(0, Math.floor((Date.now() - new Date(p.created_at).getTime()) / 86400000))
+            const urgente = diasNaFila > 30
 
             return (
-              <SpotlightCard key={p.id} className="h-full w-full rounded-[1.2rem]" spotlightColor="hsl(var(--primary) / 0.26)">
+              <SpotlightCard key={p.id} className="h-full w-full rounded-2xl" spotlightColor="hsl(230 60% 55% / 0.15)">
                 <Card
                   role="button"
                   tabIndex={0}
                   className={[
-                    `${oficiosCardHeight} w-full min-w-0 rounded-[1.2rem] border border-default-200/75 bg-content1/92`,
-                    "flex flex-col",
-                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60",
-                    "hover:border-primary/35 hover:bg-content1/100 transition",
-                    "relative overflow-hidden",
-                    "before:pointer-events-none before:absolute before:inset-0 before:opacity-80",
-                    "before:bg-[linear-gradient(145deg,rgba(255,255,255,0.2)_0%,transparent_26%,transparent_72%,rgba(255,166,63,0.15)_100%)]",
+                    "group relative flex h-full w-full flex-col rounded-2xl overflow-hidden",
+                    "border bg-content1/95 transition-all duration-200",
+                    urgente
+                      ? "border-warning/40 hover:border-warning/60"
+                      : "border-default-200/70 hover:border-slate-300/70 dark:hover:border-slate-600/50",
+                    "cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                   ].join(" ")}
                   onClick={() => handleAbrirUpload(p.id)}
                   onKeyDown={(event) => handleCardKeyDown(event, p.id)}
                 >
-                  <div className="flex items-center justify-between px-4 pt-4">
-                    <div className="rounded-xl border border-primary/25 bg-primary/10 p-2.5 text-primary">
-                      <FileCheck className="h-4 w-4" />
+                  {/* Faixa lateral de urgência */}
+                  {urgente && (
+                    <div className="absolute left-0 top-0 bottom-0 w-0.5 bg-warning rounded-l-2xl" />
+                  )}
+
+                  {/* Cabeçalho da fila */}
+                  <div className="flex items-center justify-between px-4 pt-3.5 pb-2">
+                    <div className="flex items-center gap-2">
+                      <span className="text-[11px] font-bold tabular-nums text-foreground/25 group-hover:text-foreground/40 transition-colors">
+                        #{String(index + 1).padStart(2, "0")}
+                      </span>
+                      <div className="h-3.5 w-px bg-default-200/70" />
+                      <FileCheck className="h-3.5 w-3.5 text-foreground/35" />
                     </div>
-                    <Badge variant="outline" className={`border ${statusClass}`}>
+                    <Badge variant="outline" className={`border text-[11px] px-2 py-0 h-5 ${statusClass}`}>
                       {statusLabel}
                     </Badge>
                   </div>
 
-                  <div className="px-4 pb-3 pt-3">
-                    <p
-                      title={p.credor_nome || "Credor não informado"}
-                      className="line-clamp-2 text-sm font-semibold leading-5 text-orange-600 dark:text-orange-400"
-                    >
+                  {/* Credor */}
+                  <div className="px-4 pb-3">
+                    <p className="text-sm font-semibold leading-snug text-foreground line-clamp-2"
+                      title={p.credor_nome || undefined}>
                       {p.credor_nome || "Credor não informado"}
                     </p>
-                    <p className="mt-1 text-[12px] leading-4 text-foreground/60">
-                      {p.credor_cpf_cnpj || "CPF/CNPJ não informado"}
+                    <p className="mt-0.5 font-mono text-[11px] text-foreground/45 truncate">
+                      {p.credor_cpf_cnpj || "—"}
                     </p>
-                    <p className="mt-1 text-[12px] leading-4 text-foreground/60">
-                      {p.credor_cidade ? `${p.credor_cidade}/${p.credor_uf || "--"}` : "Cidade/UF não informado"}
-                    </p>
-                    <p className="mt-1 text-[12px] leading-4 text-foreground/50">Entrada: {dataEntrada}</p>
                   </div>
 
-                  <Separator className="opacity-60" />
-
-                  <CardContent className="flex-1 space-y-3 p-4">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <Badge variant="outline" className="rounded-full border border-default-200/65 bg-content2/55 text-xs font-mono">
-                        #{String(index + 1).padStart(2, "0")}
-                      </Badge>
-                      <Badge variant="outline" className="rounded-full border border-default-200/65 bg-content2/55 text-xs">
-                        Etapa de ofícios
-                      </Badge>
-                    </div>
-
-                    <div className="rounded-xl border border-default-200/65 bg-content2/50 p-3">
-                      <p className="text-[11px] uppercase tracking-wide text-foreground/60">Processo principal</p>
-                      <p className="truncate font-mono text-sm font-semibold text-foreground">
-                        {p.numero_processo || "N/A"}
+                  {/* Processo */}
+                  <div className="mx-4 mb-3 rounded-xl border border-default-200/55 bg-content2/35 px-3 py-2.5">
+                    <p className="text-[10px] uppercase tracking-widest text-foreground/40 mb-0.5">Processo</p>
+                    <p className="font-mono text-[13px] font-semibold text-foreground truncate">
+                      {p.numero_processo || "N/A"}
+                    </p>
+                    {p.numero_precatorio && (
+                      <p className="text-[10px] text-foreground/45 truncate mt-0.5">
+                        {p.numero_precatorio}
                       </p>
-                      <p className="truncate text-[11px] text-foreground/60">
-                        Precatório: {p.numero_precatorio || "N/A"}
-                      </p>
-                    </div>
+                    )}
+                  </div>
 
-                    <div className="min-h-[42px] space-y-1 text-xs text-foreground/70">
-                      <div className="inline-flex max-w-full items-center gap-1">
-                        <User className="h-3 w-3" />
-                        <span className="truncate">Responsável: {p.responsavel_nome || "Sem responsável"}</span>
+                  {/* Meta */}
+                  <CardContent className="flex-1 px-4 pt-0 pb-3 space-y-1">
+                    <div className="flex items-center gap-1.5 text-[11px] text-foreground/55">
+                      <User className="h-3 w-3 shrink-0" />
+                      <span className="truncate">{p.responsavel_nome || "Sem responsável"}</span>
+                    </div>
+                    {(p.credor_cidade || p.credor_uf) && (
+                      <div className="flex items-center gap-1.5 text-[11px] text-foreground/55">
+                        <MapPin className="h-3 w-3 shrink-0" />
+                        <span className="truncate">{p.credor_cidade || "—"}{p.credor_uf ? `/${p.credor_uf}` : ""}</span>
                       </div>
-                      <div className="inline-flex max-w-full items-center gap-1">
-                        <MapPin className="h-3 w-3" />
-                        <span className="truncate">
-                          Localidade: {p.credor_cidade || "Cidade n/d"}{p.credor_uf ? `/${p.credor_uf}` : ""}
-                        </span>
-                      </div>
-                      <div className="inline-flex max-w-full items-center gap-1">
-                        <CalendarClock className="h-3 w-3" />
-                        <span className="truncate">Criado em: {dataEntrada}</span>
-                      </div>
+                    )}
+                    <div className="flex items-center gap-1.5 text-[11px] text-foreground/55">
+                      <CalendarClock className="h-3 w-3 shrink-0" />
+                      <span>{dataEntrada}</span>
+                      <span className={`ml-auto font-medium ${urgente ? "text-warning" : "text-foreground/40"}`}>
+                        {diasNaFila}d
+                      </span>
                     </div>
                   </CardContent>
 
-                  <Separator className="opacity-60" />
-
-                  <div className="mt-auto grid grid-cols-2 gap-2 p-3">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="rounded-full"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleAbrirDetalhes(p.id)
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        Abrir
-                        <ChevronRight className="h-4 w-4" />
-                      </span>
+                  {/* Ações */}
+                  <div className="grid grid-cols-2 gap-2 border-t border-default-200/50 bg-content2/20 px-3 py-2.5">
+                    <Button size="sm" variant="ghost"
+                      className="h-8 rounded-xl text-xs text-foreground/60 hover:text-foreground"
+                      onClick={(e) => { e.stopPropagation(); handleAbrirDetalhes(p.id) }}>
+                      <ChevronRight className="mr-1 h-3.5 w-3.5" />
+                      Detalhes
                     </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      className="oficios-attach-btn rounded-full"
-                      onClick={(event) => {
-                        event.stopPropagation()
-                        handleAbrirUpload(p.id)
-                      }}
-                    >
-                      <span className="inline-flex items-center gap-1.5">
-                        <Paperclip className="h-3.5 w-3.5" />
-                        Anexar
-                      </span>
-                    </Button>
+                    <button
+                      className="inline-flex h-8 items-center justify-center gap-1.5 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 px-3 text-xs font-semibold text-white shadow-[0_6px_20px_-8px_rgba(249,115,22,0.70)] transition hover:from-orange-400 hover:to-amber-500"
+                      onClick={(e) => { e.stopPropagation(); handleAbrirUpload(p.id) }}>
+                      <Paperclip className="h-3.5 w-3.5" />
+                      Anexar
+                    </button>
                   </div>
                 </Card>
               </SpotlightCard>

@@ -4,12 +4,18 @@ import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { CheckCircle2, XCircle, Loader2 } from "@/components/icons"
-import { getSupabase } from "@/lib/supabase/client"
+import { getSupabase, getSupabasePublicConfig, probeSupabaseAuthConnectivity } from "@/lib/supabase/client"
+
+type ConnectionDetails = Record<string, string | number | boolean | null>
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : "Erro desconhecido"
+}
 
 export default function TestConnectionPage() {
   const [status, setStatus] = useState<"loading" | "success" | "error">("loading")
   const [message, setMessage] = useState("")
-  const [details, setDetails] = useState<any>(null)
+  const [details, setDetails] = useState<ConnectionDetails | null>(null)
 
   const testConnection = async () => {
     setStatus("loading")
@@ -17,13 +23,19 @@ export default function TestConnectionPage() {
 
     try {
       const supabase = getSupabase()
+      const publicConfig = getSupabasePublicConfig()
+      const authProbe = await probeSupabaseAuthConnectivity()
 
       if (!supabase) {
         throw new Error("Cliente Supabase não foi inicializado. Verifique as variáveis de ambiente.")
       }
 
+      if (!authProbe.ok) {
+        throw new Error(`Host público do Supabase inacessível: ${authProbe.errorMessage}`)
+      }
+
       // Teste 1: Verificar se consegue conectar
-      const { data: healthCheck, error: healthError } = await supabase.from("usuarios").select("count").limit(0)
+      const { error: healthError } = await supabase.from("usuarios").select("count").limit(0)
 
       if (healthError) {
         throw new Error(`Erro na conexão: ${healthError.message}`)
@@ -32,7 +44,6 @@ export default function TestConnectionPage() {
       // Teste 2: Verificar autenticação
       const {
         data: { user },
-        error: authError,
       } = await supabase.auth.getUser()
 
       // Teste 3: Contar registros
@@ -47,15 +58,25 @@ export default function TestConnectionPage() {
         userEmail: user?.email || "Não autenticado",
         totalUsers: userCount || 0,
         totalPrecatorios: precatorioCount || 0,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        supabaseUrl: publicConfig.url,
+        supabaseHost: authProbe.host,
+        authReachable: authProbe.ok,
+        authStatus: authProbe.status,
       })
-    } catch (error: any) {
+    } catch (error) {
       console.error("[v0] Erro no teste de conexão:", error)
+      const publicConfig = getSupabasePublicConfig()
+      const authProbe = await probeSupabaseAuthConnectivity()
+      const errorMessage = getErrorMessage(error)
       setStatus("error")
-      setMessage(error.message || "Erro desconhecido")
+      setMessage(errorMessage)
       setDetails({
-        error: error.message,
-        supabaseUrl: process.env.NEXT_PUBLIC_SUPABASE_URL,
+        error: errorMessage,
+        supabaseUrl: publicConfig.url,
+        supabaseHost: authProbe.host,
+        authReachable: authProbe.ok,
+        authError: authProbe.ok ? null : authProbe.errorMessage,
+        authStatus: authProbe.ok ? authProbe.status : "sem resposta",
       })
     }
   }

@@ -52,15 +52,20 @@ USING (
   AND responsavel = auth.uid()
 );
 
--- 3. JURIDICO (Vê seus e unassigned na coluna juridico?)
--- User disse "kanban proprio", entao restrito a atribuição.
+-- 3. JURIDICO (Vê os próprios, atribuídos e os que criou)
+-- Mantém o acesso enxuto, mas sem esconder o que é do próprio jurídico.
 CREATE POLICY "Juridico ve apenas seus" 
 ON precatorios 
 FOR SELECT 
 TO authenticated 
 USING (
   public.current_user_has_role('juridico') 
-  AND responsavel_juridico_id = auth.uid()
+  AND (
+    responsavel_juridico_id = auth.uid()
+    OR responsavel = auth.uid()
+    OR criado_por = auth.uid()
+    OR dono_usuario_id = auth.uid()
+  )
 );
 
 CREATE POLICY "Juridico atualiza seus" 
@@ -69,7 +74,12 @@ FOR UPDATE
 TO authenticated 
 USING (
   public.current_user_has_role('juridico') 
-  AND responsavel_juridico_id = auth.uid()
+  AND (
+    responsavel_juridico_id = auth.uid()
+    OR responsavel = auth.uid()
+    OR criado_por = auth.uid()
+    OR dono_usuario_id = auth.uid()
+  )
 );
 
 -- 4. GESTOR CERTIDOES

@@ -516,8 +516,7 @@ main .route-shiny-important {
   .clients-revamp .clients-hero-card::before,
   .escrituras-revamp .escrituras-hero-card::before,
   .oficios-revamp .oficios-hero-card::before,
-  .certidoes-revamp .certidoes-hero-card::before,
-  .analise-revamp .analise-hero-card::before {
+  .certidoes-revamp .certidoes-hero-card::before {
     content: "";
     position: absolute;
     inset: -40% -14%;
@@ -529,6 +528,21 @@ main .route-shiny-important {
       radial-gradient(44% 36% at 84% 30%, rgb(255 159 26 / 0.26), transparent 74%);
     filter: blur(24px) saturate(1.08);
     opacity: 0.9;
+    animation: title-aurora-drift 16s ease-in-out infinite alternate;
+  }
+
+  .analise-revamp .analise-hero-card::before {
+    content: "";
+    position: absolute;
+    inset: -40% -14%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(58% 46% at 18% 24%, rgb(99 102 241 / 0.18), transparent 68%),
+      radial-gradient(48% 40% at 50% 68%, rgb(148 163 184 / 0.14), transparent 70%),
+      radial-gradient(44% 36% at 84% 30%, rgb(251 191 36 / 0.12), transparent 74%);
+    filter: blur(28px) saturate(1.04);
+    opacity: 0.85;
     animation: title-aurora-drift 16s ease-in-out infinite alternate;
   }
 
@@ -772,11 +786,11 @@ main .route-shiny-important {
   }
 
   .analise-revamp .analise-hero-card {
-    box-shadow: 0 34px 72px -50px hsl(var(--primary) / 0.48);
+    box-shadow: 0 34px 72px -50px hsl(240 50% 50% / 0.22);
   }
 
   .analise-revamp .analise-search-card {
-    box-shadow: 0 24px 56px -46px hsl(var(--primary) / 0.44);
+    box-shadow: 0 24px 56px -46px hsl(240 30% 50% / 0.18);
   }
 
   .analise-revamp .card-spotlight {
@@ -800,7 +814,7 @@ main .route-shiny-important {
     transition: opacity 180ms ease;
     background: radial-gradient(
       260px circle at var(--mouse-x, -999px) var(--mouse-y, -999px),
-      var(--spotlight-color, hsl(var(--primary) / 0.24)),
+      var(--spotlight-color, hsl(230 60% 55% / 0.18)),
       transparent 62%
     );
     mix-blend-mode: screen;

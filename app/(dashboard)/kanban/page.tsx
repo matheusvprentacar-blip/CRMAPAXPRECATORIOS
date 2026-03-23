@@ -2,7 +2,7 @@
 /* eslint-disable */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { useEffect, useMemo, useState, useRef, useCallback, memo, type RefObject } from "react"
+import { useEffect, useMemo, useState, useRef, useCallback, useDeferredValue, memo, type RefObject, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -50,7 +50,7 @@ const KANBAN_SHINY_PROPS = {
 }
 
 // Colunas do Kanban com Gates
-const COLUNAS = KANBAN_COLUMNS
+const COLUNAS = KANBAN_COLUMNS.filter((coluna) => coluna.id !== "entrada")
 
 // Colunas que permitem acesso à área de cálculos
 const COLUNAS_CALCULO_PERMITIDO = [
@@ -147,6 +147,8 @@ interface PrecatorioCard {
   prioridade?: number | null
 
   responsavel?: string | null
+  criado_por?: string | null
+  dono_usuario_id?: string | null
   responsavel_certidoes_id?: string | null
   responsavel_escrituras_id?: string | null
   responsavel_juridico_id?: string | null
@@ -181,6 +183,7 @@ interface PrecatorioCard {
   } | null
 
   responsavel_perfil?: { nome: string } | null
+  search_index?: string
 }
 
 const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HTMLDivElement | null>) => {
@@ -530,6 +533,7 @@ const KanbanColumn = memo(function KanbanColumn({
 
   return (
     <div
+      data-kanban-column="true"
       className={`flex-shrink-0 ${columnWidthClass} h-full flex flex-col ${isDragging ? "" : "snap-start"
         }`}
     >
@@ -784,6 +788,27 @@ export default function KanbanPageNewGates() {
     })
   }, [precatorios])
 
+  const normalizeString = useCallback((str: string) => {
+    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+  }, [])
+
+  const buildSearchIndex = useCallback(
+    (precatorio: Partial<PrecatorioCard>) => {
+      const raw = [
+        precatorio.titulo,
+        precatorio.numero_precatorio,
+        precatorio.credor_nome,
+        precatorio.devedor,
+        precatorio.tribunal,
+      ]
+        .filter(Boolean)
+        .join(" ")
+
+      return normalizeString(raw)
+    },
+    [normalizeString]
+  )
+
   async function loadPrecatorios(options: LoadPrecatoriosOptions = {}) {
     const { showLoading = true, preserveHorizontalScroll = false } = options
     const savedScrollLeft =
@@ -820,6 +845,8 @@ export default function KanbanPageNewGates() {
         saldo_liquido,
         prioridade,
         responsavel,
+        criado_por,
+        dono_usuario_id,
         responsavel_certidoes_id,
         responsavel_juridico_id,
         responsavel_calculo_id,
@@ -884,46 +911,34 @@ export default function KanbanPageNewGates() {
         precatoriosData = data
       }
 
-      const precatoriosComResumo = await Promise.all(
-        (precatoriosData || []).map(async (p) => {
-          const { data: resumo } = await supabase
-            .from("view_resumo_itens_precatorio")
-            .select("*")
-            .eq("precatorio_id", p.id)
-            .single()
-
-          return {
-            ...p,
-            resumo_itens: resumo || null
-          }
-        })
-      )
+      const precatoriosEnriquecidos = (precatoriosData || []).map((p: any) => ({
+        ...p,
+        resumo_itens: null,
+        search_index: buildSearchIndex(p),
+      }))
 
       const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
       const isAdmin = roles.includes("admin") || roles.includes("gestor")
       const userId = profile?.id
 
-      const precatoriosFiltrados = precatoriosComResumo.filter((p: any) => {
+      const precatoriosFiltrados = precatoriosEnriquecidos.filter((p: any) => {
         if (isAdmin) return true
 
-        if (roles.includes("operador_comercial")) {
-          return p.responsavel === userId
-        }
-        if (roles.includes("gestor_certidoes")) {
-          return p.responsavel_certidoes_id === userId
-        }
-        if (roles.includes("gestor_escrituras")) {
-          return p.responsavel_escrituras_id === userId
-        }
-        if (roles.includes("juridico")) {
-          return p.responsavel_juridico_id === userId
-        }
-        if (roles.includes("operador_calculo")) {
-          const fasesCalculo = ["pronto_calculo", "calculo_andamento", "calculo_concluido"]
-          return p.responsavel_calculo_id === userId || (!p.responsavel_calculo_id && fasesCalculo.includes(p.status_kanban))
-        }
+        const fasesCalculo = ["pronto_calculo", "calculo_andamento", "calculo_concluido"]
 
-        return false
+        return (
+          (roles.includes("operador_comercial") && p.responsavel === userId) ||
+          (roles.includes("gestor_certidoes") && p.responsavel_certidoes_id === userId) ||
+          (roles.includes("gestor_escrituras") && p.responsavel_escrituras_id === userId) ||
+          (roles.includes("juridico") &&
+            (p.responsavel_juridico_id === userId ||
+              p.responsavel === userId ||
+              p.criado_por === userId ||
+              p.dono_usuario_id === userId)) ||
+          (roles.includes("operador_calculo") &&
+            (p.responsavel_calculo_id === userId ||
+              (!p.responsavel_calculo_id && fasesCalculo.includes(p.status_kanban))))
+        )
       })
 
       setPrecatorios(precatoriosFiltrados as PrecatorioCard[])
@@ -956,63 +971,55 @@ export default function KanbanPageNewGates() {
     }
   }
 
-  const normalizeString = (str: string) => {
-    return str.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-  }
+  const getFilteredPrecatorios = useCallback(
+    (items: PrecatorioCard[], filtrosAtuais: FiltrosPrecatorios) => {
+      return items.filter((p) => {
+        if (filtrosAtuais.termo) {
+          const term = normalizeString(filtrosAtuais.termo)
+          if (!p.search_index?.includes(term)) return false
+        }
 
-  const getFilteredPrecatorios = () => {
-    return precatorios.filter(p => {
-      if (filtros.termo) {
-        const term = normalizeString(filtros.termo)
-        const matchTermo = (
-          (p.titulo && normalizeString(p.titulo).includes(term)) ||
-          (p.numero_precatorio && normalizeString(p.numero_precatorio).includes(term)) ||
-          (p.credor_nome && normalizeString(p.credor_nome).includes(term)) ||
-          (p.devedor && normalizeString(p.devedor).includes(term)) ||
-          (p.tribunal && normalizeString(p.tribunal).includes(term))
-        )
-        if (!matchTermo) return false
-      }
+        if (filtrosAtuais.status && filtrosAtuais.status.length > 0) {
+          if (!filtrosAtuais.status.includes(p.status || "")) return false
+        }
 
-      if (filtros.status && filtros.status.length > 0) {
-        if (!filtros.status.includes(p.status || "")) return false
-      }
+        if (filtrosAtuais.complexidade && filtrosAtuais.complexidade.length > 0) {
+          if (!p.nivel_complexidade || !filtrosAtuais.complexidade.includes(p.nivel_complexidade)) return false
+        }
 
-      if (filtros.complexidade && filtros.complexidade.length > 0) {
-        if (!p.nivel_complexidade || !filtros.complexidade.includes(p.nivel_complexidade)) return false
-      }
+        if (filtrosAtuais.sla_status && filtrosAtuais.sla_status.length > 0) {
+          if (!p.sla_status || !filtrosAtuais.sla_status.includes(p.sla_status)) return false
+        }
 
-      if (filtros.sla_status && filtros.sla_status.length > 0) {
-        if (!p.sla_status || !filtros.sla_status.includes(p.sla_status)) return false
-      }
+        if (filtrosAtuais.tipo_atraso && filtrosAtuais.tipo_atraso.length > 0) {
+          if (!p.tipo_atraso || !filtrosAtuais.tipo_atraso.includes(p.tipo_atraso as any)) return false
+        }
 
-      if (filtros.tipo_atraso && filtros.tipo_atraso.length > 0) {
-        if (!p.tipo_atraso || !filtros.tipo_atraso.includes(p.tipo_atraso as any)) return false
-      }
+        if (filtrosAtuais.impacto_atraso && filtrosAtuais.impacto_atraso.length > 0) {
+          if (!p.impacto_atraso || !filtrosAtuais.impacto_atraso.includes(p.impacto_atraso)) return false
+        }
 
-      if (filtros.impacto_atraso && filtros.impacto_atraso.length > 0) {
-        if (!p.impacto_atraso || !filtros.impacto_atraso.includes(p.impacto_atraso)) return false
-      }
+        if (filtrosAtuais.data_criacao_inicio) {
+          if (new Date(p.created_at) < new Date(filtrosAtuais.data_criacao_inicio)) return false
+        }
+        if (filtrosAtuais.data_criacao_fim) {
+          const endDate = new Date(filtrosAtuais.data_criacao_fim)
+          endDate.setHours(23, 59, 59, 999)
+          if (new Date(p.created_at) > endDate) return false
+        }
 
-      if (filtros.data_criacao_inicio) {
-        if (new Date(p.created_at) < new Date(filtros.data_criacao_inicio)) return false
-      }
-      if (filtros.data_criacao_fim) {
-        const endDate = new Date(filtros.data_criacao_fim)
-        endDate.setHours(23, 59, 59, 999)
-        if (new Date(p.created_at) > endDate) return false
-      }
+        const valor = (p.valor_atualizado && p.valor_atualizado > 0) ? p.valor_atualizado : (p.valor_principal || 0)
+        if (filtrosAtuais.valor_min && valor < filtrosAtuais.valor_min) return false
+        if (filtrosAtuais.valor_max && valor > filtrosAtuais.valor_max) return false
 
-      const valor = (p.valor_atualizado && p.valor_atualizado > 0) ? p.valor_atualizado : (p.valor_principal || 0)
-      if (filtros.valor_min && valor < filtros.valor_min) return false
-      if (filtros.valor_max && valor > filtros.valor_max) return false
+        if (filtrosAtuais.urgente && !p.urgente) return false
+        if (filtrosAtuais.titular_falecido && !p.titular_falecido) return false
 
-      if (filtros.urgente && !p.urgente) return false
-      if (filtros.titular_falecido && !p.titular_falecido) return false
-
-      return true
-    })
-  }
+        return true
+      })
+    },
+    [normalizeString]
+  )
 
   const updateFiltros = (novosFiltros: FiltrosPrecatorios) => setFiltros(novosFiltros)
   const clearFiltros = () => setFiltros({})
@@ -1025,31 +1032,49 @@ export default function KanbanPageNewGates() {
   }
 
   const filtrosAtivos = getFiltrosAtivos(filtros)
-  const filteredPrecatorios = useMemo(() => getFilteredPrecatorios(), [precatorios, filtros])
-
-  const agruparPorColuna = () => {
-    const grupos: Record<string, PrecatorioCard[]> = {}
-
-    COLUNAS.forEach((coluna) => {
-      const statusIds = coluna.statusIds ?? [coluna.id]
-      grupos[coluna.id] = filteredPrecatorios.filter((p) => statusIds.includes(p.status_kanban))
-    })
-
-    return grupos
-  }
+  const deferredFiltros = useDeferredValue(filtros)
+  const filteredPrecatorios = useMemo(
+    () => getFilteredPrecatorios(precatorios, deferredFiltros),
+    [precatorios, deferredFiltros, getFilteredPrecatorios]
+  )
 
   const setSearchTerm = (term: string) => {
     setFiltros(prev => ({ ...prev, termo: term }))
   }
 
-  const calcularTotalColuna = (precatoriosColuna: PrecatorioCard[]) => {
-    return precatoriosColuna.reduce((acc, p) => {
-      const valor = (p.valor_atualizado && p.valor_atualizado > 0)
-        ? p.valor_atualizado
-        : (p.valor_principal ?? 0)
-      return acc + valor
-    }, 0)
-  }
+  const { grupos, totaisColuna } = useMemo(() => {
+    const grouped: Record<string, PrecatorioCard[]> = {}
+    const totals: Record<string, number> = {}
+    const statusToColumns = new Map<string, string[]>()
+
+    COLUNAS.forEach((coluna) => {
+      grouped[coluna.id] = []
+      totals[coluna.id] = 0
+      const statusIds = coluna.statusIds ?? [coluna.id]
+      statusIds.forEach((statusId) => {
+        const columnsForStatus = statusToColumns.get(statusId) || []
+        columnsForStatus.push(coluna.id)
+        statusToColumns.set(statusId, columnsForStatus)
+      })
+    })
+
+    filteredPrecatorios.forEach((precatorio) => {
+      const matchedColumns = statusToColumns.get(precatorio.status_kanban)
+      if (!matchedColumns || matchedColumns.length === 0) return
+
+      const valor =
+        precatorio.valor_atualizado && precatorio.valor_atualizado > 0
+          ? precatorio.valor_atualizado
+          : (precatorio.valor_principal ?? 0)
+
+      matchedColumns.forEach((columnId) => {
+        grouped[columnId].push(precatorio)
+        totals[columnId] += valor
+      })
+    })
+
+    return { grupos: grouped, totaisColuna: totals }
+  }, [filteredPrecatorios])
 
   function abrirTriagemModal(precatorioId: string) {
     const precatorio = precatorios.find((p) => p.id === precatorioId)
@@ -1455,7 +1480,6 @@ export default function KanbanPageNewGates() {
     router.push(`/calcular?id=${precatorioId}`)
   }, [router])
 
-  const grupos = useMemo(() => agruparPorColuna(), [filteredPrecatorios])
   const semInteressePrecatorio = semInteresseDialog.precatorioId
     ? precatorios.find((p) => p.id === semInteresseDialog.precatorioId)
     : undefined
@@ -1474,6 +1498,92 @@ export default function KanbanPageNewGates() {
     setCanScrollLeft(container.scrollLeft > 8)
     setCanScrollRight(container.scrollLeft < maxScroll - 8)
   }, [])
+
+  const scrollByViewport = useCallback((direction: "left" | "right") => {
+    const container = scrollContainerRef.current
+    if (!container) return
+    const delta = container.clientWidth * 0.85
+    container.scrollBy({
+      left: direction === "right" ? delta : -delta,
+      behavior: "smooth",
+    })
+  }, [])
+
+  const scrollToAdjacentColumn = useCallback((direction: "left" | "right") => {
+    const container = scrollContainerRef.current
+    if (!container) return
+
+    const columns = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-kanban-column='true']")
+    )
+    const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth)
+    const current = container.scrollLeft
+
+    if (columns.length === 0) {
+      scrollByViewport(direction)
+      return
+    }
+
+    const offsets = columns.map((column) => column.offsetLeft).sort((a, b) => a - b)
+    let target = current
+
+    if (direction === "right") {
+      target = offsets.find((offset) => offset > current + 16) ?? maxScroll
+    } else {
+      for (let index = offsets.length - 1; index >= 0; index -= 1) {
+        if (offsets[index] < current - 16) {
+          target = offsets[index]
+          break
+        }
+      }
+      if (target === current) target = 0
+    }
+
+    container.scrollTo({
+      left: Math.min(maxScroll, Math.max(0, target)),
+      behavior: "smooth",
+    })
+  }, [scrollByViewport])
+
+  const handleKanbanKeyDown = useCallback((event: ReactKeyboardEvent<HTMLDivElement>) => {
+    const target = event.target as HTMLElement | null
+    if (!target) return
+    const tag = target.tagName
+    if (tag === "INPUT" || tag === "TEXTAREA" || target.isContentEditable) return
+
+    if (event.key === "ArrowRight") {
+      event.preventDefault()
+      scrollToAdjacentColumn("right")
+      return
+    }
+    if (event.key === "ArrowLeft") {
+      event.preventDefault()
+      scrollToAdjacentColumn("left")
+      return
+    }
+    if (event.key === "PageDown") {
+      event.preventDefault()
+      scrollByViewport("right")
+      return
+    }
+    if (event.key === "PageUp") {
+      event.preventDefault()
+      scrollByViewport("left")
+      return
+    }
+    if (event.key === "Home") {
+      event.preventDefault()
+      scrollContainerRef.current?.scrollTo({ left: 0, behavior: "smooth" })
+      return
+    }
+    if (event.key === "End") {
+      event.preventDefault()
+      const container = scrollContainerRef.current
+      if (!container) return
+      const maxScroll = Math.max(0, container.scrollWidth - container.clientWidth)
+      container.scrollTo({ left: maxScroll, behavior: "smooth" })
+    }
+  }, [scrollByViewport, scrollToAdjacentColumn])
 
   useEffect(() => {
     const container = scrollContainerRef.current
@@ -1584,9 +1694,6 @@ export default function KanbanPageNewGates() {
             Visíveis: {filteredPrecatorios.length}
           </Badge>
           <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
-            Entrada: {grupos.entrada?.length || 0}
-          </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
             Pronto cálculo: {grupos.pronto_calculo?.length || 0}
           </Badge>
           <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
@@ -1646,6 +1753,8 @@ export default function KanbanPageNewGates() {
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
+              onKeyDown={handleKanbanKeyDown}
+              aria-label="Painel kanban com navegação horizontal"
               className="kanban-horizontal-scroll w-full h-full overflow-x-auto overflow-y-hidden pb-3 px-1 md:px-1.5 overscroll-x-contain"
               style={{
                 WebkitOverflowScrolling: "touch",
@@ -1658,7 +1767,7 @@ export default function KanbanPageNewGates() {
               >
                 {COLUNAS.map((coluna) => {
                   const precatoriosColuna = grupos[coluna.id] || []
-                  const totalColuna = calcularTotalColuna(precatoriosColuna)
+                  const totalColuna = totaisColuna[coluna.id] || 0
 
                   return (
                     <KanbanColumn
@@ -1680,11 +1789,18 @@ export default function KanbanPageNewGates() {
             </div>
 
             {canScrollLeft && (
+              <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-background via-background/85 to-transparent" />
+            )}
+            {canScrollRight && (
+              <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-background via-background/85 to-transparent" />
+            )}
+
+            {canScrollLeft && (
               <button
                 type="button"
-                onClick={() => scrollContainerRef.current?.scrollBy({ left: -300, behavior: "smooth" })}
+                onClick={() => scrollToAdjacentColumn("left")}
                 className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
-                aria-label="Scroll para a esquerda"
+                aria-label="Ir para a coluna anterior"
               >
                 <ChevronLeft className="h-4 w-4" />
               </button>
@@ -1692,9 +1808,9 @@ export default function KanbanPageNewGates() {
             {canScrollRight && (
               <button
                 type="button"
-                onClick={() => scrollContainerRef.current?.scrollBy({ left: 300, behavior: "smooth" })}
+                onClick={() => scrollToAdjacentColumn("right")}
                 className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
-                aria-label="Scroll para a direita"
+                aria-label="Ir para a próxima coluna"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>

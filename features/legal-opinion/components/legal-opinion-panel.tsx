@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Button, Card, Chip, Modal, Spinner } from "@heroui/react"
+import { Modal } from "@heroui/react"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -19,7 +19,6 @@ import {
 } from "@/features/legal-opinion/api"
 import {
   LEGAL_OPINION_STATUSES,
-  LEGAL_OPINION_STATUS_COLORS,
   LEGAL_OPINION_STATUS_LABELS,
   LEGAL_OPINION_TYPE_LABELS,
   type LegalOpinion,
@@ -76,19 +75,16 @@ const allowedFileTypes = [
 ]
 
 function getRoleCanEdit(canEdit?: boolean) {
-  return canEdit !== false
+  return canEdit === true
 }
 
 function getRoleCanCreate(canCreate?: boolean) {
-  return canCreate !== false
+  return canCreate === true
 }
 
-const REQUEST_OPINION_BUTTON_CLASS =
-  "!bg-orange-500 !text-white shadow-[0_0_0_1px_rgba(249,115,22,0.45),0_0_24px_rgba(249,115,22,0.5)] hover:!bg-orange-400 hover:shadow-[0_0_0_1px_rgba(251,146,60,0.55),0_0_30px_rgba(251,146,60,0.6)] focus-visible:ring-2 focus-visible:ring-orange-300/80"
-
 const CHECKLIST_ITEMS = [
-  { key: "titularidade", label: "Titularidade/Cessao" },
-  { key: "calculos", label: "Calculos" },
+  { key: "titularidade", label: "Titularidade/Cessão" },
+  { key: "calculos", label: "Cálculos" },
   { key: "prioridade", label: "Prioridade" },
   { key: "penhoras", label: "Penhoras/Bloqueios" },
   { key: "documentos", label: "Documentos" },
@@ -109,13 +105,9 @@ type ChecklistEntry = {
 
 async function forceDownloadByFileName(signedUrl: string, fileName: string) {
   const response = await fetch(signedUrl)
-  if (!response.ok) {
-    throw new Error("Nao foi possivel baixar o arquivo.")
-  }
-
+  if (!response.ok) throw new Error("Não foi possível baixar o arquivo.")
   const blob = await response.blob()
   const blobUrl = window.URL.createObjectURL(blob)
-
   try {
     const anchor = document.createElement("a")
     anchor.href = blobUrl
@@ -129,11 +121,56 @@ async function forceDownloadByFileName(signedUrl: string, fileName: string) {
   }
 }
 
+function getStatusTagClass(status: LegalOpinionStatus): string {
+  switch (status) {
+    case "pendente":
+      return "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+    case "em_analise":
+      return "border-blue-200 bg-blue-500/10 text-blue-600 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300"
+    case "concluido":
+      return "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+    case "rejeitado":
+      return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+    case "arquivado":
+      return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+  }
+}
+
+function TagPill({ children, className }: { children: React.ReactNode; className: string }) {
+  return (
+    <span
+      className={cn(
+        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.04em]",
+        className
+      )}
+    >
+      {children}
+    </span>
+  )
+}
+
+function SectionTitle({ icon, children }: { icon?: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <p className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+      {icon}
+      {children}
+    </p>
+  )
+}
+
+function getInitials(name?: string | null) {
+  return (name || "?")
+    .split(/\s+/)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() || "")
+    .join("")
+}
+
 export function LegalOpinionPanel({
   precatorioId,
   initialOpinionId = null,
-  title = "Parecer Juridico",
-  subtitle = "Solicite, acompanhe e conclua pareceres juridicos vinculados a este precatorio.",
+  title = "Parecer Jurídico",
+  subtitle = "Solicite, acompanhe e conclua pareceres jurídicos vinculados a este precatório.",
   className,
   canCreate,
   canEdit,
@@ -171,30 +208,22 @@ export function LegalOpinionPanel({
 
   const hasCreatePermission = getRoleCanCreate(canCreate)
   const hasEditPermission = getRoleCanEdit(canEdit)
-
   const selectedOpinionStatus = selectedOpinion?.status || "pendente"
-
   const statusCounters = useMemo(() => countOpinionsByStatus(opinions), [opinions])
 
   const checklistMetaByKey = useMemo(() => {
     const metaMap = new Map<string, { note: string | null; name: string | null }>()
     const pattern = /^\[CHECKLIST:([a-z0-9_]+)\](?:\[NOME:([^\]]+)\])?\s*([\s\S]*)$/i
-
     for (const comment of comments) {
       const content = String(comment.content || "").trim()
       const match = content.match(pattern)
       if (!match) continue
-
       const key = match[1].toLowerCase()
       const name = (match[2] || "").trim() || null
       const note = (match[3] || "").trim() || null
       const current = metaMap.get(key) || { note: null, name: null }
-      metaMap.set(key, {
-        note: current.note || note,
-        name: current.name || name,
-      })
+      metaMap.set(key, { note: current.note || note, name: current.name || name })
     }
-
     return metaMap
   }, [comments])
 
@@ -217,18 +246,14 @@ export function LegalOpinionPanel({
         return aNum - bNum
       })
 
-    if (otherKeys.length === 0) {
-      otherKeys.push("outro")
-    }
+    if (otherKeys.length === 0) otherKeys.push("outro")
 
     const otherEntries: ChecklistEntry[] = otherKeys.map((key, index) => {
       const meta = checklistMetaByKey.get(key)
       const customName = meta?.name || null
-      const defaultLabel = index === 0 ? "Outro" : `Outro ${index + 1}`
-
       return {
         key: key as ChecklistItemKey,
-        label: customName || defaultLabel,
+        label: customName || (index === 0 ? "Outro" : `Outro ${index + 1}`),
         checked: Boolean(data[key]),
         note: meta?.note || null,
         customName,
@@ -246,27 +271,15 @@ export function LegalOpinionPanel({
         listLegalOpinionsByPrecatorio(precatorioId),
         getLegalOpinionMetadata(),
       ])
-
       setOpinions(opinionsData)
-      setUsers(
-        metadata.users.map((user) => ({
-          id: user.id,
-          nome: user.nome,
-          email: user.email,
-        }))
-      )
+      setUsers(metadata.users.map((u) => ({ id: u.id, nome: u.nome, email: u.email })))
       setPrecatorios(
-        metadata.precatorios.map((precatorio) => ({
-          id: precatorio.id,
-          label:
-            precatorio.titulo ||
-            precatorio.numero_precatorio ||
-            precatorio.credor_nome ||
-            "Precatorio sem identificacao",
-          subtitle: [precatorio.numero_processo, precatorio.credor_nome].filter(Boolean).join(" • "),
+        metadata.precatorios.map((p) => ({
+          id: p.id,
+          label: p.titulo || p.numero_precatorio || p.credor_nome || "Precatório sem identificação",
+          subtitle: [p.numero_processo, p.credor_nome].filter(Boolean).join(" • "),
         }))
       )
-
       const nextSelected =
         opinionsData.find((item) => item.id === preferredOpinionId)?.id ||
         opinionsData.find((item) => item.id === initialOpinionId)?.id ||
@@ -275,7 +288,6 @@ export function LegalOpinionPanel({
         null
       setSelectedOpinionId(nextSelected)
     } catch (error) {
-      console.error("[LegalOpinionPanel] Falha ao carregar pareceres:", error)
       toast({
         title: "Erro ao carregar pareceres",
         description: error instanceof Error ? error.message : "Falha inesperada.",
@@ -295,7 +307,6 @@ export function LegalOpinionPanel({
       setEvents(detail.events || [])
       setAttachments(detail.attachments || [])
     } catch (error) {
-      console.error("[LegalOpinionPanel] Falha ao carregar detalhe:", error)
       toast({
         title: "Erro ao carregar parecer",
         description: error instanceof Error ? error.message : "Falha inesperada.",
@@ -306,10 +317,8 @@ export function LegalOpinionPanel({
     }
   }
 
-  useEffect(() => {
-    void loadOpinions()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [precatorioId])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { void loadOpinions() }, [precatorioId])
 
   useEffect(() => {
     if (!selectedOpinionId) {
@@ -324,10 +333,8 @@ export function LegalOpinionPanel({
 
   async function handleCreateOrUpdate(value: LegalOpinionFormValue) {
     setIsSubmittingForm(true)
-
     try {
       let preferredOpinionId: string | null = selectedOpinion?.id || null
-
       if (isEditMode && selectedOpinion) {
         const updated = await updateLegalOpinion(selectedOpinion.id, {
           title: value.title,
@@ -344,10 +351,7 @@ export function LegalOpinionPanel({
         })
         preferredOpinionId = updated.id
         setIsFormOpen(false)
-        toast({
-          title: "Parecer atualizado",
-          description: `Parecer ${updated.title} atualizado com sucesso.`,
-        })
+        toast({ title: "Parecer atualizado", description: `"${updated.title}" atualizado com sucesso.` })
       } else {
         const created = await createLegalOpinion({
           precatorioId: value.precatorioId,
@@ -366,12 +370,8 @@ export function LegalOpinionPanel({
         preferredOpinionId = created.id
         setSelectedOpinionId(created.id)
         setIsFormOpen(false)
-        toast({
-          title: "Parecer criado",
-          description: `Parecer ${created.title} criado com sucesso.`,
-        })
+        toast({ title: "Parecer criado", description: `"${created.title}" criado com sucesso.` })
       }
-
       await loadOpinions(preferredOpinionId)
     } catch (error) {
       toast({
@@ -386,16 +386,15 @@ export function LegalOpinionPanel({
 
   async function handleAddComment() {
     if (!selectedOpinion || !commentText.trim() || isCommentLoading) return
-
     setIsCommentLoading(true)
     try {
       await addLegalOpinionComment(selectedOpinion.id, commentText.trim())
       setCommentText("")
       await loadDetail(selectedOpinion.id)
-      toast({ title: "Comentario adicionado" })
+      toast({ title: "Comentário adicionado" })
     } catch (error) {
       toast({
-        title: "Falha ao adicionar comentario",
+        title: "Falha ao adicionar comentário",
         description: error instanceof Error ? error.message : "Falha inesperada.",
         variant: "destructive",
       })
@@ -406,16 +405,10 @@ export function LegalOpinionPanel({
 
   async function handleUploadFile(file: File) {
     if (!selectedOpinion || isUploading) return
-
     if (!allowedFileTypes.includes(file.type)) {
-      toast({
-        title: "Tipo de arquivo nao permitido",
-        description: "Use PDF, JPG, PNG ou DOCX.",
-        variant: "destructive",
-      })
+      toast({ title: "Tipo de arquivo não permitido", description: "Use PDF, JPG, PNG ou DOCX.", variant: "destructive" })
       return
     }
-
     setIsUploading(true)
     try {
       await uploadAndRegisterLegalAttachment(selectedOpinion, file)
@@ -434,7 +427,6 @@ export function LegalOpinionPanel({
 
   async function handleDownload(attachment: LegalOpinionAttachment) {
     if (!selectedOpinion) return
-
     setIsDownloadingId(attachment.id)
     try {
       const result = await getLegalOpinionAttachmentSignedUrl(selectedOpinion.id, attachment.id)
@@ -453,7 +445,6 @@ export function LegalOpinionPanel({
   async function handleStatusUpdate(status: string) {
     const nextStatus = status as LegalOpinionStatus
     if (!selectedOpinion || !LEGAL_OPINION_STATUSES.includes(nextStatus)) return
-
     setIsUpdatingStatus(true)
     try {
       await updateLegalOpinion(selectedOpinion.id, { status: nextStatus })
@@ -480,34 +471,20 @@ export function LegalOpinionPanel({
 
   async function handleRenameOtherItem(item: ChecklistEntry) {
     if (!hasEditPermission || !selectedOpinion || !item.isOther) return
-
     const suggestedName = item.customName || item.label || "Outro"
     const nextNameRaw = window.prompt("Novo nome para este item 'Outro':", suggestedName)
     if (nextNameRaw === null) return
-
     const nextName = nextNameRaw.trim()
     if (!nextName) {
-      toast({
-        title: "Nome invalido",
-        description: "Informe um nome valido para o item 'Outro'.",
-        variant: "destructive",
-      })
+      toast({ title: "Nome inválido", description: "Informe um nome válido.", variant: "destructive" })
       return
     }
-
     if (nextName === suggestedName) return
-
     try {
       const noteText = item.note || "Nome do item atualizado."
-      await addLegalOpinionComment(
-        selectedOpinion.id,
-        `[CHECKLIST:${item.key}][NOME:${nextName}] ${noteText}`
-      )
+      await addLegalOpinionComment(selectedOpinion.id, `[CHECKLIST:${item.key}][NOME:${nextName}] ${noteText}`)
       await loadDetail(selectedOpinion.id)
-      toast({
-        title: "Nome atualizado",
-        description: `Item renomeado para "${nextName}".`,
-      })
+      toast({ title: "Nome atualizado", description: `Item renomeado para "${nextName}".` })
     } catch (error) {
       toast({
         title: "Falha ao renomear item",
@@ -519,62 +496,42 @@ export function LegalOpinionPanel({
 
   async function handleSaveChecklistOpinion() {
     if (!selectedOpinion || !activeChecklistItem) return
-
     const note = checklistOpinionText.trim()
     if (!note) {
-      toast({
-        title: "Parecer obrigatorio",
-        description: "Informe o parecer para concluir este item do checklist.",
-        variant: "destructive",
-      })
+      toast({ title: "Parecer obrigatório", description: "Informe o parecer para concluir este item.", variant: "destructive" })
       return
     }
-
     setIsSavingChecklistOpinion(true)
     try {
       const nextChecklist: Record<string, boolean> = {
         ...(selectedOpinion.checklist || {}),
         [activeChecklistItem.key]: true,
       }
-
       if (activeChecklistItem.isOther) {
         const hasPendingOther = Object.entries(nextChecklist).some(
           ([key, value]) => /^outro(?:_\d+)?$/i.test(key) && !value
         )
-
         if (!hasPendingOther) {
           const maxOtherIndex = Object.keys(nextChecklist).reduce((max, key) => {
             if (!/^outro(?:_\d+)?$/i.test(key)) return max
             const idx = key === "outro" ? 1 : Number(key.replace("outro_", "")) || 1
             return Math.max(max, idx)
           }, 1)
-
-          const nextOtherKey = `outro_${maxOtherIndex + 1}`
-          nextChecklist[nextOtherKey] = false
+          nextChecklist[`outro_${maxOtherIndex + 1}`] = false
         }
       }
-
-      await updateLegalOpinion(selectedOpinion.id, {
-        checklist: nextChecklist,
-      })
-
-      const commentPrefix = activeChecklistItem.isOther
+      await updateLegalOpinion(selectedOpinion.id, { checklist: nextChecklist })
+      const prefix = activeChecklistItem.isOther
         ? activeChecklistItem.customName
           ? `[CHECKLIST:${activeChecklistItem.key}][NOME:${activeChecklistItem.customName}]`
           : `[CHECKLIST:${activeChecklistItem.key}]`
         : `[CHECKLIST:${activeChecklistItem.key}]`
-      await addLegalOpinionComment(selectedOpinion.id, `${commentPrefix} ${note}`)
-
+      await addLegalOpinionComment(selectedOpinion.id, `${prefix} ${note}`)
       await loadDetail(selectedOpinion.id)
-
       setIsChecklistModalOpen(false)
       setActiveChecklistItem(null)
       setChecklistOpinionText("")
-
-      toast({
-        title: "Checklist atualizado",
-        description: `Item "${activeChecklistItem.label}" marcado como concluido.`,
-      })
+      toast({ title: "Checklist atualizado", description: `Item "${activeChecklistItem.label}" marcado como concluído.` })
     } catch (error) {
       toast({
         title: "Falha ao salvar checklist",
@@ -586,167 +543,201 @@ export function LegalOpinionPanel({
     }
   }
 
-  const openCreateModal = () => {
-    setIsEditMode(false)
-    setIsFormOpen(true)
-  }
+  const openCreateModal = () => { setIsEditMode(false); setIsFormOpen(true) }
+  const openEditModal = () => { if (!selectedOpinion) return; setIsEditMode(true); setIsFormOpen(true) }
 
-  const openEditModal = () => {
-    if (!selectedOpinion) return
-    setIsEditMode(true)
-    setIsFormOpen(true)
-  }
+  // ─── RENDER ───────────────────────────────────────────────────────────────
 
   return (
     <div className={cn("space-y-4", className)}>
-      <Card className="border border-default-200/80 bg-content1 shadow-sm">
-        <Card.Header className="flex flex-wrap items-center justify-between gap-3">
+
+      {/* Cabeçalho do painel + contadores */}
+      <div className="rounded-[18px] border border-slate-900/10 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b]">
+        <div className="flex flex-wrap items-start justify-between gap-3 px-5 py-5 md:px-6">
           <div>
-            <Card.Title className="flex items-center gap-2 text-lg font-semibold">
-              <Scale className="h-5 w-5 text-primary" />
+            <p className="flex items-center gap-2 text-[15px] font-bold text-slate-900 dark:text-slate-50">
+              <Scale className="h-4 w-4 text-orange-500" />
               {title}
-            </Card.Title>
-            <Card.Description>{subtitle}</Card.Description>
+            </p>
+            <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">{subtitle}</p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            {showOpenModuleButton ? (
-              <Button
-                variant="secondary"
-                size="sm"
-                onPress={() => {
-                  router.push(`/parecer-juridico?precatorioId=${precatorioId}`)
-                }}
+            {showOpenModuleButton && (
+              <button
+                type="button"
+                onClick={() => router.push(`/parecer-juridico?precatorioId=${precatorioId}`)}
+                className="inline-flex h-9 items-center gap-2 rounded-xl border border-slate-900/10 bg-white px-3 text-[13px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
               >
-                Abrir modulo
-              </Button>
-            ) : null}
-            {hasCreatePermission ? (
-              <Button
-                color="primary"
-                size="sm"
-                className={REQUEST_OPINION_BUTTON_CLASS}
-                onPress={openCreateModal}
+                Abrir módulo
+              </button>
+            )}
+            {hasCreatePermission && (
+              <button
+                type="button"
+                onClick={openCreateModal}
+                className="inline-flex h-9 items-center gap-2 rounded-xl bg-gradient-to-br from-orange-500 to-orange-600 px-3 text-[13px] font-semibold text-white shadow-[0_6px_20px_-8px_rgba(249,115,22,0.70)] transition hover:from-orange-400 hover:to-amber-500"
               >
-                <Plus className="h-4 w-4" />
+                <Plus className="h-3.5 w-3.5" />
                 Solicitar Parecer
-              </Button>
-            ) : null}
+              </button>
+            )}
           </div>
-        </Card.Header>
-        <Card.Content className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
-          {LEGAL_OPINION_STATUSES.map((status) => (
-            <div
-              key={status}
-              className="rounded-xl border border-default-200/75 bg-default-100/45 px-3 py-2"
-            >
-              <p className="text-[11px] font-semibold uppercase tracking-[0.12em] text-foreground/60">
-                {LEGAL_OPINION_STATUS_LABELS[status]}
-              </p>
-              <p className="mt-1 text-lg font-bold text-foreground">{statusCounters[status]}</p>
-            </div>
-          ))}
-        </Card.Content>
-      </Card>
+        </div>
 
+        {/* Mini contadores de status */}
+        <div className="grid grid-cols-2 gap-2 border-t border-slate-900/10 px-5 py-4 dark:border-white/10 sm:grid-cols-3 lg:grid-cols-5 md:px-6">
+          <div className="rounded-[12px] border border-amber-500/25 bg-amber-500/10 px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">Pendente</p>
+            <p className="mt-1 text-xl font-bold leading-none tabular-nums text-amber-700 dark:text-amber-300">{statusCounters.pendente}</p>
+          </div>
+          <div className="rounded-[12px] border border-blue-500/25 bg-blue-500/10 px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Em análise</p>
+            <p className="mt-1 text-xl font-bold leading-none tabular-nums text-blue-600 dark:text-blue-300">{statusCounters.em_analise}</p>
+          </div>
+          <div className="rounded-[12px] border border-emerald-500/25 bg-emerald-500/10 px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Concluído</p>
+            <p className="mt-1 text-xl font-bold leading-none tabular-nums text-emerald-700 dark:text-emerald-300">{statusCounters.concluido}</p>
+          </div>
+          <div className="rounded-[12px] border border-rose-500/25 bg-rose-500/10 px-3 py-2">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">Rejeitado</p>
+            <p className="mt-1 text-xl font-bold leading-none tabular-nums text-rose-600 dark:text-rose-300">{statusCounters.rejeitado}</p>
+          </div>
+          <div className="rounded-[12px] border border-slate-200 bg-slate-500/5 px-3 py-2 dark:border-white/10 dark:bg-white/5">
+            <p className="text-[9px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Arquivado</p>
+            <p className="mt-1 text-xl font-bold leading-none tabular-nums text-slate-600 dark:text-slate-300">{statusCounters.arquivado}</p>
+          </div>
+        </div>
+      </div>
+
+      {/* Corpo */}
       {isLoading ? (
-        <Card className="border border-default-200/80 bg-content1">
-          <Card.Content className="flex items-center justify-center py-10">
-            <Spinner size="sm" />
-          </Card.Content>
-        </Card>
+        <div className="flex items-center justify-center rounded-[18px] border border-slate-900/10 bg-white py-16 dark:border-white/10 dark:bg-[#18181b]">
+          <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-orange-500/20 border-t-orange-500" />
+        </div>
       ) : opinions.length === 0 ? (
-        <Card className="border border-default-200/80 bg-content1">
-          <Card.Content className="py-10 text-center text-muted-foreground">
-            Nenhum parecer juridico registrado para este precatorio.
-          </Card.Content>
-        </Card>
+        <div className="flex flex-col items-center justify-center rounded-[18px] border border-slate-900/10 bg-white py-16 dark:border-white/10 dark:bg-[#18181b]">
+          <div className="flex h-14 w-14 items-center justify-center rounded-[14px] bg-[#f4f5f8] dark:bg-[#09090b]">
+            <Scale className="h-6 w-6 text-slate-400" />
+          </div>
+          <p className="mt-4 text-[14px] font-semibold text-slate-900 dark:text-slate-50">Nenhum parecer registrado</p>
+          <p className="mt-1 text-[12px] text-slate-500 dark:text-slate-400">Nenhum parecer jurídico vinculado a este precatório.</p>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[320px_1fr]">
-          <Card className="border border-default-200/80 bg-content1">
-            <Card.Header>
-              <Card.Title className="text-sm font-semibold">Pareceres vinculados</Card.Title>
-            </Card.Header>
-            <Card.Content className="space-y-2">
-              {opinions.map((opinion) => (
-                <button
-                  key={opinion.id}
-                  type="button"
-                  onClick={() => setSelectedOpinionId(opinion.id)}
-                  className={cn(
-                    "w-full rounded-xl border px-3 py-2 text-left transition-colors",
-                    selectedOpinionId === opinion.id
-                      ? "border-primary/50 bg-primary/10"
-                      : "border-default-200/75 bg-default-100/40 hover:bg-default-100/70"
-                  )}
-                >
-                  <p className="line-clamp-1 text-sm font-semibold text-foreground">
-                    {getOpinionTitle(opinion)}
-                  </p>
-                  <p className="mt-1 line-clamp-1 text-xs text-muted-foreground">{getOpinionSubtitle(opinion)}</p>
-                  <div className="mt-2 flex flex-wrap items-center gap-2">
-                    <Chip size="sm" variant="flat" color={LEGAL_OPINION_STATUS_COLORS[opinion.status]}>
-                      {LEGAL_OPINION_STATUS_LABELS[opinion.status]}
-                    </Chip>
-                    {opinion.due_date ? (
-                      <Chip size="sm" variant="flat" color="default">
-                        {formatDate(opinion.due_date)}
-                      </Chip>
-                    ) : null}
-                  </div>
-                </button>
-              ))}
-            </Card.Content>
-          </Card>
+        <div className="grid grid-cols-1 gap-4 lg:grid-cols-[300px_1fr]">
 
-          <Card className="border border-default-200/80 bg-content1">
+          {/* Lista de pareceres */}
+          <div className="rounded-[18px] border border-slate-900/10 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b]">
+            <div className="border-b border-slate-900/10 px-4 py-3 dark:border-white/10">
+              <p className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
+                Pareceres vinculados
+              </p>
+            </div>
+            <div className="space-y-1.5 p-3">
+              {opinions.map((opinion) => {
+                const isSelected = selectedOpinionId === opinion.id
+                return (
+                  <button
+                    key={opinion.id}
+                    type="button"
+                    onClick={() => setSelectedOpinionId(opinion.id)}
+                    className={cn(
+                      "w-full rounded-[12px] border px-3 py-2.5 text-left transition-all duration-150",
+                      isSelected
+                        ? "border-orange-300 bg-orange-500/8 shadow-[0_0_0_1px_rgba(249,115,22,0.15)] dark:border-orange-500/40 dark:bg-orange-500/10"
+                        : "border-slate-900/8 bg-[#f4f5f8] hover:border-slate-300 hover:bg-slate-100/80 dark:border-white/8 dark:bg-[#09090b] dark:hover:border-white/15"
+                    )}
+                  >
+                    <div className="flex items-start justify-between gap-2">
+                      <p className="line-clamp-1 text-[13px] font-semibold text-slate-900 dark:text-slate-50">
+                        {getOpinionTitle(opinion)}
+                      </p>
+                      {isSelected && (
+                        <span className="mt-0.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                      )}
+                    </div>
+                    <p className="mt-0.5 line-clamp-1 text-[11px] text-slate-500 dark:text-slate-400">
+                      {getOpinionSubtitle(opinion)}
+                    </p>
+                    <div className="mt-2 flex flex-wrap items-center gap-1.5">
+                      <TagPill className={getStatusTagClass(opinion.status)}>
+                        <span className="mr-1 h-1 w-1 rounded-full bg-current" />
+                        {LEGAL_OPINION_STATUS_LABELS[opinion.status]}
+                      </TagPill>
+                      {opinion.due_date && (
+                        <span className="inline-flex items-center gap-1 rounded-full border border-slate-200 bg-slate-100 px-2 py-0.5 text-[10px] font-medium text-slate-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+                          <CalendarClock className="h-2.5 w-2.5" />
+                          {formatDate(opinion.due_date)}
+                        </span>
+                      )}
+                    </div>
+                  </button>
+                )
+              })}
+            </div>
+          </div>
+
+          {/* Detalhes do parecer selecionado */}
+          <div className="rounded-[18px] border border-slate-900/10 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b]">
             {isDetailLoading ? (
-              <Card.Content className="flex items-center justify-center py-14">
-                <Spinner size="sm" />
-              </Card.Content>
+              <div className="flex items-center justify-center py-16">
+                <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-orange-500/20 border-t-orange-500" />
+              </div>
             ) : !selectedOpinion ? (
-              <Card.Content className="py-12 text-center text-muted-foreground">
-                Selecione um parecer para visualizar os detalhes.
-              </Card.Content>
+              <div className="flex flex-col items-center justify-center py-16 text-center">
+                <Scale className="h-8 w-8 text-slate-300 dark:text-slate-600" />
+                <p className="mt-3 text-[13px] text-slate-400 dark:text-slate-500">
+                  Selecione um parecer para visualizar os detalhes.
+                </p>
+              </div>
             ) : (
-              <>
-                <Card.Header className="flex flex-wrap items-start justify-between gap-3">
-                  <div>
-                    <Card.Title className="text-lg font-semibold">{selectedOpinion.title}</Card.Title>
-                    <Card.Description>
-                      {LEGAL_OPINION_TYPE_LABELS[selectedOpinion.type]} • Atualizado em{" "}
+              <div className="space-y-0">
+                {/* Header do detalhe */}
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-900/10 px-5 py-4 dark:border-white/10 md:px-6">
+                  <div className="min-w-0 flex-1">
+                    <h3 className="text-[15px] font-bold text-slate-900 dark:text-slate-50">
+                      {selectedOpinion.title}
+                    </h3>
+                    <p className="mt-0.5 text-[11.5px] text-slate-500 dark:text-slate-400">
+                      {LEGAL_OPINION_TYPE_LABELS[selectedOpinion.type]} &bull; Atualizado em{" "}
                       {formatDateTime(selectedOpinion.updated_at)}
-                    </Card.Description>
+                    </p>
                   </div>
                   <div className="flex flex-wrap items-center gap-2">
-                    <Chip size="sm" variant="flat" color={LEGAL_OPINION_STATUS_COLORS[selectedOpinion.status]}>
+                    <TagPill className={getStatusTagClass(selectedOpinion.status)}>
+                      <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
                       {LEGAL_OPINION_STATUS_LABELS[selectedOpinion.status]}
-                    </Chip>
-                    {selectedOpinion.due_date ? (
-                      <Chip size="sm" variant="flat" color="warning">
-                        <CalendarClock className="h-3.5 w-3.5" />
+                    </TagPill>
+                    {selectedOpinion.due_date && (
+                      <span className="inline-flex items-center gap-1 rounded-full border border-amber-200 bg-amber-500/10 px-2.5 py-1 text-[10.5px] font-bold text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300">
+                        <CalendarClock className="h-3 w-3" />
                         {formatDate(selectedOpinion.due_date)}
-                      </Chip>
-                    ) : null}
-                    {hasEditPermission ? (
-                      <Button size="sm" variant="secondary" onPress={openEditModal}>
+                      </span>
+                    )}
+                    {hasEditPermission && (
+                      <button
+                        type="button"
+                        onClick={openEditModal}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-900/10 bg-white px-3 text-[12px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
+                      >
                         Editar
-                      </Button>
-                    ) : null}
+                      </button>
+                    )}
                   </div>
-                </Card.Header>
+                </div>
 
-                <Card.Content className="space-y-5">
-                  {hasEditPermission ? (
-                    <div className="space-y-2">
-                      <Label>Status do parecer</Label>
+                <div className="space-y-4 p-5 md:p-6">
+                  {/* Alterar status */}
+                  {hasEditPermission && (
+                    <div className="space-y-1.5">
+                      <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                        Alterar status
+                      </Label>
                       <Select
                         value={selectedOpinionStatus}
-                        onValueChange={(value) => {
-                          void handleStatusUpdate(value)
-                        }}
+                        onValueChange={(v) => void handleStatusUpdate(v)}
                         disabled={isUpdatingStatus}
                       >
-                        <SelectTrigger className="w-full max-w-xs">
+                        <SelectTrigger className="w-full max-w-xs rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
                           <SelectValue placeholder="Selecione o status" />
                         </SelectTrigger>
                         <SelectContent>
@@ -758,29 +749,30 @@ export function LegalOpinionPanel({
                         </SelectContent>
                       </Select>
                     </div>
-                  ) : null}
+                  )}
 
-                  <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                    <section className="space-y-2 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
-                      <p className="text-sm font-semibold">Resumo executivo</p>
-                      <p className="whitespace-pre-line text-sm text-foreground/85">
-                        {selectedOpinion.executive_summary || "Nao informado."}
+                  {/* Resumo + Conclusão */}
+                  <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                    <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
+                      <SectionTitle>Resumo executivo</SectionTitle>
+                      <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
+                        {selectedOpinion.executive_summary || "Não informado."}
                       </p>
-                    </section>
-                    <section className="space-y-2 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
-                      <p className="text-sm font-semibold">Conclusao / recomendacao</p>
-                      <p className="whitespace-pre-line text-sm text-foreground/85">
-                        {selectedOpinion.conclusion || selectedOpinion.recommendation || "Nao informado."}
+                    </div>
+                    <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
+                      <SectionTitle>Conclusão / Recomendação</SectionTitle>
+                      <p className="mt-2 whitespace-pre-line text-[13px] leading-relaxed text-slate-700 dark:text-slate-300">
+                        {selectedOpinion.conclusion || selectedOpinion.recommendation || "Não informado."}
                       </p>
-                    </section>
+                    </div>
                   </div>
 
-                  <section className="space-y-2 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
-                    <p className="flex items-center gap-2 text-sm font-semibold">
-                      <ListChecks className="h-4 w-4 text-primary" />
+                  {/* Checklist */}
+                  <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
+                    <SectionTitle icon={<ListChecks className="h-3.5 w-3.5 text-orange-500" />}>
                       Checklist analisado
-                    </p>
-                    <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                    </SectionTitle>
+                    <div className="mt-3 grid grid-cols-1 gap-2 md:grid-cols-2">
                       {checklistEntries.map((item) => (
                         <div key={item.key} className="flex items-center gap-2">
                           <button
@@ -788,53 +780,61 @@ export function LegalOpinionPanel({
                             onClick={() => openChecklistModal(item)}
                             disabled={!hasEditPermission}
                             className={cn(
-                              "flex w-full items-center gap-2 rounded-xl border px-3 py-2 text-left text-sm transition-colors",
-                              hasEditPermission ? "cursor-pointer hover:border-primary/50 hover:bg-primary/10" : "cursor-default",
+                              "flex w-full items-center gap-2.5 rounded-[10px] border px-3 py-2 text-left text-[12px] transition-all",
+                              hasEditPermission
+                                ? "cursor-pointer"
+                                : "cursor-default",
                               item.checked
-                                ? "border-success/40 bg-success/10 text-success-foreground"
-                                : "border-default-200/80 bg-content1 text-muted-foreground"
+                                ? "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+                                : cn(
+                                    "border-slate-200 bg-white text-slate-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-400",
+                                    hasEditPermission && "hover:border-orange-300 hover:bg-orange-500/5"
+                                  )
                             )}
                           >
-                            {item.checked ? <CheckCircle2 className="h-4 w-4 text-success" /> : <Clock className="h-4 w-4" />}
+                            {item.checked
+                              ? <CheckCircle2 className="h-3.5 w-3.5 shrink-0 text-emerald-500" />
+                              : <Clock className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                            }
                             <div className="min-w-0">
-                              <p>{item.label}</p>
-                              {item.note ? (
-                                <p className="line-clamp-1 text-xs text-muted-foreground">{item.note}</p>
-                              ) : null}
+                              <p className="font-medium">{item.label}</p>
+                              {item.note && (
+                                <p className="line-clamp-1 text-[10px] opacity-70">{item.note}</p>
+                              )}
                             </div>
                           </button>
-                          {item.isOther && hasEditPermission ? (
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              className="h-8 shrink-0 px-2 text-xs"
-                              onPress={() => {
-                                void handleRenameOtherItem(item)
-                              }}
+                          {item.isOther && hasEditPermission && (
+                            <button
+                              type="button"
+                              onClick={() => void handleRenameOtherItem(item)}
+                              className="inline-flex h-8 shrink-0 items-center rounded-lg border border-slate-200 bg-white px-2 text-[11px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-400"
                             >
                               Renomear
-                            </Button>
-                          ) : null}
+                            </button>
+                          )}
                         </div>
                       ))}
                     </div>
-                  </section>
+                  </div>
 
-                  <section className="space-y-3 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
+                  {/* Anexos */}
+                  <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
                     <div className="flex flex-wrap items-center justify-between gap-2">
-                      <p className="flex items-center gap-2 text-sm font-semibold">
-                        <Paperclip className="h-4 w-4 text-primary" />
+                      <SectionTitle icon={<Paperclip className="h-3.5 w-3.5 text-orange-500" />}>
                         Anexos
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        isLoading={isUploading}
-                        onPress={() => fileInputRef.current?.click()}
+                      </SectionTitle>
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={isUploading}
+                        className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 disabled:opacity-50 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
                       >
-                        <Upload className="h-4 w-4" />
+                        {isUploading
+                          ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-orange-500/30 border-t-orange-500" />
+                          : <Upload className="h-3 w-3" />
+                        }
                         Adicionar arquivo
-                      </Button>
+                      </button>
                     </div>
 
                     <input
@@ -842,108 +842,136 @@ export function LegalOpinionPanel({
                       type="file"
                       className="hidden"
                       accept=".pdf,.jpg,.jpeg,.png,.docx,application/pdf,image/jpeg,image/png,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-                      onChange={(event) => {
-                        const file = event.target.files?.[0]
+                      onChange={(e) => {
+                        const file = e.target.files?.[0]
                         if (!file) return
                         void handleUploadFile(file)
-                        event.currentTarget.value = ""
+                        e.currentTarget.value = ""
                       }}
                     />
 
                     {attachments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum anexo registrado.</p>
+                      <p className="mt-3 text-[12px] text-slate-400 dark:text-slate-500">Nenhum anexo registrado.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="mt-3 space-y-2">
                         {attachments.map((attachment) => (
                           <div
                             key={attachment.id}
-                            className="flex flex-wrap items-center justify-between gap-2 rounded-xl border border-default-200/80 bg-content1 px-3 py-2"
+                            className="flex flex-wrap items-center justify-between gap-2 rounded-[10px] border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#18181b]"
                           >
-                            <div>
-                              <p className="text-sm font-medium">{attachment.file_name}</p>
-                              <p className="text-xs text-muted-foreground">
-                                {attachment.mime_type} • {formatBytes(attachment.size)} • {formatDateTime(attachment.created_at)}
+                            <div className="min-w-0">
+                              <p className="truncate text-[13px] font-medium text-slate-800 dark:text-slate-200">
+                                {attachment.file_name}
+                              </p>
+                              <p className="text-[10.5px] text-slate-400 dark:text-slate-500">
+                                {attachment.mime_type} &bull; {formatBytes(attachment.size)} &bull; {formatDateTime(attachment.created_at)}
                               </p>
                             </div>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              isLoading={isDownloadingId === attachment.id}
-                              onPress={() => {
-                                void handleDownload(attachment)
-                              }}
+                            <button
+                              type="button"
+                              disabled={isDownloadingId === attachment.id}
+                              onClick={() => void handleDownload(attachment)}
+                              className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-slate-200 bg-white px-3 text-[11px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 disabled:opacity-50 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
                             >
-                              <Download className="h-4 w-4" />
+                              {isDownloadingId === attachment.id
+                                ? <span className="h-3 w-3 animate-spin rounded-full border-2 border-orange-500/30 border-t-orange-500" />
+                                : <Download className="h-3 w-3" />
+                              }
                               Baixar
-                            </Button>
+                            </button>
                           </div>
                         ))}
                       </div>
                     )}
-                  </section>
+                  </div>
 
-                  <section className="space-y-3 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
-                    <p className="flex items-center gap-2 text-sm font-semibold">
-                      <MessageSquare className="h-4 w-4 text-primary" />
-                      Comentarios
-                    </p>
-                    <div className="space-y-2">
+                  {/* Comentários */}
+                  <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
+                    <SectionTitle icon={<MessageSquare className="h-3.5 w-3.5 text-orange-500" />}>
+                      Comentários
+                    </SectionTitle>
+                    <div className="mt-3 space-y-2">
                       <Textarea
                         rows={3}
-                        placeholder="Adicionar comentario..."
+                        placeholder="Adicionar comentário..."
                         value={commentText}
-                        onChange={(event) => setCommentText(event.target.value)}
+                        onChange={(e) => setCommentText(e.target.value)}
+                        className="rounded-xl border-slate-200 bg-white text-[13px] dark:border-white/10 dark:bg-[#18181b]"
                       />
                       <div className="flex justify-end">
-                        <Button
-                          size="sm"
-                          color="primary"
-                          isLoading={isCommentLoading}
-                          onPress={() => {
-                            void handleAddComment()
-                          }}
+                        <button
+                          type="button"
+                          disabled={isCommentLoading || !commentText.trim()}
+                          onClick={() => void handleAddComment()}
+                          className="inline-flex h-9 items-center gap-2 rounded-xl bg-orange-500 px-4 text-[13px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(249,115,22,0.60)] transition hover:bg-orange-400 disabled:opacity-50"
                         >
-                          Enviar comentario
-                        </Button>
+                          {isCommentLoading && (
+                            <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                          )}
+                          Enviar comentário
+                        </button>
                       </div>
                     </div>
 
                     {comments.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum comentario registrado.</p>
+                      <p className="mt-3 text-[12px] text-slate-400 dark:text-slate-500">Nenhum comentário registrado.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="mt-3 space-y-2">
                         {comments.map((comment) => (
-                          <div key={comment.id} className="rounded-xl border border-default-200/80 bg-content1 px-3 py-2">
-                            <p className="text-sm font-medium">{comment.author?.nome || "Usuario"}</p>
-                            <p className="whitespace-pre-line text-sm text-foreground/85">{comment.content}</p>
-                            <p className="mt-1 text-xs text-muted-foreground">{formatDateTime(comment.created_at)}</p>
+                          <div
+                            key={comment.id}
+                            className="flex gap-3 rounded-[10px] border border-slate-200 bg-white px-3 py-2.5 dark:border-white/10 dark:bg-[#18181b]"
+                          >
+                            <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-[10px] font-bold text-white">
+                              {getInitials(comment.author?.nome)}
+                            </div>
+                            <div className="min-w-0 flex-1">
+                              <p className="text-[12px] font-semibold text-slate-800 dark:text-slate-200">
+                                {comment.author?.nome || "Usuário"}
+                              </p>
+                              <p className="whitespace-pre-line text-[12px] leading-relaxed text-slate-600 dark:text-slate-300">
+                                {comment.content}
+                              </p>
+                              <p className="mt-1 text-[10px] text-slate-400 dark:text-slate-500">
+                                {formatDateTime(comment.created_at)}
+                              </p>
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </section>
+                  </div>
 
-                  <section className="space-y-2 rounded-2xl border border-default-200/80 bg-default-100/35 p-4">
-                    <p className="text-sm font-semibold">Historico de alteracoes</p>
+                  {/* Histórico */}
+                  <div className="rounded-[12px] bg-[#f4f5f8] p-4 dark:bg-[#09090b]">
+                    <SectionTitle>Histórico de alterações</SectionTitle>
                     {events.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">Nenhum evento registrado.</p>
+                      <p className="mt-3 text-[12px] text-slate-400 dark:text-slate-500">Nenhum evento registrado.</p>
                     ) : (
-                      <div className="space-y-2">
+                      <div className="mt-3 space-y-1.5">
                         {events.slice(0, 8).map((event) => (
-                          <div key={event.id} className="rounded-xl border border-default-200/80 bg-content1 px-3 py-2">
-                            <p className="text-sm font-medium">{getEventLabel(event)}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {event.actor?.nome || "Sistema"} • {formatDateTime(event.created_at)}
-                            </p>
+                          <div
+                            key={event.id}
+                            className="flex items-start gap-3 rounded-[10px] border border-slate-200 bg-white px-3 py-2 dark:border-white/10 dark:bg-[#18181b]"
+                          >
+                            <span className="mt-1.5 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-400" />
+                            <div className="min-w-0">
+                              <p className="text-[12px] font-medium text-slate-700 dark:text-slate-300">
+                                {getEventLabel(event)}
+                              </p>
+                              <p className="text-[10.5px] text-slate-400 dark:text-slate-500">
+                                {event.actor?.nome || "Sistema"} &bull; {formatDateTime(event.created_at)}
+                              </p>
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
-                  </section>
-                </Card.Content>
-              </>
+                  </div>
+                </div>
+              </div>
             )}
-          </Card>
+          </div>
         </div>
       )}
 
@@ -959,6 +987,7 @@ export function LegalOpinionPanel({
         onSubmit={handleCreateOrUpdate}
       />
 
+      {/* Modal do Checklist */}
       <Modal.Backdrop
         isOpen={isChecklistModalOpen}
         onOpenChange={setIsChecklistModalOpen}
@@ -967,48 +996,60 @@ export function LegalOpinionPanel({
         className="bg-black/55 backdrop-blur-[3px] supports-[backdrop-filter]:bg-black/45"
       >
         <Modal.Container placement="center" size="lg" className="px-3 py-3 sm:px-6">
-          <Modal.Dialog className="mx-auto w-full max-w-2xl overflow-hidden rounded-2xl border border-default-200/70 bg-content1 shadow-xl outline-none">
+          <Modal.Dialog className="mx-auto w-full max-w-2xl overflow-hidden rounded-[20px] border border-slate-900/10 bg-white shadow-[0_24px_60px_-12px_rgba(15,23,42,0.35)] outline-none dark:border-white/10 dark:bg-[#18181b]">
             <Modal.CloseTrigger
               className={[
-                "absolute right-4 top-4 z-20 rounded-full border border-default-200/70 bg-content1/95 hover:bg-content2",
+                "absolute right-4 top-4 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-500 transition hover:text-slate-900 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-400",
                 isSavingChecklistOpinion ? "pointer-events-none opacity-60" : "",
               ].join(" ")}
             />
 
-            <Modal.Header className="border-b border-default-200/70 px-5 pb-4 pt-5 sm:px-6">
-              <Modal.Heading className="text-lg font-semibold">
+            <Modal.Header className="border-b border-slate-900/10 px-5 pb-4 pt-5 dark:border-white/10 sm:px-6">
+              <Modal.Heading className="text-[15px] font-bold text-slate-900 dark:text-slate-50">
                 Parecer do checklist
               </Modal.Heading>
-              <p className="mt-1 text-sm text-foreground/70">
+              <p className="mt-0.5 text-[12px] text-slate-500 dark:text-slate-400">
                 {activeChecklistItem ? `Item: ${activeChecklistItem.label}` : "Selecione um item"}
               </p>
             </Modal.Header>
 
             <Modal.Body className="px-5 py-4 sm:px-6">
-              <div className="space-y-2">
-                <Label htmlFor="checklist-opinion">Parecer juridico</Label>
+              <div className="space-y-1.5">
+                <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
+                  Parecer jurídico
+                </Label>
                 <Textarea
                   id="checklist-opinion"
                   rows={6}
                   placeholder="Descreva o parecer para este item..."
                   value={checklistOpinionText}
-                  onChange={(event) => setChecklistOpinionText(event.target.value)}
+                  onChange={(e) => setChecklistOpinionText(e.target.value)}
+                  className="rounded-xl border-slate-200 bg-[#f4f5f8] text-[13px] dark:border-white/10 dark:bg-[#09090b]"
                 />
               </div>
             </Modal.Body>
 
-            <Modal.Footer className="border-t border-default-200/70 px-5 py-3 sm:px-6">
+            <Modal.Footer className="border-t border-slate-900/10 px-5 py-3 dark:border-white/10 sm:px-6">
               <div className="flex w-full justify-end gap-2">
-                <Button
-                  variant="secondary"
-                  onPress={() => setIsChecklistModalOpen(false)}
-                  isDisabled={isSavingChecklistOpinion}
+                <button
+                  type="button"
+                  onClick={() => setIsChecklistModalOpen(false)}
+                  disabled={isSavingChecklistOpinion}
+                  className="inline-flex h-9 items-center rounded-xl border border-slate-900/10 bg-white px-4 text-[13px] font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 disabled:opacity-50 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
                 >
                   Cancelar
-                </Button>
-                <Button color="primary" onPress={handleSaveChecklistOpinion} isLoading={isSavingChecklistOpinion}>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => void handleSaveChecklistOpinion()}
+                  disabled={isSavingChecklistOpinion}
+                  className="inline-flex h-9 items-center gap-2 rounded-xl bg-orange-500 px-4 text-[13px] font-semibold text-white shadow-[0_4px_16px_-4px_rgba(249,115,22,0.60)] transition hover:bg-orange-400 disabled:opacity-50"
+                >
+                  {isSavingChecklistOpinion && (
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                  )}
                   Salvar e marcar como feito
-                </Button>
+                </button>
               </div>
             </Modal.Footer>
           </Modal.Dialog>

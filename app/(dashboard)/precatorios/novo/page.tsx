@@ -26,11 +26,22 @@ const STEPS = [
   { id: 4, title: "Revisão", icon: CheckCircle2, description: "Confirmação final" },
 ]
 
+function normalizeRoles(value: unknown): string[] {
+  const values = Array.isArray(value) ? value : [value]
+  return Array.from(
+    new Set(
+      values
+        .filter((role): role is string => typeof role === "string" && role.trim().length > 0)
+        .map((role) => role.trim().toLowerCase())
+    )
+  )
+}
+
 export default function NovoPrecatorioPage() {
   const router = useRouter()
   const [saving, setSaving] = useState(false)
   const [currentStep, setCurrentStep] = useState(1)
-  const [userRole, setUserRole] = useState<string | null>(null)
+  const [userRoles, setUserRoles] = useState<string[]>([])
   const [aiModalOpen, setAiModalOpen] = useState(false)
   const [herdeiros, setHerdeiros] = useState<Array<{
     nome_completo: string
@@ -52,8 +63,10 @@ export default function NovoPrecatorioPage() {
       if (supabase) {
         const { data: userData } = await supabase.auth.getUser()
         if (userData.user) {
-          const { data: perfil } = await supabase.from("usuarios").select("role").eq("id", userData.user.id).single()
-          setUserRole(perfil?.role || null)
+          const { data: perfil } = await supabase.from("usuarios").select("role").eq("id", userData.user.id).maybeSingle()
+          const metadataRoles = normalizeRoles(userData.user.app_metadata?.role)
+          const profileRoles = normalizeRoles(perfil?.role)
+          setUserRoles(Array.from(new Set([...metadataRoles, ...profileRoles])))
         }
       }
     }
@@ -138,12 +151,16 @@ export default function NovoPrecatorioPage() {
           const { data: userData } = await supabase.auth.getUser()
           currentUserId = userData.user?.id
         }
+        const isJuridico = userRoles.includes("juridico")
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const precatorioData: any = {
           ...formData, // Spread all form data
           criado_por: currentUserId,
           responsavel: currentUserId,
           dono_usuario_id: currentUserId,
+          ...(isJuridico ? { responsavel_juridico_id: currentUserId } : {}),
+          status_kanban: "entrada",
+          localizacao_kanban: "entrada",
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString(),
         }
