@@ -299,7 +299,9 @@ export default function PropostasPage() {
         .or("status_kanban.eq.proposta_negociacao,validacao_calculo_ok.is.true,validacao_juridico_ok.is.true")
 
       if (!isAdmin && profile?.id) {
-        query = query.or(`criado_por.eq.${profile.id},responsavel.eq.${profile.id}`)
+        query = query.or(
+          `responsavel.eq.${profile.id},dono_usuario_id.eq.${profile.id},responsavel_calculo_id.eq.${profile.id}`
+        )
       }
 
       const { data, error } = await query.order("updated_at", { ascending: false })

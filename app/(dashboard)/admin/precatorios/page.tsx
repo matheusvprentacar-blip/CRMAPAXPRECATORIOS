@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable */
 
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 
 import { ModalCriarPrecatorio } from "@/components/admin/modal-criar-precatorio"
 import { ModalTemplatePrecatorio } from "@/components/admin/modal-template-precatorio"
@@ -56,7 +56,6 @@ import { Textarea } from "@/components/ui/textarea"
 import { CurrencyInput } from "@/components/ui/currency-input"
 import {
   FileText,
-  Search,
   Send,
   Bell,
   CheckCircle2,
@@ -80,6 +79,7 @@ import { trackSupabaseError, trackError } from "@/lib/utils/error-tracker"
 import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { Checkbox } from "@/components/ui/checkbox"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
+import { SearchBar } from "@/components/precatorios/search-bar"
 import { getFiltrosAtivos, type FiltrosPrecatorios } from "@/lib/types/filtros"
 
 interface Usuario {
@@ -121,6 +121,17 @@ interface PrecatorioAdmin {
   usuario_dono?: Usuario
   usuario_calculo?: Usuario
 }
+
+type AdminPrecatoriosTab = "todos" | "distribuidos" | "pendentes"
+
+type PrecatoriosSummaryCounts = {
+  todos: number
+  distribuidos: number
+  pendentes: number
+}
+
+const PAGE_SIZE_OPTIONS = [24, 48, 96] as const
+const DEFAULT_PAGE_SIZE = PAGE_SIZE_OPTIONS[0]
 
 const RELATED_ADV_FILTER_KEYS: Record<string, Array<keyof FiltrosPrecatorios>> = {
   data_criacao: ["data_criacao_inicio", "data_criacao_fim"],
@@ -248,6 +259,203 @@ const matchNumberRange = (value: number, min?: number, max?: number) => {
   if (min !== undefined && value < min) return false
   if (max !== undefined && value > max) return false
   return true
+}
+
+function sanitizePostgrestPattern(value: string) {
+  return value.replace(/[(),]/g, " ").replace(/\s+/g, " ").trim()
+}
+
+function buildIlikePattern(value: string) {
+  const sanitized = sanitizePostgrestPattern(value)
+  return `%${sanitized}%`
+}
+
+function buildExpandedStatuses(statuses?: string[]) {
+  const expanded = new Set<string>()
+  ;(statuses || []).forEach((status) => {
+    expandStatus(status).forEach((expandedStatus) => expanded.add(expandedStatus))
+  })
+  return Array.from(expanded)
+}
+
+function applyPrecatoriosAdminFilters(
+  query: any,
+  {
+    filtroTab,
+    searchTerm,
+    filtros,
+  }: {
+    filtroTab: AdminPrecatoriosTab
+    searchTerm: string
+    filtros: FiltrosPrecatorios
+  }
+) {
+  if (filtroTab === "distribuidos") {
+    query = query.not("dono_usuario_id", "is", null)
+  } else if (filtroTab === "pendentes") {
+    query = query.is("dono_usuario_id", null)
+  }
+
+  const trimmedSearch = searchTerm.trim()
+  if (trimmedSearch) {
+    const searchPattern = buildIlikePattern(trimmedSearch)
+    query = query.or(
+      [
+        `titulo.ilike.${searchPattern}`,
+        `numero_precatorio.ilike.${searchPattern}`,
+        `numero_processo.ilike.${searchPattern}`,
+        `numero_oficio.ilike.${searchPattern}`,
+        `tribunal.ilike.${searchPattern}`,
+        `devedor.ilike.${searchPattern}`,
+        `credor_nome.ilike.${searchPattern}`,
+        `credor_cpf_cnpj.ilike.${searchPattern}`,
+        `advogado_nome.ilike.${searchPattern}`,
+        `advogado_cpf_cnpj.ilike.${searchPattern}`,
+      ].join(",")
+    )
+  }
+
+  const expandedStatuses = buildExpandedStatuses(filtros.status)
+  if (expandedStatuses.length > 0) {
+    query = query.or(
+      expandedStatuses
+        .flatMap((status) => [`status.eq.${status}`, `status_kanban.eq.${status}`])
+        .join(",")
+    )
+  }
+
+  if (filtros.tribunal?.trim()) {
+    query = query.ilike("tribunal", buildIlikePattern(filtros.tribunal))
+  }
+
+  if (filtros.responsavel_id) {
+    query = query.or(
+      [
+        `dono_usuario_id.eq.${filtros.responsavel_id}`,
+        `responsavel_calculo_id.eq.${filtros.responsavel_id}`,
+        `responsavel.eq.${filtros.responsavel_id}`,
+      ].join(",")
+    )
+  }
+
+  if (filtros.complexidade && filtros.complexidade.length > 0) {
+    query = query.in("nivel_complexidade", filtros.complexidade)
+  }
+
+  if (filtros.sla_status && filtros.sla_status.length > 0) {
+    query = query.in("sla_status", filtros.sla_status)
+  }
+
+  if (filtros.tipo_atraso && filtros.tipo_atraso.length > 0) {
+    query = query.in("tipo_atraso", filtros.tipo_atraso)
+  }
+
+  if (filtros.impacto_atraso && filtros.impacto_atraso.length > 0) {
+    query = query.in("impacto_atraso", filtros.impacto_atraso)
+  }
+
+  const createdAtStart = parseDateBoundary(filtros.data_criacao_inicio, false)
+  const createdAtEnd = parseDateBoundary(filtros.data_criacao_fim, true)
+  if (createdAtStart) {
+    query = query.gte("created_at", createdAtStart.toISOString())
+  }
+  if (createdAtEnd) {
+    query = query.lte("created_at", createdAtEnd.toISOString())
+  }
+
+  const entradaCalculoStart = parseDateBoundary(filtros.data_entrada_calculo_inicio, false)
+  const entradaCalculoEnd = parseDateBoundary(filtros.data_entrada_calculo_fim, true)
+  if (entradaCalculoStart) {
+    query = query.gte("data_entrada_calculo", entradaCalculoStart.toISOString())
+  }
+  if (entradaCalculoEnd) {
+    query = query.lte("data_entrada_calculo", entradaCalculoEnd.toISOString())
+  }
+
+  if (filtros.valor_min !== undefined) {
+    query = query.or(
+      [
+        `and(valor_atualizado.gt.0,valor_atualizado.gte.${filtros.valor_min})`,
+        `and(valor_atualizado.is.null,valor_principal.gte.${filtros.valor_min})`,
+        `and(valor_atualizado.eq.0,valor_principal.gte.${filtros.valor_min})`,
+      ].join(",")
+    )
+  }
+
+  if (filtros.valor_max !== undefined) {
+    query = query.or(
+      [
+        `and(valor_atualizado.gt.0,valor_atualizado.lte.${filtros.valor_max})`,
+        `and(valor_atualizado.is.null,valor_principal.lte.${filtros.valor_max})`,
+        `and(valor_atualizado.eq.0,valor_principal.lte.${filtros.valor_max})`,
+      ].join(",")
+    )
+  }
+
+  if (filtros.valor_atualizado_min !== undefined || filtros.valor_atualizado_max !== undefined) {
+    query = query.gt("valor_atualizado", 0)
+    if (filtros.valor_atualizado_min !== undefined) {
+      query = query.gte("valor_atualizado", filtros.valor_atualizado_min)
+    }
+    if (filtros.valor_atualizado_max !== undefined) {
+      query = query.lte("valor_atualizado", filtros.valor_atualizado_max)
+    }
+  }
+
+  if (filtros.valor_sem_atualizacao_min !== undefined || filtros.valor_sem_atualizacao_max !== undefined) {
+    query = query.or("valor_atualizado.is.null,valor_atualizado.eq.0")
+    if (filtros.valor_sem_atualizacao_min !== undefined) {
+      query = query.gte("valor_principal", filtros.valor_sem_atualizacao_min)
+    }
+    if (filtros.valor_sem_atualizacao_max !== undefined) {
+      query = query.lte("valor_principal", filtros.valor_sem_atualizacao_max)
+    }
+  }
+
+  if (filtros.urgente) {
+    query = query.eq("urgente", true)
+  }
+
+  if (filtros.titular_falecido) {
+    query = query.eq("tipo_atraso", "titular_falecido")
+  }
+
+  if (filtros.valor_calculado) {
+    query = query.or("valor_atualizado.gt.0,data_calculo.not.is.null")
+  }
+
+  if (filtros.calculo_em_andamento) {
+    const andamentoStatuses = ["calculo_andamento", "em_calculo", "pronto_calculo", "juridico"]
+    query = query.or(
+      [
+        `status.in.(${andamentoStatuses.join(",")})`,
+        `status_kanban.in.(${andamentoStatuses.join(",")})`,
+      ].join(",")
+    )
+  }
+
+  if (filtros.calculo_finalizado) {
+    const finalizadoStatuses = [
+      "calculo_concluido",
+      "calculado",
+      "concluido",
+      "finalizado",
+      "fechado",
+      "pos_fechamento",
+      "proposta_negociacao",
+      "proposta_aceita",
+      "certidoes",
+      "escrituras",
+    ]
+    query = query.or(
+      [
+        `status.in.(${finalizadoStatuses.join(",")})`,
+        `status_kanban.in.(${finalizadoStatuses.join(",")})`,
+      ].join(",")
+    )
+  }
+
+  return query
 }
 
 const matchesAdvancedFilters = (prec: PrecatorioAdmin, filtros: FiltrosPrecatorios) => {
@@ -500,9 +708,18 @@ export default function AdminPrecatoriosPage() {
   const [usuarios, setUsuarios] = useState<Usuario[]>([])
   const [currentUser, setCurrentUser] = useState<{ id: string } | null>(null)
   const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [filtroTab, setFiltroTab] = useState<"todos" | "distribuidos" | "pendentes">("todos")
+  const [searchInput, setSearchInput] = useState("")
+  const [filtroTab, setFiltroTab] = useState<AdminPrecatoriosTab>("todos")
   const [filtrosAvancados, setFiltrosAvancados] = useState<FiltrosPrecatorios>({})
+  const searchTerm = filtrosAvancados.termo || ""
+  const deferredSearchTerm = useDeferredValue(searchTerm)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [pageSize, setPageSize] = useState<number>(DEFAULT_PAGE_SIZE)
+  const [summaryCounts, setSummaryCounts] = useState<PrecatoriosSummaryCounts>({
+    todos: 0,
+    distribuidos: 0,
+    pendentes: 0,
+  })
 
   const [uploadOficiosOpen, setUploadOficiosOpen] = useState(false)
   const [importModalOpen, setImportModalOpen] = useState(false)
@@ -578,13 +795,22 @@ export default function AdminPrecatoriosPage() {
           : null,
       ].filter(Boolean) as { id: string; label: string }[])
     : []
+
   useEffect(() => {
     loadCurrentUser()
   }, [])
 
   useEffect(() => {
-    if (currentUser) loadData()
-  }, [currentUser])
+    setSearchInput(searchTerm)
+  }, [searchTerm])
+
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [filtroTab, deferredSearchTerm, filtrosAvancados, pageSize])
+
+  useEffect(() => {
+    setSelectedIds([])
+  }, [currentPage, filtroTab, deferredSearchTerm, filtrosAvancados, pageSize])
 
   useEffect(() => {
     if (!autoDistribDialogOpen) return
@@ -691,75 +917,115 @@ export default function AdminPrecatoriosPage() {
     if (data.user) setCurrentUser({ id: data.user.id })
   }
 
-  async function loadData() {
+  const loadData = useCallback(async () => {
     if (!currentUser) return
 
     try {
+      setLoading(true)
       const supabase = createBrowserClient()
       if (!supabase) return
 
-      console.log('[Admin] Carregando precatórios do admin:', currentUser.id)
+      console.log("[Admin] Carregando visão global de precatórios para admin:", currentUser.id)
+      const from = (currentPage - 1) * pageSize
+      const to = from + pageSize - 1
 
-      const { data, error } = await supabase
-        .from("precatorios")
-        .select("*")
-        .eq("criado_por", currentUser.id)
-        .order("created_at", { ascending: false })
+      const createQuery = (tab: AdminPrecatoriosTab, countOnly = false) => {
+        let query = supabase
+          .from("precatorios")
+          .select(countOnly ? "id" : "*", {
+            count: "exact",
+            head: countOnly,
+          })
 
-      if (error) {
-        trackSupabaseError('select precatorios admin', error, {
-          userId: currentUser.id
+        query = applyPrecatoriosAdminFilters(query, {
+          filtroTab: tab,
+          searchTerm: deferredSearchTerm,
+          filtros: filtrosAvancados,
         })
-        throw error
+
+        query = query.order("urgente", { ascending: false }).order("created_at", { ascending: false })
+
+        if (!countOnly) {
+          query = query.range(from, to)
+        }
+
+        return query
       }
 
-      console.log('[Admin] Precatórios carregados:', data?.length || 0)
+      const [pageResponse, usersResponse, totalResponse, distribuidosResponse, pendentesResponse] =
+        await Promise.all([
+          createQuery(filtroTab, false),
+          supabase.from("usuarios").select("id, nome, email, role").eq("ativo", true),
+          createQuery("todos", true),
+          createQuery("distribuidos", true),
+          createQuery("pendentes", true),
+        ])
 
-      // Carregar dados dos usuários separadamente
-      const precatoriosComUsuarios = await Promise.all(
-        (data || []).map(async (prec: any) => {
-          let usuario_dono = null
-          let usuario_calculo = null
-
-          if (prec.dono_usuario_id) {
-            const { data: dono } = await supabase
-              .from("usuarios")
-              .select("id, nome, email, role")
-              .eq("id", prec.dono_usuario_id)
-              .single()
-            usuario_dono = dono
-          }
-
-          if (prec.responsavel_calculo_id) {
-            const { data: calculo } = await supabase
-              .from("usuarios")
-              .select("id, nome, email, role")
-              .eq("id", prec.responsavel_calculo_id)
-              .single()
-            usuario_calculo = calculo
-          }
-
-          return { ...prec, usuario_dono, usuario_calculo }
+      if (pageResponse.error) {
+        trackSupabaseError("select precatorios admin", pageResponse.error, {
+          userId: currentUser.id,
+          currentPage,
+          pageSize,
+          filtroTab,
         })
-      )
+        throw pageResponse.error
+      }
 
+      if (usersResponse.error) {
+        trackSupabaseError("select usuarios admin precatorios", usersResponse.error, {
+          userId: currentUser.id,
+        })
+        throw usersResponse.error
+      }
+
+      if (totalResponse.error || distribuidosResponse.error || pendentesResponse.error) {
+        const countError = totalResponse.error || distribuidosResponse.error || pendentesResponse.error
+        trackSupabaseError("count precatorios admin", countError, {
+          userId: currentUser.id,
+          currentPage,
+          pageSize,
+          filtroTab,
+        })
+        throw countError
+      }
+
+      const counts: PrecatoriosSummaryCounts = {
+        todos: totalResponse.count || 0,
+        distribuidos: distribuidosResponse.count || 0,
+        pendentes: pendentesResponse.count || 0,
+      }
+
+      const totalPagesForTab = Math.max(1, Math.ceil((counts[filtroTab] || 0) / pageSize))
+      if (currentPage > totalPagesForTab) {
+        setCurrentPage(totalPagesForTab)
+        return
+      }
+
+      const activeUsers = ((usersResponse.data as Usuario[] | null) || []).map((user) => ({
+        ...user,
+        role: Array.isArray(user.role) ? user.role : [user.role].filter(Boolean),
+      }))
+      const usersById = new Map(activeUsers.map((user) => [user.id, user]))
+      const precatoriosComUsuarios = ((pageResponse.data as PrecatorioAdmin[] | null) || []).map((prec) => ({
+        ...prec,
+        usuario_dono: prec.dono_usuario_id ? usersById.get(prec.dono_usuario_id) || null : null,
+        usuario_calculo: prec.responsavel_calculo_id
+          ? usersById.get(prec.responsavel_calculo_id) || null
+          : null,
+      }))
+
+      setSummaryCounts(counts)
       setPrecatorios(precatoriosComUsuarios)
-      const { data: users } = await supabase
-        .from("usuarios")
-        .select("id, nome, email, role")
-        .eq("ativo", true)
+      setUsuarios(activeUsers)
 
-      // Filtrar em memória é mais seguro para arrays e evita erros 400 do PostgREST
-      // com queries complexas de OR/contains
-
-      const filteredUsers = (users || []).filter(u =>
-        u.role && (
-          u.role.includes("operador_comercial") ||
-          u.role.includes("operador_calculo")
-        )
-      )
-
-      setUsuarios(filteredUsers)
+      console.log("[Admin] Página carregada:", {
+        total: counts.todos,
+        distribuidos: counts.distribuidos,
+        pendentes: counts.pendentes,
+        pagina: currentPage,
+        pageSize,
+        carregados: precatoriosComUsuarios.length,
+      })
     } catch (error: any) {
       console.error('[Admin] Erro ao carregar dados:', error)
       trackError('Erro ao carregar dados admin', {
@@ -769,10 +1035,14 @@ export default function AdminPrecatoriosPage() {
       toast.error("Erro ao carregar dados")
     } finally {
       setLoading(false)
-      // Reset selections on reload
-      setSelectedIds([])
     }
-  }
+  }, [currentUser, currentPage, pageSize, filtroTab, deferredSearchTerm, filtrosAvancados])
+
+  useEffect(() => {
+    if (currentUser) {
+      void loadData()
+    }
+  }, [currentUser, loadData])
 
   async function handleDistribuir() {
     if (!selectedPrecatorio || !distribuicao.dono_usuario_id) return
@@ -792,6 +1062,8 @@ export default function AdminPrecatoriosPage() {
 
       if (distribuicao.responsavel_calculo_id !== "none") {
         updates.responsavel_calculo_id = distribuicao.responsavel_calculo_id
+      } else {
+        updates.responsavel_calculo_id = null
       }
 
       const { error } = await supabase
@@ -915,10 +1187,15 @@ export default function AdminPrecatoriosPage() {
   }
 
   const clearFiltrosAvancados = () => {
+    setSearchInput("")
     setFiltrosAvancados({})
   }
 
   const removeFiltroAvancado = (key: string) => {
+    if (key === "termo") {
+      setSearchInput("")
+    }
+
     setFiltrosAvancados((prev) => {
       const next = { ...prev }
       const relatedKeys = RELATED_ADV_FILTER_KEYS[key]
@@ -965,21 +1242,17 @@ export default function AdminPrecatoriosPage() {
     )
   }
 
-  const precatoriosDistribuidos = precatorios.filter((p) => p.dono_usuario_id)
-  const precatoriosPendentes = precatorios.filter((p) => !p.dono_usuario_id)
-
-  let precatoriosFiltrados = precatorios
-  if (filtroTab === "distribuidos") precatoriosFiltrados = precatoriosDistribuidos
-  if (filtroTab === "pendentes") precatoriosFiltrados = precatoriosPendentes
-
-  const trimmedSearch = searchTerm.trim()
-  if (trimmedSearch) {
-    precatoriosFiltrados = precatoriosFiltrados.filter((p) => matchesPrecatorioSearch(p, trimmedSearch))
-  }
-
-  if (temFiltrosAvancados) {
-    precatoriosFiltrados = precatoriosFiltrados.filter((p) => matchesAdvancedFilters(p, filtrosAvancados))
-  }
+  const precatoriosFiltrados = precatorios
+  const totalItensTabAtual = summaryCounts[filtroTab]
+  const totalPages = Math.max(1, Math.ceil((totalItensTabAtual || 0) / pageSize))
+  const rangeStart = totalItensTabAtual === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = totalItensTabAtual === 0 ? 0 : rangeStart + precatoriosFiltrados.length - 1
+  const valorPaginaAtual = precatoriosFiltrados.reduce(
+    (sum, prec) => sum + (prec.valor_atualizado || prec.valor_principal || 0),
+    0
+  )
+  const hasServerSideFilters =
+    deferredSearchTerm.trim().length > 0 || temFiltrosAvancados || filtroTab !== "todos"
 
   const filteredIds = new Set(precatoriosFiltrados.map((p) => p.id))
   const selectedInFilteredCount = selectedIds.reduce(
@@ -1129,7 +1402,7 @@ export default function AdminPrecatoriosPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold text-primary">Gestão de Precatórios</h1>
-            <p className="text-muted-foreground">Gerencie seus precatórios e distribua para operadores</p>
+            <p className="text-muted-foreground">Visão global dos precatórios do sistema para todos os admins</p>
           </div>
           <div className="flex gap-2">
             <DropdownMenu>
@@ -1162,8 +1435,8 @@ export default function AdminPrecatoriosPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{precatorios.length}</div>
-              <p className="text-xs text-muted-foreground">Criados por você</p>
+              <div className="text-2xl font-bold">{summaryCounts.todos}</div>
+              <p className="text-xs text-muted-foreground">Precatórios visíveis no sistema</p>
             </CardContent>
           </Card>
 
@@ -1173,7 +1446,7 @@ export default function AdminPrecatoriosPage() {
               <CheckCircle2 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{precatoriosDistribuidos.length}</div>
+              <div className="text-2xl font-bold">{summaryCounts.distribuidos}</div>
               <p className="text-xs text-muted-foreground">Atribuídos</p>
             </CardContent>
           </Card>
@@ -1184,21 +1457,19 @@ export default function AdminPrecatoriosPage() {
               <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{precatoriosPendentes.length}</div>
+              <div className="text-2xl font-bold">{summaryCounts.pendentes}</div>
               <p className="text-xs text-muted-foreground">Aguardando</p>
             </CardContent>
           </Card>
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium text-primary">Valor Total</CardTitle>
+              <CardTitle className="text-sm font-medium text-primary">Valor da Página</CardTitle>
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">
-                {formatCurrency(precatorios.reduce((s, p) => s + (p.valor_atualizado || p.valor_principal || 0), 0))}
-              </div>
-              <p className="text-xs text-muted-foreground">Soma total</p>
+              <div className="text-2xl font-bold">{formatCurrency(valorPaginaAtual)}</div>
+              <p className="text-xs text-muted-foreground">Soma dos itens carregados nesta página</p>
             </CardContent>
           </Card>
         </div>
@@ -1207,17 +1478,32 @@ export default function AdminPrecatoriosPage() {
           <CardHeader>
             <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
               <div>
-                <CardTitle className="text-primary">Meus Precatórios</CardTitle>
-                <CardDescription>Precatórios criados e gerenciados por você</CardDescription>
+                <CardTitle className="text-primary">Todos os Precatórios</CardTitle>
+                <CardDescription>Todos os admins visualizam aqui os precatórios distribuídos e pendentes do sistema</CardDescription>
               </div>
               <div className="w-full sm:w-auto flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
-                <div className="relative w-full sm:w-72">
-                  <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                  <Input
-                    placeholder="Buscar por título, número ou credor..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-8"
+                <div className="w-full sm:w-[26rem]">
+                  <SearchBar
+                    value={searchInput}
+                    onChange={setSearchInput}
+                    onSubmit={(value) => {
+                      setSearchInput(value)
+                      setFiltrosAvancados((prev) => ({
+                        ...prev,
+                        termo: value || undefined,
+                      }))
+                    }}
+                    onClear={() => {
+                      setSearchInput("")
+                      setFiltrosAvancados((prev) => {
+                        const next = { ...prev }
+                        delete next.termo
+                        return next
+                      })
+                    }}
+                    placeholder="Busque por título, número, credor ou processo..."
+                    autoSearch={false}
+                    showButton={true}
                   />
                 </div>
                 <AdvancedFilters
@@ -1283,9 +1569,9 @@ export default function AdminPrecatoriosPage() {
             <Tabs value={filtroTab} onValueChange={(v: any) => setFiltroTab(v)}>
               <div className="flex flex-col gap-4">
                 <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="todos" className="data-[state=active]:text-primary">Todos ({precatorios.length})</TabsTrigger>
-                  <TabsTrigger value="distribuidos" className="data-[state=active]:text-primary">Distribuídos ({precatoriosDistribuidos.length})</TabsTrigger>
-                  <TabsTrigger value="pendentes" className="data-[state=active]:text-primary">Pendentes ({precatoriosPendentes.length})</TabsTrigger>
+                  <TabsTrigger value="todos" className="data-[state=active]:text-primary">Todos ({summaryCounts.todos})</TabsTrigger>
+                  <TabsTrigger value="distribuidos" className="data-[state=active]:text-primary">Distribuídos ({summaryCounts.distribuidos})</TabsTrigger>
+                  <TabsTrigger value="pendentes" className="data-[state=active]:text-primary">Pendentes ({summaryCounts.pendentes})</TabsTrigger>
                 </TabsList>
 
                 {precatoriosFiltrados.length > 0 && (
@@ -1308,9 +1594,11 @@ export default function AdminPrecatoriosPage() {
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2 text-primary">Nenhum precatório encontrado</h3>
                     <p className="text-sm text-muted-foreground mb-4">
-                      {filtroTab === "todos" && "Faça upload dos ofícios requisitórios"}
+                      {hasServerSideFilters
+                        ? "Nenhum precatório corresponde aos filtros atuais."
+                        : "Ainda não há precatórios cadastrados no sistema."}
                     </p>
-                    {filtroTab === "todos" && (
+                    {!hasServerSideFilters && filtroTab === "todos" && (
                       <Button onClick={() => setImportModalOpen(true)}>
                         <Plus className="h-4 w-4 mr-2" />
                         Upload de Ofícios
@@ -1318,169 +1606,222 @@ export default function AdminPrecatoriosPage() {
                     )}
                   </div>
                 ) : (
-                  <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-                    {precatoriosFiltrados.map((prec) => {
-                      const statusKey = prec.status_kanban || "entrada"
-                      const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
-                      const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
-                      const progress = KANBAN_PROGRESS[statusKey] || 0
-                      const isSelected = selectedIds.includes(prec.id)
-                      const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
-                      const valorPrincipal = prec.valor_principal || 0
-                      const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
-                      const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
-                      const showNumeroPrecatorio = Boolean(prec.titulo && prec.numero_precatorio)
+                  <div className="space-y-4">
+                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                      {precatoriosFiltrados.map((prec) => {
+                        const statusKey = prec.status_kanban || "entrada"
+                        const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
+                        const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
+                        const progress = KANBAN_PROGRESS[statusKey] || 0
+                        const isSelected = selectedIds.includes(prec.id)
+                        const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
+                        const valorPrincipal = prec.valor_principal || 0
+                        const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
+                        const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
+                        const showNumeroPrecatorio = Boolean(prec.titulo && prec.numero_precatorio)
 
-                      return (
-                        <Card
-                          key={prec.id}
-                          className={`border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
-                        >
-                          <CardHeader className="pb-3">
-                            <div className="flex items-start gap-3">
-                              <Checkbox
-                                checked={isSelected}
-                                onCheckedChange={() => toggleSelection(prec.id)}
-                                aria-label={`Selecionar ${prec.numero_precatorio || prec.titulo || "precatório"}`}
-                                className="mt-1"
-                              />
-                              <div className="flex-1 space-y-1">
-                                <CardTitle className="text-base leading-snug line-clamp-2 text-primary">{titulo}</CardTitle>
-                                <CardDescription className="line-clamp-1">
-                                  {prec.credor_nome || "Credor não informado"}
-                                </CardDescription>
-                                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                  <span>{prec.numero_processo || "Sem processo"}</span>
-                                  {showNumeroPrecatorio && <span>• {prec.numero_precatorio}</span>}
-                                  {prec.file_url && (
-                                    <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
-                                      <FileText className="h-2 w-2" />
-                                      PDF
-                                    </Badge>
-                                  )}
+                        return (
+                          <Card
+                            key={prec.id}
+                            className={`border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
+                          >
+                            <CardHeader className="pb-3">
+                              <div className="flex items-start gap-3">
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={() => toggleSelection(prec.id)}
+                                  aria-label={`Selecionar ${prec.numero_precatorio || prec.titulo || "precatório"}`}
+                                  className="mt-1"
+                                />
+                                <div className="flex-1 space-y-1">
+                                  <CardTitle className="text-base leading-snug line-clamp-2 text-primary">{titulo}</CardTitle>
+                                  <CardDescription className="line-clamp-1">
+                                    {prec.credor_nome || "Credor não informado"}
+                                  </CardDescription>
+                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    <span>{prec.numero_processo || "Sem processo"}</span>
+                                    {showNumeroPrecatorio && <span>• {prec.numero_precatorio}</span>}
+                                    {prec.file_url && (
+                                      <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
+                                        <FileText className="h-2 w-2" />
+                                        PDF
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col items-end gap-2">
+                                  <Badge variant="outline" className={`text-xs whitespace-nowrap ${statusTone}`}>
+                                    {statusLabel || "Status não definido"}
+                                  </Badge>
+                                  <Badge variant={getPrioridadeVariant(prec.prioridade)} className="text-xs capitalize">
+                                    {prec.prioridade || "média"}
+                                  </Badge>
                                 </div>
                               </div>
-                              <div className="flex flex-col items-end gap-2">
-                                <Badge variant="outline" className={`text-xs whitespace-nowrap ${statusTone}`}>
-                                  {statusLabel || "Status não definido"}
-                                </Badge>
-                                <Badge variant={getPrioridadeVariant(prec.prioridade)} className="text-xs capitalize">
-                                  {prec.prioridade || "média"}
-                                </Badge>
-                              </div>
-                            </div>
-                          </CardHeader>
+                            </CardHeader>
 
-                          <CardContent className="space-y-4">
-                            <div className="space-y-2">
-                              <div className="flex items-center justify-between text-xs text-muted-foreground">
-                                <span>Status atual</span>
-                                <span>{progress}%</span>
-                              </div>
-                              <Progress value={progress} className="h-2" />
-                            </div>
-
-                            <div className="grid grid-cols-2 gap-3 text-sm">
-                              <div>
-                                <p className="text-xs text-muted-foreground">Valor principal</p>
-                                <p className="font-semibold">{formatCurrency(valorPrincipal)}</p>
-                              </div>
-                              <div>
-                                <p className="text-xs text-muted-foreground">Valor atualizado</p>
-                                <p className="font-semibold text-primary">{formatCurrency(valorAtualizado)}</p>
-                              </div>
-                            </div>
-
-                            <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-                              <div className="flex items-center justify-between text-xs">
-                                <div className="flex items-center gap-2 text-muted-foreground">
-                                  <User className="h-3 w-3" />
-                                  <span>Responsável distribuído</span>
+                            <CardContent className="space-y-4">
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>Status atual</span>
+                                  <span>{progress}%</span>
                                 </div>
-                                <span className="font-medium text-foreground">{responsavelNome}</span>
+                                <Progress value={progress} className="h-2" />
                               </div>
-                              {prec.responsavel_calculo_id && (
-                                <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
-                                  <span>Cálculo</span>
-                                  <span className="font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
-                                </div>
-                              )}
-                            </div>
 
-                            <div className="flex flex-wrap gap-2 pt-1">
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 min-w-[140px]"
-                                title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
-                                onClick={() => {
-                                  setSelectedPrecatorio(prec)
-                                  setDistribuicao({
-                                    dono_usuario_id: prec.dono_usuario_id || "",
-                                    responsavel_calculo_id: prec.responsavel_calculo_id || "none",
-                                    prioridade: (prec.prioridade as any) || "media",
-                                  })
-                                  setDistributeDialogOpen(true)
-                                }}
-                              >
-                                <Send className="h-3 w-3 mr-1" />
-                                {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 min-w-[120px]"
-                                title="Enviar aviso"
-                                onClick={() => openNotifyDialog(prec)}
-                              >
-                                <Bell className="h-3 w-3 mr-1" />
-                                Aviso
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="flex-1 min-w-[150px]"
-                                title={
-                                  prec.responsavel_calculo_id
-                                    ? "Alertar operador de calculo"
-                                    : "Defina um operador de calculo primeiro"
-                                }
-                                disabled={!prec.responsavel_calculo_id || sendingInterest === prec.id}
-                                onClick={() => handleSendCalculoInteresse(prec)}
-                              >
-                                {sendingInterest === prec.id ? (
-                                  <Loader2 className="h-3 w-3 mr-1 animate-spin" />
-                                ) : (
-                                  <Star className="h-3 w-3 mr-1" />
+                              <div className="grid grid-cols-2 gap-3 text-sm">
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Valor principal</p>
+                                  <p className="font-semibold">{formatCurrency(valorPrincipal)}</p>
+                                </div>
+                                <div>
+                                  <p className="text-xs text-muted-foreground">Valor atualizado</p>
+                                  <p className="font-semibold text-primary">{formatCurrency(valorAtualizado)}</p>
+                                </div>
+                              </div>
+
+                              <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                                <div className="flex items-center justify-between text-xs">
+                                  <div className="flex items-center gap-2 text-muted-foreground">
+                                    <User className="h-3 w-3" />
+                                    <span>Responsável distribuído</span>
+                                  </div>
+                                  <span className="font-medium text-foreground">{responsavelNome}</span>
+                                </div>
+                                {prec.responsavel_calculo_id && (
+                                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Cálculo</span>
+                                    <span className="font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
+                                  </div>
                                 )}
-                                Interesse no calculo
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                title="Ver detalhes"
-                                onClick={() => router.push(`/precatorios/detalhes?id=${prec.id}`)}
-                              >
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
-                                title="Excluir"
-                                onClick={() => {
-                                  setSelectedPrecatorio(prec)
-                                  setDeleteDialogOpen(true)
-                                }}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      )
-                    })}
+                              </div>
+
+                              <div className="flex flex-wrap gap-2 pt-1">
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 min-w-[140px]"
+                                  title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                  onClick={() => {
+                                    setSelectedPrecatorio(prec)
+                                    setDistribuicao({
+                                      dono_usuario_id: prec.dono_usuario_id || "",
+                                      responsavel_calculo_id: prec.responsavel_calculo_id || "none",
+                                      prioridade: (prec.prioridade as any) || "media",
+                                    })
+                                    setDistributeDialogOpen(true)
+                                  }}
+                                >
+                                  <Send className="h-3 w-3 mr-1" />
+                                  {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 min-w-[120px]"
+                                  title="Enviar aviso"
+                                  onClick={() => openNotifyDialog(prec)}
+                                >
+                                  <Bell className="h-3 w-3 mr-1" />
+                                  Aviso
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="flex-1 min-w-[150px]"
+                                  title={
+                                    prec.responsavel_calculo_id
+                                      ? "Alertar operador de calculo"
+                                      : "Defina um operador de calculo primeiro"
+                                  }
+                                  disabled={!prec.responsavel_calculo_id || sendingInterest === prec.id}
+                                  onClick={() => handleSendCalculoInteresse(prec)}
+                                >
+                                  {sendingInterest === prec.id ? (
+                                    <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                  ) : (
+                                    <Star className="h-3 w-3 mr-1" />
+                                  )}
+                                  Interesse no calculo
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  title="Ver detalhes"
+                                  onClick={() => router.push(`/precatorios/detalhes?id=${prec.id}`)}
+                                >
+                                  <FileText className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  title="Excluir"
+                                  onClick={() => {
+                                    setSelectedPrecatorio(prec)
+                                    setDeleteDialogOpen(true)
+                                  }}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )
+                      })}
+                    </div>
+
+                    <div className="flex flex-col gap-3 rounded-lg border border-border/60 bg-muted/20 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+                      <div className="text-sm text-muted-foreground">
+                        Exibindo {rangeStart}-{rangeEnd} de {totalItensTabAtual} precatórios
+                      </div>
+
+                      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm text-muted-foreground">Itens por página</span>
+                          <Select
+                            value={String(pageSize)}
+                            onValueChange={(value) => setPageSize(Number(value))}
+                          >
+                            <SelectTrigger className="w-[92px]">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {PAGE_SIZE_OPTIONS.map((option) => (
+                                <SelectItem key={option} value={String(option)}>
+                                  {option}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="flex items-center gap-2">
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
+                            disabled={currentPage <= 1}
+                          >
+                            Anterior
+                          </Button>
+                          <span className="min-w-[120px] text-center text-sm text-muted-foreground">
+                            Página {currentPage} de {totalPages}
+                          </span>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage >= totalPages}
+                          >
+                            Próxima
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
               </TabsContent>
