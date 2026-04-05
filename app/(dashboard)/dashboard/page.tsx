@@ -1146,12 +1146,12 @@ export default function DashboardPage() {
   const slaHealthyPercent = slaBase > 0 ? ((kpis.sla.no_prazo + kpis.sla.concluido) / slaBase) * 100 : 0
   return (
     <div className="dashboard-revamp relative min-h-[calc(100vh-4rem)] overflow-hidden lg:-m-6">
-      <div className="absolute inset-0 -z-20 bg-[hsl(var(--background))] dark:bg-black" />
+      <div className="absolute inset-0 -z-20 bg-[#f0f1f5]" />
 
       <div className="relative z-10 w-full space-y-5 px-4 py-6 sm:px-6 lg:px-6">
 
         {/* ===== HERO ===== */}
-        <div className="relative overflow-hidden rounded-3xl border border-border bg-background shadow-sm">
+        <div className="relative overflow-hidden rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.92)] backdrop-blur-xl" style={clayCardShadow}>
           <div className="p-4 sm:p-7">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.9fr)]">
 
@@ -1190,7 +1190,7 @@ export default function DashboardPage() {
                         className={[
                           "flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[11.5px] font-bold transition-all duration-200 sm:flex-none sm:px-4 sm:py-2.5 sm:text-sm",
                           tab === key
-                            ? "bg-primary text-white shadow-[0_14px_28px_rgba(255,122,26,.24)]"
+                            ? "bg-primary text-white shadow-[0_8px_20px_rgba(14,77,106,.32)]"
                             : "text-muted-foreground hover:bg-background/60",
                         ].join(" ")}
                       >
@@ -1248,13 +1248,13 @@ export default function DashboardPage() {
               {/* RIGHT — 2 hero panels */}
               <div className="grid gap-3.5 content-start">
                 {/* Saldo líquido */}
-                <div className="rounded-[22px] border border-border bg-background/80 p-4 shadow-sm">
+                <div className="rounded-[22px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground">Saldo líquido monitorado</h3>
                       <p className="mt-1 text-xs text-muted-foreground">Valor consolidado do período selecionado.</p>
                     </div>
-                    <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-bold">
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">
                       SLA saudável{" "}
                       <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
                     </span>
@@ -1273,13 +1273,13 @@ export default function DashboardPage() {
                 </div>
 
                 {/* Prioridades visuais */}
-                <div className="rounded-[22px] border border-border bg-background/80 p-4 shadow-sm">
+                <div className="rounded-[22px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
                   <div className="flex items-start justify-between gap-3">
                     <div>
                       <h3 className="text-sm font-semibold text-foreground">Prioridades visuais</h3>
                       <p className="mt-1 text-xs text-muted-foreground">Semântica forte para risco, SLA e gargalo.</p>
                     </div>
-                    <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background/80 px-3 py-1.5 text-xs font-bold">
+                    <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">
                       {kpis.sla.atrasado + kpis.chat.mensagens_nao_lidas} alertas
                     </span>
                   </div>
