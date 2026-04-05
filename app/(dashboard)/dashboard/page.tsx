@@ -1308,8 +1308,7 @@ export default function DashboardPage() {
             {/* 4 KPI CARDS */}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {/* Ativos */}
-              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
-                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+              <div className="relative rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Ativos monitorados</div>
@@ -1318,7 +1317,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">Base operacional no período</div>
                   </div>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]" style={clayInsetShadow}>
                     <Layers className="h-5 w-5" />
                   </div>
                 </div>
@@ -1328,8 +1327,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Valor principal */}
-              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
-                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+              <div className="relative rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Valor principal</div>
@@ -1338,7 +1336,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">Soma dos valores originais</div>
                   </div>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]" style={clayInsetShadow}>
                     <Wallet className="h-5 w-5" />
                   </div>
                 </div>
@@ -1348,8 +1346,7 @@ export default function DashboardPage() {
               </div>
 
               {/* SLA */}
-              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
-                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+              <div className="relative rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">SLA operacional</div>
@@ -1358,7 +1355,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">Indicador central de prazo</div>
                   </div>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]" style={clayInsetShadow}>
                     <Gauge className="h-5 w-5" />
                   </div>
                 </div>
@@ -1371,8 +1368,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Mensagens */}
-              <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
-                <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
+              <div className="relative rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1">
                     <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Mensagens / alertas</div>
@@ -1381,7 +1377,7 @@ export default function DashboardPage() {
                     </div>
                     <div className="mt-1 text-xs text-muted-foreground">Alertas como ação, não só número</div>
                   </div>
-                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-border bg-background shadow-sm text-muted-foreground">
+                  <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]" style={clayInsetShadow}>
                     <MessageSquare className="h-5 w-5" />
                   </div>
                 </div>
@@ -1527,8 +1523,8 @@ export default function DashboardPage() {
                   {kanbanValorRows.slice(0, 6).map((row, i) => {
                     const maxVal = kanbanValorRows[0]?.value || 1
                     const pct = Math.min((row.value / maxVal) * 100, 100)
-                    const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
-                    const dots = ["bg-orange-500", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
+                    const colors = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
+                    const dots   = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     return (
                       <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-sm">
                         <div className="flex min-w-0 items-center gap-2">
@@ -1612,11 +1608,11 @@ export default function DashboardPage() {
                             className="aspect-square rounded-[14px] border border-border/20"
                             style={{
                               background:
-                                lv === 0 ? "hsl(var(--muted)/0.5)"
-                                  : lv === 1 ? "rgba(255,122,26,.18)"
-                                    : lv === 2 ? "rgba(255,122,26,.32)"
-                                      : lv === 3 ? "rgba(255,122,26,.48)"
-                                        : "rgba(255,122,26,.72)",
+                                lv === 0 ? "#f0f1f5"
+                                  : lv === 1 ? "rgba(14,77,106,.15)"
+                                    : lv === 2 ? "rgba(14,77,106,.30)"
+                                      : lv === 3 ? "rgba(14,77,106,.50)"
+                                        : "rgba(14,77,106,.75)",
                             }}
                           />
                         ))}
@@ -1625,11 +1621,11 @@ export default function DashboardPage() {
                   })()}
                   <div className="mt-4 flex gap-3 text-xs text-muted-foreground">
                     <span className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,122,26,.18)" }} />
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(14,77,106,.15)" }} />
                       baixo
                     </span>
                     <span className="flex items-center gap-2">
-                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(255,122,26,.72)" }} />
+                      <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ background: "rgba(14,77,106,.75)" }} />
                       alto
                     </span>
                   </div>
@@ -1645,7 +1641,7 @@ export default function DashboardPage() {
                 { label: "Maior proposta", value: propostaCompilada.maiorProposta, desc: "Maior valor de proposta registrado.", isCurrency: true },
                 { label: "Mensagens não lidas", value: kpis.chat.mensagens_nao_lidas, desc: "Transformar em CTA quando urgente.", isCurrency: false },
               ].map((stat, i) => (
-                <div key={i} className="rounded-3xl border border-border bg-background p-5 shadow-sm">
+                <div key={i} className="rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
                   <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{stat.label}</div>
                   <div className="mt-3 text-[clamp(1.5rem,2.8vw,2rem)] font-extrabold leading-none tracking-[-0.03em]">
                     {stat.isCurrency
@@ -1673,8 +1669,8 @@ export default function DashboardPage() {
                   {kanbanQuantidadeRows.slice(0, 5).map((row, i) => {
                     const maxVal = kanbanQuantidadeRows[0]?.value || 1
                     const pct = Math.min((row.value / maxVal) * 100, 100)
-                    const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500"]
-                    const dots = ["bg-orange-500", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500"]
+                    const colors = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
+                    const dots   = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     return (
                       <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem] items-center gap-3 text-sm">
                         <div className="flex min-w-0 items-center gap-2">
@@ -1749,7 +1745,7 @@ export default function DashboardPage() {
                               </td>
                               <td className="py-3">
                                 <div className="flex items-center gap-2.5">
-                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-100 to-orange-100 text-xs font-extrabold text-foreground dark:from-blue-900/40 dark:to-orange-900/40">
+                                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[#0e4d6a] text-xs font-extrabold text-white" style={clayPrimaryShadow}>
                                     {initials}
                                   </div>
                                   <span>{item.responsavel_nome ?? "Não atribuído"}</span>
