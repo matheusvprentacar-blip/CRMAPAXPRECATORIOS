@@ -1,9 +1,10 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { Loader2, FileText, Download } from "@/components/icons"
+import { Loader2, Download } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 
 interface HistoricoCalculosProps {

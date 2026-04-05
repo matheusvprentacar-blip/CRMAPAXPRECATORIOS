@@ -101,3 +101,57 @@ export async function ensureOpenLegalOpinionForPrecatorio({
 
   return { created: true, opinionId: opinion.id }
 }
+
+type SyncAcceptedProposalsOptions = {
+  limit?: number
+}
+
+type SyncAcceptedProposalsResult = {
+  scanned: number
+  created: number
+  failed: number
+}
+
+export async function syncAcceptedProposalsToLegalOpinions(
+  options: SyncAcceptedProposalsOptions = {}
+): Promise<SyncAcceptedProposalsResult> {
+  const supabase = createBrowserClient()
+  if (!supabase) throw new Error("Supabase nao disponivel.")
+
+  const limit = Math.max(1, Math.min(options.limit ?? 300, 1000))
+  const { data: precatorios, error } = await supabase
+    .from("precatorios")
+    .select("id")
+    .or("proposta_aceita.eq.true,status_kanban.eq.proposta_aceita,localizacao_kanban.eq.proposta_aceita")
+    .order("updated_at", { ascending: false })
+    .limit(limit)
+
+  if (error) throw new Error(error.message)
+
+  const rows = (precatorios || []) as Array<{ id: string }>
+  let created = 0
+  let failed = 0
+
+  for (const row of rows) {
+    try {
+      const result = await ensureOpenLegalOpinionForPrecatorio({
+        precatorioId: row.id,
+        motivo: "OUTROS",
+        motivoLabel: "Proposta aceita",
+        descricao:
+          "Crédito sincronizado automaticamente a partir de Jurídico de fechamento (proposta aceita).",
+        origemSolicitacao: "kanban",
+      })
+      if (result.created) created += 1
+    } catch (syncError) {
+      failed += 1
+      console.error("[LegalOpinion Sync] Falha ao sincronizar precatorio:", row.id, syncError)
+    }
+  }
+
+  return {
+    scanned: rows.length,
+    created,
+    failed,
+  }
+}

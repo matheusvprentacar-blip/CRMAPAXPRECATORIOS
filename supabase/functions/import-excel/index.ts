@@ -189,11 +189,11 @@ function validarCPF(cpf: string): boolean {
     let soma = 0
     for (let i = 0; i < 9; i++) soma += parseInt(cpf.charAt(i)) * (10 - i)
     let resto = 11 - (soma % 11)
-    let digito1 = resto >= 10 ? 0 : resto
+    const digito1 = resto >= 10 ? 0 : resto
     soma = 0
     for (let i = 0; i < 10; i++) soma += parseInt(cpf.charAt(i)) * (11 - i)
     resto = 11 - (soma % 11)
-    let digito2 = resto >= 10 ? 0 : resto
+    const digito2 = resto >= 10 ? 0 : resto
     return parseInt(cpf.charAt(9)) === digito1 && parseInt(cpf.charAt(10)) === digito2
 }
 
@@ -202,7 +202,7 @@ function validarCNPJ(cnpj: string): boolean {
     if (cnpj.length !== 14 || /^(\d)\1{13}$/.test(cnpj)) return false
     let tamanho = cnpj.length - 2
     let numeros = cnpj.substring(0, tamanho)
-    let digitos = cnpj.substring(tamanho)
+    const digitos = cnpj.substring(tamanho)
     let soma = 0
     let pos = tamanho - 7
     for (let i = tamanho; i >= 1; i--) {

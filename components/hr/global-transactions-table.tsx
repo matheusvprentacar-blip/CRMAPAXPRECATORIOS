@@ -1,8 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState } from "react"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+// Button removed - unused
 import { Input } from "@/components/ui/input"
 import { Search, Loader2, Trash2, Pencil, ArrowUp, ArrowDown, AlertCircle } from "@/components/icons"
 import { FinancialTransaction } from "@/lib/types/database"

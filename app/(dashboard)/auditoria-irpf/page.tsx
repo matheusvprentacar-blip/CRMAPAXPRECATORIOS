@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -99,8 +100,8 @@ export default function AuditoriaIRPFPage() {
         const valPrincipal = parseFloat(principal) || 0
         const valJuros = parseFloat(juros) || 0
         const valDeducoes = parseFloat(deducoes) || 0
-        const dtBase = new Date(dataBase)
-        const dtFinal = new Date(dataFinal)
+        const _dtBase = new Date(dataBase)
+        const _dtFinal = new Date(dataFinal)
         const numMeses = parseInt(mesesRRA) || 1
 
         // Normalização de datas para comparação YYYY-MM
@@ -108,7 +109,7 @@ export default function AuditoriaIRPFPage() {
         // Mas note que new Date('2021-01-01') cria em UTC ou local, cuidado. 
         // Vamos usar a mesma logica do snippet user provided.
 
-        const dataCorte = new Date('2022-01-01T00:00:00') // Ajustado para evitar timezone mess, assuming input is YYYY-MM-DD
+        const _dataCorte = new Date('2022-01-01T00:00:00') // Ajustado para evitar timezone mess, assuming input is YYYY-MM-DD
         // O input type="date" retorna YYYY-MM-DD string. new Date(string) é UTC no browser geralmente? Não, YYYY-MM-DD é tratado como UTC.
         // Vamos tratar tudo como UTC para simplificar ou usar .toISOString().slice(0,10)
 

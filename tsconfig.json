@@ -29,14 +29,37 @@
     }
   },
   "include": [
-    "**/*.ts",
-    "**/*.tsx",
+    "next-env.d.ts",
+    "proxy.ts",
     ".next/types/**/*.ts",
-    "next-env.d.ts"
+    "app/**/*.ts",
+    "app/**/*.tsx",
+    "components/**/*.ts",
+    "components/**/*.tsx",
+    "features/**/*.ts",
+    "features/**/*.tsx",
+    "hooks/**/*.ts",
+    "hooks/**/*.tsx",
+    "lib/**/*.ts",
+    "lib/**/*.tsx"
   ],
   "exclude": [
     "node_modules",
-    "supabase",
-    "src-tauri"
+    "./supabase",
+    "./src-tauri",
+    "./backups",
+    "./api_backup",
+    "./scripts",
+    "./.venv_ocr",
+    "./.next",
+    "./out",
+    "./dist",
+    "./build",
+    "./tmp",
+    "./docs",
+    "./release-notes",
+    "./debug_artifacts",
+    "./dashboard layout v2",
+    "./precatorio_ocr_pipeline"
   ]
 }

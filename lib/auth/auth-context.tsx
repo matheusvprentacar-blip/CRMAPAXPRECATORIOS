@@ -20,6 +20,7 @@ export type UserRole =
   | "gestor_escrituras"
   | "juridico"
   | "financeiro"
+  | "agente_atendimento"
 
 interface UserProfile {
   id: string

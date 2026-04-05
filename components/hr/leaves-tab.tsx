@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { Button } from "@/components/ui/button"
@@ -19,7 +20,7 @@ interface LeavesTabProps {
 
 export function LeavesTab({ user }: LeavesTabProps) {
     const [items, setItems] = useState<HRLeave[]>([])
-    const [loading, setLoading] = useState(true)
+    const [_loading, setLoading] = useState(true)
     const [open, setOpen] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [newItem, setNewItem] = useState({

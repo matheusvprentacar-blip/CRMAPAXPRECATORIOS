@@ -45,7 +45,7 @@ const CHECK_INTERVAL_MS = 5_000
 const MOUSEMOVE_SAMPLE_MS = 5_000
 const TAURI_MINIMIZE_CHECK_MS = 3_000
 
-function readEnvMs(key: string, fallback: number, minValue: number) {
+function _readEnvMs(key: string, fallback: number, minValue: number) {
   const value = process.env[key]
   const parsed = Number(value)
   if (!value || Number.isNaN(parsed) || !Number.isFinite(parsed) || parsed < minValue) {

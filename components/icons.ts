@@ -152,6 +152,8 @@ const iconMap = {
   Star: "lucide:star",
   Sun: "lucide:sun",
   Table: "lucide:table",
+  ThumbsDown: "lucide:thumbs-down",
+  ThumbsUp: "lucide:thumbs-up",
   Trash2: "lucide:trash-2",
   TrendingDown: "lucide:trending-down",
   TrendingUp: "lucide:trending-up",
@@ -281,6 +283,8 @@ export const Sparkles = createIcon(iconMap.Sparkles);
 export const Star = createIcon(iconMap.Star);
 export const Sun = createIcon(iconMap.Sun);
 export const Table = createIcon(iconMap.Table);
+export const ThumbsDown = createIcon(iconMap.ThumbsDown);
+export const ThumbsUp = createIcon(iconMap.ThumbsUp);
 export const Trash2 = createIcon(iconMap.Trash2);
 export const TrendingDown = createIcon(iconMap.TrendingDown);
 export const TrendingUp = createIcon(iconMap.TrendingUp);

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState } from "react"
@@ -5,9 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
-import { CurrencyInput } from "@/components/ui/currency-input"
 import { toast } from "@/components/ui/use-toast"
-import { Loader2, Save, Upload } from "@/components/icons"
+import { Loader2, Save } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 
 interface FormExportarCalculoProps {

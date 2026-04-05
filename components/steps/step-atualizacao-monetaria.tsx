@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
-import { Label } from "@/components/ui/label"
+// Label removed - unused
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { KpiCard } from "@/components/ui/calc/KpiCard"
 import { SectionPanel } from "@/components/ui/calc/SectionPanel"
-import { Banknote, CalendarDays, Info, Sparkles } from "@/components/icons"
+import { Banknote, CalendarDays, Sparkles } from "@/components/icons"
 import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { calcularPrecatorio } from "@/lib/calculos/calcular-precatorio"
 import { getIndiceIpcaPre2022 } from "@/lib/calculos/indices"

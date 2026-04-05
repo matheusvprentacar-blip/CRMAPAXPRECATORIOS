@@ -10,8 +10,8 @@ export interface Usuario {
   // HR Fields
   admission_date?: string
   position?: string
-  bank_info?: Record<string, any>
-  address?: Record<string, any>
+  bank_info?: Record<string, unknown>
+  address?: Record<string, unknown>
 }
 
 export interface HRDocument {
@@ -78,17 +78,28 @@ export interface Precatorio {
   // Pessoas
   credor_nome?: string
   credor_cpf_cnpj?: string
+  credor_data_nascimento?: string | null
+  credor_profissao?: string | null
+  credor_estado_civil?: string | null
   credor_endereco?: string
   credor_cidade?: string
   credor_uf?: string
   credor_cep?: string
   credor_telefone?: string
   credor_email?: string
+  conjuge_nome?: string | null
+  conjuge_cpf_cnpj?: string | null
   advogado_nome?: string
   advogado_cpf_cnpj?: string
+  advogado_oab?: string | null
+  advogado_telefone?: string | null
+  herdeiro?: string | null
+  herdeiro_cpf?: string | null
+  herdeiro_telefone?: string | null
+  herdeiro_endereco?: string | null
   cessionario?: string
   titular_falecido: boolean
-  contatos: any[]
+  contatos: string | string[] | Record<string, unknown> | null
 
   // Valores
   valor_principal: number
@@ -131,6 +142,7 @@ export interface Precatorio {
   | "aguardando_cliente"
 
   prioridade: "baixa" | "media" | "alta" | "urgente"
+  status_kanban?: string | null
   localizacao_kanban: string
   urgente: boolean
 
@@ -141,10 +153,22 @@ export interface Precatorio {
   responsavel_calculo_id?: string
   responsavel_escrituras_id?: string
   responsavel_juridico_id?: string
+  distribuido_por_admin?: boolean
+  distribuido_por_admin_id?: string | null
+  distribuido_por_admin_em?: string | null
 
   // Escrituras
   status_escrituras?: "nao_iniciado" | "em_andamento" | "pendente_assinatura" | "concluido" | null
   observacoes_escrituras?: string | null
+
+  // Dados bancários e complementares
+  banco?: string | null
+  agencia?: string | null
+  conta?: string | null
+  tipo_conta?: string | null
+  chave_pix?: string | null
+  tipo_chave_pix?: string | null
+  observacoes_bancarias?: string | null
 
   // Complexidade (FASE 1)
   score_complexidade: number
@@ -165,7 +189,7 @@ export interface Precatorio {
   impacto_atraso?: "baixo" | "medio" | "alto"
 
   // Dados extras
-  dados_calculo: any
+  dados_calculo: unknown
 
   // Análise processual
   analise_penhora?: boolean | null
@@ -187,6 +211,10 @@ export interface Precatorio {
 
   // Origem do lead (canal de captação)
   origem_lead?: string | null
+  observacoes?: string | null
+  raw_text?: string | null
+  pontos_importantes?: string[] | null
+  detalhes?: Record<string, unknown> | null
 
   // Timestamps
   created_at: string
@@ -223,8 +251,8 @@ export interface Atividade {
   usuario_id?: string
   tipo: "criacao" | "atualizacao" | "calculo" | "mudanca_status" | "mudanca_localizacao" | "comentario" | "inclusao_fila" | "inicio_calculo" | "atraso" | "retomada" | "finalizacao"
   descricao: string
-  dados_anteriores?: any
-  dados_novos?: any
+  dados_anteriores?: unknown
+  dados_novos?: unknown
   created_at: string
   // Campos da view timeline_precatorios
   usuario_nome?: string
@@ -240,8 +268,8 @@ export interface TimelineEvent {
   usuario_email?: string
   tipo: "criacao" | "inclusao_fila" | "inicio_calculo" | "atraso" | "retomada" | "finalizacao" | "mudanca_status" | "comentario"
   descricao: string
-  dados_anteriores?: any
-  dados_novos?: any
+  dados_anteriores?: unknown
+  dados_novos?: unknown
   created_at: string
 }
 

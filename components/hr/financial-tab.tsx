@@ -1,11 +1,12 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Usuario, FinancialTransaction } from "@/lib/types/database"
 import { useState, useEffect } from "react"
 import { createBrowserClient } from "@/lib/supabase/client"
-import { DollarSign, Plus, Loader2, Trash2 } from "@/components/icons"
+import { Plus, Loader2, Trash2 } from "@/components/icons"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Label } from "@/components/ui/label"
@@ -20,7 +21,7 @@ interface FinancialTabProps {
 
 export function FinancialTab({ user }: FinancialTabProps) {
     const [items, setItems] = useState<FinancialTransaction[]>([])
-    const [loading, setLoading] = useState(true)
+    const [_loading, setLoading] = useState(true)
     const [open, setOpen] = useState(false)
     const [submitting, setSubmitting] = useState(false)
     const [newItem, setNewItem] = useState({

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 /**
@@ -32,6 +33,28 @@ const FIELD_MAP: Record<string, { sign: number, getValue: (v: any) => number }> 
     // Saldo líquido e Proposta são resultados, não entram na soma simples dos componentes acima geralmente, 
     // mas se o usuário quiser recalcular o "Saldo Disponível" based on visible lines, we sum the components.
     // O campo 'saldo_liquido_credor' is usually the result.
+}
+
+async function waitForImages(doc: Document, timeoutMs = 5000) {
+    const images = Array.from(doc.images || [])
+    if (!images.length) return
+
+    const pending = images.filter((img) => !img.complete || img.naturalWidth === 0)
+    if (!pending.length) return
+
+    await Promise.race([
+        Promise.all(
+            pending.map(
+                (img) =>
+                    new Promise<void>((resolve) => {
+                        const done = () => resolve()
+                        img.addEventListener("load", done, { once: true })
+                        img.addEventListener("error", done, { once: true })
+                    }),
+            ),
+        ),
+        new Promise<void>((resolve) => setTimeout(resolve, timeoutMs)),
+    ])
 }
 
 export async function antigravityPrint({ tipo, data, validacao, customTexts, proposalConfig }: PrintConfig) {
@@ -94,26 +117,33 @@ export async function antigravityPrint({ tipo, data, validacao, customTexts, pro
         doc.close()
 
         // 5. Chamar o renderizador e imprimir
-        const triggerPrint = () => {
+        const triggerPrint = async () => {
             if ((iframe.contentWindow as any).render) {
                 (iframe.contentWindow as any).render(printData)
             }
-            // Pequeno delay para garantir renderização de imagens/fontes
+
+            await waitForImages(doc)
+
+            // Pequeno delay para estabilizar layout após render e carregamento de imagens
             setTimeout(() => {
                 iframe.contentWindow?.focus()
                 iframe.contentWindow?.print()
 
                 // Opcional: Remover iframe depois?
-                // document.body.removeChild(iframe) 
+                // document.body.removeChild(iframe)
                 // Melhor manter para reuso ou limpar no próximo
-            }, 500)
+            }, 120)
         }
 
-        if (iframe.contentWindow) {
-            iframe.contentWindow.onload = triggerPrint
+        if (iframe.contentWindow?.document.readyState === "complete") {
+            void triggerPrint()
+        } else if (iframe.contentWindow) {
+            iframe.contentWindow.onload = () => {
+                void triggerPrint()
+            }
         } else {
             // Fallback imediato
-            triggerPrint()
+            void triggerPrint()
         }
 
     } catch (error: any) {

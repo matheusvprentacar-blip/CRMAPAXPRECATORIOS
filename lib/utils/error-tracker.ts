@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 /**
  * Error Tracker - Sistema de Rastreamento de Erros
- * 
+ *
  * Captura e loga erros detalhados do frontend e backend
  * para facilitar debugging e troubleshooting
  */
@@ -219,7 +220,7 @@ class ErrorTracker {
   /**
    * Enviar para serviço de monitoramento
    */
-  private sendToMonitoring(log: ErrorLog) {
+  private sendToMonitoring(_log: ErrorLog) {
     // Implementar integração com Sentry, LogRocket, etc.
     // Exemplo:
     // Sentry.captureException(new Error(log.message), {

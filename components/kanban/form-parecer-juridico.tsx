@@ -159,13 +159,13 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
         <p className="text-sm font-medium text-blue-900">📋 Orientações</p>
         <ul className="text-xs text-blue-700 mt-2 space-y-1 list-disc list-inside">
           <li>
-            <strong>Aprovado:</strong> O precatório retornará para "Pronto para Cálculo" e poderá prosseguir normalmente
+            <strong>Aprovado:</strong> O precatório retornará para &quot;Pronto para Cálculo&quot; e poderá prosseguir normalmente
           </li>
           <li>
-            <strong>Ajustar Dados:</strong> Retorna para "Pronto para Cálculo" mas com observação de ajustes necessários
+            <strong>Ajustar Dados:</strong> Retorna para &quot;Pronto para Cálculo&quot; mas com observação de ajustes necessários
           </li>
           <li>
-            <strong>Impedimento:</strong> O precatório irá para "Reprovado" ou "Não elegível"
+            <strong>Impedimento:</strong> O precatório irá para &quot;Reprovado&quot; ou &quot;Não elegível&quot;
           </li>
           <li>
             <strong>Risco Alto:</strong> Pode prosseguir mas com alerta de risco elevado
@@ -177,10 +177,10 @@ export function FormParecerJuridico({ precatorioId, precatorio, onUpdate }: Form
       <div className="p-4 bg-muted rounded-lg">
         <p className="text-sm font-medium">💡 Exemplo de Parecer</p>
         <p className="text-xs text-muted-foreground mt-2 italic">
-          "Após análise da documentação apresentada, verificou-se que a penhora incidente sobre o precatório foi
+          &quot;Após análise da documentação apresentada, verificou-se que a penhora incidente sobre o precatório foi
           devidamente registrada e homologada. O percentual de 30% deve ser destacado do valor líquido conforme
           determinação judicial de fls. 245. Não há impedimento para prosseguimento do cálculo, desde que observado
-          o percentual mencionado. Parecer: APROVADO."
+          o percentual mencionado. Parecer: APROVADO.&quot;
         </p>
       </div>
 

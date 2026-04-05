@@ -18,6 +18,7 @@ import {
   getLegalOpinionMetadata,
   listLegalOpinions,
 } from "@/features/legal-opinion/api"
+import { syncAcceptedProposalsToLegalOpinions } from "@/features/legal-opinion/request-from-precatorio"
 import {
   LEGAL_OPINION_PRIORITIES,
   LEGAL_OPINION_PRIORITY_LABELS,
@@ -140,6 +141,7 @@ export default function LegalOpinionListPage() {
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
+  const [isSyncingFechamento, setIsSyncingFechamento] = useState(false)
 
   const statusCounters = useMemo(() => {
     const counters: Record<LegalOpinionStatus, number> = {
@@ -231,10 +233,46 @@ export default function LegalOpinionListPage() {
     }
   }
 
+  async function syncFechamentoQueue(showFeedback = false) {
+    setIsSyncingFechamento(true)
+    try {
+      const result = await syncAcceptedProposalsToLegalOpinions({ limit: 1000 })
+      if (showFeedback && result.created > 0) {
+        toast({
+          title: "Fila jurídica sincronizada",
+          description: `${result.created} crédito(s) de Jurídico de fechamento foram adicionados ao Parecer Jurídico.`,
+        })
+      }
+      if (showFeedback && result.failed > 0) {
+        toast({
+          title: "Sincronização parcial",
+          description: `${result.failed} crédito(s) não puderam ser sincronizados agora.`,
+          variant: "destructive",
+        })
+      }
+    } catch (error) {
+      if (showFeedback) {
+        toast({
+          title: "Falha ao sincronizar fila jurídica",
+          description: error instanceof Error ? error.message : "Falha inesperada.",
+          variant: "destructive",
+        })
+      }
+      console.error("[Parecer Juridico] Falha na sincronizacao de proposta aceita:", error)
+    } finally {
+      setIsSyncingFechamento(false)
+    }
+  }
+
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { void loadMetadata() }, [])
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void loadOpinions(1, filters) }, [])
+  useEffect(() => {
+    void (async () => {
+      await syncFechamentoQueue(false)
+      await loadOpinions(1, filters)
+    })()
+  }, [])
 
   async function handleApplyFilters() {
     await loadOpinions(1, filters)
@@ -249,6 +287,11 @@ export default function LegalOpinionListPage() {
   async function handlePageChange(nextPage: number) {
     if (nextPage < 1 || nextPage > totalPages) return
     await loadOpinions(nextPage, filters)
+  }
+
+  async function handleRefresh() {
+    await syncFechamentoQueue(true)
+    await loadOpinions(page, filters)
   }
 
   return (
@@ -277,11 +320,12 @@ export default function LegalOpinionListPage() {
               <div className="flex flex-wrap items-center gap-2 pt-1">
                 <button
                   type="button"
-                  onClick={() => void loadOpinions(page, filters)}
+                  onClick={() => void handleRefresh()}
+                  disabled={isSyncingFechamento}
                   className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-900/10 bg-white px-4 text-sm font-medium text-slate-500 shadow-[0_1px_4px_rgba(15,23,42,0.06)] transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
                 >
                   <RefreshCw className="h-4 w-4" />
-                  Atualizar
+                  {isSyncingFechamento ? "Sincronizando..." : "Atualizar"}
                 </button>
                 <button
                   type="button"

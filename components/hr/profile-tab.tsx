@@ -21,8 +21,9 @@ const AVAILABLE_ROLES = [
     { value: "gestor", label: "Gestor" },
     { value: "gestor_certidoes", label: "Gestor de Certidões" },
     { value: "gestor_oficio", label: "Gestor de Ofícios" },
-    { value: "gestor_escrituras", label: "Gestor de Escrituras" },
-    { value: "juridico", label: "Jurídico" },
+    { value: "gestor_escrituras",   label: "Gestor de Escrituras" },
+    { value: "juridico",            label: "Jurídico" },
+    { value: "agente_atendimento",  label: "Agente de Atendimento" },
 ]
 
 interface ProfileTabProps {

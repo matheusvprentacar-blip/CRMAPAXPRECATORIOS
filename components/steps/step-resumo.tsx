@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import type { ReactNode } from "react"
@@ -97,7 +98,7 @@ export function StepResumo({ dados, resultadosEtapas, voltar, onFinalizar, canFi
   // steps: 0 dados, 1 índices, 2 atualização, 3 PSS, 4 IRPF, 5 honorários, 6 propostas
   const etapaAtualizacao = resultadosEtapas[2] || {}
   const etapaPss = resultadosEtapas[3] || {}
-  const etapaIrpf = resultadosEtapas[4] || {}
+  const _etapaIrpf = resultadosEtapas[4] || {}
   const etapaHonorarios = resultadosEtapas[5] || {}
   const resumo = resultadosEtapas[6] || {}
 

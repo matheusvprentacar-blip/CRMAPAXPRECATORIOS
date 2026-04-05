@@ -45,21 +45,23 @@ const ROLE_COLORS: Record<string, string> = {
   operador_comercial:"bg-emerald-500/12 text-emerald-700 dark:text-emerald-300 border-emerald-500/25",
   operador_calculo:  "bg-cyan-500/12 text-cyan-700 dark:text-cyan-300 border-cyan-500/25",
   tecnico_ti:        "bg-indigo-500/12 text-indigo-700 dark:text-indigo-300 border-indigo-500/25",
-  operador:          "bg-foreground/8 text-foreground/55 border-border/40",
+  operador:           "bg-foreground/8 text-foreground/55 border-border/40",
+  agente_atendimento: "bg-orange-500/12 text-orange-700 dark:text-orange-300 border-orange-500/25",
 }
 
 const ROLE_LABELS: Record<string, string> = {
-  admin:             "Administrador",
-  tecnico_ti:        "Técnico de T.I",
-  operador_comercial:"Operador Comercial",
-  operador_calculo:  "Operador de Cálculo",
-  operador:          "Operador",
-  analista:          "Analista",
-  gestor:            "Gestor",
-  gestor_certidoes:  "Gestor de Certidões",
-  gestor_oficio:     "Gestor de Ofícios",
-  gestor_escrituras: "Gestor de Escrituras",
-  juridico:          "Jurídico",
+  admin:              "Administrador",
+  tecnico_ti:         "Técnico de T.I",
+  operador_comercial: "Operador Comercial",
+  operador_calculo:   "Operador de Cálculo",
+  operador:           "Operador",
+  analista:           "Analista",
+  gestor:             "Gestor",
+  gestor_certidoes:   "Gestor de Certidões",
+  gestor_oficio:      "Gestor de Ofícios",
+  gestor_escrituras:  "Gestor de Escrituras",
+  juridico:           "Jurídico",
+  agente_atendimento: "Agente de Atendimento",
 }
 
 // ─── component ────────────────────────────────────────────────────────────────

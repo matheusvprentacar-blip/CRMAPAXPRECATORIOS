@@ -19,7 +19,14 @@ const ASSIGNMENT_FIELDS = [
     'responsavel_juridico_id',
 ] as const
 
+const DISTRIBUTION_METADATA_FIELDS = [
+    'distribuido_por_admin',
+    'distribuido_por_admin_id',
+    'distribuido_por_admin_em',
+] as const
+
 type AssignmentField = (typeof ASSIGNMENT_FIELDS)[number]
+type DistributionMetadataField = (typeof DISTRIBUTION_METADATA_FIELDS)[number]
 
 type CreditRow = {
     id: string
@@ -117,6 +124,29 @@ async function resolveAvailableAssignmentFields(supabaseClient: any): Promise<As
     return available
 }
 
+async function resolveAvailableDistributionMetadataFields(
+    supabaseClient: any
+): Promise<DistributionMetadataField[]> {
+    const available: DistributionMetadataField[] = []
+
+    for (const field of DISTRIBUTION_METADATA_FIELDS) {
+        const { error } = await supabaseClient
+            .from('precatorios')
+            .select(`id, ${field}`)
+            .limit(1)
+
+        if (!error) {
+            available.push(field)
+            continue
+        }
+
+        if (isMissingColumnError(error)) continue
+        throw new Error(`Erro ao validar campo ${field}: ${error.message}`)
+    }
+
+    return available
+}
+
 async function fetchEligibleRecipients(
     supabaseClient: any,
     excludedUserId: string
@@ -170,12 +200,17 @@ async function fetchAffectedCredits(
 async function applyManualRedistribution(
     supabaseClient: any,
     targetUserId: string,
-    redistributionAssignments: RedistributionAssignment[] | undefined
+    redistributionAssignments: RedistributionAssignment[] | undefined,
+    options: {
+        actorUserId: string
+        actorIsAdmin: boolean
+    }
 ): Promise<RedistributionSummary> {
     const { credits, fields } = await fetchAffectedCredits(supabaseClient, targetUserId)
     if (credits.length === 0 || fields.length === 0) {
         return { totalAffected: 0, totalReassigned: 0, byUser: [] }
     }
+    const distributionMetadataFields = await resolveAvailableDistributionMetadataFields(supabaseClient)
 
     if (!Array.isArray(redistributionAssignments) || redistributionAssignments.length === 0) {
         throw new Error('Este usuario possui creditos atribuidos. Defina a redistribuicao manual antes de continuar.')
@@ -224,6 +259,16 @@ async function applyManualRedistribution(
 
         if (!touched) continue
 
+        if (distributionMetadataFields.includes('distribuido_por_admin')) {
+            payload.distribuido_por_admin = options.actorIsAdmin
+        }
+        if (distributionMetadataFields.includes('distribuido_por_admin_id')) {
+            payload.distribuido_por_admin_id = options.actorIsAdmin ? options.actorUserId : null
+        }
+        if (distributionMetadataFields.includes('distribuido_por_admin_em')) {
+            payload.distribuido_por_admin_em = options.actorIsAdmin ? nowIso : null
+        }
+
         const { error: updateError } = await supabaseClient
             .from('precatorios')
             .update(payload)
@@ -252,7 +297,11 @@ async function applyManualRedistribution(
     }
 }
 
-async function ensureManager(supabaseClient: any, currentUserId: string, appMetadataRoles: unknown) {
+async function ensureManager(
+    supabaseClient: any,
+    currentUserId: string,
+    appMetadataRoles: unknown
+): Promise<string[]> {
     let currentUserRoles = normalizeRoles(appMetadataRoles)
     if (currentUserRoles.length === 0) {
         const { data: currentProfile } = await supabaseClient
@@ -266,6 +315,8 @@ async function ensureManager(supabaseClient: any, currentUserId: string, appMeta
 
     const canManageUsers = ALLOWED_MANAGER_ROLES.some((role) => currentUserRoles.includes(role))
     if (!canManageUsers) throw new Error('Permissao negada para gerenciar usuarios')
+
+    return currentUserRoles
 }
 
 Deno.serve(async (req) => {
@@ -292,7 +343,11 @@ Deno.serve(async (req) => {
         const { data: { user: currentUser }, error: authError } = await supabaseClient.auth.getUser(token)
         if (authError || !currentUser) throw new Error('Nao autenticado')
 
-        await ensureManager(supabaseClient, currentUser.id, currentUser.app_metadata?.role)
+        const currentUserRoles = await ensureManager(
+            supabaseClient,
+            currentUser.id,
+            currentUser.app_metadata?.role
+        )
 
         const { action, ...data } = await req.json()
 
@@ -437,7 +492,11 @@ Deno.serve(async (req) => {
                 redistribution = await applyManualRedistribution(
                     supabaseClient,
                     userId,
-                    Array.isArray(redistributionAssignments) ? (redistributionAssignments as RedistributionAssignment[]) : undefined
+                    Array.isArray(redistributionAssignments) ? (redistributionAssignments as RedistributionAssignment[]) : undefined,
+                    {
+                        actorUserId: currentUser.id,
+                        actorIsAdmin: currentUserRoles.includes('admin'),
+                    }
                 )
             }
 
@@ -517,7 +576,11 @@ Deno.serve(async (req) => {
             const redistribution = await applyManualRedistribution(
                 supabaseClient,
                 userId,
-                Array.isArray(redistributionAssignments) ? (redistributionAssignments as RedistributionAssignment[]) : undefined
+                Array.isArray(redistributionAssignments) ? (redistributionAssignments as RedistributionAssignment[]) : undefined,
+                {
+                    actorUserId: currentUser.id,
+                    actorIsAdmin: currentUserRoles.includes('admin'),
+                }
             )
 
             const { error: authDeleteError } = await supabaseClient.auth.admin.deleteUser(userId)

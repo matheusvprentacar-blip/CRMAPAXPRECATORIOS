@@ -55,6 +55,8 @@ import { ChecklistDocumentos } from "@/components/kanban/checklist-documentos"
 import { ChecklistCertidoes } from "@/components/kanban/checklist-certidoes"
 import { AbaFechamento } from "@/components/kanban/aba-fechamento"
 import { AbaEscrituras } from "@/components/kanban/aba-escrituras"
+import { AbaContratos } from "@/components/kanban/aba-contratos"
+import { AbaProcuracao } from "@/components/kanban/aba-procuracao"
 import { TimelineViewer } from "@/components/precatorios/timeline-viewer"
 import { FormParecerJuridico } from "@/components/kanban/form-parecer-juridico"
 import { FormExportarCalculo } from "@/components/kanban/form-exportar-calculo"
@@ -169,9 +171,9 @@ const InfoRow = ({
   value: ReactNode
   valueClassName?: string
 }) => (
-  <div className="space-y-1">
+  <div className="min-w-0 space-y-1">
     <p className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</p>
-    <p className={valueClassName}>{value}</p>
+    <p className={`break-all ${valueClassName}`}>{value}</p>
   </div>
 )
 
@@ -1737,10 +1739,10 @@ export default function PrecatorioDetailPage() {
 
   const dashboardCardClass =
     "group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
-  const dashboardTabsListClass =
-    "h-auto w-full justify-start gap-1.5 rounded-2xl border border-border bg-gradient-to-r from-white/85 via-zinc-50/80 to-white/85 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.7)] backdrop-blur-xl flex-nowrap overflow-x-auto [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden dark:border-border dark:bg-gradient-to-r dark:from-zinc-950/75 dark:via-zinc-900/65 dark:to-zinc-950/75 dark:shadow-[inset_0_1px_0_rgba(255,255,255,0.06)]"
-  const dashboardTabsTriggerClass =
-    "shrink-0 rounded-xl px-3.5 py-2 text-sm font-medium text-muted-foreground transition-all duration-300 hover:bg-muted hover:text-muted-foreground data-[state=active]:bg-gradient-to-r data-[state=active]:from-primary/25 data-[state=active]:to-amber-300/20 data-[state=active]:text-muted-foreground data-[state=active]:shadow-sm dark:text-muted-foreground dark:hover:bg-muted dark:hover:text-white dark:data-[state=active]:from-primary/35 dark:data-[state=active]:to-amber-400/15 dark:data-[state=active]:text-white dark:data-[state=active]:shadow-[0_8px_20px_rgba(0,0,0,0.3)]"
+  const verticalTabClass =
+    "relative flex w-full items-center justify-start gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary/[0.11] data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-[inset_3px_0_0_0_hsl(var(--primary))] dark:hover:bg-muted/40 dark:hover:text-white dark:data-[state=active]:bg-primary/[0.18] dark:data-[state=active]:text-primary dark:data-[state=active]:shadow-[inset_3px_0_0_0_hsl(var(--primary))]"
+  const navSectionLabel =
+    "mb-0.5 px-3 pt-3 pb-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/40 select-none"
 
   if (!id) {
     return (
@@ -1760,8 +1762,44 @@ export default function PrecatorioDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+      <div className="relative min-h-[calc(100vh-4rem)]">
+        <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
+          {/* Header skeleton */}
+          <div className="rounded-3xl border border-border bg-background/90 px-5 py-5">
+            <div className="flex items-center gap-4">
+              <div className="h-10 w-10 shrink-0 rounded-xl bg-muted animate-pulse" />
+              <div className="flex-1 space-y-2">
+                <div className="h-8 w-64 rounded-lg bg-muted animate-pulse" />
+                <div className="h-4 w-80 rounded bg-muted animate-pulse" />
+              </div>
+            </div>
+          </div>
+          {/* Layout skeleton */}
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-5">
+            {/* Sidebar skeleton */}
+            <div className="lg:w-[220px] lg:shrink-0">
+              <div className="rounded-2xl border border-border bg-background/60 p-3 space-y-1.5">
+                <div className="h-3 w-14 rounded bg-muted/70 animate-pulse mb-3" />
+                {[1, 0.9, 1, 0.85, 0.95, 0.8, 1, 0.9].map((w, i) => (
+                  <div key={i} className="h-8 rounded-lg bg-muted animate-pulse" style={{ width: `${w * 100}%`, animationDelay: `${i * 60}ms` }} />
+                ))}
+              </div>
+            </div>
+            {/* Content skeleton */}
+            <div className="flex-1 space-y-4">
+              <div className="rounded-2xl border border-border bg-background/60 p-6 space-y-3">
+                {[1, 0.75, 1, 0.6, 0.85].map((w, i) => (
+                  <div key={i} className="h-4 rounded bg-muted animate-pulse" style={{ width: `${w * 100}%`, animationDelay: `${i * 80}ms` }} />
+                ))}
+              </div>
+              <div className="rounded-2xl border border-border bg-background/60 p-6 space-y-3">
+                {[1, 0.8, 0.9, 0.7].map((w, i) => (
+                  <div key={i} className="h-4 rounded bg-muted animate-pulse" style={{ width: `${w * 100}%`, animationDelay: `${i * 80 + 400}ms` }} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     )
   }
@@ -1974,101 +2012,105 @@ export default function PrecatorioDetailPage() {
 
         {/* Tabs Layout Consolidado */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <div className="mb-6 rounded-2xl border border-border bg-background/45 p-1.5 backdrop-blur-xl dark:border-border dark:bg-muted">
-            <div className="relative">
-              <TabsList className={dashboardTabsListClass}>
-                <TabsTrigger
-                  value="detalhes"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Geral
-                </TabsTrigger>
-                <TabsTrigger
-                  value="datajud"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <FileSearch className="h-4 w-4 mr-2" />
-                  DataJud
-                </TabsTrigger>
-                <TabsTrigger
-                  value="documentos"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Documentos
-                </TabsTrigger>
-                <TabsTrigger
-                  value="oficio"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Ofício
-                  {(precatorio?.file_url || precatorio?.pdf_url) && <span className="ml-1.5 w-2 h-2 rounded-full bg-primary/15" />}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="certidoes"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <CheckSquare className="h-4 w-4 mr-2" />
-                  Certidões
-                </TabsTrigger>
-                <TabsTrigger
-                  value="escrituras"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <FileText className="h-4 w-4 mr-2" />
-                  Escrituras
-                </TabsTrigger>
-                <TabsTrigger
-                  value="juridico"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <Scale className="h-4 w-4 mr-2" />
-                  Parecer Jurídico
-                </TabsTrigger>
-                {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
-                  <TabsTrigger
-                    value="fechamento"
-                    className={dashboardTabsTriggerClass}
-                  >
-                    <Gavel className="h-4 w-4 mr-2" />
-                    Fechamento
-                  </TabsTrigger>
-                )}
-                <TabsTrigger
-                  value="calculo"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <Calculator className="h-4 w-4 mr-2" />
-                  Cálculo
-                </TabsTrigger>
-                <TabsTrigger
-                  value="comparativo"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <DollarSign className="h-4 w-4 mr-2" />
-                  {"Proje\u00e7\u00e3o & Comparativo"}
-                </TabsTrigger>
-                <TabsTrigger
-                  value="propostas"
-                  className={dashboardTabsTriggerClass}
-                >
-                  <Percent className="h-4 w-4 mr-2" />
-                  Propostas
-                </TabsTrigger>
-                <button
-                  type="button"
-                  className={`${dashboardTabsTriggerClass} inline-flex items-center whitespace-nowrap`}
-                  onClick={openAgendaForPrecatorio}
-                >
-                  <Calendar className="h-4 w-4 mr-2" />
-                  Agenda
-                </button>
-              </TabsList>
-            </div>
-          </div>
+          <div className="flex flex-col gap-4 lg:flex-row lg:gap-5 lg:items-start">
 
+            {/* ── Sidebar de navegação vertical ── */}
+            <aside className="lg:w-[220px] lg:shrink-0">
+              <div className="lg:sticky lg:top-20">
+                <div className="rounded-2xl border border-border bg-background/75 py-2 backdrop-blur-xl dark:bg-muted/70 shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+                  <TabsList className="flex h-auto w-full flex-col items-stretch gap-0 bg-transparent p-0">
+
+                    {/* Processo */}
+                    <p className={navSectionLabel}>Processo</p>
+                    <TabsTrigger value="detalhes" className={verticalTabClass}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      Geral
+                    </TabsTrigger>
+                    <TabsTrigger value="datajud" className={verticalTabClass}>
+                      <FileSearch className="h-3.5 w-3.5 shrink-0" />
+                      DataJud
+                    </TabsTrigger>
+
+                    {/* Documentação */}
+                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <p className={navSectionLabel}>Documentação</p>
+                    <TabsTrigger value="documentos" className={verticalTabClass}>
+                      <CheckSquare className="h-3.5 w-3.5 shrink-0" />
+                      Documentos
+                    </TabsTrigger>
+                    <TabsTrigger value="oficio" className={verticalTabClass}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      Ofício
+                      {(precatorio?.file_url || precatorio?.pdf_url) && (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary/50" />
+                      )}
+                    </TabsTrigger>
+                    <TabsTrigger value="certidoes" className={verticalTabClass}>
+                      <CheckSquare className="h-3.5 w-3.5 shrink-0" />
+                      Certidões
+                    </TabsTrigger>
+                    <TabsTrigger value="escrituras" className={verticalTabClass}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      Escrituras
+                    </TabsTrigger>
+                    <TabsTrigger value="contratos" className={verticalTabClass}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      Contratos
+                    </TabsTrigger>
+                    <TabsTrigger value="procuracao" className={verticalTabClass}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      Procuração
+                    </TabsTrigger>
+
+                    {/* Jurídico */}
+                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <p className={navSectionLabel}>Jurídico</p>
+                    <TabsTrigger value="juridico" className={verticalTabClass}>
+                      <Scale className="h-3.5 w-3.5 shrink-0" />
+                      Parecer Jurídico
+                    </TabsTrigger>
+                    {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
+                      <TabsTrigger value="fechamento" className={verticalTabClass}>
+                        <Gavel className="h-3.5 w-3.5 shrink-0" />
+                        Fechamento
+                      </TabsTrigger>
+                    )}
+
+                    {/* Financeiro */}
+                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <p className={navSectionLabel}>Financeiro</p>
+                    <TabsTrigger value="calculo" className={verticalTabClass}>
+                      <Calculator className="h-3.5 w-3.5 shrink-0" />
+                      Cálculo
+                    </TabsTrigger>
+                    <TabsTrigger value="comparativo" className={verticalTabClass}>
+                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                      Projeção & Comparativo
+                    </TabsTrigger>
+                    <TabsTrigger value="propostas" className={verticalTabClass}>
+                      <Percent className="h-3.5 w-3.5 shrink-0" />
+                      Propostas
+                    </TabsTrigger>
+
+                    {/* Gestão */}
+                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <p className={navSectionLabel}>Gestão</p>
+                    <button
+                      type="button"
+                      className={`${verticalTabClass} data-[state=active]:bg-transparent`}
+                      onClick={openAgendaForPrecatorio}
+                    >
+                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                      Agenda
+                    </button>
+
+                  </TabsList>
+                </div>
+              </div>
+            </aside>
+
+            {/* ── Área de conteúdo ── */}
+            <div className="min-w-0 flex-1">
           <AnimatePresence mode="wait" initial={false}>
             <motion.div
               key={activeTab}
@@ -2255,7 +2297,7 @@ export default function PrecatorioDetailPage() {
                             </div>
                           </>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
                             <InfoRow
                               label="Número do Precatório"
                               value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"}
@@ -3463,6 +3505,41 @@ export default function PrecatorioDetailPage() {
                   onUpdate={loadPrecatorio}
                   initialStatus={precatorio?.status_escrituras}
                   initialObservacoes={precatorio?.observacoes_escrituras}
+                  precatorio={precatorio}
+                />
+              </TabsContent>
+
+              {/* Tab: Contratos */}
+              <TabsContent value="contratos" className="mt-0">
+                <AbaContratos
+                  precatorioId={id}
+                  canEdit={
+                    userRole?.includes("admin") ||
+                    userRole?.includes("gestor") ||
+                    userRole?.includes("gestor_escrituras") ||
+                    false
+                  }
+                  onUpdate={loadPrecatorio}
+                  initialStatus={precatorio?.status_contrato}
+                  initialObservacoes={precatorio?.observacoes_contrato}
+                  precatorio={precatorio}
+                />
+              </TabsContent>
+
+              {/* Tab: Procuração */}
+              <TabsContent value="procuracao" className="mt-0">
+                <AbaProcuracao
+                  precatorioId={id}
+                  canEdit={
+                    userRole?.includes("admin") ||
+                    userRole?.includes("gestor") ||
+                    userRole?.includes("gestor_escrituras") ||
+                    false
+                  }
+                  onUpdate={loadPrecatorio}
+                  initialStatus={precatorio?.status_procuracao}
+                  initialObservacoes={precatorio?.observacoes_procuracao}
+                  precatorio={precatorio}
                 />
               </TabsContent>
 
@@ -3759,6 +3836,8 @@ export default function PrecatorioDetailPage() {
               </TabsContent>
             </motion.div>
           </AnimatePresence>
+            </div>{/* ── fim: área de conteúdo ── */}
+          </div>{/* ── fim: flex container sidebar+conteúdo ── */}
         </Tabs>
 
         {/* Modal de PDF */}

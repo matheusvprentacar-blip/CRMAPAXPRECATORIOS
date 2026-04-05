@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =====================================================
 // Cliente Google Gemini Pro
 // =====================================================

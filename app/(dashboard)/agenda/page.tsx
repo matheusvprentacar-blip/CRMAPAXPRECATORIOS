@@ -17,7 +17,6 @@ import {
   endOfWeek,
   format,
   isBefore,
-  isSameDay,
   isSameMonth,
   startOfDay,
   startOfMonth,
@@ -71,8 +70,6 @@ import {
   Surface,
   TextField,
   Label,
-  Description,
-  FieldError,
   ListBox,
 } from "@heroui/react"
 import { Textarea as UiTextarea } from "@/components/ui/textarea"
@@ -129,7 +126,7 @@ const prioridadeColor: Record<AgendaPrioridade, "default" | "warning" | "danger"
 
 const solidCardClassName = "rounded-2xl border border-default-200/80 bg-background dark:bg-muted shadow-sm"
 
-const toKey = (keys: "all" | Set<Key>) => {
+const _toKey = (keys: "all" | Set<Key>) => {
   if (keys === "all") return ""
   const value = Array.from(keys)[0]
   return typeof value === "string" ? value : value ? String(value) : ""
@@ -627,14 +624,14 @@ export default function AgendaPage() {
     return limited
   }, [creditSearch, form.precatorioId, precatorios])
 
-  const calendarDays = useMemo(() => {
+  const _calendarDays = useMemo(() => {
     const start = startOfWeek(startOfMonth(month), { weekStartsOn: 1 })
     const end = endOfWeek(endOfMonth(month), { weekStartsOn: 1 })
     return eachDayOfInterval({ start, end })
   }, [month])
 
   const selectedDayEvents = useMemo(() => filtered.filter((item) => eventInDay(item, day)), [day, filtered])
-  const HeroCalendarCellAny = HeroCalendar.Cell as any
+  const _HeroCalendarCellAny = HeroCalendar.Cell as any
   const monthEvents = useMemo(() => filtered.filter((item) => isSameMonth(new Date(item.inicio_em), month)), [filtered, month])
   const nextWeekEvents = useMemo(() => {
     const now = new Date()
@@ -1191,7 +1188,7 @@ export default function AgendaPage() {
                       >
                         <p className="mb-3 text-[11px] font-bold uppercase tracking-[0.16em] text-primary/80">Dados principais</p>
                         <div className="grid gap-4 md:grid-cols-2">
-                        {/* @ts-ignore */}
+                        {/* @ts-expect-error componente HeroUI sem tipos completos */}
                         <TextField
                           className="w-full"
                           placeholder="Ex.: Reunião..."
@@ -1201,7 +1198,7 @@ export default function AgendaPage() {
                           <Label className="text-xs font-bold uppercase tracking-wider text-[#6f5a45] dark:text-default-300">Titulo</Label>
                           <Input />
                         </TextField>
-                        {/* @ts-ignore */}
+                        {/* @ts-expect-error componente HeroUI sem tipos completos */}
                         <TextField
                           className="w-full"
                           placeholder="Ex.: Meet / Sala 2"
@@ -1782,7 +1779,7 @@ export default function AgendaPage() {
                             <Mail className="h-5 w-5" />
                             <h3 className="font-bold uppercase tracking-tight text-sm">Configurações do Comunicado</h3>
                           </div>
-                          {/* @ts-ignore */}
+                          {/* @ts-expect-error componente HeroUI sem tipos completos */}
                           <TextField
                             className="w-full"
                             value={form.comunicadoTitulo}

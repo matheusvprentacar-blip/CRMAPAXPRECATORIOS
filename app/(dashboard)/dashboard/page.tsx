@@ -838,15 +838,32 @@ export default function DashboardPage() {
   }
 
   async function fetchPerformanceData(supabase: any): Promise<PerformanceMetricsType> {
-    let queryFila = supabase
-      .from("precatorios")
-      .select("data_entrada_calculo")
-      .eq("status", "em_calculo")
-      .not("data_entrada_calculo", "is", null)
-      .is("deleted_at", null)
-
-    queryFila = applyRoleFilter(queryFila)
-    const { data: emFila } = await queryFila
+    const [{ data: emFila }, { data: finalizados }, { count: slaEstourado }] = await Promise.all([
+      applyRoleFilter(
+        supabase
+          .from("precatorios")
+          .select("data_entrada_calculo")
+          .eq("status", "em_calculo")
+          .not("data_entrada_calculo", "is", null)
+          .is("deleted_at", null)
+      ),
+      applyRoleFilter(
+        supabase
+          .from("precatorios")
+          .select("data_entrada_calculo, data_calculo")
+          .eq("status", "concluido")
+          .not("data_entrada_calculo", "is", null)
+          .not("data_calculo", "is", null)
+          .is("deleted_at", null)
+      ),
+      applyRoleFilter(
+        supabase
+          .from("precatorios")
+          .select("id", { count: "exact", head: true })
+          .eq("sla_status", "atrasado")
+          .is("deleted_at", null)
+      ),
+    ])
 
     const tempoMedioFila =
       emFila && emFila.length > 0
@@ -856,17 +873,6 @@ export default function DashboardPage() {
         }, 0) / emFila.length
         : 0
 
-    let queryFinalizado = supabase
-      .from("precatorios")
-      .select("data_entrada_calculo, data_calculo")
-      .eq("status", "concluido")
-      .not("data_entrada_calculo", "is", null)
-      .not("data_calculo", "is", null)
-      .is("deleted_at", null)
-
-    queryFinalizado = applyRoleFilter(queryFinalizado)
-    const { data: finalizados } = await queryFinalizado
-
     const tempoMedioFinalizar =
       finalizados && finalizados.length > 0
         ? finalizados.reduce((sum: number, p: any) => {
@@ -875,15 +881,6 @@ export default function DashboardPage() {
           return sum + horas
         }, 0) / finalizados.length
         : 0
-
-    let querySLA = supabase
-      .from("precatorios")
-      .select("id", { count: "exact", head: true })
-      .eq("sla_status", "atrasado")
-      .is("deleted_at", null)
-
-    querySLA = applyRoleFilter(querySLA)
-    const { count: slaEstourado } = await querySLA
 
     return {
       tempo_medio_fila: tempoMedioFila,
@@ -1047,6 +1044,55 @@ export default function DashboardPage() {
 
   const handleRefresh = () => loadDashboardMetrics(false)
 
+  // Memoizar derivações para evitar re-criação de arrays em cada render
+  const kanbanQuantidadeRows = useMemo(
+    () => buildRows(kpis.kanban.quantidade_por_status, formatKanbanStatus),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kpis.kanban.quantidade_por_status]
+  )
+  const kanbanValorRows = useMemo(
+    () => buildRows(kpis.kanban.valor_por_status, formatKanbanStatus),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [kpis.kanban.valor_por_status]
+  )
+  const financeiroConsolidadoRows = useMemo(
+    () =>
+      [
+        { label: "Total valor principal", value: kpis.resumo.total_principal },
+        { label: "Total valor atualizado", value: kpis.resumo.total_atualizado },
+        { label: "Saldo liquido", value: kpis.resumo.total_saldo_liquido },
+        { label: "Honorarios total", value: kpis.financeiro.honorarios_total },
+        { label: "IRPF total", value: kpis.financeiro.irpf_total },
+        { label: "Adiantamento total", value: kpis.financeiro.adiantamento_total },
+        { label: "PSS total", value: kpis.financeiro.pss_total },
+      ].filter((row) => row.value > 0),
+    [
+      kpis.resumo.total_principal,
+      kpis.resumo.total_atualizado,
+      kpis.resumo.total_saldo_liquido,
+      kpis.financeiro.honorarios_total,
+      kpis.financeiro.irpf_total,
+      kpis.financeiro.adiantamento_total,
+      kpis.financeiro.pss_total,
+    ]
+  )
+  const propostaStatusRows = useMemo(
+    () => buildRows(kpis.propostas.por_status, humanizeKey),
+    [kpis.propostas.por_status]
+  )
+  const juridicoParecerRows = useMemo(
+    () => buildRows(kpis.juridico.parecer_por_status, humanizeKey),
+    [kpis.juridico.parecer_por_status]
+  )
+  const juridicoResultadoRows = useMemo(
+    () => buildRows(kpis.juridico.resultado_final, humanizeKey),
+    [kpis.juridico.resultado_final]
+  )
+  const atividadesRows = useMemo(
+    () => buildRows(kpis.atividades.por_tipo, humanizeKey),
+    [kpis.atividades.por_tipo]
+  )
+
   // ----- loading (melhor visual) -----
   if (loading) {
     return (
@@ -1078,23 +1124,9 @@ export default function DashboardPage() {
     ? (kpis.documentos_certidoes.certidoes_recebidas / kpis.documentos_certidoes.total_certidoes) * 100
     : 0
 
-  const kanbanQuantidadeRows = buildRows(kpis.kanban.quantidade_por_status, formatKanbanStatus)
-  const kanbanValorRows = buildRows(kpis.kanban.valor_por_status, formatKanbanStatus)
-
-  const financeiroConsolidadoRows: SimpleTableRow[] = [
-    { label: "Total valor principal", value: kpis.resumo.total_principal },
-    { label: "Total valor atualizado", value: kpis.resumo.total_atualizado },
-    { label: "Saldo liquido", value: kpis.resumo.total_saldo_liquido },
-    { label: "Honorarios total", value: kpis.financeiro.honorarios_total },
-    { label: "IRPF total", value: kpis.financeiro.irpf_total },
-    { label: "Adiantamento total", value: kpis.financeiro.adiantamento_total },
-    { label: "PSS total", value: kpis.financeiro.pss_total },
-  ].filter((row) => row.value > 0)
-
-  const propostaStatusRows = buildRows(kpis.propostas.por_status, humanizeKey)
-  const juridicoParecerRows = buildRows(kpis.juridico.parecer_por_status, humanizeKey)
-  const juridicoResultadoRows = buildRows(kpis.juridico.resultado_final, humanizeKey)
-  const atividadesRows = buildRows(kpis.atividades.por_tipo, humanizeKey)
+  // kanbanQuantidadeRows, kanbanValorRows, financeiroConsolidadoRows,
+  // propostaStatusRows, juridicoParecerRows, juridicoResultadoRows, atividadesRows
+  // são agora memoizados com useMemo acima do early return
 
   const topCritical = operational.critical.slice(0, 7)
 
@@ -1110,32 +1142,33 @@ export default function DashboardPage() {
 
         {/* ===== HERO ===== */}
         <div className="relative overflow-hidden rounded-3xl border border-border bg-background shadow-sm">
-          <div className="p-7">
+          <div className="p-4 sm:p-7">
             <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.9fr)]">
 
               {/* LEFT */}
               <div>
-                <span className="inline-flex items-center gap-2 rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
-                  ● CRM Precatórios · {isAdmin ? "visão consolidada" : roles.includes("juridico") ? `jurídico: ${profile?.nome ?? "usuário"}` : `operador: ${profile?.nome ?? "usuário"}`}
+                <span className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
+                  <span className="shrink-0">●</span>
+                  <span className="truncate">CRM Precatórios · {isAdmin ? "visão consolidada" : roles.includes("juridico") ? `jurídico: ${profile?.nome ?? "usuário"}` : `operador: ${profile?.nome ?? "usuário"}`}</span>
                 </span>
-                <p className="mt-3 text-[clamp(2.1rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
-                  Dashboard estratégico
+                <p className="mt-3 text-[clamp(1.55rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
+                  Dashboard Estratégico
                 </p>
-                <h1 className="mt-3 text-[clamp(1.35rem,3vw,2.2rem)] font-bold leading-[1.05] tracking-[-0.03em] text-foreground">
-                  Carteira, operação e prioridades em um só painel.
+                <h1 className="mt-3 text-[clamp(1rem,3vw,2.2rem)] font-bold leading-[1.1] tracking-[-0.03em] text-foreground">
+                  Carteira, riscos e performance.
                 </h1>
-                <p className="mt-2.5 max-w-2xl text-[15px] leading-relaxed text-muted-foreground">
+                <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[15px]">
                   {isAdmin
-                    ? "Acompanhe volumes, valores, gargalos e andamento da carteira de precatórios com visão consolidada da operação."
+                    ? "KPIs críticos da operação de precatórios."
                     : roles.includes("juridico")
-                      ? `Acompanhe sua fila jurídica, seus próximos passos e os casos sob sua responsabilidade, ${profile?.nome ?? "usuário"}.`
-                      : `Acompanhe sua fila, produtividade e próximos passos, ${profile?.nome ?? "usuário"}.`}
+                      ? `Prazos e pareceres sob sua responsabilidade, ${profile?.nome ?? "usuário"}.`
+                      : `Fila, pendências e metas do dia, ${profile?.nome ?? "usuário"}.`}
                   {lastUpdated ? ` Atualizado em ${new Date(lastUpdated).toLocaleString("pt-BR")}.` : ""}
                 </p>
 
-                <div className="mt-5 flex flex-wrap items-center gap-3">
-                  {/* Segmented tabs */}
-                  <div className="inline-flex gap-1 rounded-2xl border border-border bg-muted/40 p-1.5">
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                  {/* Segmented tabs — full width on mobile, auto on sm+ */}
+                  <div className="flex w-full gap-1 rounded-2xl border border-border bg-muted/40 p-1.5 sm:w-auto sm:inline-flex">
                     {([
                       ["overview", "Visão geral"],
                       ["details", "Detalhes"],
@@ -1145,7 +1178,7 @@ export default function DashboardPage() {
                         key={key}
                         onClick={() => setTab(key)}
                         className={[
-                          "rounded-xl px-4 py-2.5 text-sm font-bold transition-all duration-200",
+                          "flex-1 whitespace-nowrap rounded-xl px-2 py-2 text-[11.5px] font-bold transition-all duration-200 sm:flex-none sm:px-4 sm:py-2.5 sm:text-sm",
                           tab === key
                             ? "bg-primary text-white shadow-[0_14px_28px_rgba(255,122,26,.24)]"
                             : "text-muted-foreground hover:bg-background/60",
@@ -1156,46 +1189,49 @@ export default function DashboardPage() {
                     ))}
                   </div>
 
-                  {/* Period select */}
-                  <Select
-                    aria-label="Período do dashboard"
-                    selectedKey={period}
-                    onSelectionChange={(k) => { if (k) setPeriod(String(k) as PeriodKey) }}
-                    className="w-[200px] [--color-field-focus:var(--background)] [--color-field-border-focus:var(--border)] [--color-field-border-hover:var(--border)]"
-                  >
-                    <Label className="sr-only">Período</Label>
-                    <Select.Trigger
-                      className="h-10 rounded-xl border border-border bg-background text-foreground shadow-sm data-[focus=true]:!bg-background data-[focus-visible=true]:!bg-background data-[hovered=true]:!bg-background"
-                      style={{ backgroundColor: "var(--background)", borderColor: "var(--border)" }}
+                  {/* Period + Refresh em linha única no mobile */}
+                  <div className="flex items-center gap-2 sm:contents">
+                    {/* Period select */}
+                    <Select
+                      aria-label="Período do dashboard"
+                      selectedKey={period}
+                      onSelectionChange={(k) => { if (k) setPeriod(String(k) as PeriodKey) }}
+                      className="flex-1 sm:w-[200px] sm:flex-none [--color-field-focus:var(--background)] [--color-field-border-focus:var(--border)] [--color-field-border-hover:var(--border)]"
                     >
-                      <Clock className="h-4 w-4 text-muted-foreground" />
-                      <Select.Value />
-                      <Select.Indicator className="text-foreground/70" />
-                    </Select.Trigger>
-                    <Select.Popover className="z-[120] rounded-xl border border-border !bg-background text-foreground shadow-sm">
-                      <ListBox className="!bg-background">
-                        {PERIOD_OPTIONS.map((o) => (
-                          <ListBox.Item key={o.value} id={o.value} textValue={o.label} className="!bg-background data-[hovered=true]:!bg-muted">
-                            {o.label}<ListBox.ItemIndicator />
-                          </ListBox.Item>
-                        ))}
-                      </ListBox>
-                    </Select.Popover>
-                  </Select>
+                      <Label className="sr-only">Período</Label>
+                      <Select.Trigger
+                        className="h-10 rounded-xl border border-border bg-background text-foreground shadow-sm data-[focus=true]:!bg-background data-[focus-visible=true]:!bg-background data-[hovered=true]:!bg-background"
+                        style={{ backgroundColor: "var(--background)", borderColor: "var(--border)" }}
+                      >
+                        <Clock className="h-4 w-4 text-muted-foreground" />
+                        <Select.Value />
+                        <Select.Indicator className="text-foreground/70" />
+                      </Select.Trigger>
+                      <Select.Popover className="z-[120] rounded-xl border border-border !bg-background text-foreground shadow-sm">
+                        <ListBox className="!bg-background">
+                          {PERIOD_OPTIONS.map((o) => (
+                            <ListBox.Item key={o.value} id={o.value} textValue={o.label} className="!bg-background data-[hovered=true]:!bg-muted">
+                              {o.label}<ListBox.ItemIndicator />
+                            </ListBox.Item>
+                          ))}
+                        </ListBox>
+                      </Select.Popover>
+                    </Select>
 
-                  {/* Refresh */}
-                  <Button
-                    onPress={handleRefresh}
-                    isDisabled={refreshing}
-                    variant="outline"
-                    size="sm"
-                    className="border-border"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
-                      <span>Atualizar painel</span>
-                    </span>
-                  </Button>
+                    {/* Refresh — ícone no mobile, texto no sm+ */}
+                    <Button
+                      onPress={handleRefresh}
+                      isDisabled={refreshing}
+                      variant="outline"
+                      size="sm"
+                      className="shrink-0 border-border"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        {refreshing ? <Spinner size="sm" /> : <RefreshCw className="h-4 w-4" />}
+                        <span className="hidden sm:inline">Atualizar painel</span>
+                      </span>
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -1213,9 +1249,9 @@ export default function DashboardPage() {
                       <CountUp end={slaHealthyPercent} duration={0.9} separator="." decimal="," decimals={0} suffix="%" {...COUNTUP_SCROLL_PROPS} />
                     </span>
                   </div>
-                  <div className="mt-4 flex items-end justify-between gap-3">
-                    <div>
-                      <div className="text-[2rem] font-bold leading-none tracking-[-0.03em]">
+                  <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between sm:gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[clamp(1.15rem,5vw,2rem)] font-bold leading-none tracking-[-0.03em]">
                         <CountUp end={kpis.resumo.total_saldo_liquido} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
                       </div>
                       <p className="mt-1 text-xs text-muted-foreground">Saldo líquido do período</p>
@@ -1260,7 +1296,7 @@ export default function DashboardPage() {
           <div className="space-y-5">
 
             {/* 4 KPI CARDS */}
-            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
               {/* Ativos */}
               <div className="relative isolate overflow-hidden rounded-3xl border border-border bg-background p-5 shadow-sm">
                 <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_top_right,hsl(var(--primary)/0.10),transparent_40%)]" />
@@ -1359,8 +1395,8 @@ export default function DashboardPage() {
                   <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Destaque: saldo líquido</span>
                 </div>
                 <div className="p-5">
-                  <div className="h-[180px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
+                  <div className="h-[180px] w-full" style={{ minWidth: 0 }}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
                       <BarChart
                         data={[
                           { name: "Principal", value: kpis.resumo.total_principal },
@@ -1389,7 +1425,7 @@ export default function DashboardPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
-                  <div className="mt-4 grid grid-cols-2 gap-3.5">
+                  <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
                     <div className="rounded-[18px] border border-border bg-muted/30 p-4">
                       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Total atualizado</div>
                       <div className="mt-2 text-[1.4rem] font-extrabold tracking-[-0.02em]">
@@ -1592,7 +1628,7 @@ export default function DashboardPage() {
             </div>
 
             {/* 4 SIMPLE STATS */}
-            <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
               {[
                 { label: "Credores", value: kpis.resumo.total_credores, desc: "Base cadastrada de credores monitorados.", isCurrency: false },
                 { label: "Propostas", value: kpis.propostas.valor_total, desc: "Valor total de propostas no sistema.", isCurrency: true },
@@ -1675,7 +1711,8 @@ export default function DashboardPage() {
                       <p className="text-sm text-muted-foreground">Sem precatórios críticos no período.</p>
                     </div>
                   ) : (
-                    <table className="w-full text-sm">
+                    <div className="overflow-x-auto">
+                    <table className="w-full min-w-[440px] text-sm">
                       <thead>
                         <tr className="border-b border-border">
                           <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Precatório</th>
@@ -1729,6 +1766,7 @@ export default function DashboardPage() {
                         })}
                       </tbody>
                     </table>
+                    </div>
                   )}
                 </div>
               </div>
@@ -1789,7 +1827,7 @@ export default function DashboardPage() {
                     {formatCount(propostaCompilada.quantidadeComProposta)} com proposta
                   </span>
                 </div>
-                <div className="grid grid-cols-3 gap-3 p-5">
+                <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-3">
                   {[
                     { label: "Valor total", value: kpis.propostas.valor_total, isCurrency: true },
                     { label: "Ticket médio", value: kpis.propostas.ticket_medio, isCurrency: true },
@@ -1834,7 +1872,7 @@ export default function DashboardPage() {
                     <h2 className="text-[15px] font-semibold">Credores</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Base cadastrada no sistema</p>
                   </div>
-                  <div className="grid grid-cols-2 gap-3 p-5">
+                  <div className="grid grid-cols-1 gap-3 p-5 sm:grid-cols-2">
                     {[
                       { label: "Total credores", value: kpis.credores.total_credores, isCurrency: false },
                       { label: "Valor total principal", value: kpis.credores.valor_total_principal, isCurrency: true },

@@ -7,7 +7,7 @@
  * Nota: Para produção, considere usar uma biblioteca como pdf-parse
  * Por enquanto, retorna placeholder para implementação futura
  */
-export async function extractTextFromPDF(pdfBuffer: Buffer): Promise<string> {
+export async function extractTextFromPDF(_pdfBuffer: Buffer): Promise<string> {
   // TODO: Implementar extração real com pdf-parse ou similar
   // npm install pdf-parse
   
@@ -26,7 +26,7 @@ export function pdfToBase64(pdfBuffer: Buffer): string {
 /**
  * Baixa arquivo do Supabase Storage
  */
-export async function downloadFromStorage(storagePath: string): Promise<Buffer> {
+export async function downloadFromStorage(_storagePath: string): Promise<Buffer> {
   // TODO: Implementar download do Supabase Storage
   // const { data, error } = await supabase.storage.from('bucket').download(path)
   

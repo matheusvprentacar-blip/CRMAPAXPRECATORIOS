@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -9,7 +10,6 @@ import type {
 import {
   validarArquivo,
   gerarStoragePath,
-  sanitizarNomeArquivo,
 } from "@/lib/types/documento"
 
 const BUCKET_NAME = "precatorios-documentos"
@@ -329,7 +329,7 @@ export async function verificarDocumentoAnexado(
   }
 
   try {
-    const { data, error, count } = await supabase
+    const { error, count } = await supabase
       .from("documentos_precatorio")
       .select("id", { count: "exact" })
       .eq("precatorio_id", precatorioId)

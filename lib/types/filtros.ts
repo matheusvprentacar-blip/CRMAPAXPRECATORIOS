@@ -9,6 +9,9 @@ export interface FiltrosPrecatorios {
   // Filtros de status
   status?: string[]
 
+  // Distribuição (visão admin)
+  distribuicao?: 'distribuido' | 'pendente' | 'distribuido_admin'
+
   // Filtros de responsáveis
   responsavel_id?: string
   criador_id?: string
@@ -113,6 +116,12 @@ export const COMPLEXIDADE_LABELS: Record<string, string> = {
   alta: 'Alta',
 }
 
+export const DISTRIBUICAO_LABELS: Record<NonNullable<FiltrosPrecatorios['distribuicao']>, string> = {
+  distribuido: 'Distribuídos',
+  pendente: 'Pendentes',
+  distribuido_admin: 'Distribuídos por admin',
+}
+
 export const SLA_LABELS: Record<string, string> = {
   nao_iniciado: 'Não iniciado',
   no_prazo: 'No prazo',
@@ -145,6 +154,11 @@ export const STATUS_OPTIONS = Object.entries(STATUS_LABELS).map(([value, label])
 
 export const COMPLEXIDADE_OPTIONS = Object.entries(COMPLEXIDADE_LABELS).map(([value, label]) => ({
   value,
+  label,
+}))
+
+export const DISTRIBUICAO_OPTIONS = Object.entries(DISTRIBUICAO_LABELS).map(([value, label]) => ({
+  value: value as NonNullable<FiltrosPrecatorios['distribuicao']>,
   label,
 }))
 
@@ -221,6 +235,15 @@ export function getFiltrosAtivos(filtros: FiltrosPrecatorios): FiltroAtivo[] {
       label: 'Status',
       value: filtros.status,
       displayValue: filtros.status.map((s) => STATUS_LABELS[s] || s).join(', '),
+    })
+  }
+
+  if (filtros.distribuicao) {
+    ativos.push({
+      key: 'distribuicao',
+      label: 'Distribuição',
+      value: filtros.distribuicao,
+      displayValue: DISTRIBUICAO_LABELS[filtros.distribuicao] || filtros.distribuicao,
     })
   }
 
@@ -428,6 +451,7 @@ export function filtrosToRpcParams(filtros: FiltrosPrecatorios) {
   if (filtros.valor_calculado) params.p_valor_calculado = true
   if (filtros.calculo_em_andamento) params.p_calculo_andamento = true
   if (filtros.calculo_finalizado) params.p_calculo_finalizado = true
+  if (filtros.distribuicao) params.p_distribuicao = filtros.distribuicao
 
   return params
 }

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -9,7 +10,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { Loader2, CheckCircle, Calculator, DollarSign } from "@/components/icons"
 import { getMonthlyClosingSummary, createCommissionTransaction } from "@/services/finance-service"
-import { toast } from "sonner" // Assuming sonner or use-toast is available, otherwise alert
+// toast removed - unused
 
 export function MonthlyClosingTab() {
     const currentYear = new Date().getFullYear()

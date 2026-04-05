@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =====================================================
 // Types para ExtraÃ§Ã£o de IA de Documentos
 // =====================================================

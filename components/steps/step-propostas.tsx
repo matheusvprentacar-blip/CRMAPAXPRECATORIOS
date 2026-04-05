@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -192,11 +193,11 @@ export function StepPropostas({
     // Extract Values
     const totalBruto = breakdown.total_bruto || etapaAtualizacao.valor_atualizado || etapaAtualizacao.valorAtualizado || 0
     const valorPrincipal = breakdown.principal_original || dados.valor_principal_original || 0
-    const correcaoMonetaria = breakdown.correcao_monetaria || 0
-    const jurosPre22 = breakdown.juros_pre_22 || 0
-    const valSelic = breakdown.selic || 0
-    const valEc136 = breakdown.ec136_2025 || 0
-    const jurosMoraOrig = breakdown.juros_moratorios_originais || dados.valor_juros_original || 0
+    const _correcaoMonetaria = breakdown.correcao_monetaria || 0
+    const _jurosPre22 = breakdown.juros_pre_22 || 0
+    const _valSelic = breakdown.selic || 0
+    const _valEc136 = breakdown.ec136_2025 || 0
+    const _jurosMoraOrig = breakdown.juros_moratorios_originais || dados.valor_juros_original || 0
 
     // Deductions
     const pssValor = etapaPss.pss_valor || etapaPss.pssTotal || 0

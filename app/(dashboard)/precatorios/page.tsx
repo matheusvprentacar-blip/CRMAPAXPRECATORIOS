@@ -260,6 +260,16 @@ function getResponsavelNome(precatorio: Precatorio) {
   return precatorio.responsavel_nome || precatorio.responsavel_calculo_nome || "Sem responsável"
 }
 
+function isPrecatorioDistribuido(precatorio: Precatorio) {
+  return Boolean(
+    precatorio.dono_usuario_id ||
+      precatorio.responsavel ||
+      precatorio.responsavel_nome ||
+      precatorio.responsavel_calculo_id ||
+      precatorio.responsavel_calculo_nome
+  )
+}
+
 function getValorDisplay(precatorio: Precatorio) {
   const valorAtualizado = Number(precatorio.valor_atualizado || 0)
   const valorPrincipal = Number(precatorio.valor_principal || 0)
@@ -424,13 +434,15 @@ function PrecatorioDeleteMenu({
   return (
     <HeroDropdown>
       <HeroDropdownTrigger>
-        <span
-          role="button"
-          tabIndex={0}
-          className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition hover:bg-black/5 dark:hover:bg-white/5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary"
+        <HeroButton
+          as="div"
+          isIconOnly
+          variant="light"
+          size="sm"
+          className="h-8 w-8 min-w-0 rounded-md text-muted-foreground hover:bg-black/5 dark:hover:bg-white/5"
         >
           <MoreVertical className="h-4 w-4" />
-        </span>
+        </HeroButton>
       </HeroDropdownTrigger>
       <HeroDropdownPopover className={deleteActionPopoverClassName}>
         <HeroDropdownMenu aria-label="Acoes do precatorio" className={deleteActionMenuClassName}>
@@ -506,6 +518,12 @@ function PrecatorioVisualCard({
             <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
             {statusLabel}
           </TagPill>
+          {precatorio.distribuido_por_admin && (
+            <TagPill className="border-blue-200 bg-blue-500/10 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300">
+              <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
+              Distribuído por admin
+            </TagPill>
+          )}
         </div>
 
         <div className="flex gap-4">
@@ -656,6 +674,11 @@ function PrecatoriosTableView({
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <TagPill className={getStatusTagClass(precatorio.status)}>{statusLabel}</TagPill>
+                  {precatorio.distribuido_por_admin && (
+                    <div className="mt-1 text-[10px] font-semibold text-blue-700 dark:text-blue-300">
+                      Distribuído por admin
+                    </div>
+                  )}
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <div className="flex min-w-[150px] items-center gap-2">
@@ -723,8 +746,21 @@ export default function PrecatoriosPage() {
     summary,
     filtrosAtivos,
     refetch,
-  } = usePrecatoriosSearch({}, searchOptions)
-  const precatoriosList = precatorios as unknown as Precatorio[]
+  } = usePrecatoriosSearch({}, { ...searchOptions, storageKey: "filtros:precatorios" })
+  const precatoriosRawList = precatorios as unknown as Precatorio[]
+  const precatoriosList = useMemo(() => {
+    if (!filtros.distribuicao) return precatoriosRawList
+
+    if (filtros.distribuicao === "distribuido") {
+      return precatoriosRawList.filter((item) => isPrecatorioDistribuido(item))
+    }
+
+    if (filtros.distribuicao === "pendente") {
+      return precatoriosRawList.filter((item) => !isPrecatorioDistribuido(item))
+    }
+
+    return precatoriosRawList.filter((item) => item.distribuido_por_admin === true)
+  }, [precatoriosRawList, filtros.distribuicao])
 
   const calculadosCount = summary.calculados
   const emCalculoOuNovoCount = summary.emCalculoOuNovo
@@ -859,9 +895,14 @@ export default function PrecatoriosPage() {
     clearFiltros()
   }
 
-  const totalPages = useMemo(() => Math.max(1, Math.ceil(totalPrecatorios / pageSize)), [totalPrecatorios, pageSize])
-  const rangeStart = totalPrecatorios === 0 ? 0 : (currentPage - 1) * pageSize + 1
-  const rangeEnd = totalPrecatorios === 0 ? 0 : Math.min(rangeStart + precatorios.length - 1, totalPrecatorios)
+  const distribuicaoFiltroAtivo = Boolean(filtros.distribuicao)
+  const effectiveTotalPrecatorios = distribuicaoFiltroAtivo ? precatoriosList.length : totalPrecatorios
+  const totalPages = useMemo(
+    () => Math.max(1, Math.ceil(effectiveTotalPrecatorios / pageSize)),
+    [effectiveTotalPrecatorios, pageSize]
+  )
+  const rangeStart = effectiveTotalPrecatorios === 0 ? 0 : (currentPage - 1) * pageSize + 1
+  const rangeEnd = effectiveTotalPrecatorios === 0 ? 0 : Math.min(rangeStart + precatoriosList.length - 1, effectiveTotalPrecatorios)
 
   useEffect(() => {
     setCurrentPage(1)
@@ -1044,7 +1085,7 @@ export default function PrecatoriosPage() {
           <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <div className="rounded-[14px] border border-slate-900/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#18181b]">
               <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Total</div>
-              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-900 dark:text-slate-50">{totalPrecatorios}</div>
+              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-900 dark:text-slate-50">{effectiveTotalPrecatorios}</div>
               <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">precatórios na carteira</div>
             </div>
             <div className="rounded-[14px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
@@ -1090,15 +1131,13 @@ export default function PrecatoriosPage() {
           <div className="flex flex-wrap items-center gap-2">
             <HeroDropdown>
               <HeroDropdownTrigger>
-                <span
-                  role="button"
-                  tabIndex={0}
-                  className="inline-flex h-11 w-[190px] items-center justify-between rounded-xl border border-slate-900/10 bg-[#f4f5f8] px-3 text-sm font-medium text-slate-500 shadow-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                <div
+                  className="inline-flex h-11 w-[190px] cursor-pointer items-center justify-between rounded-xl border border-slate-900/10 bg-[#f4f5f8] px-3 text-sm font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
                 >
                   {statusSelectValue === "todos"
                     ? "Todos os status"
                     : STATUS_OPTIONS.find((option) => option.value === statusSelectValue)?.label || "Status"}
-                </span>
+                </div>
               </HeroDropdownTrigger>
               <HeroDropdownPopover>
                 <HeroDropdownMenu aria-label="Filtro status">
@@ -1120,11 +1159,12 @@ export default function PrecatoriosPage() {
               totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
               responsaveis={responsaveis}
               showResponsavelFilter={!!userRole?.includes("admin")}
+              showDistribuicaoFilter={true}
             />
           </div>
           <div className="flex flex-wrap items-center gap-3 xl:ml-auto xl:justify-end">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-[#f4f5f8] px-3 py-1.5 text-[12.5px] font-medium text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
-              <span>{totalPrecatorios} registros</span>
+              <span>{effectiveTotalPrecatorios} registros</span>
               {loading && initialized ? (
                 <span className="inline-flex items-center gap-1 text-xs">
                   <Loader2 className="h-3 w-3 animate-spin" />
@@ -1200,7 +1240,7 @@ export default function PrecatoriosPage() {
 
       {/* Lista */}
       {
-        precatorios.length === 0 ? (
+        precatoriosList.length === 0 ? (
           <div className="relative overflow-hidden rounded-[18px] border-2 border-dashed border-slate-900/10 bg-white/90 px-6 py-20 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
             <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl" />
             <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-amber-400/10 blur-3xl" />
@@ -1282,7 +1322,7 @@ export default function PrecatoriosPage() {
 
             <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-slate-900/10 bg-white/90 px-4 py-3 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
               <span className="text-sm text-slate-500 dark:text-slate-400">
-                Exibindo {rangeStart}-{rangeEnd} de {totalPrecatorios} precatórios
+                Exibindo {rangeStart}-{rangeEnd} de {effectiveTotalPrecatorios} precatórios
               </span>
               <div className="flex items-center gap-2">
                 <Button

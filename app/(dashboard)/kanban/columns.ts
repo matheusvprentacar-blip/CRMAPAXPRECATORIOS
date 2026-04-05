@@ -1,4 +1,4 @@
-﻿// Centralized Kanban column definitions and allowed calculation columns
+// Centralized Kanban column definitions and allowed calculation columns
 
 type KanbanColor = {
   dot: string
@@ -23,6 +23,17 @@ export const KANBAN_COLUMNS: Array<{
       bg: "bg-blue-100/80 dark:bg-blue-950/40",
       ring: "ring-blue-300/60 dark:ring-blue-900/60",
       text: "text-blue-900 dark:text-blue-200",
+    },
+  },
+  {
+    id: "recebidos_admin",
+    titulo: "Recebidos do Admin",
+    color: {
+      dot: "bg-teal-700 dark:bg-teal-400",
+      bar: "bg-teal-700 dark:bg-teal-400",
+      bg: "bg-teal-100/80 dark:bg-teal-950/40",
+      ring: "ring-teal-300/60 dark:ring-teal-900/60",
+      text: "text-teal-900 dark:text-teal-200",
     },
   },
   {

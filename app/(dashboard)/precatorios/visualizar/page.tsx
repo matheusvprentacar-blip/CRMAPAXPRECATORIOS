@@ -297,6 +297,11 @@ function PrecatorioDetailContent() {
               <Badge variant="outline" className="text-xs uppercase tracking-wider font-semibold">
                 {precatorio.status?.replace(/_/g, " ") || "Rascunho"}
               </Badge>
+              {precatorio.distribuido_por_admin && (
+                <Badge variant="secondary" className="text-xs uppercase tracking-wider font-semibold">
+                  Distribuído por admin
+                </Badge>
+              )}
             </div>
             <h2 className="text-lg text-muted-foreground font-medium mb-1">
               {precatorio.titulo || "Sem título definido"}
@@ -304,6 +309,11 @@ function PrecatorioDetailContent() {
             <div className="text-sm text-muted-foreground flex items-center gap-2">
               <span className="font-medium text-foreground">Credor:</span> {precatorio.credor_nome || "-"}
             </div>
+            {precatorio.distribuido_por_admin_em && (
+              <div className="text-xs text-muted-foreground mt-1">
+                Distribuído por admin em {new Date(precatorio.distribuido_por_admin_em).toLocaleString("pt-BR")}
+              </div>
+            )}
           </div>
         </div>
 

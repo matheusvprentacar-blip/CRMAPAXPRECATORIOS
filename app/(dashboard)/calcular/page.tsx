@@ -4,18 +4,15 @@ import { useSearchParams } from "next/navigation"
 import { useState, useEffect } from "react"
 import { getSupabase } from "@/lib/supabase/client"
 import CalculadoraPrecatorios from "@/components/calculador-precatorios"
-import { FileText } from "@/components/icons"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"
-import { Button } from "@/components/ui/button"
-import { toast } from "@/components/ui/use-toast"
 
 export default function CalcularPage() {
   const searchParams = useSearchParams()
   const precatorioId = searchParams.get("id")
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
+  const [_pdfUrl, setPdfUrl] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [precatorioPdfUrl, setPrecatorioPdfUrl] = useState<string | null>(null)
-  const [hasCalculation, setHasCalculation] = useState(false)
+  const [_precatorioPdfUrl, setPrecatorioPdfUrl] = useState<string | null>(null)
+  const [_hasCalculation, setHasCalculation] = useState(false)
 
   useEffect(() => {
     if (precatorioId) {

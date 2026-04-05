@@ -1,7 +1,8 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Calculator, Calendar, DollarSign, Percent, TrendingUp, Building2, FileCheck } from "@/components/icons"
+import { Calculator, Calendar, Percent, TrendingUp, Building2, FileCheck } from "@/components/icons"
 
 const formatCurrency = (value: number | string | undefined | null) => {
     if (value === undefined || value === null) return "R$ 0,00"

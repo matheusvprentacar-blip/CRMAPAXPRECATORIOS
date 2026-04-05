@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { IPCA_E_MENSAL, TABELA_INDICES_COMPLETA, getIndiceIpcaPre2022 } from "./indices"
 import { TABELA_IPCA_FATORES_EC113, TABELA_SELIC_PERCENTUAL_EC113, FATOR_TETO_DEZ21 } from "./dados-ec113"
 

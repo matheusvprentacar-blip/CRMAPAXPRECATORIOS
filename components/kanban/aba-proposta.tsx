@@ -33,6 +33,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { ProposalConfigModal } from "./proposal-config-modal"
 import { Settings } from "@/components/icons"
 import { useAuth } from "@/lib/auth/auth-context"
+import { ensureOpenLegalOpinionForPrecatorio } from "@/features/legal-opinion/request-from-precatorio"
 
 interface AbaPropostaProps {
     precatorioId: string
@@ -589,6 +590,12 @@ export function AbaProposta({
                 ? String(persistedRow.data_aceite_proposta).slice(0, 10)
                 : null
             const expectedDataAceite = dataAceiteEfetiva ? String(dataAceiteEfetiva).slice(0, 10) : null
+            const etapaAtualAntesAceite = String(precatorio?.status_kanban || precatorio?.localizacao_kanban || "")
+                .trim()
+                .toLowerCase()
+            const deveMoverParaJuridicoFechamento =
+                propostaAceita &&
+                ["", "calculo_concluido", "proposta_negociacao", "proposta_aceita"].includes(etapaAtualAntesAceite)
 
             if (propostaAceita && (!persistedAceite || persistedDataAceite !== expectedDataAceite)) {
                 toast({
@@ -606,6 +613,67 @@ export function AbaProposta({
                     variant: "destructive",
                 })
                 return
+            }
+
+            if (
+                deveMoverParaJuridicoFechamento &&
+                (persistedRow?.status_kanban !== "proposta_aceita" || persistedRow?.localizacao_kanban !== "proposta_aceita")
+            ) {
+                const { data: movedRows, error: moveError } = await supabase
+                    .from("precatorios")
+                    .update({
+                        status_kanban: "proposta_aceita",
+                        localizacao_kanban: "proposta_aceita",
+                        updated_at: new Date().toISOString(),
+                    })
+                    .eq("id", precatorioId)
+                    .select("id, status_kanban, localizacao_kanban")
+                    .limit(1)
+
+                if (moveError) {
+                    toast({
+                        title: "Aceite salvo, mas sem encaminhamento",
+                        description:
+                            "A proposta foi aceita, porém não foi possível mover para Jurídico de fechamento. Verifique permissões/migrações e tente novamente.",
+                        variant: "destructive",
+                    })
+                    return
+                }
+
+                const movedRow = Array.isArray(movedRows) ? movedRows[0] : movedRows
+                if (
+                    movedRow?.status_kanban !== "proposta_aceita" ||
+                    movedRow?.localizacao_kanban !== "proposta_aceita"
+                ) {
+                    toast({
+                        title: "Encaminhamento não confirmado",
+                        description:
+                            "O aceite foi salvo, mas o crédito ainda não entrou em Jurídico de fechamento.",
+                        variant: "destructive",
+                    })
+                    return
+                }
+            }
+
+            if (propostaAceita) {
+                try {
+                    await ensureOpenLegalOpinionForPrecatorio({
+                        precatorioId,
+                        motivo: "OUTROS",
+                        motivoLabel: "Proposta aceita",
+                        descricao:
+                            "Crédito marcado como proposta aceita e encaminhado automaticamente para Jurídico de fechamento.",
+                        origemSolicitacao: "kanban",
+                    })
+                } catch (legalOpinionError) {
+                    console.error("[Proposta Aceita] Falha ao sincronizar parecer jurídico:", legalOpinionError)
+                    toast({
+                        title: "Aceite salvo, mas parecer não sincronizado",
+                        description:
+                            "O crédito foi para Jurídico de fechamento, porém não foi possível criar o registro no módulo de parecer. Tente atualizar a tela de Parecer Jurídico.",
+                        variant: "destructive",
+                    })
+                }
             }
 
             toast({
@@ -1501,5 +1569,3 @@ function adjustPercent(val: number) {
     // Se vier 0.65 -> 65. Se vier 65 -> 65
     return (val > 0 && val <= 1) ? val * 100 : val
 }
-
-

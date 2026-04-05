@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
@@ -303,7 +304,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
     [etapasCompletadas],
   )
 
-  const salvarCalculoNoSupabase = async () => {
+  const _salvarCalculoNoSupabase = async () => {
     if (!precatorioId) {
       console.error("[v0] Nenhum precatorioId definido")
       return
@@ -429,7 +430,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       const atualizacao = resultadosEtapas[2] || resultadosEtapas[1]
       const pss = resultadosEtapas[3] || resultadosEtapas[2]
       const irpf = resultadosEtapas[4] || resultadosEtapas[3]
-      const honorarios = resultadosEtapas[5] || resultadosEtapas[4]
+      const _honorarios = resultadosEtapas[5] || resultadosEtapas[4]
       const propostas = resultadosEtapas[6] || resultadosEtapas[5]
       const resumoFinal = resultadosEtapas[6] || resultadosEtapas[7] || {}
 

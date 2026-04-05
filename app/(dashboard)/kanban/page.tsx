@@ -33,9 +33,9 @@ import ShinyText from "@/components/ui/shiny-text"
 import GlareHover from "@/components/ui/glare-hover"
 import { KANBAN_COLUMNS } from "./columns"
 import { useSidebar } from "@/components/ui/sidebar"
-import type { FiltrosPrecatorios } from "@/lib/types/filtros"
-import { getFiltrosAtivos } from "@/lib/types/filtros"
 import { X } from "@/components/icons"
+import type { FiltrosPrecatorios } from "@/lib/types/filtros"
+import { usePersistedFilters } from "@/hooks/use-persisted-filters"
 
 const KANBAN_SHINY_PROPS = {
   speed: 2,
@@ -49,8 +49,8 @@ const KANBAN_SHINY_PROPS = {
   disabled: false,
 }
 
-// Colunas do Kanban com Gates
-const COLUNAS = KANBAN_COLUMNS.filter((coluna) => coluna.id !== "entrada")
+// Colunas do Kanban com Gates (Base)
+const COLUNAS_BASE = KANBAN_COLUMNS.filter((coluna) => coluna.id !== "entrada")
 
 // Colunas que permitem acesso à área de cálculos
 const COLUNAS_CALCULO_PERMITIDO = [
@@ -184,6 +184,7 @@ interface PrecatorioCard {
 
   responsavel_perfil?: { nome: string } | null
   search_index?: string
+  distribuido_por_admin?: boolean
 }
 
 const useHorizontalAutoScroll = (isDragging: boolean, containerRef: RefObject<HTMLDivElement | null>) => {
@@ -654,12 +655,20 @@ export default function KanbanPageNewGates() {
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [precatorios, setPrecatorios] = useState<PrecatorioCard[]>([])
   const [loading, setLoading] = useState(true)
-  const [filtros, setFiltros] = useState<FiltrosPrecatorios>({})
+  const { filtros, updateFiltros, clearFiltros, filtrosAtivos } = usePersistedFilters("filtros:kanban")
   const [updatedPrecatorios, setUpdatedPrecatorios] = useState<Set<string>>(new Set())
   const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
   const canEnviarCalculoRoles = roles.some((role) =>
     ["admin", "juridico", "analista", "analista_processual"].includes(role)
   )
+
+  const isOperadorComercial = roles.includes("operador_comercial")
+  const colunasVisiveis = useMemo(() => {
+    if (isOperadorComercial) {
+      return COLUNAS_BASE
+    }
+    return COLUNAS_BASE.filter((c) => c.id !== "recebidos_admin")
+  }, [isOperadorComercial])
 
   const [moveDialog, setMoveDialog] = useState<{
     open: boolean
@@ -898,7 +907,7 @@ export default function KanbanPageNewGates() {
         console.warn("[Kanban] Falha no select detalhado, tentando fallback:", error)
         const { data: fallbackData, error: fallbackError } = await supabase
           .from("precatorios")
-          .select("*")
+          .select(selectFieldsLegacy)
           .is("deleted_at", null)
           .order("created_at", { ascending: false })
         if (fallbackError) throw fallbackError
@@ -979,6 +988,13 @@ export default function KanbanPageNewGates() {
           if (!p.search_index?.includes(term)) return false
         }
 
+        if (filtrosAtuais.responsavel_id) {
+          const responsavelSelecionado = filtrosAtuais.responsavel_id
+          const pertenceAoResponsavel =
+            p.responsavel === responsavelSelecionado || p.dono_usuario_id === responsavelSelecionado
+          if (!pertenceAoResponsavel) return false
+        }
+
         if (filtrosAtuais.status && filtrosAtuais.status.length > 0) {
           if (!filtrosAtuais.status.includes(p.status || "")) return false
         }
@@ -1021,25 +1037,49 @@ export default function KanbanPageNewGates() {
     [normalizeString]
   )
 
-  const updateFiltros = (novosFiltros: FiltrosPrecatorios) => setFiltros(novosFiltros)
-  const clearFiltros = () => setFiltros({})
   const removeFiltro = (key: string) => {
-    setFiltros((prev) => {
-      const newFiltros = { ...prev }
-      delete newFiltros[key as keyof FiltrosPrecatorios]
-      return newFiltros
-    })
+    const newFiltros = { ...filtros }
+    delete newFiltros[key as keyof FiltrosPrecatorios]
+    updateFiltros(newFiltros)
   }
-
-  const filtrosAtivos = getFiltrosAtivos(filtros)
   const deferredFiltros = useDeferredValue(filtros)
   const filteredPrecatorios = useMemo(
     () => getFilteredPrecatorios(precatorios, deferredFiltros),
     [precatorios, deferredFiltros, getFilteredPrecatorios]
   )
+  const responsaveisFiltro = useMemo(() => {
+    const ids = new Set<string>()
+    const nomesPorId = new Map<string, string>()
+
+    precatorios.forEach((precatorio) => {
+      if (precatorio.responsavel) {
+        ids.add(precatorio.responsavel)
+        const nomeResponsavel = precatorio.responsavel_perfil?.nome?.trim()
+        if (nomeResponsavel) {
+          nomesPorId.set(precatorio.responsavel, nomeResponsavel)
+        }
+      }
+
+      if (precatorio.dono_usuario_id) {
+        ids.add(precatorio.dono_usuario_id)
+      }
+    })
+
+    return Array.from(ids)
+      .map((id) => ({
+        id,
+        nome: nomesPorId.get(id) || `Operador ${id.slice(0, 8)}`,
+      }))
+      .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
+  }, [precatorios])
+  const responsavelAtivo = useMemo(() => {
+    if (!filtros.responsavel_id) return null
+    const responsavel = responsaveisFiltro.find((item) => item.id === filtros.responsavel_id)
+    return responsavel?.nome || filtros.responsavel_id
+  }, [filtros.responsavel_id, responsaveisFiltro])
 
   const setSearchTerm = (term: string) => {
-    setFiltros(prev => ({ ...prev, termo: term }))
+    updateFiltros({ ...filtros, termo: term || undefined })
   }
 
   const { grupos, totaisColuna } = useMemo(() => {
@@ -1047,7 +1087,7 @@ export default function KanbanPageNewGates() {
     const totals: Record<string, number> = {}
     const statusToColumns = new Map<string, string[]>()
 
-    COLUNAS.forEach((coluna) => {
+    colunasVisiveis.forEach((coluna) => {
       grouped[coluna.id] = []
       totals[coluna.id] = 0
       const statusIds = coluna.statusIds ?? [coluna.id]
@@ -1059,7 +1099,17 @@ export default function KanbanPageNewGates() {
     })
 
     filteredPrecatorios.forEach((precatorio) => {
-      const matchedColumns = statusToColumns.get(precatorio.status_kanban)
+      let statusToUse = precatorio.status_kanban
+      
+      if (
+        statusToUse === "entrada" &&
+        precatorio.distribuido_por_admin &&
+        isOperadorComercial
+      ) {
+        statusToUse = "recebidos_admin"
+      }
+
+      const matchedColumns = statusToColumns.get(statusToUse)
       if (!matchedColumns || matchedColumns.length === 0) return
 
       const valor =
@@ -1639,7 +1689,7 @@ export default function KanbanPageNewGates() {
         </div>
         <div className="flex-1 min-h-0 overflow-hidden">
           <div className="flex gap-4 overflow-hidden">
-            {COLUNAS.slice(0, 4).map((coluna) => (
+            {colunasVisiveis.slice(0, 4).map((coluna) => (
               <div
                 key={coluna.id}
                 className={`${columnWidthClass} h-full flex flex-col`}
@@ -1680,7 +1730,10 @@ export default function KanbanPageNewGates() {
                 filtros={filtros}
                 onFilterChange={updateFiltros}
                 onClearFilters={clearFiltros}
-                totalFiltrosAtivos={filtrosAtivos.length}
+                totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
+                responsaveis={responsaveisFiltro}
+                showResponsavelFilter={responsaveisFiltro.length > 0}
+                showDistribuicaoFilter={true}
               />
             </div>
           </div>
@@ -1706,9 +1759,24 @@ export default function KanbanPageNewGates() {
 
         <Separator />
 
-        {filtrosAtivos.length > 0 && (
+        {(filtrosAtivos.length > 0 || !!filtros.responsavel_id) && (
           <div className="flex items-center gap-2 flex-wrap">
             <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Filtros:</span>
+            {filtros.responsavel_id && (
+              <Badge
+                variant="secondary"
+                className="flex items-center gap-1.5 px-2.5 py-1"
+              >
+                <span className="font-semibold">Responsável:</span>
+                <span>{responsavelAtivo}</span>
+                <button
+                  onClick={() => removeFiltro("responsavel_id")}
+                  className="ml-1 hover:text-destructive transition-colors"
+                >
+                  <X className="h-3 w-3" />
+                </button>
+              </Badge>
+            )}
             {filtrosAtivos.map((filtro, index) => (
               <Badge
                 key={index}
@@ -1765,7 +1833,7 @@ export default function KanbanPageNewGates() {
               <div
                 className={`flex min-w-max h-full gap-2.5 md:gap-3 ${isDragging ? "snap-none" : "snap-x snap-proximity"}`}
               >
-                {COLUNAS.map((coluna) => {
+                {colunasVisiveis.map((coluna) => {
                   const precatoriosColuna = grupos[coluna.id] || []
                   const totalColuna = totaisColuna[coluna.id] || 0
 

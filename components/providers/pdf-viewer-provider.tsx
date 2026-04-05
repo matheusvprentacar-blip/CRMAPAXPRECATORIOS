@@ -1,6 +1,6 @@
 "use client"
 
-import React, { createContext, useContext, useState, useEffect } from "react"
+import React, { createContext, useContext, useState } from "react"
 import { FloatingWindow } from "@/components/ui/floating-window"
 import { getFileDownloadUrl } from "@/lib/utils/file-upload"
 

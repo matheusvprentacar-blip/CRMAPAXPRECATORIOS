@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // =====================================================
 // Parser de Excel para Importação de Precatórios
 // =====================================================
@@ -130,7 +131,7 @@ function rowsToObjects(data: any[][], headers?: string[]): any[] {
 /**
  * Converte colunas para objetos
  */
-function columnsToObjects(data: any[][], headers?: string[]): any[] {
+function columnsToObjects(data: any[][], _headers?: string[]): any[] {
   if (data.length === 0 || data[0].length < 2) return []
   
   const numObjects = data[0].length - 1

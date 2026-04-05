@@ -49,7 +49,7 @@ type HeatmapProps = HTMLAttributes<HTMLDivElement> &
 function getAllDays(start: string, end: string): string[] {
   // Generate all days between start and end dates (inclusive)
   const days: string[] = [];
-  let curr = new Date(start + "T00:00:00");
+  const curr = new Date(start + "T00:00:00");
 
   const endDate = new Date(end + "T00:00:00");
 
@@ -278,41 +278,12 @@ export default function Heatmap(props: HeatmapProps) {
   let safeProps: HTMLAttributes<HTMLDivElement> = {};
 
   if (colorMode === "discrete") {
-    const {
-      data,
-      startDate,
-      endDate,
-      cellSize,
-      daysOfTheWeek,
-      gap,
-      displayStyle,
-      valueDisplayFunction,
-      dateDisplayFunction,
-      className,
-      colorMode,
-      customColorMap,
-      colorScale,
-      ...others
-    } = props;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data, startDate, endDate, cellSize, daysOfTheWeek, gap, displayStyle, valueDisplayFunction, dateDisplayFunction, className, colorMode, customColorMap, colorScale, ...others } = props;
     safeProps = others;
   } else if (colorMode === "interpolate") {
-    const {
-      data,
-      startDate,
-      endDate,
-      cellSize,
-      daysOfTheWeek,
-      gap,
-      displayStyle,
-      valueDisplayFunction,
-      dateDisplayFunction,
-      className,
-      colorMode,
-      minColor,
-      maxColor,
-      interpolation,
-      ...others
-    } = props;
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    const { data, startDate, endDate, cellSize, daysOfTheWeek, gap, displayStyle, valueDisplayFunction, dateDisplayFunction, className, colorMode, minColor, maxColor, interpolation, ...others } = props;
     safeProps = others;
   }
 

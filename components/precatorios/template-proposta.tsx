@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import React, { useRef } from "react"
 import { Button } from "@/components/ui/button"
-import { Printer, Download } from "@/components/icons"
+import { Printer } from "@/components/icons"
 
 interface TemplatePropostaProps {
     precatorio: any

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useEffect, useState, type ReactNode } from "react"
@@ -310,7 +311,7 @@ export default function FinanceiroPage() {
                   Movimentações Recentes
                 </SectionLabel>
                 <span className="text-[11px] text-foreground/38">
-                  Gestão completa na aba "Transações"
+                  Gestão completa na aba &quot;Transações&quot;
                 </span>
               </div>
               <Card className="border-border/55 overflow-hidden">

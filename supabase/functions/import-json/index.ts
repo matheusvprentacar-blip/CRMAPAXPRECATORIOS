@@ -213,9 +213,9 @@ function validarCPF(cpf: string) {
     cpf = cpf.replace(/[^\d]/g, '')
     if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false
     let s = 0; for (let i = 0; i < 9; i++) s += parseInt(cpf.charAt(i)) * (10 - i);
-    let r = 11 - (s % 11); let d1 = r >= 10 ? 0 : r;
+    let r = 11 - (s % 11); const d1 = r >= 10 ? 0 : r;
     s = 0; for (let i = 0; i < 10; i++) s += parseInt(cpf.charAt(i)) * (11 - i);
-    r = 11 - (s % 11); let d2 = r >= 10 ? 0 : r;
+    r = 11 - (s % 11); const d2 = r >= 10 ? 0 : r;
     return parseInt(cpf.charAt(9)) === d1 && parseInt(cpf.charAt(10)) === d2
 }
 function validarCNPJ(cnpj: string) {

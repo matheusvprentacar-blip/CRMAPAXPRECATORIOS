@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 ﻿"use client"
 
 import { useState, useEffect } from "react"
@@ -9,17 +10,20 @@ import {
 } from "@/components/ui/dialog"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { Loader2, FileText, CheckCircle2, Scale, Calculator, History, FileCheck, ScrollText } from "@/components/icons"
+import { Loader2, FileText, Scale, Calculator, History, ScrollText } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
-import { FormInteresse } from "./form-interesse"
+// FormInteresse removed - unused
+
 import { ChecklistDocumentos } from "./checklist-documentos"
 import { ChecklistCertidoes } from "./checklist-certidoes"
 import { FormParecerJuridico } from "./form-parecer-juridico"
-import { FormExportarCalculo } from "./form-exportar-calculo"
-import { HistoricoCalculos } from "./historico-calculos"
+// FormExportarCalculo, HistoricoCalculos removed - unused
+
 import { AbaProposta } from "./aba-proposta"
 import { AbaEscrituras } from "./aba-escrituras"
+import { AbaContratos } from "./aba-contratos"
+import { AbaProcuracao } from "./aba-procuracao"
 
 interface ModalDetalhesKanbanProps {
   open: boolean
@@ -233,12 +237,14 @@ export function ModalDetalhesKanban({
   if (!precatorio) return null
 
   const roles = Array.isArray(userRole) ? userRole : userRole ? [userRole] : []
-  const podeEditarInteresse = ["admin", "operador_comercial"].some((role) => roles.includes(role))
+  const _podeEditarInteresse = ["admin", "operador_comercial"].some((role) => roles.includes(role))
   const podeEditarItens = ["admin", "operador_comercial", "operador_calculo"].some((role) => roles.includes(role))
   const podeSolicitarJuridico = ["admin", "operador_calculo"].some((role) => roles.includes(role))
   const podeDarParecer = ["admin", "juridico"].some((role) => roles.includes(role))
-  const podeExportarCalculo = ["admin", "operador_calculo"].some((role) => roles.includes(role))
+  const _podeExportarCalculo = ["admin", "operador_calculo"].some((role) => roles.includes(role))
   const podeEditarEscrituras = ["admin", "gestor", "gestor_escrituras"].some((role) => roles.includes(role))
+  const podeEditarContratos = ["admin", "gestor", "gestor_escrituras"].some((role) => roles.includes(role))
+  const podeEditarProcuracao = ["admin", "gestor", "gestor_escrituras"].some((role) => roles.includes(role))
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -251,27 +257,35 @@ export function ModalDetalhesKanban({
         </DialogHeader>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-7">
+          <TabsList className="grid w-full grid-cols-9">
             <TabsTrigger value="geral">Geral</TabsTrigger>
             <TabsTrigger value="documentos">
               <FileText className="h-4 w-4 mr-1" />
-              Documentos
+              Docs
             </TabsTrigger>
             <TabsTrigger value="certidoes">
               <FileText className="h-4 w-4 mr-1" />
-              Certidões
+              Certs
             </TabsTrigger>
             <TabsTrigger value="escrituras">
               <ScrollText className="h-4 w-4 mr-1" />
-              Escrituras
+              Escrit.
+            </TabsTrigger>
+            <TabsTrigger value="contratos">
+              <FileText className="h-4 w-4 mr-1" />
+              Contr.
+            </TabsTrigger>
+            <TabsTrigger value="procuracao">
+              <ScrollText className="h-4 w-4 mr-1" />
+              Procur.
             </TabsTrigger>
             <TabsTrigger value="juridico">
               <Scale className="h-4 w-4 mr-1" />
-              Jurídico
+              Juríd.
             </TabsTrigger>
             <TabsTrigger value="proposta">
               <Calculator className="h-4 w-4 mr-1" />
-              Proposta
+              Prop.
             </TabsTrigger>
             <TabsTrigger value="auditoria">
               <History className="h-4 w-4 mr-1" />
@@ -436,6 +450,31 @@ export function ModalDetalhesKanban({
               onUpdate={handleUpdate}
               initialStatus={precatorio?.status_escrituras}
               initialObservacoes={precatorio?.observacoes_escrituras}
+              precatorio={precatorio}
+            />
+          </TabsContent>
+
+          {/* Aba Contratos */}
+          <TabsContent value="contratos">
+            <AbaContratos
+              precatorioId={precatorioId}
+              canEdit={podeEditarContratos}
+              onUpdate={handleUpdate}
+              initialStatus={precatorio?.status_contrato}
+              initialObservacoes={precatorio?.observacoes_contrato}
+              precatorio={precatorio}
+            />
+          </TabsContent>
+
+          {/* Aba Procuração */}
+          <TabsContent value="procuracao">
+            <AbaProcuracao
+              precatorioId={precatorioId}
+              canEdit={podeEditarProcuracao}
+              onUpdate={handleUpdate}
+              initialStatus={precatorio?.status_procuracao}
+              initialObservacoes={precatorio?.observacoes_procuracao}
+              precatorio={precatorio}
             />
           </TabsContent>
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useRef } from 'react'
@@ -211,6 +212,11 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
     'analise_itcmd'
   ] as const
 
+  const JSON_FIELDS = [
+    'pontos_importantes',
+    'detalhes'
+  ] as const
+
   const FIELD_ALIASES: Record<string, string[]> = {
     numero_precatorio: ['numero'],
     numero_processo: ['processo', 'numero_do_processo'],
@@ -287,6 +293,12 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
       return Number.isFinite(parsed) ? parsed : undefined
     }
     return undefined
+  }
+
+  function normalizeAnoOrcamentario(value: unknown): number | undefined {
+    const parsed = coerceNumber(value)
+    if (parsed === undefined || !Number.isInteger(parsed)) return undefined
+    return parsed >= 1900 && parsed <= 2999 ? parsed : undefined
   }
 
   function coerceBoolean(value: unknown): boolean | undefined {
@@ -773,6 +785,15 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
             confirmFloat(dadosNormalizados, field, value)
           })
 
+          const anoOrcamentarioNormalizado = normalizeAnoOrcamentario(
+            getFirstValue(precatorioSafe, ['ano_orcamentario', ...(FIELD_ALIASES.ano_orcamentario || [])])
+          )
+          if (anoOrcamentarioNormalizado !== undefined) {
+            dadosNormalizados.ano_orcamentario = anoOrcamentarioNormalizado
+          } else {
+            delete dadosNormalizados.ano_orcamentario
+          }
+
           DATE_FIELDS.forEach((field) => {
             const value = getFirstValue(precatorioSafe, [field, ...(FIELD_ALIASES[field] || [])])
             confirmDate(dadosNormalizados, field, value)
@@ -781,6 +802,25 @@ export function ImportJsonModal({ open, onOpenChange, onSuccess }: ImportJsonMod
           BOOLEAN_FIELDS.forEach((field) => {
             const value = getFirstValue(precatorioSafe, [field, ...(FIELD_ALIASES[field] || [])])
             confirmBoolean(dadosNormalizados, field, value)
+          })
+
+          const pontosImportantesNormalizados = [
+            ...asTextList(getFirstValue(precatorioSafe, ['pontos_importantes', 'pontos_chave', 'highlights'])),
+            ...asTextList(getFirstValue(precatorioSafe, ['detalhes.pontos_importantes', 'detalhes.pontos_chave', 'detalhes.highlights']))
+          ]
+            .map((item) => item.trim())
+            .filter(Boolean)
+          if (pontosImportantesNormalizados.length > 0) {
+            dadosNormalizados.pontos_importantes = pontosImportantesNormalizados
+          } else {
+            const pontosImportantesBrutos = getFirstValue(precatorioSafe, ['pontos_importantes'])
+            if (Array.isArray(pontosImportantesBrutos)) dadosNormalizados.pontos_importantes = []
+          }
+
+          JSON_FIELDS.forEach((field) => {
+            const value = getFirstValue(precatorioSafe, [field, ...(FIELD_ALIASES[field] || [])])
+            if (!value || typeof value !== 'object' || Array.isArray(value)) return
+            dadosNormalizados[field] = value
           })
 
           const observacoesOrganizadas = composeObservacoes(precatorioSafe)

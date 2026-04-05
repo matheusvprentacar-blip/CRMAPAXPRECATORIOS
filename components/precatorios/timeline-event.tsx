@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import type { TimelineEvent } from "@/lib/types/database"
@@ -23,7 +24,7 @@ interface TimelineEventItemProps {
   isLast?: boolean
 }
 
-export function TimelineEventItem({ event, isLast = false }: TimelineEventItemProps) {
+export function TimelineEventItem({ event, isLast: _isLast = false }: TimelineEventItemProps) {
   const eventConfig = {
     criacao: {
       icon: FileText,

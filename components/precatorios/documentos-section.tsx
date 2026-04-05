@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import { Upload, FileText, List, CheckSquare } from "@/components/icons"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { DocumentoCard } from "./documento-card"
 import { UploadDocumentoModal } from "./upload-documento-modal"
@@ -28,7 +28,7 @@ export function DocumentosSection({
   const [documentos, setDocumentos] = useState<DocumentoPrecatorio[]>([])
   const [loading, setLoading] = useState(true)
   const [showUploadModal, setShowUploadModal] = useState(false)
-  const [tipoSelecionado, setTipoSelecionado] = useState<TipoDocumento | undefined>()
+  const [_tipoSelecionado, setTipoSelecionado] = useState<TipoDocumento | undefined>()
 
   // Carregar documentos
   useEffect(() => {
@@ -69,7 +69,7 @@ export function DocumentosSection({
   // Gerar checklist
   const checklist = gerarChecklist(documentos)
   const obrigatorios = documentos.filter((doc) => !doc.opcional)
-  const opcionais = documentos.filter((doc) => doc.opcional)
+  const _opcionais = documentos.filter((doc) => doc.opcional)
   const tiposJaAnexados = documentos.map((doc) => doc.tipo_documento)
 
   if (loading) {
@@ -110,7 +110,7 @@ export function DocumentosSection({
         <Alert>
           <FileText className="h-4 w-4" />
           <AlertDescription>
-            Nenhum documento anexado ainda. Clique em "Anexar Documento" para começar.
+            Nenhum documento anexado ainda. Clique em &quot;Anexar Documento&quot; para começar.
           </AlertDescription>
         </Alert>
       )}

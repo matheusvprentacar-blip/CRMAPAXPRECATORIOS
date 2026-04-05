@@ -342,11 +342,13 @@
 
 <body>
     <div class="page" id="document">
-        <img src="/logo-apax.png" class="watermark" alt="Timbrado">
+        <img src="/logo-apax.png" class="watermark" alt="Timbrado"
+            onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='../logo-apax.png';}">
 
         <header>
             <div class="logo-box">
-                <img src="/logo-apax.png" alt="Logo Apax">
+                <img src="/logo-apax.png" alt="Logo Apax"
+                    onerror="if(!this.dataset.fallback){this.dataset.fallback='1';this.src='../logo-apax.png';}">
             </div>
             <div class="company-info">
                 <h1>Apax Investimentos Ltda.</h1>

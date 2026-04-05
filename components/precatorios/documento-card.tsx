@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Download, Trash2, FileText, Edit2, Check, X, File } from "@/components/icons"
+import { Download, Trash2, Edit2, Check, X, File } from "@/components/icons"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -20,7 +20,6 @@ import type { DocumentoPrecatorio } from "@/lib/types/documento"
 import {
   TIPO_DOCUMENTO_LABELS,
   formatarTamanho,
-  getIconeArquivo,
 } from "@/lib/types/documento"
 import {
   downloadDocumento,
@@ -250,7 +249,7 @@ export function DocumentoCard({
           <AlertDialogHeader>
             <AlertDialogTitle>Remover documento?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja remover o documento "{documento.nome_arquivo}"?
+              Tem certeza que deseja remover o documento &quot;{documento.nome_arquivo}&quot;?
               Esta ação não pode ser desfeita.
             </AlertDialogDescription>
           </AlertDialogHeader>

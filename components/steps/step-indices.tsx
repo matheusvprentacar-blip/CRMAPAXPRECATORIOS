@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client"
 
 import { useState, useEffect } from "react"
@@ -70,7 +71,7 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
 
   const getSumSELIC = (start: Date, end: Date): number => {
     let sum = 0
-    let current = new Date(start.getFullYear(), start.getMonth(), 1)
+    const current = new Date(start.getFullYear(), start.getMonth(), 1)
     const endDate = new Date(end.getFullYear(), end.getMonth(), 1)
 
     while (current <= endDate) {
@@ -141,7 +142,7 @@ export function StepIndices({ dados, setDados, onCompletar, voltar }: StepIndice
 
     if (aplicaIpca2025) {
       let somaPercentual = 0
-      let current = new Date(inicioIpca2025.getFullYear(), inicioIpca2025.getMonth(), 1)
+      const current = new Date(inicioIpca2025.getFullYear(), inicioIpca2025.getMonth(), 1)
       const endDate = new Date(fimIpca2025.getFullYear(), fimIpca2025.getMonth(), 1)
 
       while (current <= endDate) {

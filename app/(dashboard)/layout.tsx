@@ -28,6 +28,7 @@ import {
   Megaphone,
   CalendarDays,
   Activity,
+  Phone,
 } from "@/components/icons"
 import { Avatar, AvatarIcon, Slider } from "@/lib/heroui/compat"
 import {
@@ -191,6 +192,12 @@ const navigation = [
       </svg>
     ),
     roles: ["admin", "gestor_certidoes", "gestor_escrituras", "juridico"],
+  },
+  {
+    name: "Atendimento",
+    href: "/atendimento",
+    icon: Phone,
+    roles: ["admin", "agente_atendimento"],
   },
   { name: "Telemetria", href: "/admin/telemetria", icon: Activity, roles: ["admin"] },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },

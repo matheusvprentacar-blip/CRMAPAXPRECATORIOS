@@ -988,7 +988,7 @@ export const Slider = React.forwardRef<HTMLDivElement, SliderProps>(
     ref
   ) => {
     const [internalValue, setInternalValue] = React.useState(value)
-    const trackRef = React.useRef<HTMLDivElement>(null)
+    const _trackRef = React.useRef<HTMLDivElement>(null)
 
     React.useEffect(() => {
       setInternalValue(value)

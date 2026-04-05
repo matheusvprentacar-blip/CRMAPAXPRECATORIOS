@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 'use client'
 
 import { useState, useRef } from 'react'
 import { Button } from '@/components/ui/button'
-import { Upload, Loader2, FileSpreadsheet } from "@/components/icons"
+import { Loader2, FileSpreadsheet } from "@/components/icons"
 import { toast } from 'sonner'
 
 interface UploadExcelButtonProps {

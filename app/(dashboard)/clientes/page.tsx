@@ -59,21 +59,22 @@ type ClienteFilterChip = {
   value: string
 }
 
-const glassCard = "rounded-3xl border border-border bg-background shadow-sm"
+const _glassCard = "rounded-3xl border border-border bg-background shadow-sm"
 
-const cardSoft = "rounded-3xl border border-border bg-background shadow-sm"
+const _cardSoft = "rounded-3xl border border-border bg-background shadow-sm"
 
-const clientGridRows = ""
-const clientCardHeight = ""
+const _clientGridRows = ""
+const _clientCardHeight = ""
 
 const modalWrapper = "z-[120] p-2 sm:p-4"
 const modalBackdrop = "bg-black/65"
 const modalBase =
-  "w-[min(96vw,72rem)] max-w-[96vw] rounded-3xl border border-border bg-background shadow-sm"
+  "w-[min(96vw,72rem)] max-w-[96vw] rounded-3xl border border-border !bg-background text-foreground shadow-sm"
 const modalContentBase =
-  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-3xl bg-background"
+  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-3xl !bg-background text-foreground"
+const modalSurfaceStyle: React.CSSProperties = {}
 
-const sheen = ""
+const _sheen = ""
 const carteiraAccentClass = "text-[#95c63d] dark:text-[#a7d75a] drop-shadow-[0_0_12px_rgba(149,198,61,0.16)]"
 
 const clienteModalInputClassNames =
@@ -364,9 +365,9 @@ function Checkbox({ onValueChange, classNames, className, children, ...props }: 
   )
 }
 
-const Divider = Separator
+const _Divider = Separator
 
-function Tooltip({ content, children }: { content: ReactNode; children: ReactNode }) {
+function _Tooltip({ content, children }: { content: ReactNode; children: ReactNode }) {
   if (typeof content !== "string") return <>{children}</>
   return <span title={content}>{children}</span>
 }
@@ -403,7 +404,7 @@ function Modal({ isOpen = false, onOpenChange, size, scrollBehavior, backdrop, c
       </HeroModal.Trigger>
       <HeroModal.Backdrop className={backdropClass}>
         <HeroModal.Container size={mapModalSize(size)} scroll={scrollBehavior === "inside" ? "inside" : "outside"} className={classNames?.wrapper}>
-          <HeroModal.Dialog className={classNames?.base}>
+          <HeroModal.Dialog className={classNames?.base} style={modalSurfaceStyle}>
             <ModalContentContext.Provider value={{}}>
               {children}
             </ModalContentContext.Provider>
@@ -415,7 +416,7 @@ function Modal({ isOpen = false, onOpenChange, size, scrollBehavior, backdrop, c
 }
 
 function ModalContent({ className, children }: { className?: string; children?: ReactNode }) {
-  return <div className={className}>{children}</div>
+  return <div className={className} style={modalSurfaceStyle}>{children}</div>
 }
 
 function ModalHeader({ className, children }: { className?: string; children?: ReactNode }) {
@@ -795,13 +796,13 @@ function ClienteGridCard({
             className="flex-shrink-0"
           >
             <Dropdown>
-              <DropdownTrigger>
-                <button
-                  aria-label={`Ações de ${nome}`}
-                  className="grid h-8 w-8 place-items-center rounded-lg text-muted-foreground transition hover:bg-muted hover:text-foreground"
-                >
+              <DropdownTrigger
+                aria-label={`Ações de ${nome}`}
+                className="h-8 w-8 min-w-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+              >
+                <span className="inline-flex items-center justify-center" aria-hidden="true">
                   <MoreVertical className="h-4 w-4" />
-                </button>
+                </span>
               </DropdownTrigger>
               <DropdownPopover placement="bottom end">
                 <DropdownMenu
@@ -2288,10 +2289,13 @@ export default function ClientsPage() {
                     </>
                   )}
                   <Dropdown placement="bottom-end">
-                    <DropdownTrigger>
-                      <Button as="div" isIconOnly variant="light" aria-label="Mais acoes">
+                    <DropdownTrigger
+                      aria-label="Mais acoes"
+                      className="inline-flex h-10 w-10 min-w-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                    >
+                      <span className="inline-flex items-center justify-center" aria-hidden="true">
                         <MoreVertical className="h-5 w-5" />
-                      </Button>
+                      </span>
                     </DropdownTrigger>
                     <DropdownPopover>
                       <DropdownMenu aria-label="Acoes do cliente">

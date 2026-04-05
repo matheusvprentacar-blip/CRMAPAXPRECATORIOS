@@ -109,6 +109,9 @@ interface PrecatorioAdmin {
   dono_usuario_id: string
   responsavel?: string
   responsavel_calculo_id: string
+  distribuido_por_admin?: boolean
+  distribuido_por_admin_id?: string | null
+  distribuido_por_admin_em?: string | null
   urgente?: boolean
   titular_falecido?: boolean
   nivel_complexidade?: "baixa" | "media" | "alta" | null
@@ -120,6 +123,7 @@ interface PrecatorioAdmin {
   file_url?: string
   usuario_dono?: Usuario
   usuario_calculo?: Usuario
+  usuario_distribuidor_admin?: Usuario | null
 }
 
 type AdminPrecatoriosTab = "todos" | "distribuidos" | "pendentes"
@@ -294,6 +298,14 @@ function applyPrecatoriosAdminFilters(
     query = query.not("dono_usuario_id", "is", null)
   } else if (filtroTab === "pendentes") {
     query = query.is("dono_usuario_id", null)
+  }
+
+  if (filtros.distribuicao === "distribuido") {
+    query = query.not("dono_usuario_id", "is", null)
+  } else if (filtros.distribuicao === "pendente") {
+    query = query.is("dono_usuario_id", null)
+  } else if (filtros.distribuicao === "distribuido_admin") {
+    query = query.eq("distribuido_por_admin", true)
   }
 
   const trimmedSearch = searchTerm.trim()
@@ -710,7 +722,15 @@ export default function AdminPrecatoriosPage() {
   const [loading, setLoading] = useState(true)
   const [searchInput, setSearchInput] = useState("")
   const [filtroTab, setFiltroTab] = useState<AdminPrecatoriosTab>("todos")
-  const [filtrosAvancados, setFiltrosAvancados] = useState<FiltrosPrecatorios>({})
+  const [filtrosAvancados, setFiltrosAvancados] = useState<FiltrosPrecatorios>(() => {
+    if (typeof window === "undefined") return {}
+    try {
+      const raw = localStorage.getItem("filtros:admin-precatorios")
+      return raw ? (JSON.parse(raw) as FiltrosPrecatorios) : {}
+    } catch {
+      return {}
+    }
+  })
   const searchTerm = filtrosAvancados.termo || ""
   const deferredSearchTerm = useDeferredValue(searchTerm)
   const [currentPage, setCurrentPage] = useState(1)
@@ -745,6 +765,11 @@ export default function AdminPrecatoriosPage() {
   const [autoDistribOutlierMultiplier, setAutoDistribOutlierMultiplier] = useState(1.6)
   const [autoDistribSaving, setAutoDistribSaving] = useState(false)
 
+  const [pendentesSubTab, setPendentesSubTab] = useState<"geral" | "atendimento">("geral")
+  const [creditosAtendimento, setCreditosAtendimento] = useState<PrecatorioAdmin[]>([])
+  const [loadingAtendimento, setLoadingAtendimento] = useState(false)
+  const [atendimentoCount, setAtendimentoCount] = useState(0)
+
   const [distribuicao, setDistribuicao] = useState({
     dono_usuario_id: "",
     responsavel_calculo_id: "none",
@@ -771,6 +796,21 @@ export default function AdminPrecatoriosPage() {
     () => getFiltrosAtivos(filtrosAvancados),
     [filtrosAvancados]
   )
+  useEffect(() => {
+    if (typeof window === "undefined") return
+    try {
+      const cleaned = Object.fromEntries(
+        Object.entries(filtrosAvancados).filter(([, v]) => v !== undefined && v !== null)
+      )
+      if (Object.keys(cleaned).length === 0) {
+        localStorage.removeItem("filtros:admin-precatorios")
+      } else {
+        localStorage.setItem("filtros:admin-precatorios", JSON.stringify(cleaned))
+      }
+    } catch {
+      // silently ignore quota errors
+    }
+  }, [filtrosAvancados])
   const responsavelAtivo = useMemo(() => {
     if (!filtrosAvancados.responsavel_id) return null
     const responsavel = responsaveisFiltro.find((item) => item.id === filtrosAvancados.responsavel_id)
@@ -1012,6 +1052,9 @@ export default function AdminPrecatoriosPage() {
         usuario_calculo: prec.responsavel_calculo_id
           ? usersById.get(prec.responsavel_calculo_id) || null
           : null,
+        usuario_distribuidor_admin: prec.distribuido_por_admin_id
+          ? usersById.get(prec.distribuido_por_admin_id) || null
+          : null,
       }))
 
       setSummaryCounts(counts)
@@ -1044,8 +1087,39 @@ export default function AdminPrecatoriosPage() {
     }
   }, [currentUser, loadData])
 
+  const loadCreditosAtendimento = useCallback(async () => {
+    setLoadingAtendimento(true)
+    try {
+      const supabase = createBrowserClient()
+      if (!supabase) return
+      const { data, error } = await supabase
+        .from("precatorios")
+        .select("*, usuario_dono:dono_usuario_id(id,nome,email,role), usuario_calculo:responsavel_calculo_id(id,nome,email,role), usuario_distribuidor_admin:distribuido_por_admin_id(id,nome,email,role)")
+        .eq("origem", "atendimento")
+        .eq("status_atendimento", "interessado")
+        .order("created_at", { ascending: false })
+      if (!error) {
+        setCreditosAtendimento(data ?? [])
+        setAtendimentoCount(data?.length ?? 0)
+      }
+    } finally {
+      setLoadingAtendimento(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    if (filtroTab === "pendentes" && pendentesSubTab === "atendimento") {
+      void loadCreditosAtendimento()
+    }
+  }, [filtroTab, pendentesSubTab, loadCreditosAtendimento])
+
+  useEffect(() => {
+    void loadCreditosAtendimento()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   async function handleDistribuir() {
-    if (!selectedPrecatorio || !distribuicao.dono_usuario_id) return
+    if (!selectedPrecatorio || !distribuicao.dono_usuario_id || !currentUser?.id) return
 
 
     setSaving(true)
@@ -1057,6 +1131,9 @@ export default function AdminPrecatoriosPage() {
         responsavel: distribuicao.dono_usuario_id,
         dono_usuario_id: distribuicao.dono_usuario_id,
         prioridade: distribuicao.prioridade,
+        distribuido_por_admin: true,
+        distribuido_por_admin_id: currentUser.id,
+        distribuido_por_admin_em: new Date().toISOString(),
         // status: "distribuido", // Removido pois viola check constraint constraint 'precatorios_status_check'
       }
 
@@ -1217,6 +1294,13 @@ export default function AdminPrecatoriosPage() {
     return new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" }).format(value)
   }
 
+  const formatDateTime = (value?: string | null) => {
+    if (!value) return "Data não registrada"
+    const date = new Date(value)
+    if (Number.isNaN(date.getTime())) return "Data não registrada"
+    return date.toLocaleString("pt-BR")
+  }
+
   const getPrioridadeVariant = (p: string): "destructive" | "default" | "secondary" | "outline" => {
     if (p === "urgente") return "destructive"
     if (p === "alta") return "default"
@@ -1278,7 +1362,7 @@ export default function AdminPrecatoriosPage() {
   }
 
   async function handleAutoDistribuir() {
-    if (!autoDistribPreview) return
+    if (!autoDistribPreview || !currentUser?.id) return
     const { assignments, outliers } = autoDistribPreview
 
     const updates: Array<{ id: string; userId: string }> = []
@@ -1311,6 +1395,9 @@ export default function AdminPrecatoriosPage() {
             responsavel: update.userId,
             dono_usuario_id: update.userId,
             prioridade: autoDistribPrioridade,
+            distribuido_por_admin: true,
+            distribuido_por_admin_id: currentUser.id,
+            distribuido_por_admin_em: now,
             updated_at: now,
           })
           .eq("id", update.id)
@@ -1366,10 +1453,10 @@ export default function AdminPrecatoriosPage() {
 
   return (
     <RoleGuard allowedRoles={["admin"]}>
-      <div className="space-y-6 p-6 pb-24 relative">
+      <div className="relative space-y-5 p-3 pb-24 sm:space-y-6 sm:p-6">
         {/* Bulk Actions Floating Bar */}
         {selectedIds.length > 0 && (
-          <div className="fixed bottom-6 left-1/2 transform -translate-x-1/2 bg-popover border shadow-2xl rounded-lg px-6 py-3 flex items-center gap-4 z-50 animate-in slide-in-from-bottom-5">
+          <div className="fixed bottom-4 left-1/2 z-50 flex w-[calc(100%-1rem)] max-w-2xl -translate-x-1/2 flex-wrap items-center justify-center gap-2 rounded-lg border bg-popover px-3 py-2 shadow-2xl animate-in slide-in-from-bottom-5 sm:bottom-6 sm:w-auto sm:flex-nowrap sm:justify-start sm:gap-4 sm:px-6 sm:py-3">
             <span className="text-sm font-medium">{selectedIds.length} selecionado(s)</span>
             <Button
               size="sm"
@@ -1399,15 +1486,15 @@ export default function AdminPrecatoriosPage() {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-primary">Gestão de Precatórios</h1>
+            <h1 className="text-2xl font-bold text-primary sm:text-3xl">Gestão de Precatórios</h1>
             <p className="text-muted-foreground">Visão global dos precatórios do sistema para todos os admins</p>
           </div>
-          <div className="flex gap-2">
+          <div className="flex w-full gap-2 sm:w-auto">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button>
+                <Button className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" />
                   Importação Admin
                 </Button>
@@ -1435,7 +1522,7 @@ export default function AdminPrecatoriosPage() {
               <FileText className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summaryCounts.todos}</div>
+              <div className="text-xl font-bold break-words sm:text-2xl">{summaryCounts.todos}</div>
               <p className="text-xs text-muted-foreground">Precatórios visíveis no sistema</p>
             </CardContent>
           </Card>
@@ -1446,7 +1533,7 @@ export default function AdminPrecatoriosPage() {
               <CheckCircle2 className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summaryCounts.distribuidos}</div>
+              <div className="text-xl font-bold break-words sm:text-2xl">{summaryCounts.distribuidos}</div>
               <p className="text-xs text-muted-foreground">Atribuídos</p>
             </CardContent>
           </Card>
@@ -1457,7 +1544,7 @@ export default function AdminPrecatoriosPage() {
               <Clock className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{summaryCounts.pendentes}</div>
+              <div className="text-xl font-bold break-words sm:text-2xl">{summaryCounts.pendentes}</div>
               <p className="text-xs text-muted-foreground">Aguardando</p>
             </CardContent>
           </Card>
@@ -1468,7 +1555,7 @@ export default function AdminPrecatoriosPage() {
               <TrendingUp className="h-4 w-4 text-primary" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold">{formatCurrency(valorPaginaAtual)}</div>
+              <div className="text-xl font-bold break-words sm:text-2xl">{formatCurrency(valorPaginaAtual)}</div>
               <p className="text-xs text-muted-foreground">Soma dos itens carregados nesta página</p>
             </CardContent>
           </Card>
@@ -1513,6 +1600,7 @@ export default function AdminPrecatoriosPage() {
                   totalFiltrosAtivos={totalFiltrosAtivos}
                   responsaveis={responsaveisFiltro}
                   showResponsavelFilter={responsaveisFiltro.length > 0}
+                  showDistribuicaoFilter={true}
                 />
               </div>
             </div>
@@ -1568,13 +1656,60 @@ export default function AdminPrecatoriosPage() {
           <CardContent>
             <Tabs value={filtroTab} onValueChange={(v: any) => setFiltroTab(v)}>
               <div className="flex flex-col gap-4">
-                <TabsList className="grid w-full grid-cols-3">
-                  <TabsTrigger value="todos" className="data-[state=active]:text-primary">Todos ({summaryCounts.todos})</TabsTrigger>
-                  <TabsTrigger value="distribuidos" className="data-[state=active]:text-primary">Distribuídos ({summaryCounts.distribuidos})</TabsTrigger>
-                  <TabsTrigger value="pendentes" className="data-[state=active]:text-primary">Pendentes ({summaryCounts.pendentes})</TabsTrigger>
+                <TabsList className="grid h-auto w-full grid-cols-3 gap-1">
+                  <TabsTrigger
+                    value="todos"
+                    className="min-w-0 px-1 py-1 text-center leading-tight whitespace-normal sm:px-3 sm:py-1.5 sm:whitespace-nowrap data-[state=active]:text-primary"
+                    title={`Todos (${summaryCounts.todos})`}
+                  >
+                    <span className="block text-[11px] sm:inline sm:text-sm">Todos</span>
+                    <span className="block text-[10px] sm:ml-1 sm:inline sm:text-xs">({summaryCounts.todos})</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="distribuidos"
+                    className="min-w-0 px-1 py-1 text-center leading-tight whitespace-normal sm:px-3 sm:py-1.5 sm:whitespace-nowrap data-[state=active]:text-primary"
+                    title={`Distribuídos (${summaryCounts.distribuidos})`}
+                  >
+                    <span className="block text-[11px] sm:inline sm:text-sm">
+                      <span className="sm:hidden">Distrib.</span>
+                      <span className="hidden sm:inline">Distribuídos</span>
+                    </span>
+                    <span className="block text-[10px] sm:ml-1 sm:inline sm:text-xs">({summaryCounts.distribuidos})</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="pendentes"
+                    className="min-w-0 px-1 py-1 text-center leading-tight whitespace-normal sm:px-3 sm:py-1.5 sm:whitespace-nowrap data-[state=active]:text-primary"
+                    title={`Pendentes (${summaryCounts.pendentes})`}
+                  >
+                    <span className="block text-[11px] sm:inline sm:text-sm">
+                      <span className="sm:hidden">Pend.</span>
+                      <span className="hidden sm:inline">Pendentes</span>
+                    </span>
+                    <span className="block text-[10px] sm:ml-1 sm:inline sm:text-xs">({summaryCounts.pendentes})</span>
+                  </TabsTrigger>
                 </TabsList>
 
-                {precatoriosFiltrados.length > 0 && (
+                {filtroTab === "pendentes" && (
+                  <div className="mt-3 border-b pb-3">
+                    <Tabs value={pendentesSubTab} onValueChange={(v: any) => setPendentesSubTab(v)}>
+                      <TabsList className="h-8">
+                        <TabsTrigger value="geral" className="h-7 text-xs px-3">
+                          Pendentes Gerais
+                        </TabsTrigger>
+                        <TabsTrigger value="atendimento" className="h-7 text-xs px-3">
+                          Do Atendimento
+                          {atendimentoCount > 0 && (
+                            <span className="ml-1.5 rounded-full bg-green-100 px-1.5 text-[10px] font-semibold text-green-800">
+                              {atendimentoCount}
+                            </span>
+                          )}
+                        </TabsTrigger>
+                      </TabsList>
+                    </Tabs>
+                  </div>
+                )}
+
+                {precatoriosFiltrados.length > 0 && !(filtroTab === "pendentes" && pendentesSubTab === "atendimento") && (
                   <div className="flex items-center gap-2 px-1">
                     <Checkbox
                       id="select-all"
@@ -1588,8 +1723,200 @@ export default function AdminPrecatoriosPage() {
                 )}
               </div>
 
-              <TabsContent value={filtroTab} className="mt-6">
-                {precatoriosFiltrados.length === 0 ? (
+              <TabsContent value={filtroTab} className="mt-6 w-full overflow-x-hidden">
+                {filtroTab === "pendentes" && pendentesSubTab === "atendimento" ? (
+                  <div className="space-y-3">
+                    {loadingAtendimento ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : creditosAtendimento.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <p className="text-sm">Nenhum crédito do atendimento marcado como interessado.</p>
+                      </div>
+                    ) : (
+                      <div className="grid w-full gap-4 md:grid-cols-2 xl:grid-cols-3">
+                        {creditosAtendimento.map((prec) => {
+                          const statusKey = prec.status_kanban || "entrada"
+                          const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
+                          const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
+                          const progress = KANBAN_PROGRESS[statusKey] || 0
+                          const isSelected = selectedIds.includes(prec.id)
+                          const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
+                          const valorPrincipal = prec.valor_principal || 0
+                          const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
+                          const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
+                          const showNumeroPrecatorio = Boolean(prec.titulo && prec.numero_precatorio)
+
+                          return (
+                            <Card
+                              key={prec.id}
+                              className={`w-full min-w-0 overflow-hidden border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
+                            >
+                              <CardHeader className="min-w-0 pb-3">
+                                <div className="flex min-w-0 items-start gap-3">
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={() => toggleSelection(prec.id)}
+                                    aria-label={`Selecionar ${prec.numero_precatorio || prec.titulo || "precatório"}`}
+                                    className="mt-1 shrink-0"
+                                  />
+                                  <div className="min-w-0 flex-1 space-y-1">
+                                    <CardTitle className="line-clamp-2 break-words text-base leading-snug text-primary">{titulo}</CardTitle>
+                                    <CardDescription className="line-clamp-1 break-words">
+                                      {prec.credor_nome || "Credor não informado"}
+                                    </CardDescription>
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                      <span className="max-w-full break-all">{prec.numero_processo || "Sem processo"}</span>
+                                      {showNumeroPrecatorio && <span className="max-w-full break-all">• {prec.numero_precatorio}</span>}
+                                      {prec.file_url && (
+                                        <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
+                                          <FileText className="h-2 w-2" />
+                                          PDF
+                                        </Badge>
+                                      )}
+                                    </div>
+                                  </div>
+                                  <div className="flex max-w-[9.75rem] shrink-0 flex-col items-end gap-2 sm:max-w-[11rem]">
+                                    <Badge variant="outline" className={`max-w-full truncate text-xs ${statusTone}`}>
+                                      {statusLabel || "Status não definido"}
+                                    </Badge>
+                                    <Badge variant={getPrioridadeVariant(prec.prioridade)} className="max-w-full truncate text-xs capitalize">
+                                      {prec.prioridade || "média"}
+                                    </Badge>
+                                    {prec.distribuido_por_admin && (
+                                      <Badge variant="secondary" className="max-w-full truncate text-[10px] uppercase tracking-wide">
+                                        Distribuído por admin
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                              </CardHeader>
+
+                              <CardContent className="min-w-0 space-y-4">
+                                <div className="space-y-2">
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>Status atual</span>
+                                    <span>{progress}%</span>
+                                  </div>
+                                  <Progress value={progress} className="h-2" />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-3 text-sm">
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Valor principal</p>
+                                    <p className="font-semibold">{formatCurrency(valorPrincipal)}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-xs text-muted-foreground">Valor atualizado</p>
+                                    <p className="font-semibold text-primary">{formatCurrency(valorAtualizado)}</p>
+                                  </div>
+                                </div>
+
+                                <div className="min-w-0 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                                  <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                                    <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
+                                      <User className="h-3 w-3" />
+                                      <span>Responsável distribuído</span>
+                                    </div>
+                                    <span className="max-w-[58%] break-words text-right font-medium text-foreground">{responsavelNome}</span>
+                                  </div>
+                                  <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
+                                    <span>Distribuição admin</span>
+                                    <span className="max-w-[58%] break-words text-right font-medium text-foreground">
+                                      {prec.distribuido_por_admin
+                                        ? `${prec.usuario_distribuidor_admin?.nome || "Admin"} • ${formatDateTime(prec.distribuido_por_admin_em)}`
+                                        : "Não"}
+                                    </span>
+                                  </div>
+                                  {prec.responsavel_calculo_id && (
+                                    <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
+                                      <span>Cálculo</span>
+                                      <span className="max-w-[58%] break-words text-right font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
+                                    </div>
+                                  )}
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-2 pt-1 sm:flex sm:flex-wrap">
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full sm:flex-1 sm:min-w-[140px]"
+                                    title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                    onClick={() => {
+                                      setSelectedPrecatorio(prec)
+                                      setDistribuicao({
+                                        dono_usuario_id: prec.dono_usuario_id || "",
+                                        responsavel_calculo_id: prec.responsavel_calculo_id || "none",
+                                        prioridade: (prec.prioridade as any) || "media",
+                                      })
+                                      setDistributeDialogOpen(true)
+                                    }}
+                                  >
+                                    <Send className="h-3 w-3 mr-1" />
+                                    {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full sm:flex-1 sm:min-w-[120px]"
+                                    title="Enviar aviso"
+                                    onClick={() => openNotifyDialog(prec)}
+                                  >
+                                    <Bell className="h-3 w-3 mr-1" />
+                                    Aviso
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="outline"
+                                    className="w-full sm:flex-1 sm:min-w-[150px]"
+                                    title={
+                                      prec.responsavel_calculo_id
+                                        ? "Alertar operador de calculo"
+                                        : "Defina um operador de calculo primeiro"
+                                    }
+                                    disabled={!prec.responsavel_calculo_id || sendingInterest === prec.id}
+                                    onClick={() => handleSendCalculoInteresse(prec)}
+                                  >
+                                    {sendingInterest === prec.id ? (
+                                      <Loader2 className="h-3 w-3 mr-1 animate-spin" />
+                                    ) : (
+                                      <Star className="h-3 w-3 mr-1" />
+                                    )}
+                                    Interesse no calculo
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-full justify-start px-3 sm:w-8 sm:justify-center sm:p-0"
+                                    title="Ver detalhes"
+                                    onClick={() => router.push(`/precatorios/detalhes?id=${prec.id}`)}
+                                  >
+                                    <FileText className="h-4 w-4" />
+                                    <span className="ml-2 text-xs sm:hidden">Ver detalhes</span>
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-8 w-full justify-start px-3 text-destructive hover:text-destructive sm:w-8 sm:justify-center sm:p-0"
+                                    title="Excluir"
+                                    onClick={() => {
+                                      setSelectedPrecatorio(prec)
+                                      setDeleteDialogOpen(true)
+                                    }}
+                                  >
+                                    <Trash2 className="h-4 w-4" />
+                                    <span className="ml-2 text-xs sm:hidden">Excluir</span>
+                                  </Button>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          )
+                        })}
+                      </div>
+                    )}
+                  </div>
+                ) : precatoriosFiltrados.length === 0 ? (
                   <div className="text-center py-12">
                     <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
                     <h3 className="text-lg font-semibold mb-2 text-primary">Nenhum precatório encontrado</h3>
@@ -1607,7 +1934,7 @@ export default function AdminPrecatoriosPage() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+                    <div className="grid w-full gap-4 md:grid-cols-2 xl:grid-cols-3">
                       {precatoriosFiltrados.map((prec) => {
                         const statusKey = prec.status_kanban || "entrada"
                         const statusLabel = KANBAN_LABELS[statusKey] || prec.status_kanban
@@ -1623,24 +1950,24 @@ export default function AdminPrecatoriosPage() {
                         return (
                           <Card
                             key={prec.id}
-                            className={`border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
+                            className={`w-full min-w-0 overflow-hidden border-border/60 transition-shadow ${isSelected ? "ring-2 ring-primary/30 shadow-lg" : "hover:shadow-lg"}`}
                           >
-                            <CardHeader className="pb-3">
-                              <div className="flex items-start gap-3">
+                            <CardHeader className="min-w-0 pb-3">
+                              <div className="flex min-w-0 items-start gap-3">
                                 <Checkbox
                                   checked={isSelected}
                                   onCheckedChange={() => toggleSelection(prec.id)}
                                   aria-label={`Selecionar ${prec.numero_precatorio || prec.titulo || "precatório"}`}
-                                  className="mt-1"
+                                  className="mt-1 shrink-0"
                                 />
-                                <div className="flex-1 space-y-1">
-                                  <CardTitle className="text-base leading-snug line-clamp-2 text-primary">{titulo}</CardTitle>
-                                  <CardDescription className="line-clamp-1">
+                                <div className="min-w-0 flex-1 space-y-1">
+                                  <CardTitle className="line-clamp-2 break-words text-base leading-snug text-primary">{titulo}</CardTitle>
+                                  <CardDescription className="line-clamp-1 break-words">
                                     {prec.credor_nome || "Credor não informado"}
                                   </CardDescription>
-                                  <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                                    <span>{prec.numero_processo || "Sem processo"}</span>
-                                    {showNumeroPrecatorio && <span>• {prec.numero_precatorio}</span>}
+                                  <div className="flex min-w-0 flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                    <span className="max-w-full break-all">{prec.numero_processo || "Sem processo"}</span>
+                                    {showNumeroPrecatorio && <span className="max-w-full break-all">• {prec.numero_precatorio}</span>}
                                     {prec.file_url && (
                                       <Badge variant="secondary" className="h-4 px-1 gap-1 text-[9px] pointer-events-none">
                                         <FileText className="h-2 w-2" />
@@ -1649,18 +1976,23 @@ export default function AdminPrecatoriosPage() {
                                     )}
                                   </div>
                                 </div>
-                                <div className="flex flex-col items-end gap-2">
-                                  <Badge variant="outline" className={`text-xs whitespace-nowrap ${statusTone}`}>
+                                <div className="flex max-w-[9.75rem] shrink-0 flex-col items-end gap-2 sm:max-w-[11rem]">
+                                  <Badge variant="outline" className={`max-w-full truncate text-xs ${statusTone}`}>
                                     {statusLabel || "Status não definido"}
                                   </Badge>
-                                  <Badge variant={getPrioridadeVariant(prec.prioridade)} className="text-xs capitalize">
+                                  <Badge variant={getPrioridadeVariant(prec.prioridade)} className="max-w-full truncate text-xs capitalize">
                                     {prec.prioridade || "média"}
                                   </Badge>
+                                  {prec.distribuido_por_admin && (
+                                    <Badge variant="secondary" className="max-w-full truncate text-[10px] uppercase tracking-wide">
+                                      Distribuído por admin
+                                    </Badge>
+                                  )}
                                 </div>
                               </div>
                             </CardHeader>
 
-                            <CardContent className="space-y-4">
+                            <CardContent className="min-w-0 space-y-4">
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between text-xs text-muted-foreground">
                                   <span>Status atual</span>
@@ -1680,27 +2012,35 @@ export default function AdminPrecatoriosPage() {
                                 </div>
                               </div>
 
-                              <div className="rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
-                                <div className="flex items-center justify-between text-xs">
-                                  <div className="flex items-center gap-2 text-muted-foreground">
+                              <div className="min-w-0 rounded-lg border border-border/60 bg-muted/30 px-3 py-2">
+                                <div className="flex min-w-0 items-center justify-between gap-2 text-xs">
+                                  <div className="flex min-w-0 items-center gap-2 text-muted-foreground">
                                     <User className="h-3 w-3" />
                                     <span>Responsável distribuído</span>
                                   </div>
-                                  <span className="font-medium text-foreground">{responsavelNome}</span>
+                                  <span className="max-w-[58%] break-words text-right font-medium text-foreground">{responsavelNome}</span>
+                                </div>
+                                <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
+                                  <span>Distribuição admin</span>
+                                  <span className="max-w-[58%] break-words text-right font-medium text-foreground">
+                                    {prec.distribuido_por_admin
+                                      ? `${prec.usuario_distribuidor_admin?.nome || "Admin"} • ${formatDateTime(prec.distribuido_por_admin_em)}`
+                                      : "Não"}
+                                  </span>
                                 </div>
                                 {prec.responsavel_calculo_id && (
-                                  <div className="mt-1 flex items-center justify-between text-xs text-muted-foreground">
+                                  <div className="mt-1 flex min-w-0 items-center justify-between gap-2 text-xs text-muted-foreground">
                                     <span>Cálculo</span>
-                                    <span className="font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
+                                    <span className="max-w-[58%] break-words text-right font-medium text-foreground">{prec.usuario_calculo?.nome || "—"}</span>
                                   </div>
                                 )}
                               </div>
 
-                              <div className="flex flex-wrap gap-2 pt-1">
+                              <div className="grid grid-cols-1 gap-2 pt-1 sm:flex sm:flex-wrap">
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 min-w-[140px]"
+                                  className="w-full sm:flex-1 sm:min-w-[140px]"
                                   title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
                                   onClick={() => {
                                     setSelectedPrecatorio(prec)
@@ -1718,7 +2058,7 @@ export default function AdminPrecatoriosPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 min-w-[120px]"
+                                  className="w-full sm:flex-1 sm:min-w-[120px]"
                                   title="Enviar aviso"
                                   onClick={() => openNotifyDialog(prec)}
                                 >
@@ -1728,7 +2068,7 @@ export default function AdminPrecatoriosPage() {
                                 <Button
                                   size="sm"
                                   variant="outline"
-                                  className="flex-1 min-w-[150px]"
+                                  className="w-full sm:flex-1 sm:min-w-[150px]"
                                   title={
                                     prec.responsavel_calculo_id
                                       ? "Alertar operador de calculo"
@@ -1747,16 +2087,17 @@ export default function AdminPrecatoriosPage() {
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-8 w-8 p-0"
+                                  className="h-8 w-full justify-start px-3 sm:w-8 sm:justify-center sm:p-0"
                                   title="Ver detalhes"
                                   onClick={() => router.push(`/precatorios/detalhes?id=${prec.id}`)}
                                 >
                                   <FileText className="h-4 w-4" />
+                                  <span className="ml-2 text-xs sm:hidden">Ver detalhes</span>
                                 </Button>
                                 <Button
                                   size="sm"
                                   variant="ghost"
-                                  className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                  className="h-8 w-full justify-start px-3 text-destructive hover:text-destructive sm:w-8 sm:justify-center sm:p-0"
                                   title="Excluir"
                                   onClick={() => {
                                     setSelectedPrecatorio(prec)
@@ -1764,6 +2105,7 @@ export default function AdminPrecatoriosPage() {
                                   }}
                                 >
                                   <Trash2 className="h-4 w-4" />
+                                  <span className="ml-2 text-xs sm:hidden">Excluir</span>
                                 </Button>
                               </div>
                             </CardContent>
@@ -2237,4 +2579,3 @@ export default function AdminPrecatoriosPage() {
     </RoleGuard >
   )
 }
-

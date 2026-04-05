@@ -42,6 +42,7 @@ type UsePrecatoriosSearchOptions = {
   page?: number
   pageSize?: number
   excludedStatuses?: string[]
+  storageKey?: string
 }
 
 type UsePrecatoriosSearchSummary = {
@@ -179,11 +180,41 @@ function applyStatusConstraints(
   }
 }
 
+function loadStoredFiltros(storageKey: string | undefined, fallback: FiltrosPrecatorios): FiltrosPrecatorios {
+  if (!storageKey || typeof window === "undefined") return fallback
+  try {
+    const raw = localStorage.getItem(storageKey)
+    if (!raw) return fallback
+    return JSON.parse(raw) as FiltrosPrecatorios
+  } catch {
+    return fallback
+  }
+}
+
+function persistFiltros(storageKey: string | undefined, filtros: FiltrosPrecatorios) {
+  if (!storageKey || typeof window === "undefined") return
+  try {
+    const cleaned = Object.fromEntries(
+      Object.entries(filtros).filter(([, v]) => v !== undefined && v !== null)
+    )
+    if (Object.keys(cleaned).length === 0) {
+      localStorage.removeItem(storageKey)
+    } else {
+      localStorage.setItem(storageKey, JSON.stringify(cleaned))
+    }
+  } catch {
+    // silently ignore quota errors
+  }
+}
+
 export function usePrecatoriosSearch(
   initialFiltros: FiltrosPrecatorios = {},
   options: UsePrecatoriosSearchOptions = {}
 ) {
-  const [filtros, setFiltros] = useState<FiltrosPrecatorios>(normalizeFiltros(initialFiltros))
+  const { storageKey } = options
+  const [filtros, setFiltros] = useState<FiltrosPrecatorios>(() =>
+    normalizeFiltros(loadStoredFiltros(storageKey, initialFiltros))
+  )
   const [loading, setLoading] = useState(false)
   const [initialized, setInitialized] = useState(false)
   const [resultados, setResultados] = useState<Array<Record<string, unknown>>>([])
@@ -194,6 +225,7 @@ export function usePrecatoriosSearch(
   })
   const [error, setError] = useState<string | null>(null)
   const activeRequestRef = useRef(0)
+  const persistDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const supabase = useMemo(() => createBrowserClient(), [])
   const filtrosNormalizados = useMemo(() => normalizeFiltros(filtros), [filtros])
@@ -223,35 +255,29 @@ export function usePrecatoriosSearch(
 
     try {
       const rpcParams = sanitizeRpcParams(filtrosToRpcParams(filtrosNormalizados))
-      const baseParams = applyStatusConstraints(rpcParams, { excludedStatuses })
-      const from = (page - 1) * pageSize
-      const to = from + pageSize - 1
+      const params = {
+        ...applyStatusConstraints(rpcParams, { excludedStatuses }),
+        p_offset: (page - 1) * pageSize,
+        p_limit: pageSize,
+      }
 
-      const [pageResponse, calculadosResponse, emCalculoOuNovoResponse] = await Promise.all([
-        supabase.rpc("buscar_precatorios_global", baseParams, { count: "exact" }).range(from, to),
-        supabase.rpc(
-          "buscar_precatorios_global",
-          applyStatusConstraints(baseParams, { includeStatuses: CALCULADOS_STATUS }),
-          { head: true, count: "exact" }
-        ),
-        supabase.rpc(
-          "buscar_precatorios_global",
-          applyStatusConstraints(baseParams, { includeStatuses: EM_CALCULO_OU_NOVO_STATUS }),
-          { head: true, count: "exact" }
-        ),
-      ])
+      const { data, error: rpcError } = await supabase.rpc("buscar_precatorios_com_summary", params)
 
-      if (pageResponse.error) throw pageResponse.error
-      if (calculadosResponse.error) throw calculadosResponse.error
-      if (emCalculoOuNovoResponse.error) throw emCalculoOuNovoResponse.error
+      if (rpcError) throw rpcError
       if (requestId !== activeRequestRef.current) return
 
-      const list = (pageResponse.data || []) as Array<Record<string, unknown>>
-      setResultados(list)
-      setTotal(pageResponse.count ?? list.length)
+      const result = data as {
+        rows: Array<Record<string, unknown>>
+        total: number
+        calculados: number
+        em_calculo_ou_novo: number
+      }
+
+      setResultados(Array.isArray(result?.rows) ? result.rows : [])
+      setTotal(result?.total ?? 0)
       setSummary({
-        calculados: calculadosResponse.count ?? 0,
-        emCalculoOuNovo: emCalculoOuNovoResponse.count ?? 0,
+        calculados: result?.calculados ?? 0,
+        emCalculoOuNovo: result?.em_calculo_ou_novo ?? 0,
       })
     } catch (err) {
       if (requestId !== activeRequestRef.current) return
@@ -274,12 +300,15 @@ export function usePrecatoriosSearch(
   }, [buscar])
 
   const updateFiltros = useCallback((novosFiltros: FiltrosPrecatorios) => {
-    setFiltros(normalizeFiltros(novosFiltros))
-  }, [])
+    const normalized = normalizeFiltros(novosFiltros)
+    setFiltros(normalized)
+    persistFiltros(storageKey, normalized)
+  }, [storageKey])
 
   const clearFiltros = useCallback(() => {
     setFiltros({})
-  }, [])
+    persistFiltros(storageKey, {})
+  }, [storageKey])
 
   const removeFiltro = useCallback((key: string) => {
     setFiltros((prev) => {
@@ -294,18 +323,20 @@ export function usePrecatoriosSearch(
         delete next[key as keyof FiltrosPrecatorios]
       }
 
-      return normalizeFiltros(next)
+      const normalized = normalizeFiltros(next)
+      persistFiltros(storageKey, normalized)
+      return normalized
     })
-  }, [])
+  }, [storageKey])
 
   const setTermo = useCallback((termo: string) => {
-    setFiltros((prev) =>
-      normalizeFiltros({
-        ...prev,
-        termo,
-      })
-    )
-  }, [])
+    setFiltros((prev) => {
+      const normalized = normalizeFiltros({ ...prev, termo })
+      if (persistDebounceRef.current) clearTimeout(persistDebounceRef.current)
+      persistDebounceRef.current = setTimeout(() => persistFiltros(storageKey, normalized), 300)
+      return normalized
+    })
+  }, [storageKey])
 
   const filtrosAtivos = useMemo(() => getFiltrosAtivos(filtrosNormalizados), [filtrosNormalizados])
 

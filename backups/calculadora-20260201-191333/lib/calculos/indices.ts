@@ -119,7 +119,7 @@ export function calcularJurosMoratoriosAcumulados(
   const fimMes = new Date(fimData.getFullYear(), fimData.getMonth(), 1)
 
   let taxaTotal = 0
-  let current = new Date(inicioMes)
+  const current = new Date(inicioMes)
 
   while (current <= fimMes) {
     const mesAno = `${current.getFullYear()}-${String(current.getMonth() + 1).padStart(2, "0")}`
