@@ -76,12 +76,10 @@ const clayInsetShadow: React.CSSProperties = { boxShadow: "inset 5px 5px 12px rg
 
 const clayPrimaryShadow: React.CSSProperties = { boxShadow: "8px 8px 20px rgba(14,77,106,.42), -3px -3px 8px rgba(255,255,255,.3), inset 1px 1px 3px rgba(255,255,255,.14), inset -1px -1px 2px rgba(8,40,60,.3)" }
 
-const modalWrapper = "z-[120] p-2 sm:p-4"
-const modalBackdrop = "bg-black/65"
-const modalBase =
-  "w-[min(96vw,72rem)] max-w-[96vw] rounded-3xl border border-border !bg-background text-foreground shadow-sm"
-const modalContentBase =
-  "flex max-h-[88vh] min-h-0 flex-col overflow-hidden overflow-x-hidden rounded-3xl !bg-background text-foreground"
+const modalWrapper = "z-[120] p-0 sm:p-4"
+const modalBackdrop = "bg-black/45 backdrop-blur-sm"
+const modalBase = "w-[min(96vw,72rem)] max-w-[96vw] rounded-[28px] border border-black/[0.07] bg-white text-[#0b0c10]"
+const modalContentBase = "flex max-h-[90dvh] min-h-0 flex-col overflow-hidden rounded-[28px] bg-white text-[#0b0c10]"
 const modalSurfaceStyle: React.CSSProperties = {}
 
 const _sheen = ""
@@ -1779,11 +1777,16 @@ export default function ClientsPage() {
         >
           <ModalContent className={modalContentBase}>
             <>
-              <ModalHeader className="shrink-0 flex flex-col gap-1 border-b border-border dark:border-border px-6 pb-4 pt-5">
-                <h2 className="text-xl font-semibold tracking-tight">Filtros avancados de clientes</h2>
-                <p className="text-sm text-foreground/70">
-                  Refine a lista por status, periodo, faixa de carteira e contato.
-                </p>
+              <ModalHeader className="shrink-0 border-b border-black/[0.06] px-5 pb-4 pt-5 sm:px-6">
+                <div className="space-y-2">
+                  <span className="inline-flex h-7 items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#1d4ed8]">
+                    Filtros avançados
+                  </span>
+                  <div>
+                    <h2 className="text-xl font-black tracking-[-0.03em] text-[#0b0c10]">Refinar base de clientes</h2>
+                    <p className="text-sm text-[#6b7280]">Filtre por status, período, carteira e presença de contato.</p>
+                  </div>
+                </div>
               </ModalHeader>
 
               <ModalBody className="min-h-0 flex-1 overflow-y-auto px-6 pb-4 pt-4">
@@ -1792,12 +1795,10 @@ export default function ClientsPage() {
                   defaultExpandedKeys={["status", "periodo", "financeiro", "outros"]}
                   className="gap-3"
                   itemClasses={{
-                    base:
-                      "rounded-2xl border border-border dark:border-border " +
-                      "bg-background",
-                    title: "text-base font-semibold text-left",
-                    trigger: "py-3 px-3",
-                    content: "px-3 pb-4 pt-1",
+                    base: "rounded-[20px] border border-black/[0.06] bg-white",
+                    title: "text-sm font-extrabold tracking-[-0.02em] text-[#0b0c10]",
+                    trigger: "px-4 py-4",
+                    content: "px-4 pb-4 pt-1",
                   }}
                 >
                   <AccordionItem key="status" aria-label="Status e segmento" title="Status e segmento">
@@ -1885,10 +1886,8 @@ export default function ClientsPage() {
                             variant="bordered"
                             size="sm"
                             classNames={{
-                              inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-border " +
-                                "bg-muted/50 hover:bg-muted/70 transition",
-                              input: "text-sm text-foreground",
+                              inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                              input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                             }}
                             value={adminFiltersDraft.cidade || ""}
                             onValueChange={(value) =>
@@ -1909,10 +1908,8 @@ export default function ClientsPage() {
                             variant="bordered"
                             size="sm"
                             classNames={{
-                              inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-border " +
-                                "bg-muted/50 hover:bg-muted/70 transition",
-                              input: "text-sm text-foreground",
+                              inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                              input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                             }}
                             value={adminFiltersDraft.uf || ""}
                             onValueChange={(value) =>
@@ -1967,10 +1964,8 @@ export default function ClientsPage() {
                           variant="bordered"
                           size="sm"
                           classNames={{
-                            inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-border " +
-                              "bg-muted/50 hover:bg-muted/70 transition",
-                            input: "text-sm text-foreground",
+                            inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                            input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                           }}
                           value={adminFiltersDraft.ultimaMovInicio || ""}
                           onChange={(event) =>
@@ -1990,10 +1985,8 @@ export default function ClientsPage() {
                           variant="bordered"
                           size="sm"
                           classNames={{
-                            inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-border " +
-                              "bg-muted/50 hover:bg-muted/70 transition",
-                            input: "text-sm text-foreground",
+                            inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                            input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                           }}
                           value={adminFiltersDraft.ultimaMovFim || ""}
                           onChange={(event) =>
@@ -2020,10 +2013,8 @@ export default function ClientsPage() {
                           variant="bordered"
                           size="sm"
                           classNames={{
-                            inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-border " +
-                              "bg-muted/50 hover:bg-muted/70 transition",
-                            input: "text-sm text-foreground",
+                            inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                            input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                           }}
                           value={adminFiltersDraft.carteiraMin?.toString() ?? ""}
                           onValueChange={(value) => updateDraftNumberFilter("carteiraMin", value)}
@@ -2041,10 +2032,8 @@ export default function ClientsPage() {
                           variant="bordered"
                           size="sm"
                           classNames={{
-                            inputWrapper:
-                              "h-11 min-h-11 rounded-xl border border-border " +
-                              "bg-muted/50 hover:bg-muted/70 transition",
-                            input: "text-sm text-foreground",
+                            inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                            input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                           }}
                           value={adminFiltersDraft.carteiraMax?.toString() ?? ""}
                           onValueChange={(value) => updateDraftNumberFilter("carteiraMax", value)}
@@ -2067,10 +2056,8 @@ export default function ClientsPage() {
                             variant="bordered"
                             size="sm"
                             classNames={{
-                              inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-border " +
-                                "bg-muted/50 hover:bg-muted/70 transition",
-                              input: "text-sm text-foreground",
+                              inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                              input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                             }}
                             value={adminFiltersDraft.qtdMin?.toString() ?? ""}
                             onValueChange={(value) => updateDraftNumberFilter("qtdMin", value)}
@@ -2088,10 +2075,8 @@ export default function ClientsPage() {
                             variant="bordered"
                             size="sm"
                             classNames={{
-                              inputWrapper:
-                                "h-11 min-h-11 rounded-xl border border-border " +
-                                "bg-muted/50 hover:bg-muted/70 transition",
-                              input: "text-sm text-foreground",
+                              inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                              input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
                             }}
                             value={adminFiltersDraft.qtdMax?.toString() ?? ""}
                             onValueChange={(value) => updateDraftNumberFilter("qtdMax", value)}
@@ -2121,13 +2106,15 @@ export default function ClientsPage() {
                 </Accordion>
               </ModalBody>
 
-              <ModalFooter className="shrink-0 border-t border-border bg-background px-6 py-4">
-                <Button variant="light" color="default" onPress={clearAdminFilters}>
-                  Limpar
-                </Button>
-                <Button color="primary" onPress={applyAdminFilters}>
-                  Aplicar filtros
-                </Button>
+              <ModalFooter className="shrink-0 border-t border-black/[0.06] bg-white px-5 py-4 sm:px-6">
+                <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                  <Button variant="light" color="default" onPress={clearAdminFilters} className="min-h-11 rounded-[15px] border border-black/[0.06] bg-[#f2f3f7] text-[#374151]">
+                    Limpar
+                  </Button>
+                  <Button color="primary" onPress={applyAdminFilters} className="min-h-11 rounded-[15px] bg-[#0e4d6a] text-white">
+                    Aplicar filtros
+                  </Button>
+                </div>
               </ModalFooter>
             </>
           </ModalContent>
