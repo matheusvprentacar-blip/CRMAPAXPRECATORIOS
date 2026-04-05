@@ -484,14 +484,14 @@ function SimpleTableCard({
         ) : (
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border">
+              <tr className="border-b border-black/[0.06]">
                 <th className="pb-2 text-left text-xs font-semibold uppercase tracking-wide text-muted-foreground">{labelHeader}</th>
                 <th className="pb-2 text-right text-xs font-semibold uppercase tracking-wide text-muted-foreground">{valueHeader}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
-                <tr key={row.label} className="border-b border-border/50 last:border-0">
+                <tr key={row.label} className="border-b border-black/[0.04] last:border-0">
                   <td className="py-2 font-medium text-foreground">{row.label}</td>
                   <td className="py-2 text-right font-mono tabular-nums text-muted-foreground">{valueFormatter(row.value)}</td>
                 </tr>
@@ -1392,13 +1392,13 @@ export default function DashboardPage() {
             {/* FINANCIAL + RADAR */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.3fr_.9fr]">
               {/* Resumo financeiro */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Resumo financeiro</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Valores principais do portfólio no período selecionado.</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Destaque: saldo líquido</span>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">Destaque: saldo líquido</span>
                 </div>
                 <div className="p-5">
                   <div className="h-[180px] w-full" style={{ minWidth: 0 }}>
@@ -1432,14 +1432,14 @@ export default function DashboardPage() {
                     </ResponsiveContainer>
                   </div>
                   <div className="mt-4 grid gap-3.5 sm:grid-cols-2">
-                    <div className="rounded-[18px] border border-border bg-muted/30 p-4">
+                    <div className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Total atualizado</div>
                       <div className="mt-2 text-[1.4rem] font-extrabold tracking-[-0.02em]">
                         <CountUp end={kpis.resumo.total_atualizado} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
                       </div>
                       <div className="mt-1 text-xs text-muted-foreground">Valores corrigidos (última atualização)</div>
                     </div>
-                    <div className="rounded-[18px] border border-border bg-muted/30 p-4">
+                    <div className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">PSS total</div>
                       <div className="mt-2 text-[1.4rem] font-extrabold tracking-[-0.02em]">
                         <CountUp end={kpis.financeiro.pss_total} duration={0.9} separator="." decimal="," decimals={2} prefix={CURRENCY_PREFIX} {...COUNTUP_SCROLL_PROPS} />
@@ -1451,13 +1451,13 @@ export default function DashboardPage() {
               </div>
 
               {/* Radar operacional */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Radar operacional</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Concentra risco, SLA, documentos e gargalos.</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Leitura rápida</span>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">Leitura rápida</span>
                 </div>
                 <div className="grid gap-4 p-5">
                   {/* Ring */}
@@ -1490,7 +1490,7 @@ export default function DashboardPage() {
                         count: kpis.calculo.em_calculo,
                       },
                     ].map((item) => (
-                      <div key={item.label} className="rounded-[18px] border border-border bg-muted/20 p-3.5">
+                      <div key={item.label} className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-3.5" style={clayInsetShadow}>
                         <div className="flex items-center justify-between">
                           <span className="text-sm font-semibold">{item.label}</span>
                           <span className="text-sm font-extrabold tabular-nums">
@@ -1511,13 +1511,13 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-[1.1fr_.9fr_.8fr]">
 
               {/* Valor por status */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Valor por status</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Prioridade visual — destaque ao topo, resumo do resto.</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Top 6 por valor</span>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">Top 6 por valor</span>
                 </div>
                 <div className="grid gap-3 p-5">
                   {kanbanValorRows.slice(0, 6).map((row, i) => {
@@ -1547,7 +1547,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Gargalos */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="p-5 pb-0">
                   <h2 className="text-[15px] font-semibold">Gargalos e metas</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Informações acionáveis, não apenas decorativas.</p>
@@ -1579,7 +1579,7 @@ export default function DashboardPage() {
                       desc: "Precatórios com prazo estourado.",
                     },
                   ].map((item) => (
-                    <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-4">
+                    <div key={item.label} className="rounded-[22px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                       <div className="flex items-center justify-between gap-3">
                         <span className="font-semibold text-foreground">{item.label}</span>
                         <ToneChip tone={item.tone as any}>{formatCount(item.count)} {item.count === 1 ? "item" : "itens"}</ToneChip>
@@ -1591,7 +1591,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Mapa de carga */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="p-5 pb-0">
                   <h2 className="text-[15px] font-semibold">Mapa de carga</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Distribuição de atividades no período.</p>
@@ -1657,13 +1657,13 @@ export default function DashboardPage() {
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
 
               {/* Quantidade por status */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Quantidade por status</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Destacar o topo, condensar cauda longa, detalhar sob demanda.</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Top 5</span>
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">Top 5</span>
                 </div>
                 <div className="grid gap-3 p-5">
                   {kanbanQuantidadeRows.slice(0, 5).map((row, i) => {
@@ -1691,7 +1691,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Precatórios críticos */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Precatórios críticos</h2>
@@ -1720,7 +1720,7 @@ export default function DashboardPage() {
                     <div className="overflow-x-auto">
                     <table className="w-full min-w-[440px] text-sm">
                       <thead>
-                        <tr className="border-b border-border">
+                        <tr className="border-b border-black/[0.06]">
                           <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Precatório</th>
                           <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Responsável</th>
                           <th className="pb-2.5 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">SLA</th>
@@ -1736,7 +1736,7 @@ export default function DashboardPage() {
                             .join("")
                             .toUpperCase()
                           return (
-                            <tr key={item.id} className="border-b border-border/50 last:border-0 hover:bg-muted/20">
+                            <tr key={item.id} className="border-b border-black/[0.04] last:border-0 hover:bg-muted/20">
                               <td className="py-3">
                                 <div className="flex flex-col">
                                   <span className="font-medium">{item.numero_precatorio ?? item.titulo}</span>
@@ -1785,7 +1785,7 @@ export default function DashboardPage() {
           <div className="space-y-5">
 
             {/* Movimento do período — 5 KPI cards */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="flex items-start justify-between gap-3 p-5 pb-0">
                 <div>
                   <h2 className="text-[15px] font-semibold">Movimento do período</h2>
@@ -1795,7 +1795,7 @@ export default function DashboardPage() {
                       : periodRange.label}
                   </p>
                 </div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">Período selecionado</span>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">Período selecionado</span>
               </div>
               <div className="grid grid-cols-2 gap-4 p-5 sm:grid-cols-3 lg:grid-cols-5">
                 {[
@@ -1805,10 +1805,10 @@ export default function DashboardPage() {
                   { label: "Atividades", value: kpis.periodo_kpis.atividades_periodo, icon: <ListChecks className="h-4 w-4" />, tone: "default" },
                   { label: "Mensagens chat", value: kpis.periodo_kpis.mensagens_chat_periodo, icon: <MessageSquare className="h-4 w-4" />, tone: kpis.periodo_kpis.mensagens_chat_periodo > 0 ? "warning" : "default" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-4">
+                  <div key={item.label} className="rounded-[22px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                     <div className="flex items-center justify-between gap-2">
                       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{item.label}</div>
-                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-border bg-background text-muted-foreground">
+                      <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]">
                         {item.icon}
                       </div>
                     </div>
@@ -1823,13 +1823,13 @@ export default function DashboardPage() {
             {/* Propostas + Credores 2-col */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
               {/* Propostas */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="flex items-start justify-between gap-3 p-5 pb-0">
                   <div>
                     <h2 className="text-[15px] font-semibold">Propostas</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Valores e distribuição por status</p>
                   </div>
-                  <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">
+                  <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">
                     {formatCount(propostaCompilada.quantidadeComProposta)} com proposta
                   </span>
                 </div>
@@ -1839,7 +1839,7 @@ export default function DashboardPage() {
                     { label: "Ticket médio", value: kpis.propostas.ticket_medio, isCurrency: true },
                     { label: "Desconto médio", value: kpis.propostas.desconto_medio, suffix: "%" },
                   ].map((s) => (
-                    <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-3.5">
+                    <div key={s.label} className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-3.5" style={clayInsetShadow}>
                       <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
                       <div className="mt-2 text-[1.1rem] font-extrabold leading-none tracking-[-0.02em]">
                         {s.isCurrency
@@ -1850,17 +1850,17 @@ export default function DashboardPage() {
                   ))}
                 </div>
                 {propostaStatusRows.length > 0 && (
-                  <div className="border-t border-border/50 p-5 pt-0">
+                  <div className="border-t border-black/[0.04] p-5 pt-0">
                     <table className="w-full text-sm">
                       <thead>
-                        <tr className="border-b border-border">
+                        <tr className="border-b border-black/[0.06]">
                           <th className="pb-2 text-left text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Status</th>
                           <th className="pb-2 text-right text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">Total</th>
                         </tr>
                       </thead>
                       <tbody>
                         {propostaStatusRows.map((row) => (
-                          <tr key={row.label} className="border-b border-border/40 last:border-0">
+                          <tr key={row.label} className="border-b border-black/[0.04] last:border-0">
                             <td className="py-2 font-medium">{row.label}</td>
                             <td className="py-2 text-right font-mono tabular-nums text-muted-foreground">{formatCount(row.value)}</td>
                           </tr>
@@ -1873,7 +1873,7 @@ export default function DashboardPage() {
 
               {/* Credores + Jurídico */}
               <div className="flex flex-col gap-5">
-                <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                   <div className="p-5 pb-0">
                     <h2 className="text-[15px] font-semibold">Credores</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Base cadastrada no sistema</p>
@@ -1883,7 +1883,7 @@ export default function DashboardPage() {
                       { label: "Total credores", value: kpis.credores.total_credores, isCurrency: false },
                       { label: "Valor total principal", value: kpis.credores.valor_total_principal, isCurrency: true },
                     ].map((s) => (
-                      <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-4">
+                      <div key={s.label} className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                         <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
                         <div className="mt-2 text-[1.3rem] font-extrabold leading-none tracking-[-0.02em]">
                           {s.isCurrency
@@ -1895,7 +1895,7 @@ export default function DashboardPage() {
                   </div>
                 </div>
 
-                <div className="rounded-3xl border border-border bg-background shadow-sm">
+                <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                   <div className="p-5 pb-0">
                     <h2 className="text-[15px] font-semibold">Ofícios</h2>
                     <p className="mt-1.5 text-xs text-muted-foreground">Pendências e conclusões processuais</p>
@@ -1905,7 +1905,7 @@ export default function DashboardPage() {
                       { label: "Análise inicial", value: kpis.oficios.analise_processual_inicial, tone: kpis.oficios.analise_processual_inicial > 0 ? "warning" : "default" },
                       { label: "Com ofício", value: kpis.oficios.com_oficio, tone: "success" },
                     ].map((s) => (
-                      <div key={s.label} className="rounded-[18px] border border-border bg-muted/20 p-4">
+                      <div key={s.label} className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] p-4" style={clayInsetShadow}>
                         <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{s.label}</div>
                         <div className="mt-2 text-[1.6rem] font-extrabold leading-none tracking-[-0.02em]">
                           <CountUp end={s.value} duration={0.9} separator="." decimal="," decimals={0} {...COUNTUP_SCROLL_PROPS} />
@@ -1921,13 +1921,13 @@ export default function DashboardPage() {
             </div>
 
             {/* SLA + Cálculo */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="flex items-start justify-between gap-3 p-5 pb-0">
                 <div>
                   <h2 className="text-[15px] font-semibold">SLA e cálculo</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Controle de prazo e progresso da fila de cálculo</p>
                 </div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">{slaHealthyPercent.toFixed(0)}% saudável</span>
+                <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">{slaHealthyPercent.toFixed(0)}% saudável</span>
               </div>
               <div className="grid grid-cols-2 gap-3 p-5 sm:grid-cols-3 lg:grid-cols-5">
                 {[
@@ -1942,7 +1942,7 @@ export default function DashboardPage() {
                   { label: "Tempo médio", value: null, displayValue: formatHours(kpis.sla.tempo_medio_calculo_horas), tone: "default" },
                   { label: "Versões média", value: kpis.calculo.versoes_media, decimals: 1, tone: "default" },
                 ].map((item) => (
-                  <div key={item.label} className="rounded-[22px] border border-border bg-muted/20 p-3.5">
+                  <div key={item.label} className="rounded-[22px] border border-black/[0.06] bg-[#f2f3f7] p-3.5" style={clayInsetShadow}>
                     <div className="text-[11px] font-extrabold uppercase tracking-[.08em] text-muted-foreground">{item.label}</div>
                     <div className="mt-2 text-[1.5rem] font-extrabold leading-none tracking-[-0.03em]">
                       {item.displayValue
@@ -1960,7 +1960,7 @@ export default function DashboardPage() {
             {/* Documentos + Certidões + Jurídico 3-col */}
             <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
               {/* Documentos */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="p-5 pb-0">
                   <h2 className="text-[15px] font-semibold">Documentos do credor</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Progresso de recebimento</p>
@@ -1980,7 +1980,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Certidões */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="p-5 pb-0">
                   <h2 className="text-[15px] font-semibold">Certidões</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Progresso e vencimentos</p>
@@ -2006,7 +2006,7 @@ export default function DashboardPage() {
               </div>
 
               {/* Jurídico */}
-              <div className="rounded-3xl border border-border bg-background shadow-sm">
+              <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                 <div className="p-5 pb-0">
                   <h2 className="text-[15px] font-semibold">Jurídico</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Pareceres e resultados finais</p>
@@ -2017,7 +2017,7 @@ export default function DashboardPage() {
                   ) : (
                     <div className="grid gap-3">
                       {[...juridicoParecerRows.slice(0, 3), ...juridicoResultadoRows.slice(0, 3)].map((row) => (
-                        <div key={row.label} className="flex items-center justify-between rounded-[14px] border border-border/50 bg-muted/10 px-3.5 py-2.5">
+                        <div key={row.label} className="flex items-center justify-between rounded-[14px] border border-black/[0.04] bg-[#f2f3f7] px-3.5 py-2.5">
                           <span className="text-sm font-medium truncate">{row.label}</span>
                           <span className="ml-2 shrink-0 font-mono text-sm font-extrabold tabular-nums">{formatCount(row.value)}</span>
                         </div>
@@ -2029,13 +2029,13 @@ export default function DashboardPage() {
             </div>
 
             {/* Atividades */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="flex items-start justify-between gap-3 p-5 pb-0">
                 <div>
                   <h2 className="text-[15px] font-semibold">Atividades por tipo</h2>
                   <p className="mt-1.5 text-xs text-muted-foreground">Eventos registrados no período selecionado</p>
                 </div>
-                <span className="inline-flex shrink-0 items-center rounded-full border border-border bg-background px-3 py-1.5 text-xs font-bold">
+                <span className="inline-flex shrink-0 items-center rounded-full border border-black/[0.06] bg-[#f2f3f7] px-3 py-1.5 text-xs font-bold text-[#374151]">
                   {formatCount(atividadesRows.reduce((a, r) => a + r.value, 0))} total
                 </span>
               </div>
@@ -2047,7 +2047,7 @@ export default function DashboardPage() {
                     {atividadesRows.map((row, i) => {
                       const maxVal = atividadesRows[0]?.value || 1
                       const pct = Math.min((row.value / maxVal) * 100, 100)
-                      const colors = ["bg-primary", "bg-amber-400", "bg-emerald-500", "bg-blue-500", "bg-violet-500", "bg-red-500"]
+                      const colors = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]", "bg-[#92400e]"]
                       return (
                         <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_3.5rem] items-center gap-3 text-sm">
                           <span className="truncate font-medium">{row.label}</span>
@@ -2070,7 +2070,7 @@ export default function DashboardPage() {
           <div className="space-y-5">
 
             {/* ComplexityOverview */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="p-5 pb-0">
                 <h2 className="text-[15px] font-semibold">Complexidade operacional</h2>
                 <p className="mt-1.5 text-xs text-muted-foreground">Distribuição dos precatórios por nível de complexidade</p>
@@ -2081,7 +2081,7 @@ export default function DashboardPage() {
             </div>
 
             {/* PerformanceMetrics */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="p-5 pb-0">
                 <h2 className="text-[15px] font-semibold">Métricas de performance</h2>
                 <p className="mt-1.5 text-xs text-muted-foreground">Tempos médios, SLA estourado e fila de cálculo</p>
@@ -2095,7 +2095,7 @@ export default function DashboardPage() {
             {(operational.bottlenecks.length > 0 || operational.operators.length > 0) && (
               <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
                 {operational.bottlenecks.length > 0 && (
-                  <div className="rounded-3xl border border-border bg-background shadow-sm">
+                  <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                     <div className="p-5 pb-0">
                       <h2 className="text-[15px] font-semibold">Gargalos por motivo de atraso</h2>
                       <p className="mt-1.5 text-xs text-muted-foreground">Principais motivos que travam precatórios</p>
@@ -2106,7 +2106,7 @@ export default function DashboardPage() {
                   </div>
                 )}
                 {operational.operators.length > 0 && (
-                  <div className="rounded-3xl border border-border bg-background shadow-sm">
+                  <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
                     <div className="p-5 pb-0">
                       <h2 className="text-[15px] font-semibold">Distribuição por operador</h2>
                       <p className="mt-1.5 text-xs text-muted-foreground">Carga de trabalho por responsável de cálculo</p>
@@ -2120,7 +2120,7 @@ export default function DashboardPage() {
             )}
 
             {/* Críticos */}
-            <div className="rounded-3xl border border-border bg-background shadow-sm">
+            <div className="rounded-[24px] border border-black/[0.07] bg-white" style={clayCardShadow}>
               <div className="flex items-start justify-between gap-3 p-5 pb-0">
                 <div>
                   <h2 className="text-[15px] font-semibold">Precatórios críticos — visão detalhada</h2>
