@@ -1,0 +1,1442 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>CRM Apax — Preview Claymorphism</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #e8eaf6;
+    --bg2: #ede7f6;
+    --surface: #f3f0ff;
+
+    --purple: #7c4dff;
+    --purple-light: #b39dff;
+    --purple-pale: #ede7fe;
+    --indigo: #5c6bc0;
+
+    --teal: #00bcd4;
+    --teal-pale: #e0f7fa;
+    --green: #43a047;
+    --green-pale: #e8f5e9;
+    --green-vivid: #00c853;
+
+    --amber: #ffab00;
+    --amber-pale: #fff8e1;
+    --orange: #ff6d00;
+    --orange-pale: #fff3e0;
+
+    --rose: #f06292;
+    --rose-pale: #fce4ec;
+    --red: #ef5350;
+
+    --blue: #42a5f5;
+    --blue-pale: #e3f2fd;
+
+    --text: #1a1035;
+    --text-mid: #4a3f6b;
+    --text-soft: #8b7daa;
+
+    /* Clay shadow formula: bottom-right shadow + inner top-left highlight */
+    --clay-sm:
+      6px 6px 12px rgba(100, 80, 180, 0.18),
+      -2px -2px 6px rgba(255,255,255,0.85),
+      inset 1px 1px 2px rgba(255,255,255,0.9),
+      inset -1px -1px 2px rgba(100,80,160,0.1);
+
+    --clay-md:
+      10px 10px 20px rgba(100, 80, 180, 0.2),
+      -4px -4px 10px rgba(255,255,255,0.9),
+      inset 2px 2px 4px rgba(255,255,255,0.9),
+      inset -2px -2px 4px rgba(100,80,160,0.12);
+
+    --clay-lg:
+      16px 16px 32px rgba(100, 80, 180, 0.22),
+      -6px -6px 16px rgba(255,255,255,0.95),
+      inset 3px 3px 6px rgba(255,255,255,0.9),
+      inset -3px -3px 6px rgba(100,80,160,0.1);
+
+    --clay-pressed:
+      4px 4px 8px rgba(100, 80, 180, 0.2),
+      -2px -2px 5px rgba(255,255,255,0.8),
+      inset 3px 3px 8px rgba(100,80,160,0.15),
+      inset -2px -2px 5px rgba(255,255,255,0.7);
+  }
+
+  body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #dde1f5 0%, #ede8f8 40%, #e8f0fb 100%);
+    min-height: 100vh;
+    display: flex;
+    overflow: hidden;
+    color: var(--text);
+  }
+
+  /* ── SIDEBAR ── */
+  .sidebar {
+    width: 230px;
+    min-height: 100vh;
+    background: linear-gradient(160deg, #f0eeff 0%, #ebe4ff 100%);
+    box-shadow:
+      8px 0 24px rgba(100,80,180,0.15),
+      inset -2px 0 4px rgba(255,255,255,0.8);
+    display: flex;
+    flex-direction: column;
+    padding: 24px 14px;
+    gap: 6px;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+  }
+
+  .logo-wrap {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 10px 22px;
+  }
+
+  .logo-blob {
+    width: 46px; height: 46px;
+    background: linear-gradient(135deg, #9c6fff 0%, #6c3fff 100%);
+    border-radius: 16px;
+    box-shadow:
+      5px 5px 12px rgba(108,63,255,0.4),
+      -2px -2px 6px rgba(255,255,255,0.9),
+      inset 2px 2px 4px rgba(255,255,255,0.3),
+      inset -1px -1px 3px rgba(60,20,180,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    flex-shrink: 0;
+  }
+
+  .logo-text strong {
+    display: block;
+    font-size: 14px;
+    font-weight: 800;
+    color: #4a2db0;
+    letter-spacing: -0.3px;
+  }
+
+  .logo-text span {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 600;
+    color: var(--text-soft);
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-top: 1px;
+  }
+
+  .nav-section-label {
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    color: var(--text-soft);
+    padding: 10px 10px 4px;
+    opacity: 0.6;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 11px 14px;
+    border-radius: 16px;
+    cursor: pointer;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-mid);
+    transition: all 0.15s;
+    user-select: none;
+    position: relative;
+  }
+
+  .nav-item:hover {
+    background: rgba(255,255,255,0.6);
+    box-shadow: var(--clay-sm);
+    color: var(--purple);
+    transform: translateY(-1px);
+  }
+
+  .nav-item.active {
+    background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+    color: white;
+    font-weight: 700;
+    box-shadow:
+      8px 8px 16px rgba(108,63,255,0.4),
+      -3px -3px 8px rgba(255,255,255,0.9),
+      inset 2px 2px 4px rgba(255,255,255,0.25),
+      inset -1px -1px 3px rgba(0,0,0,0.15);
+    transform: translateY(-1px);
+  }
+
+  .nav-icon {
+    width: 28px; height: 28px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+    background: rgba(255,255,255,0.25);
+  }
+
+  .nav-item.active .nav-icon {
+    background: rgba(255,255,255,0.2);
+  }
+
+  .nav-badge {
+    margin-left: auto;
+    background: linear-gradient(135deg, #ff6b6b, #ee4040);
+    color: white;
+    font-size: 9px;
+    font-weight: 800;
+    padding: 1px 7px;
+    border-radius: 20px;
+    box-shadow: 3px 3px 6px rgba(238,64,64,0.4), -1px -1px 3px rgba(255,255,255,0.8);
+  }
+
+  .nav-item.active .nav-badge {
+    background: rgba(255,255,255,0.3);
+    box-shadow: none;
+  }
+
+  .sidebar-footer {
+    margin-top: auto;
+    padding-top: 16px;
+  }
+
+  .user-chip {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.8), rgba(240,235,255,0.9));
+    border-radius: 18px;
+    box-shadow: var(--clay-sm);
+    cursor: pointer;
+  }
+
+  .user-avatar {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, #ff8a65, #e64a19);
+    border-radius: 12px;
+    box-shadow:
+      4px 4px 8px rgba(230,74,25,0.4),
+      -1px -1px 4px rgba(255,255,255,0.9),
+      inset 1px 1px 2px rgba(255,255,255,0.3);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 15px;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+  }
+
+  .user-info strong {
+    display: block;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text);
+  }
+
+  .user-info span {
+    display: block;
+    font-size: 9.5px;
+    font-weight: 500;
+    color: var(--text-soft);
+    margin-top: 1px;
+  }
+
+  /* ── MAIN ── */
+  .main {
+    flex: 1;
+    overflow-y: auto;
+    padding: 28px 28px 40px;
+  }
+
+  /* ── HEADER ── */
+  .page-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 26px;
+  }
+
+  .page-title {
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--text);
+    letter-spacing: -0.8px;
+    line-height: 1.15;
+  }
+
+  .page-subtitle {
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--text-soft);
+    margin-top: 3px;
+    letter-spacing: 0.1px;
+  }
+
+  .header-actions { display: flex; gap: 10px; }
+
+  /* ── BUTTONS ── */
+  .btn {
+    font-family: 'Inter', sans-serif;
+    font-size: 12.5px;
+    font-weight: 700;
+    padding: 11px 20px;
+    border-radius: 16px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.15s;
+    user-select: none;
+    white-space: nowrap;
+    letter-spacing: 0.1px;
+  }
+
+  .btn:active { transform: translateY(2px); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+    color: white;
+    box-shadow:
+      8px 8px 18px rgba(108,63,255,0.45),
+      -3px -3px 8px rgba(255,255,255,0.95),
+      inset 2px 2px 4px rgba(255,255,255,0.25),
+      inset -1px -1px 3px rgba(0,0,0,0.2);
+  }
+
+  .btn-primary:hover { transform: translateY(-2px); box-shadow: 12px 12px 24px rgba(108,63,255,0.5), -4px -4px 10px rgba(255,255,255,0.95), inset 2px 2px 4px rgba(255,255,255,0.25); }
+
+  .btn-secondary {
+    background: linear-gradient(135deg, #f3f0ff, #ece8ff);
+    color: var(--purple);
+    box-shadow: var(--clay-sm);
+  }
+
+  .btn-secondary:hover { transform: translateY(-2px); box-shadow: var(--clay-md); }
+
+  /* ── STATS ── */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    border-radius: 24px;
+    padding: 20px 20px 18px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+
+  .stat-card:hover { transform: translateY(-3px); }
+
+  .stat-card-purple {
+    background: linear-gradient(145deg, #9c6fff, #7c3fff);
+    box-shadow:
+      10px 10px 20px rgba(124,63,255,0.45),
+      -4px -4px 12px rgba(255,255,255,0.9),
+      inset 3px 3px 6px rgba(255,255,255,0.2),
+      inset -2px -2px 5px rgba(0,0,0,0.15);
+  }
+
+  .stat-card-teal {
+    background: linear-gradient(145deg, #26c6da, #00acc1);
+    box-shadow:
+      10px 10px 20px rgba(0,172,193,0.45),
+      -4px -4px 12px rgba(255,255,255,0.9),
+      inset 3px 3px 6px rgba(255,255,255,0.2),
+      inset -2px -2px 5px rgba(0,0,0,0.12);
+  }
+
+  .stat-card-green {
+    background: linear-gradient(145deg, #66bb6a, #43a047);
+    box-shadow:
+      10px 10px 20px rgba(67,160,71,0.45),
+      -4px -4px 12px rgba(255,255,255,0.9),
+      inset 3px 3px 6px rgba(255,255,255,0.2),
+      inset -2px -2px 5px rgba(0,0,0,0.12);
+  }
+
+  .stat-card-amber {
+    background: linear-gradient(145deg, #ffca28, #ffa000);
+    box-shadow:
+      10px 10px 20px rgba(255,160,0,0.45),
+      -4px -4px 12px rgba(255,255,255,0.9),
+      inset 3px 3px 6px rgba(255,255,255,0.3),
+      inset -2px -2px 5px rgba(0,0,0,0.1);
+  }
+
+  .stat-card-icon {
+    width: 44px; height: 44px;
+    background: rgba(255,255,255,0.22);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    margin-bottom: 14px;
+    box-shadow: inset 1px 1px 3px rgba(255,255,255,0.3), inset -1px -1px 2px rgba(0,0,0,0.1);
+  }
+
+  .stat-value {
+    font-size: 30px;
+    font-weight: 900;
+    color: white;
+    letter-spacing: -1px;
+    line-height: 1;
+    text-shadow: 0 2px 4px rgba(0,0,0,0.15);
+  }
+
+  .stat-value.currency { font-size: 20px; letter-spacing: -0.5px; }
+
+  .stat-label {
+    font-size: 11px;
+    font-weight: 600;
+    color: rgba(255,255,255,0.75);
+    margin-top: 5px;
+    letter-spacing: 0.2px;
+  }
+
+  .stat-trend {
+    font-size: 10px;
+    font-weight: 700;
+    color: rgba(255,255,255,0.65);
+    margin-top: 8px;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: -20px; right: -20px;
+    width: 90px; height: 90px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.1);
+  }
+
+  .stat-card::after {
+    content: '';
+    position: absolute;
+    bottom: -30px; right: -10px;
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.07);
+  }
+
+  /* ── LAYOUT ── */
+  .content-grid {
+    display: grid;
+    grid-template-columns: 1fr 330px;
+    gap: 20px;
+    align-items: start;
+  }
+
+  /* ── CLAY PANEL ── */
+  .clay-panel {
+    background: linear-gradient(145deg, #f5f2ff, #ede8ff);
+    border-radius: 28px;
+    box-shadow: var(--clay-lg);
+    overflow: hidden;
+  }
+
+  .panel-header {
+    padding: 18px 22px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid rgba(124,77,255,0.08);
+  }
+
+  .panel-title {
+    font-size: 15px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.3px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .panel-title-icon {
+    width: 28px; height: 28px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+  }
+
+  .panel-count {
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #7c4dff, #5c2de0);
+    color: white;
+    box-shadow: 3px 3px 8px rgba(124,77,255,0.4), -1px -1px 3px rgba(255,255,255,0.9);
+  }
+
+  /* ── TABS ── */
+  .tabs {
+    display: flex;
+    gap: 6px;
+    padding: 14px 20px 0;
+  }
+
+  .tab {
+    padding: 9px 16px;
+    border-radius: 14px 14px 0 0;
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-soft);
+    cursor: pointer;
+    user-select: none;
+    transition: all 0.15s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: transparent;
+  }
+
+  .tab:hover { color: var(--purple); }
+
+  .tab.active {
+    background: linear-gradient(135deg, #7c4dff 0%, #651fff 100%);
+    color: white;
+    box-shadow:
+      6px 4px 14px rgba(108,63,255,0.4),
+      -2px -2px 6px rgba(255,255,255,0.9),
+      inset 1px 1px 3px rgba(255,255,255,0.2);
+  }
+
+  .tab-count-bubble {
+    background: rgba(255,255,255,0.25);
+    font-size: 9px;
+    font-weight: 800;
+    min-width: 18px; height: 18px;
+    border-radius: 9px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+  }
+
+  .tab:not(.active) .tab-count-bubble {
+    background: rgba(124,77,255,0.12);
+    color: var(--purple);
+  }
+
+  /* ── PREC CARDS ── */
+  .prec-list {
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .prec-card {
+    background: linear-gradient(145deg, #ffffff, #f5f0ff);
+    border-radius: 22px;
+    padding: 18px 20px;
+    box-shadow:
+      8px 8px 18px rgba(100,80,180,0.15),
+      -4px -4px 10px rgba(255,255,255,0.95),
+      inset 2px 2px 5px rgba(255,255,255,0.9),
+      inset -1px -1px 3px rgba(100,80,160,0.06);
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .prec-card:hover {
+    transform: translateY(-3px);
+    box-shadow:
+      14px 14px 28px rgba(100,80,180,0.2),
+      -5px -5px 14px rgba(255,255,255,0.98),
+      inset 2px 2px 5px rgba(255,255,255,0.9),
+      inset -1px -1px 3px rgba(100,80,160,0.08);
+  }
+
+  .prec-card-accent {
+    position: absolute;
+    top: 0; left: 0;
+    width: 5px; height: 100%;
+    border-radius: 22px 0 0 22px;
+  }
+
+  .accent-gold { background: linear-gradient(180deg, #ffca28, #ff8f00); }
+  .accent-blue { background: linear-gradient(180deg, #42a5f5, #1565c0); }
+  .accent-green { background: linear-gradient(180deg, #66bb6a, #2e7d32); }
+  .accent-rose { background: linear-gradient(180deg, #f06292, #c2185b); }
+
+  .prec-card-top {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 12px;
+    padding-left: 10px;
+  }
+
+  .prec-name {
+    font-size: 13.5px;
+    font-weight: 800;
+    color: var(--text);
+    letter-spacing: -0.2px;
+    line-height: 1.3;
+  }
+
+  .prec-sub {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: var(--text-soft);
+    margin-top: 2px;
+  }
+
+  /* Status pills — clay style */
+  .status-pill {
+    padding: 4px 12px;
+    border-radius: 14px;
+    font-size: 9.5px;
+    font-weight: 800;
+    white-space: nowrap;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+  }
+
+  .pill-amber {
+    background: linear-gradient(135deg, #ffe082, #ffca28);
+    color: #7a5200;
+    box-shadow: 4px 4px 8px rgba(255,160,0,0.35), -2px -2px 5px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.6);
+  }
+
+  .pill-blue {
+    background: linear-gradient(135deg, #90caf9, #42a5f5);
+    color: #0d3a6e;
+    box-shadow: 4px 4px 8px rgba(66,165,245,0.35), -2px -2px 5px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.5);
+  }
+
+  .pill-green {
+    background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+    color: #1a4f1d;
+    box-shadow: 4px 4px 8px rgba(102,187,106,0.35), -2px -2px 5px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.5);
+  }
+
+  .pill-purple {
+    background: linear-gradient(135deg, #b39ddb, #9575cd);
+    color: #2a0d6e;
+    box-shadow: 4px 4px 8px rgba(149,117,205,0.35), -2px -2px 5px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.4);
+  }
+
+  .pill-rose {
+    background: linear-gradient(135deg, #f48fb1, #f06292);
+    color: #6a0033;
+    box-shadow: 4px 4px 8px rgba(240,98,146,0.35), -2px -2px 5px rgba(255,255,255,0.9), inset 1px 1px 2px rgba(255,255,255,0.4);
+  }
+
+  /* Meta chips */
+  .prec-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 14px;
+    padding-left: 10px;
+  }
+
+  .meta-chip {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 10px;
+    border-radius: 10px;
+    background: linear-gradient(135deg, #f0ecff, #e8e0ff);
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-mid);
+    box-shadow:
+      3px 3px 6px rgba(100,80,180,0.12),
+      -1px -1px 4px rgba(255,255,255,0.9),
+      inset 1px 1px 2px rgba(255,255,255,0.8);
+  }
+
+  /* Progress bar */
+  .progress-wrap {
+    margin-bottom: 14px;
+    padding-left: 10px;
+  }
+
+  .progress-label {
+    display: flex;
+    justify-content: space-between;
+    font-size: 10px;
+    font-weight: 600;
+    color: var(--text-soft);
+    margin-bottom: 6px;
+  }
+
+  .progress-track {
+    height: 10px;
+    background: linear-gradient(135deg, #e0d8ff, #d8d0f8);
+    border-radius: 20px;
+    overflow: visible;
+    box-shadow:
+      inset 3px 3px 6px rgba(100,80,180,0.2),
+      inset -2px -2px 4px rgba(255,255,255,0.8);
+    position: relative;
+  }
+
+  .progress-fill {
+    height: 100%;
+    border-radius: 20px;
+    position: relative;
+    transition: width 0.6s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  .progress-fill::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 4px; right: 4px;
+    height: 3px;
+    background: rgba(255,255,255,0.5);
+    border-radius: 10px;
+  }
+
+  .fill-amber {
+    background: linear-gradient(90deg, #ffca28, #ff8f00);
+    box-shadow: 0 3px 10px rgba(255,160,0,0.5);
+  }
+
+  .fill-blue {
+    background: linear-gradient(90deg, #42a5f5, #1565c0);
+    box-shadow: 0 3px 10px rgba(66,165,245,0.5);
+  }
+
+  .fill-green {
+    background: linear-gradient(90deg, #66bb6a, #2e7d32);
+    box-shadow: 0 3px 10px rgba(102,187,106,0.5);
+  }
+
+  .fill-purple {
+    background: linear-gradient(90deg, #9575cd, #4527a0);
+    box-shadow: 0 3px 10px rgba(149,117,205,0.5);
+  }
+
+  /* Values row */
+  .values-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+    padding-left: 10px;
+  }
+
+  .value-blob {
+    background: linear-gradient(135deg, #f0ecff, #e8e0ff);
+    border-radius: 16px;
+    padding: 10px 14px;
+    box-shadow:
+      4px 4px 10px rgba(100,80,180,0.12),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.8),
+      inset -1px -1px 2px rgba(100,80,160,0.06);
+  }
+
+  .value-label {
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--text-soft);
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
+    margin-bottom: 4px;
+  }
+
+  .value-amount {
+    font-size: 14px;
+    font-weight: 800;
+    letter-spacing: -0.3px;
+    color: var(--text);
+  }
+
+  .value-amount.highlight { color: #651fff; }
+
+  /* Responsável blob */
+  .resp-blob {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: linear-gradient(135deg, #f0ecff, #e8e0ff);
+    border-radius: 14px;
+    margin-bottom: 14px;
+    margin-left: 10px;
+    box-shadow:
+      4px 4px 10px rgba(100,80,180,0.1),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.8);
+    font-size: 11px;
+  }
+
+  .resp-label { color: var(--text-soft); font-weight: 500; display: flex; align-items: center; gap: 5px; }
+  .resp-name { font-weight: 700; color: var(--text); }
+
+  /* Action buttons */
+  .actions-row {
+    display: flex;
+    gap: 8px;
+    padding-left: 10px;
+    flex-wrap: wrap;
+  }
+
+  .btn-clay {
+    font-family: 'Inter', sans-serif;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 8px 14px;
+    border-radius: 14px;
+    cursor: pointer;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    flex: 1;
+    min-width: 90px;
+    transition: all 0.15s;
+    user-select: none;
+    letter-spacing: 0.1px;
+  }
+
+  .btn-clay:hover { transform: translateY(-2px); }
+  .btn-clay:active { transform: translateY(1px); box-shadow: var(--clay-pressed) !important; }
+
+  .btn-clay-default {
+    background: linear-gradient(135deg, #f0ecff, #e4deff);
+    color: var(--purple);
+    box-shadow:
+      5px 5px 12px rgba(100,80,180,0.2),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.8),
+      inset -1px -1px 2px rgba(100,80,160,0.1);
+  }
+
+  .btn-clay-green {
+    background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+    color: #2e7d32;
+    box-shadow:
+      5px 5px 12px rgba(67,160,71,0.25),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.7),
+      inset -1px -1px 2px rgba(46,125,50,0.1);
+  }
+
+  .btn-clay-danger {
+    background: linear-gradient(135deg, #ffcdd2, #ef9a9a);
+    color: #b71c1c;
+    flex: 0;
+    min-width: 38px;
+    padding: 8px 10px;
+    box-shadow:
+      5px 5px 12px rgba(239,83,80,0.2),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.7);
+  }
+
+  /* ── RIGHT PANELS ── */
+  .right-panel { display: flex; flex-direction: column; gap: 18px; }
+
+  /* Atendimento */
+  .atend-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    border-radius: 18px;
+    margin: 4px 0;
+    background: transparent;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+
+  .atend-item:hover {
+    background: linear-gradient(135deg, rgba(255,255,255,0.7), rgba(240,235,255,0.8));
+    box-shadow:
+      5px 5px 12px rgba(100,80,180,0.12),
+      -2px -2px 6px rgba(255,255,255,0.9);
+    transform: translateX(2px);
+  }
+
+  .atend-avatar {
+    width: 38px; height: 38px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    color: white;
+    flex-shrink: 0;
+    box-shadow: 4px 4px 8px rgba(0,0,0,0.2), -1px -1px 4px rgba(255,255,255,0.8), inset 1px 1px 2px rgba(255,255,255,0.2);
+  }
+
+  .av-yellow { background: linear-gradient(135deg, #ffd54f, #ff8f00); }
+  .av-blue { background: linear-gradient(135deg, #64b5f6, #1565c0); }
+  .av-green { background: linear-gradient(135deg, #81c784, #2e7d32); }
+  .av-rose { background: linear-gradient(135deg, #f48fb1, #c2185b); }
+  .av-teal { background: linear-gradient(135deg, #4dd0e1, #00838f); }
+
+  .atend-info { flex: 1; min-width: 0; }
+  .atend-name { font-size: 11.5px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .atend-meta { font-size: 9.5px; font-weight: 500; color: var(--text-soft); margin-top: 1px; }
+
+  .atend-badge {
+    font-size: 9px;
+    font-weight: 800;
+    padding: 3px 9px;
+    border-radius: 10px;
+    flex-shrink: 0;
+    letter-spacing: 0.3px;
+  }
+
+  .s-fila {
+    background: linear-gradient(135deg, #ffe082, #ffca28);
+    color: #7a5200;
+    box-shadow: 3px 3px 6px rgba(255,160,0,0.3), -1px -1px 3px rgba(255,255,255,0.9);
+  }
+
+  .s-contato {
+    background: linear-gradient(135deg, #90caf9, #42a5f5);
+    color: #0d3a6e;
+    box-shadow: 3px 3px 6px rgba(66,165,245,0.3), -1px -1px 3px rgba(255,255,255,0.9);
+  }
+
+  .s-interesse {
+    background: linear-gradient(135deg, #a5d6a7, #66bb6a);
+    color: #1a4f1d;
+    box-shadow: 3px 3px 6px rgba(102,187,106,0.3), -1px -1px 3px rgba(255,255,255,0.9);
+  }
+
+  /* Chart */
+  .chart-bars {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 88px;
+    padding: 0 4px;
+  }
+
+  .bar-wrap { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 5px; }
+
+  .bar {
+    width: 100%;
+    border-radius: 10px 10px 4px 4px;
+    position: relative;
+    overflow: hidden;
+    min-height: 8px;
+    transition: transform 0.2s;
+    cursor: pointer;
+  }
+
+  .bar:hover { transform: scaleY(1.04) translateY(-2px); }
+
+  .bar::after {
+    content: '';
+    position: absolute;
+    top: 4px; left: 25%; right: 25%;
+    height: 4px;
+    background: rgba(255,255,255,0.45);
+    border-radius: 10px;
+  }
+
+  .bar-purple {
+    background: linear-gradient(180deg, #b39dff, #7c4dff);
+    box-shadow: 0 6px 14px rgba(124,77,255,0.5), inset 1px 1px 3px rgba(255,255,255,0.3);
+  }
+
+  .bar-teal {
+    background: linear-gradient(180deg, #4dd0e1, #00838f);
+    box-shadow: 0 6px 14px rgba(0,131,143,0.4), inset 1px 1px 3px rgba(255,255,255,0.3);
+  }
+
+  .bar-label { font-size: 8px; font-weight: 700; color: var(--text-soft); letter-spacing: 0.3px; }
+
+  /* Quick stats right */
+  .quick-stat {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 11px 14px;
+    border-radius: 16px;
+    background: linear-gradient(135deg, #f5f2ff, #ede8ff);
+    box-shadow:
+      5px 5px 12px rgba(100,80,180,0.12),
+      -2px -2px 6px rgba(255,255,255,0.95),
+      inset 1px 1px 3px rgba(255,255,255,0.8);
+    cursor: pointer;
+    transition: transform 0.15s;
+  }
+
+  .quick-stat:hover { transform: translateX(2px); }
+
+  .qs-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: var(--text-mid);
+  }
+
+  .qs-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    box-shadow: 0 2px 6px currentColor;
+    flex-shrink: 0;
+  }
+
+  .qs-value {
+    font-size: 18px;
+    font-weight: 900;
+    letter-spacing: -0.5px;
+  }
+
+  /* Scrollbar */
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: rgba(124,77,255,0.05); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb { background: rgba(124,77,255,0.25); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(124,77,255,0.45); }
+</style>
+</head>
+<body>
+
+<!-- ── SIDEBAR ── -->
+<nav class="sidebar">
+  <div class="logo-wrap">
+    <div class="logo-blob">⚖️</div>
+    <div class="logo-text">
+      <strong>Apax Precatórios</strong>
+      <span>Gestão Jurídica</span>
+    </div>
+  </div>
+
+  <div class="nav-section-label">Principal</div>
+  <div class="nav-item">
+    <div class="nav-icon">🏠</div> Dashboard
+  </div>
+  <div class="nav-item active">
+    <div class="nav-icon">📋</div> Precatórios
+    <span class="nav-badge">24</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">🗂️</div> Kanban
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">📅</div> Agenda
+  </div>
+
+  <div class="nav-section-label" style="margin-top:6px">Operacional</div>
+  <div class="nav-item">
+    <div class="nav-icon">📞</div> Atendimento
+    <span class="nav-badge">7</span>
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">⚖️</div> Parecer Jurídico
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">🧮</div> Calculadora
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">📊</div> Auditoria IRPF
+  </div>
+
+  <div class="nav-section-label" style="margin-top:6px">Administração</div>
+  <div class="nav-item">
+    <div class="nav-icon">💰</div> Financeiro
+  </div>
+  <div class="nav-item">
+    <div class="nav-icon">👥</div> Usuários
+  </div>
+
+  <div class="sidebar-footer">
+    <div class="user-chip">
+      <div class="user-avatar">M</div>
+      <div class="user-info">
+        <strong>Matheus Prentacar</strong>
+        <span>Administrador</span>
+      </div>
+    </div>
+  </div>
+</nav>
+
+<!-- ── MAIN ── -->
+<main class="main">
+
+  <div class="page-header">
+    <div>
+      <div class="page-title">Precatórios 📋</div>
+      <div class="page-subtitle">Gestão completa da carteira de créditos</div>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-secondary">⬆ Upload Ofícios</button>
+      <button class="btn btn-primary">＋ Novo Precatório</button>
+    </div>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card stat-card-purple">
+      <div class="stat-card-icon">📋</div>
+      <div class="stat-value">247</div>
+      <div class="stat-label">Total de Precatórios</div>
+      <div class="stat-trend">↑ 12 este mês</div>
+    </div>
+    <div class="stat-card stat-card-teal">
+      <div class="stat-card-icon">✅</div>
+      <div class="stat-value">183</div>
+      <div class="stat-label">Distribuídos</div>
+      <div class="stat-trend">74% do total</div>
+    </div>
+    <div class="stat-card stat-card-green">
+      <div class="stat-card-icon">⏳</div>
+      <div class="stat-value">64</div>
+      <div class="stat-label">Pendentes</div>
+      <div class="stat-trend">↓ 8 do atendimento</div>
+    </div>
+    <div class="stat-card stat-card-amber">
+      <div class="stat-card-icon">💎</div>
+      <div class="stat-value currency">R$ 142,8M</div>
+      <div class="stat-label">Valor da Carteira</div>
+      <div class="stat-trend">↑ R$ 8,2M este mês</div>
+    </div>
+  </div>
+
+  <!-- Content -->
+  <div class="content-grid">
+    <div>
+      <div class="clay-panel">
+        <div class="tabs">
+          <div class="tab">Todos <span class="tab-count-bubble">247</span></div>
+          <div class="tab">Distribuídos <span class="tab-count-bubble">183</span></div>
+          <div class="tab active">Pendentes <span class="tab-count-bubble">64</span></div>
+        </div>
+        <div style="height:1px;background:rgba(124,77,255,0.08);margin:0 20px"></div>
+
+        <div class="prec-list">
+
+          <!-- Card 1 -->
+          <div class="prec-card">
+            <div class="prec-card-accent accent-gold"></div>
+            <div class="prec-card-top">
+              <div>
+                <div class="prec-name">ARISIA BARROS DOS SANTOS</div>
+                <div class="prec-sub">0830029-45.1995.8.02.0001 · TJAL</div>
+              </div>
+              <div class="status-pill pill-amber">🏆 Cálculo concluído</div>
+            </div>
+            <div class="prec-meta">
+              <div class="meta-chip">⚖️ TJAL</div>
+              <div class="meta-chip">📄 Média</div>
+              <div class="meta-chip">👤 Sem CPF</div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label"><span>Progresso do processo</span><span>75%</span></div>
+              <div class="progress-track">
+                <div class="progress-fill fill-amber" style="width:75%"></div>
+              </div>
+            </div>
+            <div class="values-row">
+              <div class="value-blob">
+                <div class="value-label">Valor principal</div>
+                <div class="value-amount">R$ 804.323,82</div>
+              </div>
+              <div class="value-blob">
+                <div class="value-label">Valor atualizado</div>
+                <div class="value-amount highlight">R$ 1.235.562,42</div>
+              </div>
+            </div>
+            <div class="resp-blob">
+              <div class="resp-label">👤 Responsável</div>
+              <div class="resp-name" style="color:var(--text-soft);font-weight:600">Não distribuído</div>
+            </div>
+            <div class="actions-row">
+              <button class="btn-clay btn-clay-default">↗ Distribuir</button>
+              <button class="btn-clay btn-clay-default">🔔 Aviso</button>
+              <button class="btn-clay btn-clay-default">⭐ Interesse no cálculo</button>
+              <button class="btn-clay btn-clay-danger">🗑</button>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="prec-card">
+            <div class="prec-card-accent accent-blue"></div>
+            <div class="prec-card-top">
+              <div>
+                <div class="prec-name">DJFUNDO DE INVESTIMENTO EM DIREITOS</div>
+                <div class="prec-sub">1042852-11.2019.8.26.0053 · TJSP</div>
+              </div>
+              <div class="status-pill pill-blue">🔵 Negociação</div>
+            </div>
+            <div class="prec-meta">
+              <div class="meta-chip">⚖️ TJSP</div>
+              <div class="meta-chip">🍽️ Alimentar</div>
+              <div class="meta-chip">👨‍💼 Dr. Roberto Lima</div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label"><span>Progresso do processo</span><span>55%</span></div>
+              <div class="progress-track">
+                <div class="progress-fill fill-blue" style="width:55%"></div>
+              </div>
+            </div>
+            <div class="values-row">
+              <div class="value-blob">
+                <div class="value-label">Valor principal</div>
+                <div class="value-amount">R$ 55.130.133,34</div>
+              </div>
+              <div class="value-blob">
+                <div class="value-label">Valor atualizado</div>
+                <div class="value-amount highlight">R$ 78.440.200,00</div>
+              </div>
+            </div>
+            <div class="resp-blob">
+              <div class="resp-label">👤 Responsável</div>
+              <div class="resp-name">Carlos Henrique</div>
+            </div>
+            <div class="actions-row">
+              <button class="btn-clay btn-clay-default">↗ Redistribuir</button>
+              <button class="btn-clay btn-clay-default">🔔 Aviso</button>
+              <button class="btn-clay btn-clay-default">⭐ Interesse no cálculo</button>
+              <button class="btn-clay btn-clay-danger">🗑</button>
+            </div>
+          </div>
+
+          <!-- Card 3: Do Atendimento -->
+          <div class="prec-card" style="background:linear-gradient(145deg,#f0fff4,#e8fdf0)">
+            <div class="prec-card-accent accent-green"></div>
+            <div class="prec-card-top">
+              <div>
+                <div class="prec-name">JOSÉ AUGUSTO BASILIO FERREIRA</div>
+                <div class="prec-sub">Do Atendimento · TRF4</div>
+              </div>
+              <div class="status-pill pill-green">✅ Interessado</div>
+            </div>
+            <div class="prec-meta">
+              <div class="meta-chip" style="background:linear-gradient(135deg,#d0f0d8,#b8e8c0)">⚖️ TRF4</div>
+              <div class="meta-chip" style="background:linear-gradient(135deg,#d0f0d8,#b8e8c0)">📞 Do Atendimento</div>
+              <div class="meta-chip" style="background:linear-gradient(135deg,#d0f0d8,#b8e8c0)">🏙️ Curitiba</div>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-label"><span>Progresso do processo</span><span>20%</span></div>
+              <div class="progress-track" style="background:linear-gradient(135deg,#c8f0cc,#b0e8b4)">
+                <div class="progress-fill fill-green" style="width:20%"></div>
+              </div>
+            </div>
+            <div class="values-row">
+              <div class="value-blob" style="background:linear-gradient(135deg,#e8fdf0,#d8f8e4)">
+                <div class="value-label">Valor principal</div>
+                <div class="value-amount">R$ 33.230.956,95</div>
+              </div>
+              <div class="value-blob" style="background:linear-gradient(135deg,#e8fdf0,#d8f8e4)">
+                <div class="value-label">Valor atualizado</div>
+                <div class="value-amount" style="color:var(--text-soft)">—</div>
+              </div>
+            </div>
+            <div class="resp-blob" style="background:linear-gradient(135deg,#e8fdf0,#d8f8e4)">
+              <div class="resp-label">👤 Responsável</div>
+              <div class="resp-name" style="color:var(--text-soft);font-weight:600">Não distribuído</div>
+            </div>
+            <div class="actions-row">
+              <button class="btn-clay btn-clay-green">↗ Distribuir</button>
+              <button class="btn-clay btn-clay-default">🔔 Aviso</button>
+              <button class="btn-clay btn-clay-default">⭐ Interesse no cálculo</button>
+              <button class="btn-clay btn-clay-danger">🗑</button>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+    <!-- Right -->
+    <div class="right-panel">
+
+      <!-- Atendimento -->
+      <div class="clay-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:linear-gradient(135deg,#ffd54f,#ff8f00);box-shadow:3px 3px 8px rgba(255,143,0,0.4)">📞</div>
+            Setor de Atendimento
+          </div>
+          <div class="panel-count">7 na fila</div>
+        </div>
+        <div style="padding:8px 8px">
+          <div class="atend-item">
+            <div class="atend-avatar av-yellow">M</div>
+            <div class="atend-info">
+              <div class="atend-name">MATHEUS FELIPE DA SILVA</div>
+              <div class="atend-meta">TRF4 · R$ 100.000.000,00</div>
+            </div>
+            <div class="atend-badge s-contato">Em contato</div>
+          </div>
+          <div class="atend-item">
+            <div class="atend-avatar av-blue">C</div>
+            <div class="atend-info">
+              <div class="atend-name">CREDOR EM SIGILO</div>
+              <div class="atend-meta">TJSP · R$ 55.130.133,34</div>
+            </div>
+            <div class="atend-badge s-fila">Na fila</div>
+          </div>
+          <div class="atend-item">
+            <div class="atend-avatar av-green">J</div>
+            <div class="atend-info">
+              <div class="atend-name">JOSÉ AUGUSTO BASILIO</div>
+              <div class="atend-meta">TRF4 · R$ 33.230.956,95</div>
+            </div>
+            <div class="atend-badge s-interesse">Interessado</div>
+          </div>
+          <div class="atend-item">
+            <div class="atend-avatar av-rose">F</div>
+            <div class="atend-info">
+              <div class="atend-name">FUNDO APAX INVESTIMENTOS</div>
+              <div class="atend-meta">TJRJ · R$ 12.800.000,00</div>
+            </div>
+            <div class="atend-badge s-fila">Na fila</div>
+          </div>
+          <div class="atend-item">
+            <div class="atend-avatar av-teal">A</div>
+            <div class="atend-info">
+              <div class="atend-name">ADRIANA COSTA MONTEIRO</div>
+              <div class="atend-meta">TJMG · R$ 4.450.000,00</div>
+            </div>
+            <div class="atend-badge s-contato">Em contato</div>
+          </div>
+        </div>
+        <div style="padding:8px 16px 14px">
+          <button class="btn btn-secondary" style="width:100%;justify-content:center;font-size:11.5px">
+            Ver fila completa →
+          </button>
+        </div>
+      </div>
+
+      <!-- Chart -->
+      <div class="clay-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:linear-gradient(135deg,#b39dff,#7c4dff);box-shadow:3px 3px 8px rgba(124,77,255,0.4)">💰</div>
+            Receita Mensal
+          </div>
+          <div class="panel-count" style="background:linear-gradient(135deg,#66bb6a,#2e7d32);box-shadow:3px 3px 8px rgba(46,125,50,0.4)">+18%</div>
+        </div>
+        <div style="padding:14px 20px 18px">
+          <div style="margin-bottom:14px">
+            <div style="font-size:22px;font-weight:900;color:#4527a0;letter-spacing:-0.5px">R$ 284.500</div>
+            <div style="font-size:10px;font-weight:600;color:var(--text-soft);margin-top:2px;text-transform:uppercase;letter-spacing:0.8px">Receita acumulada 2026</div>
+          </div>
+          <div class="chart-bars">
+            <div class="bar-wrap">
+              <div class="bar bar-purple" style="height:44px"></div>
+              <div class="bar-label">jan</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-purple" style="height:56px"></div>
+              <div class="bar-label">fev</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-teal" style="height:38px"></div>
+              <div class="bar-label">mar</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-purple" style="height:70px"></div>
+              <div class="bar-label">abr</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-teal" style="height:52px"></div>
+              <div class="bar-label">mai</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-purple" style="height:46px"></div>
+              <div class="bar-label">jun</div>
+            </div>
+            <div class="bar-wrap">
+              <div class="bar bar-teal" style="height:74px"></div>
+              <div class="bar-label">jul</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:16px;margin-top:12px">
+            <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--text-soft)">
+              <div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,#b39dff,#7c4dff)"></div>
+              Receita
+            </div>
+            <div style="display:flex;align-items:center;gap:6px;font-size:10px;font-weight:600;color:var(--text-soft)">
+              <div style="width:10px;height:10px;border-radius:3px;background:linear-gradient(135deg,#4dd0e1,#00838f)"></div>
+              Honorários
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick stats -->
+      <div class="clay-panel">
+        <div class="panel-header">
+          <div class="panel-title">
+            <div class="panel-title-icon" style="background:linear-gradient(135deg,#80cbc4,#00897b);box-shadow:3px 3px 8px rgba(0,137,123,0.4)">📊</div>
+            Resumo Operacional
+          </div>
+        </div>
+        <div style="padding:12px 16px;display:flex;flex-direction:column;gap:8px">
+          <div class="quick-stat">
+            <div class="qs-label">
+              <div class="qs-dot" style="background:#9575cd;color:#9575cd"></div>
+              Pareceres pendentes
+            </div>
+            <div class="qs-value" style="color:#4527a0">12</div>
+          </div>
+          <div class="quick-stat">
+            <div class="qs-label">
+              <div class="qs-dot" style="background:#ffa726;color:#ffa726"></div>
+              Cálculos em andamento
+            </div>
+            <div class="qs-value" style="color:#e65100">8</div>
+          </div>
+          <div class="quick-stat">
+            <div class="qs-label">
+              <div class="qs-dot" style="background:#66bb6a;color:#66bb6a"></div>
+              Audiências esta semana
+            </div>
+            <div class="qs-value" style="color:#2e7d32">3</div>
+          </div>
+          <div class="quick-stat">
+            <div class="qs-label">
+              <div class="qs-dot" style="background:#ef5350;color:#ef5350"></div>
+              SLA em atraso
+            </div>
+            <div class="qs-value" style="color:#b71c1c">4</div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</main>
+</body>
+</html>

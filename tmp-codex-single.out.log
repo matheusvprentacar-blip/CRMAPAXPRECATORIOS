@@ -1,0 +1,17 @@
+
+> Blackbox AI clone@1.6.43 dev
+> node -e "const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}" && next dev
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3000
+   - Network:      http://192.168.1.3:3000
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1216ms
+ ○ Compiling /clientes ...
+ ✓ Compiled /clientes in 11s (6045 modules)
+ GET /clientes 200 in 14037ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 5.5s (6993 modules)
+ GET /dashboard 200 in 6164ms

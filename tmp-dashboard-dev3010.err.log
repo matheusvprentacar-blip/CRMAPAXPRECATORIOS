@@ -1,0 +1,29 @@
+ ⨯ ./app/(dashboard)/dashboard/page.tsx
+Error:   [31mx[0m Unexpected token. Did you mean `{'}'}` or `&rbrace;`?
+      ,-[[36;1;4mC:\Users\User\Desktop\crmapaxprecatorios\app\(dashboard)\dashboard\page.tsx[0m:1737:1]
+ [2m1734[0m |                         })}
+ [2m1735[0m |                       </tbody>
+ [2m1736[0m |                     </table>
+ [2m1737[0m |                   )}
+      : [35;1m                   ^[0m
+ [2m1738[0m |                 </div>
+ [2m1739[0m |               </div>
+ [2m1739[0m |             </div>
+      `----
+  [31mx[0m Unterminated regexp literal
+      ,-[[36;1;4mC:\Users\User\Desktop\crmapaxprecatorios\app\(dashboard)\dashboard\page.tsx[0m:1739:1]
+ [2m1736[0m |                     </table>
+ [2m1737[0m |                   )}
+ [2m1738[0m |                 </div>
+ [2m1739[0m |               </div>
+      : [35;1m               ^^^^^[0m
+ [2m1740[0m |             </div>
+ [2m1741[0m |           </div>
+ [2m1741[0m |         )}
+      `----
+
+Caused by:
+    Syntax Error
+
+Import trace for requested module:
+./app/(dashboard)/dashboard/page.tsx

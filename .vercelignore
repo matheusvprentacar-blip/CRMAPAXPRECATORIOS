@@ -1,0 +1,32 @@
+# Dependencies and build output
+/node_modules
+/.next
+/.next-dev-*
+/out
+/dist
+/build
+/coverage
+
+# Local/dev artifacts
+/.vercel
+/.codex
+/.venv_ocr
+/tmp
+/tmp-*.log
+/*.log
+/*.zip
+
+# Non-web app directories
+/src-tauri
+/supabase
+/backups
+/api_backup
+/scripts
+/debug_artifacts
+/docs
+/release-notes
+/precatorio_ocr_pipeline
+/dashboard layout v2
+/templates de documentos
+/Distrib
+/Ver

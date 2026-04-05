@@ -1,0 +1,55 @@
+
+> Blackbox AI clone@1.6.43 dev
+> node -e "const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}" && next dev -p 3010
+
+   ▲ Next.js 15.5.9
+   - Local:        http://localhost:3010
+   - Network:      http://192.168.1.3:3010
+   - Environments: .env.local
+
+ ✓ Starting...
+ ✓ Ready in 1201ms
+ ○ Compiling /dashboard ...
+ ✓ Compiled /dashboard in 9.3s (7013 modules)
+ GET /dashboard 200 in 12096ms
+ ✓ Compiled in 930ms (3427 modules)
+ ✓ Compiled in 667ms (3427 modules)
+ ✓ Compiled in 863ms (3427 modules)
+ ✓ Compiled in 582ms (3427 modules)
+ ✓ Compiled in 726ms (3427 modules)
+ ✓ Compiled in 717ms (3427 modules)
+ ✓ Compiled in 774ms (3427 modules)
+ ✓ Compiled in 833ms (3427 modules)
+ ✓ Compiled in 677ms (3427 modules)
+ ✓ Compiled in 879ms (3427 modules)
+ ✓ Compiled in 676ms (3427 modules)
+ ✓ Compiled in 689ms (3427 modules)
+ ✓ Compiled in 688ms (3427 modules)
+ ✓ Compiled in 508ms (3427 modules)
+ ✓ Compiled in 511ms (3427 modules)
+ ✓ Compiled in 498ms (3427 modules)
+ ✓ Compiled in 578ms (3427 modules)
+ ✓ Compiled in 877ms (3427 modules)
+ ✓ Compiled in 661ms (3427 modules)
+ ✓ Compiled in 923ms (3427 modules)
+ ✓ Compiled in 649ms (3427 modules)
+ ✓ Compiled in 826ms (3427 modules)
+ ✓ Compiled in 535ms (3427 modules)
+ ✓ Compiled in 702ms (3427 modules)
+ ✓ Compiled in 752ms (3427 modules)
+ ✓ Compiled in 661ms (3427 modules)
+ ✓ Compiled in 580ms (3427 modules)
+ ✓ Compiled in 956ms (3427 modules)
+ ✓ Compiled in 974ms (3427 modules)
+ ✓ Compiled in 620ms (3427 modules)
+ ✓ Compiled in 957ms (3427 modules)
+ ✓ Compiled in 608ms (3427 modules)
+ ✓ Compiled in 688ms (3427 modules)
+ ✓ Compiled in 2.5s (3427 modules)
+ ✓ Compiled in 877ms (3427 modules)
+ ✓ Compiled in 2.3s (3427 modules)
+ ✓ Compiled in 3.1s (3427 modules)
+ ✓ Compiled in 646ms (3427 modules)
+ ✓ Compiled in 2s (3427 modules)
+ ✓ Compiled in 898ms (3427 modules)
+ ✓ Compiled in 673ms (3427 modules)
