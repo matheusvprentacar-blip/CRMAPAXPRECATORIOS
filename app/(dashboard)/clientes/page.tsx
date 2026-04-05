@@ -85,7 +85,7 @@ const modalSurfaceStyle: React.CSSProperties = {}
 const _sheen = ""
 const carteiraAccentClass = "text-[#95c63d] dark:text-[#a7d75a] drop-shadow-[0_0_12px_rgba(149,198,61,0.16)]"
 
-const clienteModalInputClassNames =
+const _clienteModalInputClassNames =
   "h-11 min-h-11 rounded-xl border border-border bg-muted/40 px-3 " +
   "text-foreground placeholder:text-foreground/55 hover:bg-muted/60"
 
@@ -2142,26 +2142,26 @@ export default function ClientsPage() {
       >
         <ModalContent className={modalContentBase}>
           <>
-            <ModalHeader className="shrink-0 border-b border-border/50 px-6 pb-4 pt-5">
+            <ModalHeader className="shrink-0 border-b border-black/[0.06] px-5 pb-4 pt-5 sm:px-6">
               <div className="flex w-full flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                 <div className="flex items-start gap-3">
-                  <div className="rounded-full bg-primary/10 p-2.5 text-primary">
-                    <User className="h-6 w-6" />
+                  <div className="grid h-12 w-12 place-items-center rounded-2xl bg-[#0e4d6a] text-white" style={clayPrimaryShadow}>
+                    <User className="h-5 w-5" />
                   </div>
                   <div className="space-y-2">
-                    <h2 className="break-words text-2xl font-semibold tracking-tight text-foreground">
-                      {selectedCredor?.credor_nome || "Cliente"}
-                    </h2>
-                    <p className="text-sm text-foreground/70">
-                      {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
-                        ? selectedCredor.credor_cpf_cnpj
-                        : "CPF/CNPJ nao informado"}
-                    </p>
+                    <div>
+                      <h2 className="break-words text-[28px] font-black tracking-[-0.04em] text-[#0b0c10]">
+                        {selectedCredor?.credor_nome || "Cliente"}
+                      </h2>
+                      <p className="text-sm text-[#6b7280]">
+                        {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
+                          ? selectedCredor.credor_cpf_cnpj
+                          : "CPF/CNPJ não informado"}
+                      </p>
+                    </div>
                     <div className="flex flex-wrap items-center gap-2">
-                      <span className="inline-flex items-center rounded-full border border-primary/30 bg-primary/10 px-2.5 py-0.5 text-xs font-medium text-primary">
-                        {selectedCredor?.total_precatorios || 0} processos
-                      </span>
-                      <span className={cx("inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold", statusClass(selectedCredor?.ultimo_status))}>
+                      <span className={cx(clayBadgeClass, "border-[#bfdbfe] bg-[#eff6ff] text-[#1d4ed8]")}>{selectedCredor?.total_precatorios || 0} processos</span>
+                      <span className={cx("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusClass(selectedCredor?.ultimo_status))}>
                         {formatStatus(selectedCredor?.ultimo_status)}
                       </span>
                     </div>
@@ -2186,7 +2186,8 @@ export default function ClientsPage() {
                   <Dropdown placement="bottom-end">
                     <DropdownTrigger
                       aria-label="Mais acoes"
-                      className="inline-flex h-10 w-10 min-w-0 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
+                      className="inline-flex h-11 w-11 min-w-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#6b7280] hover:text-[#0b0c10]"
+                      style={clayInsetShadow}
                     >
                       <span className="inline-flex items-center justify-center" aria-hidden="true">
                         <MoreVertical className="h-5 w-5" />
@@ -2209,29 +2210,31 @@ export default function ClientsPage() {
 
             <ModalBody className="min-h-0 flex-1 space-y-4 overflow-x-hidden overflow-y-auto px-6 py-4">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Total processos</p>
-                  <p className="text-2xl font-semibold tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
+                <div className="rounded-[20px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">Total de processos</p>
+                  <p className="mt-2 text-2xl font-black tracking-[-0.03em] text-[#0b0c10] tabular-nums">{selectedCredor?.total_precatorios || 0}</p>
                 </div>
-                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Carteira atualizada</p>
-                  <p className={cx("text-2xl font-semibold tabular-nums", carteiraAccentClass)}>
+                <div className="rounded-[20px] bg-[#0e4d6a] p-4 text-white" style={clayPrimaryShadow}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">Carteira atualizada</p>
+                  <p className="mt-2 text-2xl font-black tracking-[-0.03em] tabular-nums">
                     {selectedCredor?.valor_total_atualizado || selectedCredor?.valor_total_principal
                       ? `R$ ${formatCurrency(selectedCredor.valor_total_atualizado || selectedCredor.valor_total_principal)}`
                       : "R$ 0,00"}
                   </p>
                 </div>
-                <div className="rounded-2xl border border-border bg-muted/30 p-4 space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Ultimo status</p>
-                  <span className={cx("inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold", statusClass(selectedCredor?.ultimo_status))}>
-                    {formatStatus(selectedCredor?.ultimo_status)}
-                  </span>
-                  <p className="text-xs text-muted-foreground">
-                    {selectedCredor?.ultimo_precatorio_data
-                      ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
-                      : "Sem movimentacao"}
+                <div className="rounded-[20px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
+                  <p className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">Último status</p>
+                  <div className="mt-2 flex flex-wrap items-center gap-2">
+                    <span className={cx("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusClass(selectedCredor?.ultimo_status))}>
+                      {formatStatus(selectedCredor?.ultimo_status)}
+                    </span>
+                    <p className="text-xs text-[#6b7280]">
+                      {selectedCredor?.ultimo_precatorio_data
+                        ? new Date(selectedCredor.ultimo_precatorio_data).toLocaleDateString("pt-BR")
+                        : "Sem movimentação"}
                     </p>
                   </div>
+                </div>
               </div>
 
               <Tabs
@@ -2243,21 +2246,21 @@ export default function ClientsPage() {
                 color="primary"
                 classNames={{
                   base: "w-full",
-                  tabList: "w-full gap-2 border-b border-border px-1",
-                  tab: "h-10 px-3 data-[selected=true]:text-primary",
+                  tabList: "rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] p-1",
+                  tab: "rounded-[12px] text-sm font-semibold text-[#6b7280] data-[selected=true]:bg-white data-[selected=true]:text-[#0b0c10] data-[selected=true]:font-bold",
                   panel: "pt-4",
                 }}
               >
                 <Tab key="dados" title="Dados do cliente">
-                  <div className="rounded-2xl border border-border bg-background p-4">
+                  <div className="rounded-[20px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
                     <div className="mb-4 flex items-center justify-between gap-3">
-                      <h3 className="text-base font-semibold tracking-tight">Dados do cliente</h3>
+                      <h3 className="text-sm font-extrabold tracking-[-0.02em] text-[#0b0c10]">Dados do cliente</h3>
                       {editingCredor ? (
                         <button
                           type="button"
                           onClick={() => importCredorDataFromPrecatorios(true)}
                           disabled={loadingDetails || credorPrecatorios.length === 0}
-                          className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 text-xs font-medium text-primary transition hover:bg-primary/20 disabled:pointer-events-none disabled:opacity-40"
+                          className="inline-flex h-8 items-center gap-1.5 rounded-[12px] border border-[#bfdbfe] bg-[#eff6ff] px-3 text-xs font-bold text-[#1d4ed8] transition hover:bg-[#dbeafe] disabled:pointer-events-none disabled:opacity-40"
                         >
                           Importar do precatorio
                         </button>
@@ -2267,96 +2270,114 @@ export default function ClientsPage() {
                       {editingCredor ? (
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Nome</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Nome</p>
                             <Input
                               aria-label="Nome"
                               placeholder=""
                               value={credorForm.credor_nome || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, credor_nome: value })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">CPF/CNPJ</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">CPF/CNPJ</p>
                             <Input
                               aria-label="CPF/CNPJ"
                               placeholder=""
                               value={credorForm.credor_cpf_cnpj || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, credor_cpf_cnpj: value })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Telefone</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Telefone</p>
                             <Input
                               aria-label="Telefone"
                               placeholder=""
                               value={credorForm.telefone || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, telefone: value })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Email</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Email</p>
                             <Input
                               type="email"
                               aria-label="Email"
                               placeholder=""
                               value={credorForm.email || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, email: value })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">Cidade</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Cidade</p>
                             <Input
                               aria-label="Cidade"
                               placeholder=""
                               value={credorForm.cidade || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, cidade: value })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                           <div className="space-y-1">
-                            <p className="text-xs font-semibold uppercase tracking-wide text-primary/90">UF</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">UF</p>
                             <Input
                               aria-label="UF"
                               placeholder=""
                               value={credorForm.uf || ""}
                               onValueChange={(value) => setCredorForm({ ...credorForm, uf: value.toUpperCase() })}
-                              classNames={clienteModalInputClassNames}
+                              classNames={{
+                                inputWrapper: "h-11 min-h-11 rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] transition hover:bg-[#eef1f6]",
+                                input: "text-sm text-[#0b0c10] placeholder:text-[#9ca3af]",
+                              }}
                             />
                           </div>
                         </div>
                       ) : (
-                        <div className="grid grid-cols-1 gap-3 text-sm md:grid-cols-2">
+                        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                           <div>
-                            <p className="text-xs text-foreground/60">Nome</p>
-                            <p className="font-medium">{selectedCredor?.credor_nome || "-"}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Nome</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">{selectedCredor?.credor_nome || <span className="italic text-[#9ca3af]">Não informado</span>}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/60">CPF/CNPJ</p>
-                            <p className="font-medium">
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">CPF/CNPJ</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">
                               {selectedCredor?.credor_cpf_cnpj && !selectedCredor.credor_cpf_cnpj.startsWith("SEM_CPF")
                                 ? selectedCredor.credor_cpf_cnpj
-                                : "Nao informado"}
+                                : <span className="italic text-[#9ca3af]">Não informado</span>}
                             </p>
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/60">Telefone</p>
-                            <p className="font-medium">{selectedCredor?.telefone || "Nao informado"}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Telefone</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">{selectedCredor?.telefone || <span className="italic text-[#9ca3af]">Não informado</span>}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/60">Email</p>
-                            <p className="font-medium">{selectedCredor?.email || "Nao informado"}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Email</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">{selectedCredor?.email || <span className="italic text-[#9ca3af]">Não informado</span>}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/60">Cidade</p>
-                            <p className="font-medium">{selectedCredor?.cidade || "Nao informada"}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Cidade</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">{selectedCredor?.cidade || <span className="italic text-[#9ca3af]">Não informada</span>}</p>
                           </div>
                           <div>
-                            <p className="text-xs text-foreground/60">UF</p>
-                            <p className="font-medium">{selectedCredor?.uf || "Nao informada"}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">UF</p>
+                            <p className="text-[13.5px] font-semibold text-[#0b0c10]">{selectedCredor?.uf || <span className="italic text-[#9ca3af]">Não informada</span>}</p>
                           </div>
                         </div>
                       )}
@@ -2365,15 +2386,15 @@ export default function ClientsPage() {
                 </Tab>
 
                 <Tab key="processos" title={`Processos vinculados (${credorPrecatorios.length})`}>
-                  <div className="rounded-2xl border border-border bg-background overflow-hidden">
+                  <div className="rounded-[20px] border border-black/[0.07] bg-white overflow-hidden" style={clayCardShadow}>
                       <Table
                         aria-label="Tabela de processos do cliente"
                         isHeaderSticky
                         classNames={{
-                          wrapper: "w-full overflow-x-hidden rounded-xl border border-border shadow-none",
+                          wrapper: "w-full overflow-x-hidden rounded-[20px] border border-black/[0.07] shadow-none",
                           table: "w-full table-fixed",
-                          th: "bg-default-100/70 text-xs uppercase tracking-wide text-foreground/70",
-                          td: "align-top",
+                          th: "bg-[#f2f3f7] text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]",
+                          td: "align-top text-[13.5px] text-[#0b0c10]",
                         }}
                       >
                         <TableHeader>
@@ -2419,7 +2440,7 @@ export default function ClientsPage() {
                                     : "R$ 0,00"}
                                 </span>
                               </TableCell>
-                              <TableCell className="text-right text-xs text-foreground/70">
+                              <TableCell className="text-right text-xs text-[#6b7280]">
                                 {new Date(precatorio.created_at).toLocaleDateString("pt-BR")}
                               </TableCell>
                             </TableRow>
@@ -2430,32 +2451,33 @@ export default function ClientsPage() {
                 </Tab>
 
                 <Tab key="historico" title="Historico de atualizacoes">
-                  <div className="rounded-2xl border border-border bg-background p-4">
+                  <div className="rounded-[20px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
                     <div className="space-y-3">
                       {loadingDetails ? (
                         <div className="space-y-2">
-                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
-                          <div className="h-14 w-full rounded-lg bg-muted animate-pulse" />
+                          <div className="h-14 w-full rounded-[18px] bg-[#f2f3f7] animate-pulse" />
+                          <div className="h-14 w-full rounded-[18px] bg-[#f2f3f7] animate-pulse" />
+                          <div className="h-14 w-full rounded-[18px] bg-[#f2f3f7] animate-pulse" />
                         </div>
                       ) : credorPrecatorios.length === 0 ? (
-                        <p className="text-sm text-muted-foreground">Sem movimentacoes registradas para este cliente.</p>
+                        <p className="text-[13.5px] italic text-[#9ca3af]">Sem movimentacoes registradas para este cliente.</p>
                       ) : (
                         credorPrecatorios.slice(0, 8).map((precatorio) => (
                           <div
                             key={`timeline-${precatorio.id}`}
-                            className="rounded-xl border border-border bg-muted/30 px-4 py-3"
+                            className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-3"
+                            style={clayInsetShadow}
                           >
                             <div className="flex flex-col gap-1 sm:flex-row sm:items-center sm:justify-between">
-                              <p className="font-mono text-xs text-foreground/80">{precatorio.numero_processo || "Processo N/A"}</p>
-                              <p className="text-xs text-foreground/60">
+                              <p className="font-mono text-xs font-semibold text-[#0b0c10]">{precatorio.numero_processo || "Processo N/A"}</p>
+                              <p className="text-xs text-[#6b7280]">
                                 Atualizado em{" "}
                                 {precatorio.updated_at
                                   ? new Date(precatorio.updated_at).toLocaleDateString("pt-BR")
                                   : new Date(precatorio.created_at).toLocaleDateString("pt-BR")}
                               </p>
                             </div>
-                            <p className="mt-1 text-sm text-foreground/75">
+                            <p className="mt-1 text-[13.5px] font-semibold text-[#0b0c10]">
                               Status: {(precatorio.status || "N/I").replaceAll("_", " ")}
                             </p>
                           </div>
@@ -2466,27 +2488,30 @@ export default function ClientsPage() {
                 </Tab>
               </Tabs>
             </ModalBody>
-            <ModalFooter className="shrink-0 border-t border-border/50 px-6 py-4">
-              <Button
-                variant="light"
-                color="default"
-                onPress={() => {
-                  setModalOpen(false)
-                  setEditingCredor(false)
-                }}
-              >
-                Fechar
-              </Button>
-              {editingCredor && (
-                <>
-                  <Button variant="light" color="default" isDisabled={savingCredor} onPress={cancelCredorEditing}>
-                    Cancelar
-                  </Button>
-                  <Button color="primary" isLoading={savingCredor} onPress={handleSaveCredor}>
-                    {savingCredor ? "Salvando..." : "Salvar alteracoes"}
-                  </Button>
-                </>
-              )}
+            <ModalFooter className="shrink-0 border-t border-black/[0.06] bg-white px-5 py-4 sm:px-6">
+              <div className="flex w-full flex-col-reverse gap-2 sm:flex-row sm:justify-end">
+                <Button
+                  variant="light"
+                  color="default"
+                  onPress={() => {
+                    setModalOpen(false)
+                    setEditingCredor(false)
+                  }}
+                  className="min-h-11 rounded-[15px] border border-black/[0.06] bg-[#f2f3f7] text-[#374151]"
+                >
+                  Fechar
+                </Button>
+                {editingCredor && (
+                  <>
+                    <Button variant="light" color="default" isDisabled={savingCredor} onPress={cancelCredorEditing} className="min-h-11 rounded-[15px] border border-black/[0.06] bg-[#f2f3f7] text-[#374151]">
+                      Cancelar
+                    </Button>
+                    <Button color="primary" isLoading={savingCredor} onPress={handleSaveCredor} className="min-h-11 rounded-[15px] bg-[#0e4d6a] text-white">
+                      {savingCredor ? "Salvando..." : "Salvar alteracoes"}
+                    </Button>
+                  </>
+                )}
+              </div>
             </ModalFooter>
           </>
         </ModalContent>
