@@ -1,7 +1,6 @@
 "use client"
 
 import React, { type ReactNode, createContext, useContext, useDeferredValue, useEffect, useMemo, useState } from "react"
-import { motion } from "framer-motion"
 import CountUp from "react-countup"
 import {
   Accordion as HeroAccordion,
@@ -20,7 +19,7 @@ import {
   Tabs as HeroTabs,
   useOverlayState,
 } from "@heroui/react"
-import { Search, User, Phone, Mail, FileText, ChevronRight, Clock, Filter, X, MoreVertical, RefreshCw, Users, Edit3 } from "@/components/icons"
+import { Search, User, FileText, ChevronRight, Clock, Filter, X, MoreVertical, RefreshCw, Users, Edit3 } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import { CredorView, Precatorio } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
@@ -59,12 +58,23 @@ type ClienteFilterChip = {
   value: string
 }
 
-const _glassCard = "rounded-3xl border border-border bg-background shadow-sm"
+const clayPageClass = "clients-revamp relative w-full max-w-[100vw] bg-[#f0f1f5] px-3 py-4 text-[#0b0c10] sm:px-4 lg:px-6 lg:py-6"
 
-const _cardSoft = "rounded-3xl border border-border bg-background shadow-sm"
+const _clayCardClass = "rounded-[24px] border border-black/[0.07] bg-white transition-transform duration-200"
 
-const _clientGridRows = ""
-const _clientCardHeight = ""
+const _clayInsetClass = "rounded-[18px] border border-black/[0.06] bg-[#f2f3f7]"
+
+const clayGhostButtonClass = "inline-flex min-h-11 items-center gap-2 rounded-[15px] border border-black/[0.08] bg-white px-4 text-sm font-semibold text-[#374151] transition hover:-translate-y-0.5"
+
+const clayPrimaryButtonClass = "inline-flex min-h-11 items-center gap-2 rounded-[15px] bg-[#0e4d6a] px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5"
+
+const clayBadgeClass = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em]"
+
+const clayCardShadow: React.CSSProperties = { boxShadow: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)" }
+
+const clayInsetShadow: React.CSSProperties = { boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07), inset -4px -4px 10px rgba(255,255,255,.87)" }
+
+const clayPrimaryShadow: React.CSSProperties = { boxShadow: "8px 8px 20px rgba(14,77,106,.42), -3px -3px 8px rgba(255,255,255,.3), inset 1px 1px 3px rgba(255,255,255,.14), inset -1px -1px 2px rgba(8,40,60,.3)" }
 
 const modalWrapper = "z-[120] p-2 sm:p-4"
 const modalBackdrop = "bg-black/65"
@@ -674,8 +684,8 @@ function KpiCard({
     tone === "success"
       ? carteiraAccentClass
       : tone === "primary"
-        ? "text-primary"
-        : "text-foreground"
+        ? "text-[#0e4d6a]"
+        : "text-[#0b0c10]"
   const formattedPrefix = prefix ? prefix.replace(/\s+$/, "\u00A0") : undefined
   const numberFormatter = useMemo(
     () =>
@@ -690,40 +700,34 @@ function KpiCard({
     : "text-3xl"
 
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
-      className="h-full"
-    >
-      <article className="flex h-full flex-col rounded-3xl border border-border bg-background p-5 shadow-sm">
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex-1 min-w-0">
-            <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{title}</div>
-            <div className={`mt-2 font-extrabold tabular-nums ${valueClassName} ${toneClasses}`}>
-              {isLoading ? (
-                <span className="inline-block h-8 w-28 animate-pulse rounded-lg bg-muted" />
-              ) : (
-                <CountUp
-                  end={Number.isFinite(value) ? value : 0}
-                  duration={0.9}
-                  decimals={decimals}
-                  prefix={formattedPrefix}
-                  formattingFn={(currentValue) => numberFormatter.format(currentValue)}
-                />
-              )}
-            </div>
-            <div className="mt-1 text-xs text-muted-foreground">{subtitle}</div>
+    <article className="h-full rounded-[24px] border border-black/[0.07] bg-white p-5" style={clayCardShadow}>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <span className="text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">{title}</span>
+          <div className={cx("mt-3 font-black leading-tight tracking-[-0.04em] tabular-nums", valueClassName, toneClasses)}>
+            {isLoading ? (
+              <span className="inline-block h-8 w-28 animate-pulse rounded-xl bg-[#e8eaef]" />
+            ) : (
+              <CountUp
+                end={Number.isFinite(value) ? value : 0}
+                duration={0.9}
+                decimals={decimals}
+                prefix={formattedPrefix}
+                formattingFn={(currentValue) => numberFormatter.format(currentValue)}
+              />
+            )}
           </div>
-          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-            {icon}
-          </div>
+          <p className="mt-2 text-xs font-medium text-[#6b7280]">{subtitle}</p>
         </div>
-      </article>
-    </motion.div>
+        <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#0e4d6a]" style={clayInsetShadow}>
+          {icon}
+        </div>
+      </div>
+    </article>
   )
 }
 
-function ClienteGridCard({
+function ClienteListRow({
   credor,
   onOpen,
   formatCurrency,
@@ -747,70 +751,81 @@ function ClienteGridCard({
   const carteira = Number(credor.valor_total_atualizado || credor.valor_total_principal || 0)
   const ultimo = Number(credor.ultimo_precatorio_valor || 0)
 
-  const avatarColors = [
-    "bg-gradient-to-br from-orange-200 to-orange-100 text-orange-700",
-    "bg-gradient-to-br from-blue-200 to-blue-100 text-blue-700",
-    "bg-gradient-to-br from-emerald-200 to-emerald-100 text-emerald-700",
-    "bg-gradient-to-br from-violet-200 to-violet-100 text-violet-700",
-  ]
-  const avatarColor = avatarColors[nome.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0) % 4]
   const initials = nome.split(" ").filter(Boolean).slice(0, 2).map((w) => w[0].toUpperCase()).join("") || "?"
 
-  const statusBadgeClass = cx(
-    "inline-flex items-center rounded-full px-2 py-0.5 text-xs font-semibold",
-    statusClass(status),
-  )
-
   return (
-    <motion.div
-      whileHover={{ y: -2 }}
-      whileTap={{ scale: 0.99 }}
-      transition={{ type: "spring", stiffness: 300, damping: 24 }}
+    <article
+      role="button"
+      tabIndex={0}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault()
+          onOpen()
+        }
+      }}
+      className="group flex flex-col gap-4 rounded-[24px] border border-black/[0.07] bg-white p-4 text-left transition hover:-translate-y-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0e4d6a]/40 lg:grid lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto] lg:items-center"
+      style={clayCardShadow}
     >
-      <article
-        role="button"
-        tabIndex={0}
-        onClick={onOpen}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" || event.key === " ") {
-            event.preventDefault()
-            onOpen()
-          }
-        }}
-        className="flex flex-col gap-4 rounded-3xl border border-border bg-background p-5 shadow-sm transition hover:border-primary/40 hover:shadow-md cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/60"
-      >
-        {/* Header: avatar + nome + menu */}
-        <div className="flex items-start justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className={cx("grid h-10 w-10 flex-shrink-0 place-items-center rounded-xl text-sm font-bold", avatarColor)}>
-              {initials}
-            </div>
-            <div className="min-w-0">
-              <p title={nome} className="truncate text-sm font-semibold leading-5 text-foreground">{nome}</p>
-              <p className="truncate text-xs text-muted-foreground">{cpf ?? "CPF/CNPJ não informado"}</p>
-            </div>
+        {/* Zona 1 — Avatar + Nome */}
+        <div className="flex min-w-0 items-center gap-3">
+          <div className="grid h-11 w-11 flex-shrink-0 place-items-center rounded-2xl bg-[#0e4d6a] text-sm font-black text-white" style={clayPrimaryShadow}>
+            {initials}
           </div>
-          <div
-            onClick={(event) => event.stopPropagation()}
-            onMouseDown={(event) => event.stopPropagation()}
-            className="flex-shrink-0"
-          >
+          <div className="min-w-0 space-y-1">
+            <p title={nome} className="truncate text-sm font-extrabold text-[#0b0c10]">{nome}</p>
+            <p className="truncate text-xs font-medium text-[#6b7280]">{cpf ?? "CPF/CNPJ não informado"}</p>
+          </div>
+        </div>
+
+        {/* Zona 2 — Contexto + Contato */}
+        <div className="grid gap-2 text-xs text-[#6b7280] sm:grid-cols-2 lg:grid-cols-1">
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">Contexto</span>
+            <p className="mt-1 truncate">{cidadeUf ?? "Localização não informada"}</p>
+            <p className="truncate">{dt ? `Últ. mov.: ${dt}` : "Sem movimentação recente"}</p>
+          </div>
+          <div>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">Contato</span>
+            <p className="truncate">{credor.telefone || "Sem telefone"}</p>
+            <p className="truncate">{credor.email || "Sem e-mail"}</p>
+          </div>
+        </div>
+
+        {/* Zona 3 — Carteira + Status */}
+        <div className="grid gap-3 sm:grid-cols-[1fr_auto] lg:grid-cols-1">
+          <div className="rounded-[18px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-3" style={clayInsetShadow}>
+            <span className="block text-[10px] font-bold uppercase tracking-[0.16em] text-[#9ca3af]">Carteira atualizada</span>
+            <strong className={cx("mt-1 block truncate text-lg font-black tracking-[-0.03em]", carteiraAccentClass)}>
+              {carteira ? `R$ ${formatCurrency(carteira)}` : "R$ 0,00"}
+            </strong>
+            <p className="mt-1 text-xs text-[#6b7280]">{ultimo > 0 ? `Último: R$ ${formatCurrency(ultimo)}` : "Sem último valor"}</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-2 lg:justify-start">
+            <span className={cx("inline-flex items-center rounded-full px-3 py-1 text-xs font-bold", statusClass(status))}>{formatStatus(status)}</span>
+            <span className="inline-flex items-center rounded-full border border-black/[0.06] bg-white px-3 py-1 text-xs font-bold text-[#6b7280]">
+              {credor.total_precatorios ?? 0} proc.
+            </span>
+          </div>
+        </div>
+
+        {/* Zona 4 — Ações */}
+        <div className="flex items-center justify-between gap-2 lg:justify-end">
+          <span className="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-[0.14em] text-[#0e4d6a]">
+            Abrir detalhes
+            <ChevronRight className="h-3.5 w-3.5" />
+          </span>
+          <div onClick={(event) => event.stopPropagation()} onMouseDown={(event) => event.stopPropagation()}>
             <Dropdown>
-              <DropdownTrigger
-                aria-label={`Ações de ${nome}`}
-                className="h-8 w-8 min-w-0 rounded-lg text-muted-foreground hover:bg-muted hover:text-foreground"
-              >
+              <DropdownTrigger aria-label={`Ações de ${nome}`} className="inline-flex h-11 w-11 min-w-0 items-center justify-center rounded-2xl border border-black/[0.06] bg-[#f2f3f7] text-[#6b7280] hover:text-[#0b0c10]" style={clayInsetShadow}>
                 <span className="inline-flex items-center justify-center" aria-hidden="true">
                   <MoreVertical className="h-4 w-4" />
                 </span>
               </DropdownTrigger>
               <DropdownPopover placement="bottom end">
-                <DropdownMenu
-                  aria-label={`Ações para ${nome}`}
-                  onAction={(key) => {
-                    if (String(key) === "detalhes") onOpen()
-                  }}
-                >
+                <DropdownMenu aria-label={`Ações para ${nome}`} onAction={(key) => {
+                  if (String(key) === "detalhes") onOpen()
+                }}>
                   <DropdownItem id="detalhes">
                     <span className="inline-flex items-center gap-2">
                       <ChevronRight className="h-4 w-4" />
@@ -822,67 +837,7 @@ function ClienteGridCard({
             </Dropdown>
           </div>
         </div>
-
-        {/* Localização + data */}
-        {(cidadeUf || dt) && (
-          <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-            {cidadeUf && <span>{cidadeUf}</span>}
-            {dt && <span>Últ. mov.: {dt}</span>}
-          </div>
-        )}
-
-        {/* Status + contagem */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className={statusBadgeClass}>{formatStatus(status)}</span>
-          <span className="rounded-full border border-border px-2 py-0.5 text-xs font-mono text-muted-foreground">
-            {credor.total_precatorios ?? 0} proc.
-          </span>
-        </div>
-
-        {/* Carteira */}
-        <div className="rounded-2xl border border-border bg-muted/40 p-3">
-          <div className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Carteira atualizada</div>
-          <div className={cx("mt-1 truncate text-lg font-extrabold tabular-nums", carteiraAccentClass)}>
-            {carteira ? `R$ ${formatCurrency(carteira)}` : "R$ 0,00"}
-          </div>
-          {ultimo > 0 && (
-            <div className="mt-0.5 truncate text-xs text-muted-foreground">
-              Último: R$ {formatCurrency(ultimo)}
-            </div>
-          )}
-        </div>
-
-        {/* Contato */}
-        <div className="space-y-1 text-xs text-muted-foreground">
-          {credor.telefone || credor.email ? (
-            <>
-              {credor.telefone && (
-                <div className="flex items-center gap-1.5">
-                  <Phone className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{credor.telefone}</span>
-                </div>
-              )}
-              {credor.email && (
-                <div className="flex items-center gap-1.5">
-                  <Mail className="h-3 w-3 flex-shrink-0" />
-                  <span className="break-all">{credor.email}</span>
-                </div>
-              )}
-            </>
-          ) : (
-            <span>Sem contato cadastrado</span>
-          )}
-        </div>
-
-        {/* Rodapé */}
-        <div className="mt-auto border-t border-border pt-3">
-          <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-primary">
-            Abrir detalhes
-            <ChevronRight className="h-3.5 w-3.5" />
-          </span>
-        </div>
-      </article>
-    </motion.div>
+    </article>
   )
 }
 
@@ -1606,184 +1561,138 @@ export default function ClientsPage() {
     : "Sem movimentacao recente"
 
   return (
-    <div className="clients-revamp relative w-full max-w-[100vw] px-4 py-6 lg:px-6">
-      <div className="space-y-6">
-        <section className="rounded-3xl border border-border bg-background shadow-sm">
-          <div className="flex flex-col gap-5 p-5 lg:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-2.5">
-                <div className="flex items-center gap-3">
-                  <div className="inline-flex h-11 w-11 items-center justify-center rounded-2xl border border-primary/30 bg-primary/10 text-primary">
-                    <Users className="h-5 w-5" />
-                  </div>
-                  <div>
-                    <h1 className="text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">Clientes</h1>
-                    <span className="text-xs uppercase tracking-[0.16em] text-foreground/60">CRM operacional</span>
-                  </div>
-                </div>
-                <p className="text-sm text-foreground/70">Gerencie clientes, contatos e historico de processos de ponta a ponta.</p>
-                <div className="flex flex-wrap items-center gap-2">
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                    <Users className="h-3.5 w-3.5" />
-                    {credores.length} clientes
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                    <FileText className="h-3.5 w-3.5" />
-                    {resumo.totalPrecatorios} processos
-                  </span>
-                  <span className="inline-flex items-center gap-1.5 rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                    <Clock className="h-3.5 w-3.5" />
-                    Atualizado em {ultimaAtualizacaoLabel}
-                  </span>
-                </div>
+    <div className={clayPageClass}>
+      <div className="space-y-4">
+        <section className="space-y-4 rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.92)] p-5 backdrop-blur-xl lg:p-6" style={clayCardShadow}>
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+            <div className="space-y-3">
+              <span className="inline-flex h-7 items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#1d4ed8]">
+                CRM operacional
+              </span>
+              <div className="space-y-2">
+                <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-[#6b7280] sm:text-[30px]">
+                  Gestão de
+                  <strong className="block text-[34px] font-black text-[#0b0c10] sm:text-[40px]">Clientes</strong>
+                </p>
+                <p className="max-w-3xl text-sm leading-6 text-[#6b7280]">
+                  Gerencie carteira, contato, processos e histórico dos clientes em uma leitura operacional mais rápida.
+                </p>
               </div>
-
               <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  disabled={!searchTerm}
-                  onClick={() => setSearchTerm("")}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-muted px-4 text-sm font-medium text-muted-foreground transition hover:bg-muted/80 disabled:pointer-events-none disabled:opacity-40"
-                >
-                  <X className="h-4 w-4" />
-                  Limpar busca
-                </button>
-                <button
-                  type="button"
-                  disabled={loading}
-                  onClick={() => loadCredores()}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-60"
-                >
-                  <RefreshCw className={cx("h-4 w-4", loading ? "animate-spin" : "")} />
-                  Atualizar
-                </button>
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedFiltersOpen(true)}
-                    className="inline-flex h-10 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-medium text-foreground transition hover:bg-muted"
-                  >
-                    <Filter className="h-4 w-4" />
-                    {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avancados"}
-                  </button>
-                ) : null}
+                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{credores.length} clientes</span>
+                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{resumo.totalPrecatorios} processos</span>
+                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>Atualizado em {ultimaAtualizacaoLabel}</span>
               </div>
             </div>
 
-            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              <KpiCard
-                title="Total de clientes"
-                value={credores.length}
-                subtitle="Base consolidada"
-                icon={<Users className="h-5 w-5" />}
-                tone="primary"
-                isLoading={loading}
-              />
-              <KpiCard
-                title="Carteira atualizada"
-                value={resumo.totalCarteira}
-                subtitle={`Media de R$ ${formatCurrency(carteiraMedia)} por cliente`}
-                icon={<FileText className="h-5 w-5" />}
-                tone="success"
-                isLoading={loading}
-                prefix={"R$\u00A0"}
-                decimals={2}
-              />
-              <KpiCard
-                title="Clientes com contato"
-                value={clientesComContato}
-                subtitle={`${clientesSemContato} sem telefone/e-mail`}
-                icon={<Users className="h-5 w-5" />}
-                tone="default"
-                isLoading={loading}
-              />
-              <KpiCard
-                title="Clientes com status"
-                value={clientesComStatus}
-                subtitle={`${statusOptions.length} status distintos`}
-                icon={<Clock className="h-5 w-5" />}
-                tone="default"
-                isLoading={loading}
-              />
+            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
+              <button type="button" disabled={!searchTerm} onClick={() => setSearchTerm("")} className={cx(clayGhostButtonClass, "disabled:pointer-events-none disabled:opacity-40")}>
+                <X className="h-4 w-4" />
+                Limpar busca
+              </button>
+              <button type="button" disabled={loading} onClick={() => loadCredores()} className={cx(clayPrimaryButtonClass, "disabled:pointer-events-none disabled:opacity-60")} style={clayPrimaryShadow}>
+                <RefreshCw className={cx("h-4 w-4", loading ? "animate-spin" : "")} />
+                Atualizar
+              </button>
             </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard
+              title="Total de clientes"
+              value={credores.length}
+              subtitle="Base consolidada"
+              icon={<Users className="h-5 w-5" />}
+              tone="primary"
+              isLoading={loading}
+            />
+            <KpiCard
+              title="Carteira atualizada"
+              value={resumo.totalCarteira}
+              subtitle={`Media de R$ ${formatCurrency(carteiraMedia)} por cliente`}
+              icon={<FileText className="h-5 w-5" />}
+              tone="success"
+              isLoading={loading}
+              prefix={"R$\u00A0"}
+              decimals={2}
+            />
+            <KpiCard
+              title="Clientes com contato"
+              value={clientesComContato}
+              subtitle={`${clientesSemContato} sem telefone/e-mail`}
+              icon={<Users className="h-5 w-5" />}
+              tone="default"
+              isLoading={loading}
+            />
+            <KpiCard
+              title="Clientes com status"
+              value={clientesComStatus}
+              subtitle={`${statusOptions.length} status distintos`}
+              icon={<Clock className="h-5 w-5" />}
+              tone="default"
+              isLoading={loading}
+            />
           </div>
         </section>
 
-        <section className="rounded-3xl border border-border bg-background shadow-sm">
-          <div className="space-y-4 p-5 lg:p-6">
-            <div className="flex flex-col gap-3 rounded-2xl border border-border bg-muted/30 p-3 xl:flex-row xl:items-center xl:justify-between">
-              <div className="relative w-full xl:max-w-2xl">
-                <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <input
-                  aria-label="Buscar clientes"
-                  placeholder="Buscar por nome, CPF/CNPJ, cidade, status, email ou telefone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="h-11 w-full rounded-xl border border-border bg-background pl-10 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary/40"
-                />
-                {searchTerm ? (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    aria-label="Limpar"
-                    className="absolute right-3 top-1/2 -translate-y-1/2 rounded-full p-0.5 text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="h-3.5 w-3.5" />
-                  </button>
-                ) : null}
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {filteredCredores.length} exibidos
-                </span>
-                <span className="inline-flex items-center rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">
-                  {resumo.totalPrecatorios} processos
-                </span>
-                {isAdmin ? (
-                  <button
-                    type="button"
-                    onClick={() => setAdvancedFiltersOpen(true)}
-                    className="inline-flex h-9 items-center gap-2 rounded-xl border border-border bg-background px-3 text-sm font-medium text-foreground transition hover:bg-muted"
-                  >
-                    <Filter className="h-4 w-4" />
-                    Filtros avancados
-                  </button>
-                ) : null}
-              </div>
-            </div>
-
-            {isAdmin && adminFilterChips.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Filtros ativos:</span>
-                {adminFilterChips.map((chip) => (
-                  <span
-                    key={chip.key}
-                    className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary"
-                  >
-                    <span className="font-semibold">{chip.label}:</span>
-                    <span className="truncate">{chip.value}</span>
+        <section>
+          <div className="space-y-3">
+            <div className="space-y-4 rounded-[24px] border border-black/[0.06] bg-white p-4" style={clayCardShadow}>
+              <div className="flex flex-col gap-3 xl:flex-row xl:items-center xl:justify-between">
+                <div className="relative w-full xl:max-w-3xl">
+                  <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#9ca3af]" />
+                  <input
+                    aria-label="Buscar clientes"
+                    placeholder="Buscar por nome, CPF/CNPJ, cidade, status, email ou telefone..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="h-12 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] pl-11 pr-10 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
+                  />
+                  {searchTerm ? (
                     <button
                       type="button"
-                      onClick={() => removeAdminFilter(chip.key)}
-                      aria-label={`Remover filtro ${chip.label}`}
-                      className="ml-0.5 rounded-full p-0.5 hover:bg-primary/20"
+                      onClick={() => setSearchTerm("")}
+                      aria-label="Limpar"
+                      className="absolute right-3 top-1/2 inline-flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-full text-[#6b7280] hover:bg-white"
                     >
-                      <X className="h-2.5 w-2.5" />
+                      <X className="h-3.5 w-3.5" />
                     </button>
-                  </span>
-                ))}
-                <button
-                  type="button"
-                  onClick={clearAdminFilters}
-                  className="text-xs font-medium text-muted-foreground hover:text-foreground"
-                >
-                  Limpar tudo
-                </button>
-              </div>
-            ) : null}
+                  ) : null}
+                </div>
 
-            <div className="border-t border-border" />
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{filteredCredores.length} exibidos</span>
+                  <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{resumo.totalPrecatorios} processos</span>
+                  {isAdmin ? (
+                    <button type="button" onClick={() => setAdvancedFiltersOpen(true)} className={clayGhostButtonClass}>
+                      <Filter className="h-4 w-4" />
+                      {totalAdminFilters > 0 ? `Filtros (${totalAdminFilters})` : "Filtros avançados"}
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {isAdmin && adminFilterChips.length > 0 ? (
+                <div className="flex flex-wrap items-center gap-2">
+                  <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[#9ca3af]">Filtros ativos</span>
+                  {adminFilterChips.map((chip) => (
+                    <span
+                      key={chip.key}
+                      className="inline-flex max-w-full items-center gap-1.5 rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 py-1 text-xs font-semibold text-[#1d4ed8]"
+                    >
+                      <span>{chip.label}:</span>
+                      <span className="truncate">{chip.value}</span>
+                      <button type="button" onClick={() => removeAdminFilter(chip.key)} aria-label={`Remover filtro ${chip.label}`} className="rounded-full p-0.5 hover:bg-[#dbeafe]">
+                        <X className="h-2.5 w-2.5" />
+                      </button>
+                    </span>
+                  ))}
+                  <button type="button" onClick={clearAdminFilters} className="text-xs font-medium text-[#6b7280] hover:text-[#0b0c10]">
+                    Limpar tudo
+                  </button>
+                </div>
+              ) : null}
+            </div>
 
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
               {loading ? (
@@ -1814,7 +1723,7 @@ export default function ClientsPage() {
                 </div>
               ) : (
                 paginatedCredores.map((credor) => (
-                  <ClienteGridCard
+                  <ClienteListRow
                     key={credor.id_unico}
                     credor={credor}
                     formatCurrency={formatCurrency}
