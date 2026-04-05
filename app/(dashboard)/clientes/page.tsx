@@ -1694,32 +1694,31 @@ export default function ClientsPage() {
               ) : null}
             </div>
 
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
+            <div className="space-y-3">
               {loading ? (
                 Array.from({ length: 8 }).map((_, idx) => (
-                  <div key={`cliente-skeleton-${idx}`} className="w-full rounded-3xl border border-border bg-background p-5 shadow-sm">
-                    <div className="space-y-3">
+                  <div key={`cliente-skeleton-${idx}`} className="rounded-[24px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
+                    <div className="grid gap-4 lg:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)_minmax(0,0.9fr)_auto] lg:items-center">
                       <div className="flex items-center gap-3">
-                        <div className="h-10 w-10 rounded-xl bg-muted animate-pulse flex-shrink-0" />
-                        <div className="flex-1 space-y-1.5">
-                          <div className="h-4 w-3/4 rounded-lg bg-muted animate-pulse" />
-                          <div className="h-3 w-1/2 rounded-lg bg-muted animate-pulse" />
+                        <div className="h-11 w-11 rounded-2xl bg-[#e8eaef] animate-pulse" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-40 rounded-xl bg-[#e8eaef] animate-pulse" />
+                          <div className="h-3 w-28 rounded-xl bg-[#e8eaef] animate-pulse" />
                         </div>
                       </div>
-                      <div className="flex gap-2">
-                        <div className="h-6 w-20 rounded-full bg-muted animate-pulse" />
-                        <div className="h-6 w-24 rounded-full bg-muted animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="h-3 w-32 rounded-xl bg-[#e8eaef] animate-pulse" />
+                        <div className="h-3 w-36 rounded-xl bg-[#e8eaef] animate-pulse" />
                       </div>
-                      <div className="h-16 w-full rounded-2xl bg-muted animate-pulse" />
+                      <div className="h-20 rounded-[18px] bg-[#f2f3f7] animate-pulse" />
+                      <div className="h-11 w-11 rounded-2xl bg-[#e8eaef] animate-pulse" />
                     </div>
                   </div>
                 ))
               ) : filteredCredores.length === 0 ? (
-                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-3xl border border-border bg-background shadow-sm sm:col-span-2 xl:col-span-3 2xl:col-span-4">
-                  <p className="font-medium text-foreground">Nenhum cliente encontrado</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Ajuste a busca ou remova filtros para visualizar resultados.
-                  </p>
+                <div className="flex min-h-[320px] flex-col items-center justify-center rounded-[24px] border border-black/[0.07] bg-white px-6 text-center" style={clayCardShadow}>
+                  <p className="text-base font-extrabold text-[#0b0c10]">Nenhum cliente encontrado</p>
+                  <p className="mt-2 max-w-md text-sm text-[#6b7280]">Ajuste a busca ou remova filtros para visualizar resultados.</p>
                 </div>
               ) : (
                 paginatedCredores.map((credor) => (
@@ -1735,8 +1734,8 @@ export default function ClientsPage() {
               )}
             </div>
             {!loading && filteredCredores.length > 0 ? (
-              <div className="flex flex-col gap-3 border-t border-border pt-3 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-muted-foreground">
+              <div className="flex flex-col gap-3 border-t border-black/[0.06] pt-3 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-sm text-[#6b7280]">
                   Exibindo {rangeStart}-{rangeEnd} de {filteredCredores.length} clientes
                 </p>
                 <div className="flex items-center gap-2">
@@ -1744,20 +1743,20 @@ export default function ClientsPage() {
                     type="button"
                     disabled={currentPage <= 1}
                     onClick={() => setCurrentPage((prev) => Math.max(1, prev - 1))}
-                    className="h-8 rounded-lg border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                    className={cx(clayGhostButtonClass, "disabled:pointer-events-none disabled:opacity-40")}
                   >
                     Anterior
                   </button>
-                  <span className="min-w-[120px] text-center text-xs font-medium text-muted-foreground">
-                    Pagina {currentPage} de {totalPages}
+                  <span className="min-w-[120px] text-center text-xs font-medium text-[#6b7280]">
+                    Página {currentPage} de {totalPages}
                   </span>
                   <button
                     type="button"
                     disabled={currentPage >= totalPages}
                     onClick={() => setCurrentPage((prev) => Math.min(totalPages, prev + 1))}
-                    className="h-8 rounded-lg border border-border bg-background px-3 text-xs font-medium text-foreground transition hover:bg-muted disabled:pointer-events-none disabled:opacity-40"
+                    className={cx(clayGhostButtonClass, "disabled:pointer-events-none disabled:opacity-40")}
                   >
-                    Proxima
+                    Próxima
                   </button>
                 </div>
               </div>
