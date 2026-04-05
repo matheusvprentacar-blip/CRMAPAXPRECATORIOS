@@ -287,14 +287,23 @@ const COUNTUP_SCROLL_PROPS = {
   scrollSpyDelay: 120,
 } as const
 const CHART_PALETTE = [
-  "hsl(var(--chart-1))",
-  "hsl(var(--chart-2))",
-  "hsl(var(--chart-3))",
-  "hsl(var(--destructive))",
-  "hsl(var(--chart-5))",
-  "hsl(var(--chart-4))",
-  "hsl(var(--primary))",
+  "#0e4d6a",   // petróleo
+  "#1a6080",   // petróleo claro
+  "#2578a0",   // petróleo mais claro
+  "#15803d",   // verde semântico
+  "#1d4ed8",   // azul semântico
+  "#92400e",   // âmbar semântico
 ]
+
+const clayCardShadow: React.CSSProperties = {
+  boxShadow: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)",
+}
+const clayInsetShadow: React.CSSProperties = {
+  boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07), inset -4px -4px 10px rgba(255,255,255,.87)",
+}
+const clayPrimaryShadow: React.CSSProperties = {
+  boxShadow: "8px 8px 20px rgba(14,77,106,.42), -3px -3px 8px rgba(255,255,255,.3), inset 1px 1px 3px rgba(255,255,255,.14), inset -1px -1px 2px rgba(8,40,60,.3)",
+}
 
 const PERIOD_OPTIONS: Array<{ value: PeriodKey; label: string; days: number | null }> = [
   { value: "30d", label: "Últimos 30 dias", days: 30 },
@@ -427,7 +436,8 @@ const formatCurrencyNoBreak = (value: number) => formatCurrency(value).replace(/
 function GlassCard({ className, children, ...props }: any) {
   return (
     <div
-      className={["relative rounded-3xl border border-border bg-background shadow-sm", className || ""].join(" ")}
+      className={["rounded-[24px] border border-black/[0.07] bg-white", className || ""].join(" ")}
+      style={clayCardShadow}
       {...props}
     >
       {children}
@@ -444,7 +454,7 @@ function ToneChip({ tone = "default", children, className = "" }: any) {
         : tone === "danger"
           ? "bg-red-100 text-red-700 border-red-200 dark:bg-red-900/30 dark:text-red-400 dark:border-red-800"
           : tone === "primary"
-            ? "bg-primary/10 text-primary border-primary/20"
+            ? "bg-[#e8f4f8] text-[#0e4d6a] border-[#a8d4e8]"
             : "bg-muted text-muted-foreground border-border"
   return (
     <span className={["inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold", toneClass, className].join(" ")}>
@@ -543,7 +553,7 @@ function Chart3DCard({
     const value = Number(item?.value || payload[0]?.value || 0)
 
     return (
-      <div className="rounded-xl border border-border bg-background/48 p-3 text-sm shadow-[0_24px_50px_-36px_hsl(var(--primary)/0.45)] dark:border-border dark:bg-muted/44">
+      <div className="rounded-xl border border-black/[0.07] bg-white p-3 text-sm shadow-sm">
         <p className="font-semibold text-muted-foreground dark:text-white/90">{item?.name || "Item"}</p>
         <p className="mt-1 font-mono text-base tabular-nums text-muted-foreground dark:text-white/90">{valueFormatter(value)}</p>
       </div>
