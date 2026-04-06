@@ -1,16 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { useRouter, useSearchParams } from "next/navigation"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { useRouter } from "next/navigation"
 import { toast } from "@/components/ui/use-toast"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import {
@@ -40,11 +31,123 @@ import {
   type LegalOpinionFormPrecatorioOption,
   type LegalOpinionFormUserOption,
 } from "@/features/legal-opinion/components/legal-opinion-form-modal"
-import { ChevronDown, ChevronUp, Filter, Plus, RefreshCw, Scale, Search } from "@/components/icons"
+import React from "react"
 
-const cx = (...classes: Array<string | false | null | undefined>) =>
-  classes.filter(Boolean).join(" ")
+// ─── Clay shadows ────────────────────────────────────────────────────────────
+const SH_CARD: React.CSSProperties = {
+  boxShadow:
+    "16px 16px 36px rgba(0,0,0,.08),-8px -8px 20px rgba(255,255,255,.94),inset 1px 1px 4px rgba(255,255,255,.9),inset -1px -1px 2px rgba(0,0,0,.04)",
+}
+const SH_BTN_AC: React.CSSProperties = {
+  boxShadow:
+    "8px 8px 20px rgba(14,77,106,.42),-3px -3px 8px rgba(255,255,255,.3),inset 1px 1px 3px rgba(255,255,255,.14),inset -1px -1px 2px rgba(8,40,60,.3)",
+}
+const SH_BTN_GHOST: React.CSSProperties = {
+  boxShadow:
+    "5px 5px 12px rgba(0,0,0,.07),-3px -3px 8px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.87),inset -1px -1px 2px rgba(0,0,0,.04)",
+}
+const SH_INSET: React.CSSProperties = {
+  boxShadow:
+    "inset 5px 5px 12px rgba(0,0,0,.07),inset -4px -4px 10px rgba(255,255,255,.87)",
+}
 
+// ─── Style constants ──────────────────────────────────────────────────────────
+const C_CARD = "bg-white rounded-[24px] border border-black/[0.07] overflow-hidden transition-all duration-300"
+const C_BTN_AC =
+  "inline-flex items-center gap-2 h-10 px-5 rounded-[15px] bg-[#0e4d6a] text-white text-[12.5px] font-bold cursor-pointer select-none transition-all duration-200 hover:-translate-y-0.5 active:translate-y-0.5 active:scale-95 relative overflow-hidden whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+const C_BTN_GHOST =
+  "inline-flex items-center gap-2 h-10 px-4 rounded-[15px] bg-gradient-to-b from-white to-[#f2f3f7] border border-black/[0.08] text-[#374151] text-[12.5px] font-bold cursor-pointer select-none transition-all duration-200 hover:-translate-y-0.5 hover:text-[#0b0c10] active:translate-y-0.5 active:scale-95 whitespace-nowrap disabled:opacity-50 disabled:cursor-not-allowed"
+const C_BADGE =
+  "inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[10.5px] font-bold border whitespace-nowrap"
+const C_INPUT =
+  "w-full h-10 rounded-[13px] border border-black/[0.09] bg-[#f2f3f7] px-3 text-[13px] text-[#0b0c10] placeholder:text-[#9ca3af] outline-none focus:border-[#0e4d6a] focus:ring-2 focus:ring-[#0e4d6a]/20 transition-all"
+const C_SELECT =
+  "w-full h-10 rounded-[13px] border border-black/[0.09] bg-[#f2f3f7] px-3 text-[13px] text-[#0b0c10] outline-none focus:border-[#0e4d6a] transition-all appearance-none cursor-pointer"
+const C_LABEL =
+  "block text-[9.5px] font-bold uppercase tracking-[0.16em] text-[#9ca3af] mb-1.5"
+
+// ─── Status / Priority classes ────────────────────────────────────────────────
+const STATUS_CLS: Record<LegalOpinionStatus, string> = {
+  pendente:   "bg-[#fffbeb] text-[#92400e] border-[#fde68a]",
+  em_analise: "bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]",
+  concluido:  "bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]",
+  rejeitado:  "bg-[#fef2f2] text-[#dc2626] border-[#fecaca]",
+  arquivado:  "bg-[#f9fafb] text-[#6b7280] border-[#e5e7eb]",
+}
+
+const PRIORITY_CLS: Record<LegalOpinionPriority, string> = {
+  baixa:   "bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]",
+  media:   "bg-[#fffbeb] text-[#92400e] border-[#fde68a]",
+  alta:    "bg-[#fef2f2] text-[#dc2626] border-[#fecaca]",
+  critica: "bg-[#fdf2f8] text-[#9d174d] border-[#fbcfe8]",
+}
+
+// ─── SVG Icons ────────────────────────────────────────────────────────────────
+const IC = {
+  scale: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-5 h-5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707M18.364 18.364l.707.707M1 12h1M21 12h1M4.22 19.778l.707-.707M18.364 5.636l.707-.707M7 10l-3 5h6L7 10zM17 10l-3 5h6L17 10zM7 15h10M12 3a2 2 0 010 4" />
+    </svg>
+  ),
+  plus: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+    </svg>
+  ),
+  refresh: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99" />
+    </svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 15.803 7.5 7.5 0 0015.803 15.803z" />
+    </svg>
+  ),
+  filter: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M12 3c2.755 0 5.455.232 8.083.678.533.09.917.556.917 1.096v1.044a2.25 2.25 0 01-.659 1.591L15.25 12.5v6.25a.75.75 0 01-.75.75h-5a.75.75 0 01-.75-.75V12.5L3.659 7.409A2.25 2.25 0 013 5.818V4.774c0-.54.384-1.006.917-1.096A48.32 48.32 0 0112 3z" />
+    </svg>
+  ),
+  chevronDown: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
+    </svg>
+  ),
+  chevronLeft: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5" />
+    </svg>
+  ),
+  chevronRight: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5" />
+    </svg>
+  ),
+  dot: (
+    <svg viewBox="0 0 6 6" fill="currentColor" className="w-1.5 h-1.5">
+      <circle cx="3" cy="3" r="3" />
+    </svg>
+  ),
+  user: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" />
+    </svg>
+  ),
+  calendar: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 9v7.5" />
+    </svg>
+  ),
+  tag: (
+    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-3.5 h-3.5">
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.568 3H5.25A2.25 2.25 0 003 5.25v4.318c0 .597.237 1.17.659 1.591l9.581 9.581c.699.699 1.78.872 2.607.33a18.095 18.095 0 005.223-5.223c.542-.827.369-1.908-.33-2.607L11.16 3.66A2.25 2.25 0 009.568 3z" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M6 6h.008v.008H6V6z" />
+    </svg>
+  ),
+}
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 type FiltersState = {
   search: string
   status: LegalOpinionStatus | ""
@@ -85,576 +188,497 @@ function buildPrecatorioLabel(precatorio: {
   )
 }
 
-function getStatusTagClass(status: LegalOpinionStatus): string {
-  switch (status) {
-    case "pendente":
-      return "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
-    case "em_analise":
-      return "border-blue-200 bg-blue-500/10 text-blue-600 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300"
-    case "concluido":
-      return "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
-    case "rejeitado":
-      return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
-    case "arquivado":
-      return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
-  }
-}
-
-function getPriorityTagClass(priority: LegalOpinionPriority): string {
-  switch (priority) {
-    case "baixa":
-      return "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
-    case "media":
-      return "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
-    case "alta":
-      return "border-orange-200 bg-orange-500/10 text-orange-700 dark:border-orange-500/25 dark:bg-orange-500/10 dark:text-orange-300"
-    case "critica":
-      return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
-  }
-}
-
-function TagPill({ children, className }: { children: React.ReactNode; className: string }) {
+// ─── KPI Card ─────────────────────────────────────────────────────────────────
+function KpiCard({ label, value, sub, cls }: { label: string; value: number; sub: string; cls: string }) {
   return (
-    <span
-      className={cx(
-        "inline-flex items-center rounded-full border px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-[0.04em]",
-        className
-      )}
+    <div
+      className={`rounded-[18px] border px-4 py-3.5 transition-all duration-300 ${cls}`}
+      style={SH_CARD}
     >
-      {children}
-    </span>
+      <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] opacity-70">{label}</div>
+      <div className="mt-1.5 text-[26px] font-black leading-none tabular-nums">{value}</div>
+      <div className="mt-1 text-[11px] opacity-60">{sub}</div>
+    </div>
   )
 }
 
-export default function LegalOpinionListPage() {
+// ─── Opinion Row ──────────────────────────────────────────────────────────────
+function OpinionRow({ opinion, onClick }: { opinion: LegalOpinion; onClick: () => void }) {
+  const statusCls = STATUS_CLS[opinion.status]
+  const priorityCls = PRIORITY_CLS[opinion.priority]
+
+  return (
+    <tr
+      onClick={onClick}
+      className="group cursor-pointer border-t border-black/[0.05] transition-colors hover:bg-[#f0f1f5]/60"
+    >
+      <td className="px-5 py-3.5 align-middle">
+        <div className="font-semibold text-[13.5px] text-[#0b0c10] group-hover:text-[#0e4d6a] transition-colors">
+          {opinion.title}
+        </div>
+        <div className="mt-0.5 text-[11px] text-[#9ca3af]">
+          {LEGAL_OPINION_SOURCE_LABELS[(opinion.origem_solicitacao || "manual") as LegalOpinionSource]}
+        </div>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <span className="text-[13px] text-[#374151]">
+          {opinion.precatorio?.numero_precatorio || opinion.precatorio?.titulo || "—"}
+        </span>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <span className="text-[13px] text-[#374151]">
+          {LEGAL_OPINION_TYPE_LABELS[opinion.type]}
+        </span>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <span className={`${C_BADGE} ${statusCls}`}>
+          {IC.dot}
+          {LEGAL_OPINION_STATUS_LABELS[opinion.status]}
+        </span>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <span className={`${C_BADGE} ${priorityCls}`}>
+          {LEGAL_OPINION_PRIORITY_LABELS[opinion.priority]}
+        </span>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <div className="flex items-center gap-1.5 text-[12.5px] text-[#374151]">
+          {IC.calendar}
+          {formatDate(opinion.due_date)}
+        </div>
+      </td>
+      <td className="px-5 py-3.5 align-middle">
+        <div className="flex items-center gap-1.5 text-[12.5px] text-[#374151]">
+          {IC.user}
+          {opinion.assigned_to_user?.nome || "Não atribuído"}
+        </div>
+      </td>
+      <td className="px-5 py-3.5 align-middle text-[11.5px] text-[#9ca3af]">
+        {formatDateTime(opinion.updated_at)}
+      </td>
+    </tr>
+  )
+}
+
+// ─── Page ─────────────────────────────────────────────────────────────────────
+export default function PareceresPage() {
   const router = useRouter()
-  const searchParams = useSearchParams()
-  const [filters, setFilters] = useState<FiltersState>(initialFilters)
-  const [page, setPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(true)
-  const [isMetadataLoading, setIsMetadataLoading] = useState(true)
+
   const [opinions, setOpinions] = useState<LegalOpinion[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(1)
-  const [users, setUsers] = useState<LegalOpinionFormUserOption[]>([])
-  const [precatorios, setPrecatorios] = useState<LegalOpinionFormPrecatorioOption[]>([])
+  const [page, setPage] = useState(1)
+  const [isLoading, setIsLoading] = useState(false)
+  const [isMetadataLoading, setIsMetadataLoading] = useState(true)
+  const [isSyncingFechamento, setIsSyncingFechamento] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
   const [isCreating, setIsCreating] = useState(false)
   const [isFiltersExpanded, setIsFiltersExpanded] = useState(false)
-  const [isSyncingFechamento, setIsSyncingFechamento] = useState(false)
+
+  const [users, setUsers] = useState<LegalOpinionFormUserOption[]>([])
+  const [precatorios, setPrecatorios] = useState<LegalOpinionFormPrecatorioOption[]>([])
+  const [filters, setFilters] = useState<FiltersState>(initialFilters)
+  const [appliedFilters, setAppliedFilters] = useState<FiltersState>(initialFilters)
 
   const statusCounters = useMemo(() => {
-    const counters: Record<LegalOpinionStatus, number> = {
-      pendente: 0,
-      em_analise: 0,
-      concluido: 0,
-      rejeitado: 0,
-      arquivado: 0,
-    }
-    for (const opinion of opinions) counters[opinion.status] += 1
-    return counters
+    const base = { pendente: 0, em_analise: 0, concluido: 0, rejeitado: 0, arquivado: 0 }
+    return opinions.reduce((acc, o) => {
+      acc[o.status] = (acc[o.status] || 0) + 1
+      return acc
+    }, base as Record<LegalOpinionStatus, number>)
   }, [opinions])
 
-  const hasActiveFilters = !!(
-    filters.search ||
-    filters.status ||
-    filters.type ||
-    filters.priority ||
-    filters.origemSolicitacao ||
-    filters.assignedTo ||
-    filters.precatorioId ||
-    filters.dueStart ||
-    filters.dueEnd
-  )
+  const hasActiveFilters = Object.values(appliedFilters).some(Boolean)
 
-  const selectedPrecatorioFromQuery = searchParams.get("precatorioId")
-
-  useEffect(() => {
-    if (!selectedPrecatorioFromQuery) return
-    setFilters((prev) => ({ ...prev, precatorioId: selectedPrecatorioFromQuery }))
-  }, [selectedPrecatorioFromQuery])
-
-  async function loadMetadata(search?: string) {
+  async function loadMetadata() {
     setIsMetadataLoading(true)
     try {
-      const metadata = await getLegalOpinionMetadata({ search })
-      setUsers(
-        metadata.users.map((user) => ({ id: user.id, nome: user.nome, email: user.email }))
-      )
+      const meta = await getLegalOpinionMetadata()
+      setUsers(meta.users)
       setPrecatorios(
-        metadata.precatorios.map((precatorio) => ({
-          id: precatorio.id,
-          label: buildPrecatorioLabel(precatorio),
-          subtitle: [precatorio.numero_processo, precatorio.credor_nome]
-            .filter(Boolean)
-            .join(" • "),
+        meta.precatorios.map((p) => ({
+          id: p.id,
+          label: buildPrecatorioLabel(p),
         }))
       )
-    } catch (error) {
-      toast({
-        title: "Falha ao carregar metadados",
-        description: error instanceof Error ? error.message : "Falha inesperada.",
-        variant: "destructive",
-      })
     } finally {
       setIsMetadataLoading(false)
     }
   }
 
-  async function loadOpinions(nextPage = page, activeFilters = filters) {
+  async function loadOpinions(p: number, f: FiltersState) {
     setIsLoading(true)
     try {
-      const response = await listLegalOpinions({
-        page: nextPage,
+      const result = await listLegalOpinions({
+        page: p,
         pageSize,
-        search: activeFilters.search || undefined,
-        status: (activeFilters.status || undefined) as LegalOpinionStatus | undefined,
-        type: (activeFilters.type || undefined) as LegalOpinionType | undefined,
-        priority: (activeFilters.priority || undefined) as LegalOpinionPriority | undefined,
-        origemSolicitacao: (activeFilters.origemSolicitacao ||
-          undefined) as LegalOpinionSource | undefined,
-        assignedTo: activeFilters.assignedTo || undefined,
-        precatorioId: activeFilters.precatorioId || undefined,
-        dueStart: activeFilters.dueStart || undefined,
-        dueEnd: activeFilters.dueEnd || undefined,
+        search: f.search || undefined,
+        status: f.status || undefined,
+        type: f.type || undefined,
+        priority: f.priority || undefined,
+        origemSolicitacao: f.origemSolicitacao || undefined,
+        assignedTo: f.assignedTo || undefined,
+        precatorioId: f.precatorioId || undefined,
+        dueStart: f.dueStart || undefined,
+        dueEnd: f.dueEnd || undefined,
       })
-      setOpinions(response.data)
-      setTotal(response.pagination.total)
-      setTotalPages(response.pagination.totalPages)
-      setPage(response.pagination.page)
-    } catch (error) {
-      toast({
-        title: "Falha ao carregar pareceres",
-        description: error instanceof Error ? error.message : "Falha inesperada.",
-        variant: "destructive",
-      })
+      setOpinions(result.data)
+      setTotal(result.total)
+      setTotalPages(result.totalPages)
     } finally {
       setIsLoading(false)
     }
   }
 
-  async function syncFechamentoQueue(showFeedback = false) {
+  async function syncFechamentoQueue() {
     setIsSyncingFechamento(true)
     try {
-      const result = await syncAcceptedProposalsToLegalOpinions({ limit: 1000 })
-      if (showFeedback && result.created > 0) {
-        toast({
-          title: "Fila jurídica sincronizada",
-          description: `${result.created} crédito(s) de Jurídico de fechamento foram adicionados ao Parecer Jurídico.`,
-        })
-      }
-      if (showFeedback && result.failed > 0) {
-        toast({
-          title: "Sincronização parcial",
-          description: `${result.failed} crédito(s) não puderam ser sincronizados agora.`,
-          variant: "destructive",
-        })
-      }
-    } catch (error) {
-      if (showFeedback) {
-        toast({
-          title: "Falha ao sincronizar fila jurídica",
-          description: error instanceof Error ? error.message : "Falha inesperada.",
-          variant: "destructive",
-        })
-      }
-      console.error("[Parecer Juridico] Falha na sincronizacao de proposta aceita:", error)
+      await syncAcceptedProposalsToLegalOpinions()
     } finally {
       setIsSyncingFechamento(false)
     }
   }
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => { void loadMetadata() }, [])
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    void (async () => {
-      await syncFechamentoQueue(false)
-      await loadOpinions(1, filters)
-    })()
-  }, [])
+  async function handleRefresh() {
+    await syncFechamentoQueue()
+    await loadOpinions(page, appliedFilters)
+  }
 
   async function handleApplyFilters() {
+    setAppliedFilters(filters)
+    setPage(1)
     await loadOpinions(1, filters)
+    setIsFiltersExpanded(false)
   }
 
   async function handleClearFilters() {
-    const next = { ...initialFilters, precatorioId: selectedPrecatorioFromQuery || "" }
-    setFilters(next)
-    await loadOpinions(1, next)
+    setFilters(initialFilters)
+    setAppliedFilters(initialFilters)
+    setPage(1)
+    await loadOpinions(1, initialFilters)
   }
 
-  async function handlePageChange(nextPage: number) {
-    if (nextPage < 1 || nextPage > totalPages) return
-    await loadOpinions(nextPage, filters)
+  async function handlePageChange(p: number) {
+    setPage(p)
+    await loadOpinions(p, appliedFilters)
   }
 
-  async function handleRefresh() {
-    await syncFechamentoQueue(true)
-    await loadOpinions(page, filters)
-  }
+  useEffect(() => {
+    void loadMetadata()
+    void loadOpinions(1, initialFilters)
+  }, [])
 
   return (
     <RoleGuard allowedRoles={["admin", "juridico", "gestor"]}>
-      <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-6 pb-24 sm:px-5">
+      <div className="min-h-screen bg-[#f0f1f5] p-4 md:p-6 space-y-5">
 
-        {/* Hero Header */}
-        <section className="relative overflow-hidden rounded-[24px] border border-slate-900/10 bg-[linear-gradient(135deg,#ffffff_60%,#fff7ed_100%)] px-5 py-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[linear-gradient(135deg,#18181b_60%,rgba(124,45,18,0.35)_100%)] sm:px-8">
-          <div className="pointer-events-none absolute -right-5 -top-16 h-[200px] w-[200px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.14)_0%,transparent_70%)]" />
-          <div className="pointer-events-none absolute -bottom-12 left-4 h-[160px] w-[160px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.10)_0%,transparent_70%)]" />
+        {/* ── Hero Title ──────────────────────────────────────────────── */}
+        <div className="pt-2 pb-1">
+          <span className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
+            <span className="shrink-0">●</span>
+            <span className="truncate">CRM Precatórios · jurídico</span>
+          </span>
+          <p className="mt-3 text-[clamp(1.55rem,6vw,4rem)] font-black leading-none tracking-[-0.05em] text-primary">
+            Parecer Jurídico
+          </p>
+          <h1 className="mt-3 text-[clamp(1rem,3vw,1.9rem)] font-bold leading-[1.1] tracking-[-0.03em] text-foreground">
+            Análise, risco e recomendações legais.
+          </h1>
+          <p className="mt-2 max-w-2xl text-[14px] leading-relaxed text-[#6b7280]">
+            Gerencie os pareceres jurídicos da carteira de precatórios — acompanhe status, prazos e responsáveis em um único painel.
+          </p>
 
-          <div className="relative z-10">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-              <div>
-                <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">
-                  Departamento Jurídico
-                </p>
-                <h1 className="mt-1 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
-                  Pareceres Jurídicos
-                </h1>
-                <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-slate-500 dark:text-slate-400">
-                  Gerencie análises, validações e pareceres vinculados aos precatórios da carteira.
-                </p>
-              </div>
-
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                <button
-                  type="button"
-                  onClick={() => void handleRefresh()}
-                  disabled={isSyncingFechamento}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border border-slate-900/10 bg-white px-4 text-sm font-medium text-slate-500 shadow-[0_1px_4px_rgba(15,23,42,0.06)] transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
-                >
-                  <RefreshCw className="h-4 w-4" />
-                  {isSyncingFechamento ? "Sincronizando..." : "Atualizar"}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setIsFormOpen(true)}
-                  disabled={isMetadataLoading}
-                  className="inline-flex h-10 items-center gap-2 rounded-xl border-none bg-gradient-to-br from-orange-500 to-orange-600 px-4 text-sm font-semibold text-white shadow-[0_8px_24px_-10px_rgba(249,115,22,0.70)] transition hover:from-orange-400 hover:to-amber-500 disabled:opacity-50"
-                >
-                  <Plus className="h-4 w-4" />
-                  Solicitar Parecer
-                </button>
-              </div>
-            </div>
-
-            {/* Stat cards */}
-            <div className="mt-6 grid gap-3 sm:grid-cols-3 xl:grid-cols-5">
-              <div className="rounded-[14px] border border-amber-500/25 bg-amber-500/10 px-4 py-3">
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-amber-700 dark:text-amber-300">
-                  Pendente
-                </div>
-                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-amber-700 dark:text-amber-300">
-                  {statusCounters.pendente}
-                </div>
-                <div className="mt-1 text-[11px] text-amber-700/80 dark:text-amber-300/80">
-                  aguardando análise
-                </div>
-              </div>
-              <div className="rounded-[14px] border border-blue-500/25 bg-blue-500/10 px-4 py-3">
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">
-                  Em análise
-                </div>
-                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-blue-600 dark:text-blue-300">
-                  {statusCounters.em_analise}
-                </div>
-                <div className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">
-                  em andamento agora
-                </div>
-              </div>
-              <div className="rounded-[14px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">
-                  Concluído
-                </div>
-                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700 dark:text-emerald-300">
-                  {statusCounters.concluido}
-                </div>
-                <div className="mt-1 text-[11px] text-emerald-700/80 dark:text-emerald-300/80">
-                  análise finalizada
-                </div>
-              </div>
-              <div className="rounded-[14px] border border-rose-500/25 bg-rose-500/10 px-4 py-3">
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">
-                  Rejeitado
-                </div>
-                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-rose-600 dark:text-rose-300">
-                  {statusCounters.rejeitado}
-                </div>
-                <div className="mt-1 text-[11px] text-rose-700/80 dark:text-rose-300/80">
-                  parecer negativo
-                </div>
-              </div>
-              <div className="rounded-[14px] border border-slate-900/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#18181b]">
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">
-                  Total
-                </div>
-                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-900 dark:text-slate-50">
-                  {total}
-                </div>
-                <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">
-                  pareceres na carteira
-                </div>
-              </div>
-            </div>
+          {/* Action buttons */}
+          <div className="mt-5 flex flex-wrap items-center gap-2.5">
+            <button
+              type="button"
+              onClick={() => void handleRefresh()}
+              disabled={isSyncingFechamento}
+              className={C_BTN_GHOST}
+              style={SH_BTN_GHOST}
+            >
+              <span className={isSyncingFechamento ? "animate-spin" : ""}>{IC.refresh}</span>
+              {isSyncingFechamento ? "Sincronizando..." : "Atualizar"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setIsFormOpen(true)}
+              disabled={isMetadataLoading}
+              className={C_BTN_AC}
+              style={SH_BTN_AC}
+            >
+              {IC.plus}
+              Solicitar Parecer
+            </button>
           </div>
-        </section>
+        </div>
 
-        {/* Painel de Filtros */}
-        <div className="rounded-[18px] border border-slate-900/10 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b]">
+        {/* ── KPI Cards ───────────────────────────────────────────────── */}
+        <div
+          className="grid gap-3 sm:grid-cols-3 xl:grid-cols-5"
+          style={{ animation: "cardIn .55s .09s cubic-bezier(.34,1.56,.64,1) both" }}
+        >
+          <KpiCard
+            label="Pendente"
+            value={statusCounters.pendente}
+            sub="aguardando análise"
+            cls="bg-[#fffbeb] text-[#92400e] border-[#fde68a]"
+          />
+          <KpiCard
+            label="Em análise"
+            value={statusCounters.em_analise}
+            sub="em andamento agora"
+            cls="bg-[#eff6ff] text-[#1d4ed8] border-[#bfdbfe]"
+          />
+          <KpiCard
+            label="Concluído"
+            value={statusCounters.concluido}
+            sub="análise finalizada"
+            cls="bg-[#f0fdf4] text-[#15803d] border-[#bbf7d0]"
+          />
+          <KpiCard
+            label="Rejeitado"
+            value={statusCounters.rejeitado}
+            sub="parecer negativo"
+            cls="bg-[#fef2f2] text-[#dc2626] border-[#fecaca]"
+          />
+          <KpiCard
+            label="Total"
+            value={total}
+            sub="pareceres na carteira"
+            cls="bg-white text-[#0b0c10] border-black/[0.07]"
+          />
+        </div>
+
+        {/* ── Filtros ──────────────────────────────────────────────────── */}
+        <div className={C_CARD} style={SH_CARD}>
           <button
             type="button"
             onClick={() => setIsFiltersExpanded((prev) => !prev)}
-            className="flex w-full items-center justify-between px-5 py-4 text-left md:px-6"
+            className="flex w-full items-center justify-between px-5 py-4"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700 dark:text-slate-200">
-              <Filter className="h-4 w-4 text-orange-500" />
+            <span className="flex items-center gap-2 text-[13px] font-bold text-[#374151]">
+              {IC.filter}
               Filtros
               {hasActiveFilters && (
-                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white">
+                <span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-[#0e4d6a] text-[10px] font-bold text-white">
                   !
                 </span>
               )}
             </span>
-            {isFiltersExpanded ? (
-              <ChevronUp className="h-4 w-4 text-slate-400" />
-            ) : (
-              <ChevronDown className="h-4 w-4 text-slate-400" />
-            )}
+            <span className="text-[#9ca3af] transition-transform duration-200" style={{ transform: isFiltersExpanded ? "rotate(180deg)" : "rotate(0deg)" }}>
+              {IC.chevronDown}
+            </span>
           </button>
 
           {isFiltersExpanded && (
-            <div className="border-t border-slate-900/10 px-5 py-5 dark:border-white/10 md:px-6">
+            <div className="border-t border-black/[0.06] px-5 py-5">
               <div className="grid grid-cols-1 gap-3 md:grid-cols-2 xl:grid-cols-3">
+
                 {/* Busca */}
-                <div className="space-y-1.5 md:col-span-2 xl:col-span-1">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Busca
-                  </Label>
+                <div className="md:col-span-2 xl:col-span-1">
+                  <label className={C_LABEL}>Busca</label>
                   <div className="relative">
-                    <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
+                    <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.search}
+                    </span>
+                    <input
+                      type="text"
                       placeholder="Título, credor, número do processo..."
-                      className="pl-9 rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]"
+                      className={`${C_INPUT} pl-9`}
                       value={filters.search}
-                      onChange={(e) =>
-                        setFilters((prev) => ({ ...prev, search: e.target.value }))
-                      }
+                      onChange={(e) => setFilters((prev) => ({ ...prev, search: e.target.value }))}
                     />
                   </div>
                 </div>
 
                 {/* Status */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Status
-                  </Label>
-                  <Select
-                    value={filters.status || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        status: v === "__all__" ? "" : (v as LegalOpinionStatus),
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todos os status" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todos os status</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Status</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.status || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          status: e.target.value === "__all__" ? "" : (e.target.value as LegalOpinionStatus),
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todos os status</option>
                       {LEGAL_OPINION_STATUSES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {LEGAL_OPINION_STATUS_LABELS[s]}
-                        </SelectItem>
+                        <option key={s} value={s}>{LEGAL_OPINION_STATUS_LABELS[s]}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Tipo */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Tipo
-                  </Label>
-                  <Select
-                    value={filters.type || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        type: v === "__all__" ? "" : (v as LegalOpinionType),
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todos os tipos" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todos os tipos</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Tipo</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.type || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          type: e.target.value === "__all__" ? "" : (e.target.value as LegalOpinionType),
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todos os tipos</option>
                       {LEGAL_OPINION_TYPES.map((t) => (
-                        <SelectItem key={t} value={t}>
-                          {LEGAL_OPINION_TYPE_LABELS[t]}
-                        </SelectItem>
+                        <option key={t} value={t}>{LEGAL_OPINION_TYPE_LABELS[t]}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Prioridade */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Prioridade
-                  </Label>
-                  <Select
-                    value={filters.priority || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        priority: v === "__all__" ? "" : (v as LegalOpinionPriority),
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todas as prioridades" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todas as prioridades</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Prioridade</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.priority || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          priority: e.target.value === "__all__" ? "" : (e.target.value as LegalOpinionPriority),
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todas as prioridades</option>
                       {LEGAL_OPINION_PRIORITIES.map((p) => (
-                        <SelectItem key={p} value={p}>
-                          {LEGAL_OPINION_PRIORITY_LABELS[p]}
-                        </SelectItem>
+                        <option key={p} value={p}>{LEGAL_OPINION_PRIORITY_LABELS[p]}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Origem */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Origem
-                  </Label>
-                  <Select
-                    value={filters.origemSolicitacao || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        origemSolicitacao: v === "__all__" ? "" : (v as LegalOpinionSource),
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todas as origens" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todas as origens</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Origem</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.origemSolicitacao || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          origemSolicitacao: e.target.value === "__all__" ? "" : (e.target.value as LegalOpinionSource),
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todas as origens</option>
                       {LEGAL_OPINION_SOURCES.map((s) => (
-                        <SelectItem key={s} value={s}>
-                          {LEGAL_OPINION_SOURCE_LABELS[s]}
-                        </SelectItem>
+                        <option key={s} value={s}>{LEGAL_OPINION_SOURCE_LABELS[s]}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Responsável */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Responsável
-                  </Label>
-                  <Select
-                    value={filters.assignedTo || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        assignedTo: v === "__all__" ? "" : v,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todos os responsáveis" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todos os responsáveis</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Responsável</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.assignedTo || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          assignedTo: e.target.value === "__all__" ? "" : e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todos os responsáveis</option>
                       {users.map((u) => (
-                        <SelectItem key={u.id} value={u.id}>
-                          {u.nome}
-                        </SelectItem>
+                        <option key={u.id} value={u.id}>{u.nome}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Precatório */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Precatório
-                  </Label>
-                  <Select
-                    value={filters.precatorioId || "__all__"}
-                    onValueChange={(v) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        precatorioId: v === "__all__" ? "" : v,
-                      }))
-                    }
-                  >
-                    <SelectTrigger className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                      <SelectValue placeholder="Todos os precatórios" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="__all__">Todos os precatórios</SelectItem>
+                <div>
+                  <label className={C_LABEL}>Precatório</label>
+                  <div className="relative">
+                    <select
+                      className={C_SELECT}
+                      value={filters.precatorioId || "__all__"}
+                      onChange={(e) =>
+                        setFilters((prev) => ({
+                          ...prev,
+                          precatorioId: e.target.value === "__all__" ? "" : e.target.value,
+                        }))
+                      }
+                    >
+                      <option value="__all__">Todos os precatórios</option>
                       {precatorios.map((p) => (
-                        <SelectItem key={p.id} value={p.id}>
-                          {p.label}
-                        </SelectItem>
+                        <option key={p.id} value={p.id}>{p.label}</option>
                       ))}
-                    </SelectContent>
-                  </Select>
+                    </select>
+                    <span className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-[#9ca3af]">
+                      {IC.chevronDown}
+                    </span>
+                  </div>
                 </div>
 
                 {/* Prazo inicial */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Prazo inicial
-                  </Label>
-                  <Input
+                <div>
+                  <label className={C_LABEL}>Prazo inicial</label>
+                  <input
                     type="date"
+                    className={C_INPUT}
                     value={filters.dueStart}
-                    onChange={(e) =>
-                      setFilters((prev) => ({ ...prev, dueStart: e.target.value }))
-                    }
-                    className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]"
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dueStart: e.target.value }))}
                   />
                 </div>
 
                 {/* Prazo final */}
-                <div className="space-y-1.5">
-                  <Label className="text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">
-                    Prazo final
-                  </Label>
-                  <Input
+                <div>
+                  <label className={C_LABEL}>Prazo final</label>
+                  <input
                     type="date"
+                    className={C_INPUT}
                     value={filters.dueEnd}
-                    onChange={(e) =>
-                      setFilters((prev) => ({ ...prev, dueEnd: e.target.value }))
-                    }
-                    className="rounded-xl border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]"
+                    onChange={(e) => setFilters((prev) => ({ ...prev, dueEnd: e.target.value }))}
                   />
                 </div>
               </div>
 
-              <div className="mt-4 flex flex-wrap justify-end gap-2">
+              <div className="mt-5 flex flex-wrap justify-end gap-2">
                 <button
                   type="button"
                   onClick={() => void handleClearFilters()}
-                  className="h-9 rounded-lg border border-slate-900/10 bg-white px-3 text-sm font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                  className={C_BTN_GHOST}
+                  style={SH_BTN_GHOST}
                 >
                   Limpar tudo
                 </button>
                 <button
                   type="button"
                   onClick={() => void handleApplyFilters()}
-                  className="h-9 rounded-lg bg-orange-500 px-4 text-sm font-semibold text-white shadow-[0_4px_16px_-4px_rgba(249,115,22,0.60)] transition hover:bg-orange-400"
+                  className={C_BTN_AC}
+                  style={SH_BTN_AC}
                 >
                   Aplicar filtros
                 </button>
@@ -663,114 +687,62 @@ export default function LegalOpinionListPage() {
           )}
         </div>
 
-        {/* Tabela */}
-        <div className="overflow-x-auto rounded-[18px] border border-slate-900/10 bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[#18181b]">
+        {/* ── Tabela ──────────────────────────────────────────────────── */}
+        <div className={C_CARD} style={SH_CARD}>
           {isLoading ? (
-            <div className="flex items-center justify-center py-16">
-              <div className="h-8 w-8 animate-spin rounded-full border-[3px] border-orange-500/20 border-t-orange-500" />
+            <div className="flex items-center justify-center py-20">
+              <div
+                className="h-9 w-9 rounded-full border-[3px] border-[#0e4d6a]/20 border-t-[#0e4d6a] animate-spin"
+              />
             </div>
           ) : opinions.length === 0 ? (
-            <div className="relative overflow-hidden px-6 py-20 text-center">
-              <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl" />
-              <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-amber-400/10 blur-3xl" />
-              <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
-                <Scale className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+            <div className="px-6 py-20 text-center">
+              <div
+                className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-[18px] bg-[#f0f1f5] text-[#6b7280]"
+                style={SH_INSET}
+              >
+                <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.5} stroke="currentColor" className="w-7 h-7">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M12 3v1m0 16v1M4.22 4.22l.707.707M18.364 18.364l.707.707M1 12h1M21 12h1M4.22 19.778l.707-.707M18.364 5.636l.707-.707" />
+                </svg>
               </div>
-              <h3 className="relative text-[15px] font-bold text-slate-900 dark:text-slate-50">
-                Nenhum parecer encontrado
-              </h3>
-              <p className="relative mx-auto mt-1 max-w-sm text-[13px] text-slate-500 dark:text-slate-400">
+              <h3 className="text-[15px] font-bold text-[#0b0c10]">Nenhum parecer encontrado</h3>
+              <p className="mx-auto mt-1 max-w-sm text-[13px] text-[#6b7280]">
                 Tente ajustar os filtros ou solicite um novo parecer.
               </p>
             </div>
           ) : (
             <>
-              <table className="min-w-[1000px] w-full border-collapse">
-                <thead className="bg-[#f4f5f8] dark:bg-[#09090b]">
-                  <tr>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Título
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Precatório
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Tipo
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Status
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Prioridade
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Prazo
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Responsável
-                    </th>
-                    <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">
-                      Atualizado
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {opinions.map((opinion) => (
-                    <tr
-                      key={opinion.id}
-                      className="cursor-pointer border-t border-slate-900/5 transition hover:bg-orange-500/[0.03] dark:border-white/5 dark:hover:bg-orange-500/[0.04]"
-                      onClick={() =>
-                        router.push(`/parecer-juridico/detalhes?id=${opinion.id}`)
-                      }
-                    >
-                      <td className="px-4 py-3 align-middle">
-                        <div className="font-semibold text-slate-900 dark:text-slate-50">
-                          {opinion.title}
-                        </div>
-                        <div className="mt-0.5 text-[11.5px] text-slate-500 dark:text-slate-400">
-                          {
-                            LEGAL_OPINION_SOURCE_LABELS[
-                              (opinion.origem_solicitacao || "manual") as LegalOpinionSource
-                            ]
-                          }
-                        </div>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">
-                        {opinion.precatorio?.numero_precatorio ||
-                          opinion.precatorio?.titulo ||
-                          "-"}
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">
-                        {LEGAL_OPINION_TYPE_LABELS[opinion.type]}
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <TagPill className={getStatusTagClass(opinion.status)}>
-                          <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
-                          {LEGAL_OPINION_STATUS_LABELS[opinion.status]}
-                        </TagPill>
-                      </td>
-                      <td className="px-4 py-3 align-middle">
-                        <TagPill className={getPriorityTagClass(opinion.priority)}>
-                          {LEGAL_OPINION_PRIORITY_LABELS[opinion.priority]}
-                        </TagPill>
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">
-                        {formatDate(opinion.due_date)}
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">
-                        {opinion.assigned_to_user?.nome || "Não atribuído"}
-                      </td>
-                      <td className="px-4 py-3 align-middle text-[12px] text-slate-400 dark:text-slate-500">
-                        {formatDateTime(opinion.updated_at)}
-                      </td>
+              <div className="overflow-x-auto">
+                <table className="min-w-[1000px] w-full border-collapse">
+                  <thead>
+                    <tr className="bg-[#f0f1f5]">
+                      {["Título", "Precatório", "Tipo", "Status", "Prioridade", "Prazo", "Responsável", "Atualizado"].map((h) => (
+                        <th
+                          key={h}
+                          className="px-5 py-3 text-left text-[9.5px] font-bold uppercase tracking-[0.16em] text-[#9ca3af] border-b border-black/[0.06]"
+                        >
+                          {h}
+                        </th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {opinions.map((opinion) => (
+                      <OpinionRow
+                        key={opinion.id}
+                        opinion={opinion}
+                        onClick={() => router.push(`/parecer-juridico/detalhes?id=${opinion.id}`)}
+                      />
+                    ))}
+                  </tbody>
+                </table>
+              </div>
 
               {/* Paginação */}
-              <div className="flex flex-wrap items-center justify-between gap-3 border-t border-slate-900/10 px-5 py-4 dark:border-white/10">
-                <span className="text-sm text-slate-500 dark:text-slate-400">
+              <div
+                className="flex flex-wrap items-center justify-between gap-3 border-t border-black/[0.06] px-5 py-4"
+              >
+                <span className="text-[12.5px] text-[#6b7280]">
                   Página {page} de {Math.max(totalPages, 1)} &bull; {total} resultado(s)
                 </span>
                 <div className="flex items-center gap-2">
@@ -778,17 +750,21 @@ export default function LegalOpinionListPage() {
                     type="button"
                     disabled={page <= 1}
                     onClick={() => void handlePageChange(page - 1)}
-                    className="h-9 rounded-lg border border-slate-900/10 bg-white px-3 text-sm font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
+                    className={C_BTN_GHOST}
+                    style={SH_BTN_GHOST}
                   >
-                    ← Anterior
+                    {IC.chevronLeft}
+                    Anterior
                   </button>
                   <button
                     type="button"
                     disabled={page >= totalPages}
                     onClick={() => void handlePageChange(page + 1)}
-                    className="h-9 rounded-lg border border-slate-900/10 bg-white px-3 text-sm font-medium text-slate-500 transition hover:border-orange-300 hover:text-orange-500 disabled:cursor-not-allowed disabled:opacity-40 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
+                    className={C_BTN_AC}
+                    style={SH_BTN_AC}
                   >
-                    Próxima →
+                    Próxima
+                    {IC.chevronRight}
                   </button>
                 </div>
               </div>
@@ -796,6 +772,7 @@ export default function LegalOpinionListPage() {
           )}
         </div>
 
+        {/* ── Form Modal ──────────────────────────────────────────────── */}
         <LegalOpinionFormModal
           open={isFormOpen}
           onOpenChange={setIsFormOpen}

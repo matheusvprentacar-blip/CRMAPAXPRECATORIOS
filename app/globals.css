@@ -74,56 +74,6 @@
   --heatmap-zero: rgb(221, 221, 221);
 }
 
-.dark {
-  /* Premium Orange Palette - Dark Mode */
-  --background: 24 10% 8%;
-  /* Deep Warm Grey/Brown */
-  --foreground: 30 10% 98%;
-
-  --card: 24 10% 10%;
-  /* Slightly lighter grey */
-  --card-foreground: 30 10% 98%;
-
-  --popover: 24 10% 10%;
-  --popover-foreground: 30 10% 98%;
-
-  /* Primary: Slightly brighter orange for dark mode contrast */
-  --primary: 25 95% 55%;
-  --primary-foreground: 0 0% 100%;
-
-  --secondary: 24 10% 16%;
-  --secondary-foreground: 30 10% 98%;
-
-  --muted: 24 10% 16%;
-  --muted-foreground: 24 5% 65%;
-
-  --accent: 25 95% 55%;
-  /* Matches primary in dark mode for glows */
-  --accent-foreground: 0 0% 100%;
-
-  --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-
-  --border: 24 10% 20%;
-  --input: 24 10% 20%;
-  --ring: 25 95% 55%;
-
-  --chart-1: 25 95% 55%;
-  --chart-2: 40 90% 65%;
-  --chart-3: 15 85% 70%;
-  --chart-4: 170 50% 60%;
-  --chart-5: 220 40% 65%;
-  --sidebar-background: 24 10% 10%;
-  --sidebar-foreground: 30 10% 98%;
-  --sidebar-primary: 25 95% 55%;
-  --sidebar-primary-foreground: 0 0% 100%;
-  --sidebar-accent: 24 10% 16%;
-  --sidebar-accent-foreground: 30 10% 98%;
-  --sidebar-border: 24 10% 20%;
-  --sidebar-ring: 25 95% 55%;
-  --sidebar: var(--sidebar-background);
-  --heatmap-zero: rgb(51, 51, 51);
-}
 
 * {
   border-color: hsl(var(--border));
@@ -322,16 +272,6 @@ body.hide-global-watermark .global-watermark {
   }
 }
 
-/* Custom classes for titles */
-.dark h1,
-.dark h2,
-.dark h3 {
-  color: hsl(var(--primary));
-}
-
-.dark .text-foreground {
-  color: hsl(var(--foreground));
-}
 
 @keyframes route-shiny-sweep {
   0% {

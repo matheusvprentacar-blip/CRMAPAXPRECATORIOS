@@ -38,6 +38,10 @@ const deleteActionItemStyle: React.CSSProperties = { padding: 0, minHeight: 0 }
 const deleteActionContentClassName =
   "group flex w-full select-none items-center gap-3 rounded-lg border border-white/15 bg-black p-2 shadow-sm"
 
+const clayCardShadow: React.CSSProperties = {
+  boxShadow: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)",
+}
+
 type ButtonVariant = "default" | "outline" | "ghost" | "destructive" | "secondary"
 
 function Button({
@@ -275,7 +279,7 @@ function getValorDisplay(precatorio: Precatorio) {
   const valorPrincipal = Number(precatorio.valor_principal || 0)
   const value = valorAtualizado > 0 ? valorAtualizado : valorPrincipal
   const label = valorAtualizado > 0 ? "Atualizado" : valorPrincipal > 0 ? "Principal" : "Valor"
-  const valueClass = valorAtualizado > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-orange-500 dark:text-orange-300"
+  const valueClass = valorAtualizado > 0 ? "text-emerald-700" : "text-foreground"
   return { value, label, formatted: value > 0 ? formatMoney(value) : "Aguardando", valueClass }
 }
 
@@ -303,29 +307,29 @@ function getStatusLabel(precatorio: Precatorio) {
 function getStatusTagClass(status?: Precatorio["status"]) {
   switch (status) {
     case "em_calculo":
-      return "border-blue-200 bg-blue-500/10 text-blue-600 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300"
+      return "border-blue-200 bg-blue-50 text-blue-700"
     case "concluido":
-      return "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300"
+      return "border-emerald-200 bg-emerald-50 text-emerald-700"
     case "em_andamento":
     case "pendente_distribuicao":
     case "em_contato":
     case "aguardando_cliente":
-      return "border-orange-200 bg-orange-500/10 text-orange-700 dark:border-orange-500/25 dark:bg-orange-500/10 dark:text-orange-300"
+      return "border-amber-200 bg-amber-50 text-amber-800"
     case "cancelado":
-      return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+      return "border-red-200 bg-red-50 text-red-700"
     default:
-      return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+      return "border-black/[0.07] bg-muted/40 text-muted-foreground"
   }
 }
 
 function getPriorityTagClass(prioridade?: Precatorio["prioridade"], urgente?: boolean) {
   if (urgente || prioridade === "urgente") {
-    return "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300"
+    return "border-red-200 bg-red-50 text-red-700"
   }
   if (prioridade === "alta") {
-    return "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300"
+    return "border-amber-200 bg-amber-50 text-amber-800"
   }
-  return "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300"
+  return "border-black/[0.07] bg-muted/40 text-muted-foreground"
 }
 
 function getSlaMeta(precatorio: Precatorio) {
@@ -334,51 +338,51 @@ function getSlaMeta(precatorio: Precatorio) {
       return {
         tone: "urgent" as ToneKey,
         tagLabel: "SLA atrasado",
-        tagClass: "border-rose-200 bg-rose-500/10 text-rose-700 dark:border-rose-500/25 dark:bg-rose-500/10 dark:text-rose-300",
-        barClass: "bg-rose-500",
+        tagClass: "border-red-200 bg-red-50 text-red-700",
+        barClass: "bg-red-500",
         progress: 100,
         detail: precatorio.motivo_atraso_calculo || "Ação imediata",
-        detailClass: "text-rose-600 dark:text-rose-300",
+        detailClass: "text-red-600",
       }
     case "atencao":
       return {
         tone: "attention" as ToneKey,
         tagLabel: "Atenção SLA",
-        tagClass: "border-amber-200 bg-amber-500/10 text-amber-700 dark:border-amber-500/25 dark:bg-amber-500/10 dark:text-amber-300",
+        tagClass: "border-amber-200 bg-amber-50 text-amber-800",
         barClass: "bg-amber-500",
         progress: 78,
         detail: precatorio.sla_horas ? `${precatorio.sla_horas}h de SLA` : "Prazo em observação",
-        detailClass: "text-amber-600 dark:text-amber-300",
+        detailClass: "text-amber-700",
       }
     case "concluido":
       return {
         tone: "healthy" as ToneKey,
         tagLabel: "Concluído",
-        tagClass: "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+        tagClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
         barClass: "bg-emerald-500",
         progress: 100,
         detail: "Cálculo concluído",
-        detailClass: "text-emerald-600 dark:text-emerald-300",
+        detailClass: "text-emerald-600",
       }
     case "nao_iniciado":
       return {
         tone: "neutral" as ToneKey,
         tagLabel: "Não iniciado",
-        tagClass: "border-slate-200 bg-slate-500/10 text-slate-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300",
-        barClass: "bg-slate-400 dark:bg-slate-500",
+        tagClass: "border-black/[0.07] bg-muted/40 text-muted-foreground",
+        barClass: "bg-muted-foreground/30",
         progress: 16,
         detail: "Aguardando entrada em cálculo",
-        detailClass: "text-slate-500 dark:text-slate-400",
+        detailClass: "text-muted-foreground",
       }
     default:
       return {
         tone: "healthy" as ToneKey,
         tagLabel: "No prazo",
-        tagClass: "border-emerald-200 bg-emerald-500/10 text-emerald-700 dark:border-emerald-500/25 dark:bg-emerald-500/10 dark:text-emerald-300",
+        tagClass: "border-emerald-200 bg-emerald-50 text-emerald-700",
         barClass: "bg-emerald-500",
         progress: 56,
         detail: precatorio.sla_horas ? `${precatorio.sla_horas}h de SLA` : "Dentro do prazo",
-        detailClass: "text-emerald-600 dark:text-emerald-300",
+        detailClass: "text-emerald-600",
       }
   }
 }
@@ -387,27 +391,27 @@ function getToneClasses(tone: ToneKey) {
   switch (tone) {
     case "urgent":
       return {
-        line: "bg-rose-500",
-        avatar: "bg-rose-500/12 text-rose-600 dark:bg-rose-500/15 dark:text-rose-300",
-        border: "border-rose-500/15 hover:border-rose-500/25",
+        line: "bg-red-500",
+        avatar: "bg-red-50 text-red-700",
+        border: "border-red-200/60 hover:border-red-300",
       }
     case "attention":
       return {
         line: "bg-amber-500",
-        avatar: "bg-amber-500/12 text-amber-600 dark:bg-amber-500/15 dark:text-amber-300",
-        border: "border-amber-500/15 hover:border-amber-500/25",
+        avatar: "bg-amber-50 text-amber-800",
+        border: "border-amber-200/60 hover:border-amber-300",
       }
     case "healthy":
       return {
         line: "bg-emerald-500",
-        avatar: "bg-emerald-500/12 text-emerald-600 dark:bg-emerald-500/15 dark:text-emerald-300",
-        border: "border-emerald-500/15 hover:border-emerald-500/25",
+        avatar: "bg-emerald-50 text-emerald-700",
+        border: "border-emerald-200/60 hover:border-emerald-300",
       }
     default:
       return {
-        line: "bg-blue-500",
-        avatar: "bg-blue-500/12 text-blue-600 dark:bg-blue-500/15 dark:text-blue-300",
-        border: "border-border hover:border-orange-500/25",
+        line: "bg-blue-400",
+        avatar: "bg-blue-50 text-blue-700",
+        border: "border-black/[0.07] hover:border-black/[0.12]",
       }
   }
 }
@@ -493,17 +497,20 @@ function PrecatorioVisualCard({
   const tone = getToneClasses(sla.tone)
 
   return (
-    <Card
+    <div
       className={cx(
-        "group relative cursor-pointer overflow-hidden rounded-[18px] bg-white p-5 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] transition duration-200 hover:-translate-y-[3px] hover:shadow-[0_16px_48px_-20px_rgba(249,115,22,0.22)] dark:bg-[#18181b]",
+        "group relative cursor-pointer overflow-hidden rounded-[22px] border border-black/[0.07] bg-white p-5 transition duration-200 hover:-translate-y-[2px]",
         tone.border,
-        selected && "ring-2 ring-orange-200 dark:ring-orange-900/60"
+        selected && "ring-2 ring-[#0e4d6a]/20"
       )}
+      style={selected
+        ? { ...clayCardShadow, boxShadow: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04), 0 0 0 2px rgba(14,77,106,.2)" }
+        : clayCardShadow}
       onClick={onOpen}
     >
       <div className={cx("absolute inset-x-0 top-0 h-[3px]", tone.line)} />
-      <CardContent className="space-y-4">
-        <div className="flex flex-wrap items-center gap-2">
+      <div className="space-y-4">
+        <div className="flex flex-wrap items-center gap-1.5">
           {(precatorio.urgente || precatorio.prioridade === "urgente") && (
             <TagPill className={getPriorityTagClass(precatorio.prioridade, precatorio.urgente)}>
               <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
@@ -519,7 +526,7 @@ function PrecatorioVisualCard({
             {statusLabel}
           </TagPill>
           {precatorio.distribuido_por_admin && (
-            <TagPill className="border-blue-200 bg-blue-500/10 text-blue-700 dark:border-blue-500/25 dark:bg-blue-500/10 dark:text-blue-300">
+            <TagPill className="border-blue-200 bg-blue-50 text-blue-700">
               <span className="mr-1 h-1.5 w-1.5 rounded-full bg-current" />
               Distribuído por admin
             </TagPill>
@@ -545,11 +552,11 @@ function PrecatorioVisualCard({
                     {initials}
                   </div>
                   <div className="min-w-0">
-                    <h3 className="truncate text-[15px] font-bold text-slate-900 dark:text-slate-50">{headline}</h3>
-                    <div className="mt-1 text-[11.5px] font-medium text-slate-500 dark:text-slate-400">
+                    <h3 className="truncate text-[15px] font-bold text-foreground">{headline}</h3>
+                    <div className="mt-1 text-[11.5px] font-medium text-muted-foreground">
                       {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : precatorio.numero_precatorio || "Sem número"}
                     </div>
-                    <div className="mt-1 text-[11.5px] text-slate-400 dark:text-slate-500">
+                    <div className="mt-1 text-[11.5px] text-muted-foreground/70">
                       Devedor: {precatorio.devedor || "Não informado"}
                     </div>
                   </div>
@@ -560,35 +567,37 @@ function PrecatorioVisualCard({
                 <div className={cx("break-all text-[clamp(1rem,1.9vw,1.125rem)] font-extrabold leading-tight tracking-[-0.02em]", valor.valueClass)}>
                   {valor.formatted}
                 </div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">
+                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/60">
                   {valor.label}
                 </div>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-2 rounded-[10px] bg-[#f4f5f8] p-3 dark:bg-[#09090b]">
+            {/* Info grid — inset clay */}
+            <div className="grid grid-cols-2 gap-2 rounded-[12px] p-3" style={{ background: "#f2f3f7", boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07), inset -4px -4px 10px rgba(255,255,255,.87)" }}>
               <div>
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Tribunal</div>
-                <div className="mt-1 truncate text-[12px] font-semibold text-slate-900 dark:text-slate-100">{precatorio.tribunal || "Não informado"}</div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Tribunal</div>
+                <div className="mt-1 truncate text-[12px] font-semibold text-foreground">{precatorio.tribunal || "Não informado"}</div>
               </div>
               <div>
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Data-base</div>
-                <div className="mt-1 text-[12px] font-semibold text-slate-900 dark:text-slate-100">{formatShortDate(precatorio.data_base)}</div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Data-base</div>
+                <div className="mt-1 text-[12px] font-semibold text-foreground">{formatShortDate(precatorio.data_base)}</div>
               </div>
               <div>
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Complexidade</div>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Complexidade</div>
                 <div className={cx("mt-1 text-[12px] font-semibold", complexidade.className)}>{complexidade.label}</div>
               </div>
               <div>
-                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-slate-400 dark:text-slate-500">Origem do lead</div>
-                <div className="mt-1 inline-flex items-center rounded-full border border-violet-200 bg-violet-500/10 px-2 py-0.5 text-[10px] font-semibold text-violet-700 dark:border-violet-500/20 dark:bg-violet-500/10 dark:text-violet-300">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground/70">Origem do lead</div>
+                <div className="mt-1 inline-flex items-center rounded-full border border-black/[0.07] bg-white px-2 py-0.5 text-[10px] font-semibold text-muted-foreground">
                   {getOrigemLeadLabel(precatorio.origem_lead)}
                 </div>
               </div>
             </div>
 
+            {/* SLA progress */}
             <div className="flex items-center gap-2">
-              <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f4f5f8] dark:bg-[#09090b]">
+              <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "#e8eaef", boxShadow: "inset 2px 2px 4px rgba(0,0,0,.06), inset -1px -1px 3px rgba(255,255,255,.8)" }}>
                 <div className={cx("h-full rounded-full transition-[width] duration-300", sla.barClass)} style={{ width: `${sla.progress}%` }} />
               </div>
               <span className={cx("w-[92px] shrink-0 text-right text-[10.5px] font-bold", sla.detailClass)}>{sla.detail}</span>
@@ -596,22 +605,22 @@ function PrecatorioVisualCard({
 
             <div className="flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
-                <div className="flex h-6 w-6 items-center justify-center rounded-full bg-gradient-to-br from-orange-500 to-amber-400 text-[10px] font-bold text-white">
+                <div className="flex h-6 w-6 items-center justify-center rounded-full text-[10px] font-bold text-white" style={{ background: "#0e4d6a", boxShadow: "4px 4px 10px rgba(14,77,106,.36), -2px -2px 6px rgba(255,255,255,.3)" }}>
                   {getInitials(responsavelNome)}
                 </div>
-                <span className="text-[12px] font-medium text-slate-500 dark:text-slate-400">{responsavelNome}</span>
+                <span className="text-[12px] font-medium text-muted-foreground">{responsavelNome}</span>
               </div>
               <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
                 {selectable ? <PrecatorioDeleteMenu onDelete={onDelete} /> : null}
-                <span className="text-[12px] font-bold text-orange-500 transition-opacity duration-200 group-hover:opacity-100 md:opacity-0">
+                <span className="text-[12px] font-bold text-[#0e4d6a] transition-opacity duration-200 group-hover:opacity-100 md:opacity-0">
                   Ver detalhes →
                 </span>
               </div>
             </div>
           </div>
         </div>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   )
 }
 
@@ -631,19 +640,19 @@ function PrecatoriosTableView({
   openDetails: (id: string) => void
 }) {
   return (
-    <div className="overflow-x-auto rounded-[18px] border border-border bg-white shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:bg-[#18181b]">
+    <div className="overflow-x-auto rounded-[22px] border border-black/[0.07] bg-white" style={clayCardShadow}>
       <table className="min-w-[980px] w-full border-collapse">
-        <thead className="bg-[#f4f5f8] dark:bg-[#09090b]">
+        <thead style={{ background: "#f2f3f7" }}>
           <tr>
-            <th className="w-[44px] px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400" />
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Credor</th>
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Status</th>
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">SLA</th>
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Tribunal</th>
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Processo</th>
-            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Responsável</th>
-            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Valor</th>
-            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-slate-500 dark:text-slate-400">Ações</th>
+            <th className="w-[44px] px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground" />
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Credor</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Status</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">SLA</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Tribunal</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Processo</th>
+            <th className="px-4 py-3 text-left text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Responsável</th>
+            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Valor</th>
+            <th className="px-4 py-3 text-right text-[10.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground">Ações</th>
           </tr>
         </thead>
         <tbody>
@@ -656,7 +665,7 @@ function PrecatoriosTableView({
             return (
               <tr
                 key={precatorio.id}
-                className="cursor-pointer border-t border-slate-900/5 transition hover:bg-orange-500/[0.03] dark:border-white/5 dark:hover:bg-orange-500/[0.04]"
+                className="cursor-pointer border-t border-black/[0.05] transition hover:bg-[#f2f3f7]/60"
                 onClick={() => openDetails(precatorio.id)}
               >
                 <td className="px-4 py-3 align-middle" onClick={(event) => event.stopPropagation()}>
@@ -669,33 +678,33 @@ function PrecatoriosTableView({
                   ) : null}
                 </td>
                 <td className="px-4 py-3 align-middle">
-                  <div className="font-semibold text-slate-900 dark:text-slate-50">{getHeadline(precatorio)}</div>
-                  <div className="mt-1 text-[11.5px] text-slate-500 dark:text-slate-400">{precatorio.numero_precatorio || "Sem número"}</div>
+                  <div className="font-semibold text-foreground">{getHeadline(precatorio)}</div>
+                  <div className="mt-1 text-[11.5px] text-muted-foreground">{precatorio.numero_precatorio || "Sem número"}</div>
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <TagPill className={getStatusTagClass(precatorio.status)}>{statusLabel}</TagPill>
                   {precatorio.distribuido_por_admin && (
-                    <div className="mt-1 text-[10px] font-semibold text-blue-700 dark:text-blue-300">
+                    <div className="mt-1 text-[10px] font-semibold text-blue-700">
                       Distribuído por admin
                     </div>
                   )}
                 </td>
                 <td className="px-4 py-3 align-middle">
                   <div className="flex min-w-[150px] items-center gap-2">
-                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-[#f4f5f8] dark:bg-[#09090b]">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full" style={{ background: "#e8eaef" }}>
                       <div className={cx("h-full rounded-full", sla.barClass)} style={{ width: `${sla.progress}%` }} />
                     </div>
                     <span className={cx("text-[11px] font-semibold", sla.detailClass)}>{sla.tagLabel}</span>
                   </div>
                 </td>
-                <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">{precatorio.tribunal || "-"}</td>
-                <td className="px-4 py-3 align-middle text-[12px] font-mono text-slate-500 dark:text-slate-400">
+                <td className="px-4 py-3 align-middle text-[13px] text-muted-foreground">{precatorio.tribunal || "-"}</td>
+                <td className="px-4 py-3 align-middle text-[12px] font-mono text-muted-foreground">
                   {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
                 </td>
-                <td className="px-4 py-3 align-middle text-[13px] text-slate-600 dark:text-slate-300">{getResponsavelNome(precatorio)}</td>
+                <td className="px-4 py-3 align-middle text-[13px] text-muted-foreground">{getResponsavelNome(precatorio)}</td>
                 <td className="px-4 py-3 align-middle text-right">
                   <div className={cx("font-semibold", valor.valueClass)}>{valor.value > 0 ? formatMoney(valor.value) : "-"}</div>
-                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-slate-400 dark:text-slate-500">{valor.label}</div>
+                  <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/60">{valor.label}</div>
                 </td>
                 <td className="px-4 py-3 align-middle text-right" onClick={(event) => event.stopPropagation()}>
                   {selectable ? <PrecatorioDeleteMenu onDelete={() => openDeleteDialog(precatorio)} /> : null}
@@ -1049,65 +1058,74 @@ export default function PrecatoriosPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-[1280px] flex-col gap-5 px-4 py-6 pb-24 sm:px-5">
-      <section className="relative overflow-hidden rounded-[24px] border border-slate-900/10 bg-[linear-gradient(135deg,#ffffff_60%,#fff7ed_100%)] px-5 py-6 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.10)] dark:border-white/10 dark:bg-[linear-gradient(135deg,#18181b_60%,rgba(124,45,18,0.35)_100%)] sm:px-8">
-        <div className="pointer-events-none absolute -right-5 -top-16 h-[200px] w-[200px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.14)_0%,transparent_70%)]" />
-        <div className="pointer-events-none absolute -bottom-12 left-4 h-[160px] w-[160px] rounded-full bg-[radial-gradient(circle,rgba(249,115,22,0.10)_0%,transparent_70%)]" />
-        <div className="relative z-10">
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+      {/* ===== HERO TITLE — padrão de todas as páginas ===== */}
+      <section className="relative overflow-hidden rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.92)] backdrop-blur-xl" style={clayCardShadow}>
+        <div className="p-4 sm:p-7">
+          <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.9fr)]">
+
+            {/* Coluna esquerda — identidade da página */}
             <div>
-              <p className="text-[10px] font-bold uppercase tracking-[0.22em] text-slate-500 dark:text-slate-400">Carteira ativa</p>
-              <h1 className="mt-1 bg-gradient-to-r from-orange-600 via-orange-500 to-amber-400 bg-clip-text text-3xl font-bold tracking-tight text-transparent sm:text-4xl">
+              <span className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
+                <span className="shrink-0">●</span>
+                <span className="truncate">CRM Precatórios · gestão de processos</span>
+              </span>
+              <p className="mt-3 text-[clamp(1.55rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
                 Precatórios
+              </p>
+              <h1 className="no-route-shiny mt-3 text-[clamp(1rem,3vw,2.2rem)] font-bold leading-[1.1] tracking-[-0.03em]" style={{ color: "#0e4d6a" }}>
+                Todos os processos em um só lugar.
               </h1>
-              <p className="mt-2 max-w-2xl text-[13.5px] leading-relaxed text-slate-500 dark:text-slate-400">
+              <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[15px]">
                 Gerencie a carteira com visão operacional clara, atalhos rápidos e filtros inteligentes.
               </p>
+              <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                <Button
+                  variant="outline"
+                  onClick={() => setImportJsonOpen(true)}
+                  className="rounded-xl border-border bg-background text-muted-foreground hover:border-border hover:text-foreground"
+                >
+                  <FileJson className="mr-2 h-4 w-4" />
+                  Importar
+                </Button>
+                <Button
+                  onClick={() => router.push("/precatorios/novo")}
+                  className="rounded-xl border-none bg-primary text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3),inset_1px_1px_3px_rgba(255,255,255,.14),inset_-1px_-1px_2px_rgba(8,40,60,.3)]"
+                >
+                  <Plus className="mr-2 h-4 w-4" />
+                  Novo Precatório
+                </Button>
+              </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Button
-                variant="outline"
-                onClick={() => setImportJsonOpen(true)}
-                className="rounded-xl border-slate-900/10 bg-white text-slate-500 shadow-[0_1px_4px_rgba(15,23,42,0.06)] hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#18181b] dark:text-slate-300"
-              >
-                <FileJson className="mr-2 h-4 w-4" />
-                Importar
-              </Button>
-              <Button
-                onClick={() => router.push("/precatorios/novo")}
-                className="rounded-xl border-none bg-gradient-to-br from-orange-500 to-orange-600 text-white shadow-[0_8px_24px_-10px_rgba(249,115,22,0.70)] hover:from-orange-400 hover:to-amber-500"
-              >
-                <Plus className="mr-2 h-4 w-4" />
-                Novo Precatório
-              </Button>
-            </div>
-          </div>
 
-          <div className="mt-6 grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
-            <div className="rounded-[14px] border border-slate-900/10 bg-white px-4 py-3 dark:border-white/10 dark:bg-[#18181b]">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-slate-500 dark:text-slate-400">Total</div>
-              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-slate-900 dark:text-slate-50">{effectiveTotalPrecatorios}</div>
-              <div className="mt-1 text-[11px] text-slate-400 dark:text-slate-500">precatórios na carteira</div>
+            {/* Coluna direita — KPIs */}
+            <div className="grid grid-cols-2 gap-3 content-start">
+              <div className="rounded-[18px] border border-black/[0.07] bg-white p-4" style={clayCardShadow}>
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-muted-foreground">Total</div>
+                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-foreground">{effectiveTotalPrecatorios}</div>
+                <div className="mt-1 text-[11px] text-muted-foreground">na carteira</div>
+              </div>
+              <div className="rounded-[18px] border border-emerald-200 bg-emerald-50 p-4">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-emerald-700">Calculados</div>
+                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700">{calculadosCount}</div>
+                <div className="mt-1 text-[11px] text-emerald-700/80">cálculo concluído</div>
+              </div>
+              <div className="rounded-[18px] border border-amber-200 bg-amber-50 p-4">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-amber-800">Em cálculo / Novo</div>
+                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-amber-700">{emCalculoOuNovoCount}</div>
+                <div className="mt-1 text-[11px] text-amber-800/80">em andamento</div>
+              </div>
+              <div className="rounded-[18px] border border-red-200 bg-red-50 p-4">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-red-700">SLA atrasado</div>
+                <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-red-600">{slaAtrasadoCount}</div>
+                <div className="mt-1 text-[11px] text-red-700/80">na página atual</div>
+              </div>
+              <div className="col-span-2 rounded-[18px] border border-blue-200 bg-blue-50 p-4">
+                <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-blue-700">Valor exibido</div>
+                <div className="mt-1 text-[22px] font-bold leading-none tabular-nums text-blue-600">{formatCompactMoney(valorExibidoTotal)}</div>
+                <div className="mt-1 text-[11px] text-blue-700/80">portfólio desta página</div>
+              </div>
             </div>
-            <div className="rounded-[14px] border border-emerald-500/25 bg-emerald-500/10 px-4 py-3">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-emerald-700 dark:text-emerald-300">Calculados</div>
-              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-emerald-700 dark:text-emerald-300">{calculadosCount}</div>
-              <div className="mt-1 text-[11px] text-emerald-700/80 dark:text-emerald-300/80">cálculo concluído</div>
-            </div>
-            <div className="rounded-[14px] border border-orange-500/25 bg-orange-500/10 px-4 py-3">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-orange-700 dark:text-orange-300">Em cálculo / Novo</div>
-              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-orange-600 dark:text-orange-300">{emCalculoOuNovoCount}</div>
-              <div className="mt-1 text-[11px] text-orange-700/80 dark:text-orange-300/80">em andamento agora</div>
-            </div>
-            <div className="rounded-[14px] border border-rose-500/25 bg-rose-500/10 px-4 py-3">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-rose-700 dark:text-rose-300">SLA atrasado</div>
-              <div className="mt-1 text-2xl font-bold leading-none tabular-nums text-rose-600 dark:text-rose-300">{slaAtrasadoCount}</div>
-              <div className="mt-1 text-[11px] text-rose-700/80 dark:text-rose-300/80">na página atual</div>
-            </div>
-            <div className="rounded-[14px] border border-blue-500/25 bg-blue-500/10 px-4 py-3">
-              <div className="text-[9.5px] font-bold uppercase tracking-[0.18em] text-blue-700 dark:text-blue-300">Valor exibido</div>
-              <div className="mt-1 text-[18px] font-bold leading-none tabular-nums text-blue-600 dark:text-blue-300">{formatCompactMoney(valorExibidoTotal)}</div>
-              <div className="mt-1 text-[11px] text-blue-700/80 dark:text-blue-300/80">portfólio desta página</div>
-            </div>
+
           </div>
         </div>
       </section>
@@ -1241,26 +1259,24 @@ export default function PrecatoriosPage() {
       {/* Lista */}
       {
         precatoriosList.length === 0 ? (
-          <div className="relative overflow-hidden rounded-[18px] border-2 border-dashed border-slate-900/10 bg-white/90 px-6 py-20 text-center shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
-            <div className="pointer-events-none absolute -right-8 -top-10 h-32 w-32 rounded-full bg-orange-500/10 blur-3xl" />
-            <div className="pointer-events-none absolute -bottom-10 left-6 h-24 w-24 rounded-full bg-amber-400/10 blur-3xl" />
-            <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-slate-900/10 bg-[#f4f5f8] dark:border-white/10 dark:bg-[#09090b]">
+          <div className="relative overflow-hidden rounded-[22px] border-2 border-dashed border-black/[0.07] bg-white px-6 py-20 text-center" style={clayCardShadow}>
+            <div className="relative mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl border border-black/[0.07] bg-[#f2f3f7]" style={{ boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07), inset -4px -4px 10px rgba(255,255,255,.87)" }}>
               {searchTerm || temFiltrosAtivos ? (
-                <Filter className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+                <Filter className="h-7 w-7 text-muted-foreground" />
               ) : (
-                <FileText className="h-7 w-7 text-slate-500 dark:text-slate-400" />
+                <FileText className="h-7 w-7 text-muted-foreground" />
               )}
             </div>
-            <h3 className="relative text-lg font-bold text-slate-900 dark:text-slate-50">
+            <h3 className="relative text-lg font-bold text-foreground">
               {searchTerm || temFiltrosAtivos ? "Nenhum resultado encontrado" : "Sua lista está vazia"}
             </h3>
-            <p className="relative mx-auto mt-2 mb-6 max-w-sm text-[13.5px] leading-6 text-slate-500 dark:text-slate-400">
+            <p className="relative mx-auto mt-2 mb-6 max-w-sm text-[13.5px] leading-6 text-muted-foreground">
               {searchTerm || temFiltrosAtivos
                 ? "Tente ajustar os filtros ou termo de busca para encontrar o que procura."
                 : "Comece adicionando novos precatórios para gerenciá-los aqui."}
             </p>
             {!searchTerm && !temFiltrosAtivos && (
-              <Button onClick={() => router.push("/precatorios/novo")} className="shadow-[0_8px_24px_-10px_rgba(249,115,22,0.7)]">
+              <Button onClick={() => router.push("/precatorios/novo")} className="rounded-xl border-none bg-primary text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3),inset_1px_1px_3px_rgba(255,255,255,.14),inset_-1px_-1px_2px_rgba(8,40,60,.3)]">
                 <Plus className="h-4 w-4 mr-2" />
                 Cadastrar Precatório
               </Button>
@@ -1269,8 +1285,8 @@ export default function PrecatoriosPage() {
         ) : (
           <>
             {deletableCount > 0 && (
-              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-slate-900/10 bg-white/90 px-4 py-3 text-sm text-slate-500 shadow-[0_4px_18px_-12px_rgba(15,23,42,0.18)] dark:border-white/10 dark:bg-[#18181b] dark:text-slate-400">
-                <label className="flex items-center gap-2 font-semibold text-slate-700 dark:text-slate-200">
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-[14px] border border-black/[0.07] bg-white px-4 py-3 text-sm text-muted-foreground" style={{ boxShadow: "4px 4px 12px rgba(0,0,0,.05), -2px -2px 8px rgba(255,255,255,.9)" }}>
+                <label className="flex items-center gap-2 font-semibold text-foreground">
                   <Checkbox
                     checked={selectedIds.size > 0 && selectedIds.size === deletableCount}
                     onCheckedChange={toggleSelectAll}
@@ -1278,7 +1294,7 @@ export default function PrecatoriosPage() {
                   Selecionar página
                 </label>
                 {selectedIds.size > 0 && (
-                  <span className="inline-flex items-center rounded-full border border-orange-200 bg-orange-500/10 px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-orange-600 dark:border-orange-500/20 dark:bg-orange-500/10 dark:text-orange-300">
+                  <span className="inline-flex items-center rounded-full border border-[#0e4d6a]/20 bg-[#e8f4f8] px-3 py-1 text-xs font-bold uppercase tracking-[0.12em] text-[#0e4d6a]">
                     {selectedIds.size} selecionado(s)
                   </span>
                 )}
@@ -1320,9 +1336,9 @@ export default function PrecatoriosPage() {
               )}
             </div>
 
-            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-slate-900/10 bg-white/90 px-4 py-3 shadow-[0_4px_24px_-8px_rgba(15,23,42,0.08)] dark:border-white/10 dark:bg-[#18181b]">
-              <span className="text-sm text-slate-500 dark:text-slate-400">
-                Exibindo {rangeStart}-{rangeEnd} de {effectiveTotalPrecatorios} precatórios
+            <div className="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-black/[0.07] bg-white px-4 py-3" style={clayCardShadow}>
+              <span className="text-sm text-muted-foreground">
+                Exibindo {rangeStart}–{rangeEnd} de {effectiveTotalPrecatorios} precatórios
               </span>
               <div className="flex items-center gap-2">
                 <Button
@@ -1330,11 +1346,11 @@ export default function PrecatoriosPage() {
                   size="sm"
                   disabled={currentPage <= 1}
                   onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                  className="border-slate-900/10 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                  className="border-border bg-background text-muted-foreground hover:border-[#0e4d6a]/30 hover:text-[#0e4d6a]"
                 >
                   Anterior
                 </Button>
-                <span className="inline-flex min-w-[120px] items-center justify-center rounded-full border border-slate-900/10 bg-[#f4f5f8] px-4 py-2 text-center text-xs font-semibold text-slate-600 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
+                <span className="inline-flex min-w-[120px] items-center justify-center rounded-full border border-black/[0.07] bg-[#f2f3f7] px-4 py-2 text-center text-xs font-semibold text-foreground">
                   Página {currentPage} de {totalPages}
                 </span>
                 <Button
@@ -1342,7 +1358,7 @@ export default function PrecatoriosPage() {
                   size="sm"
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                  className="border-slate-900/10 bg-white text-slate-500 hover:border-orange-300 hover:text-orange-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                  className="border-border bg-background text-muted-foreground hover:border-[#0e4d6a]/30 hover:text-[#0e4d6a]"
                 >
                   Próxima
                 </Button>
@@ -1355,17 +1371,17 @@ export default function PrecatoriosPage() {
       {
         selectedIds.size > 0 && (
           <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-            <div className="flex flex-wrap items-center gap-2 rounded-full border border-slate-900/10 bg-white/95 px-4 py-2 shadow-[0_16px_48px_-20px_rgba(249,115,22,0.22)] backdrop-blur dark:border-white/10 dark:bg-[#18181b]/95">
-              <span className="text-sm font-semibold text-slate-600 dark:text-slate-300">
+            <div className="flex flex-wrap items-center gap-2 rounded-full border border-black/[0.07] bg-white/95 px-4 py-2 backdrop-blur" style={{ boxShadow: "16px 16px 36px rgba(0,0,0,.10), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)" }}>
+              <span className="text-sm font-semibold text-foreground">
                 {selectedIds.size} selecionado(s)
               </span>
-              <div className="h-6 w-px bg-slate-900/10 dark:bg-white/10" />
+              <div className="h-6 w-px bg-black/[0.07]" />
               <Button
                 variant="outline"
                 size="sm"
                 disabled
                 title="Em breve"
-                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                className="border-border bg-[#f2f3f7] text-muted-foreground"
               >
                 Exportar
               </Button>
@@ -1374,7 +1390,7 @@ export default function PrecatoriosPage() {
                 size="sm"
                 disabled
                 title="Em breve"
-                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                className="border-border bg-[#f2f3f7] text-muted-foreground"
               >
                 Mover status
               </Button>
@@ -1383,7 +1399,7 @@ export default function PrecatoriosPage() {
                 size="sm"
                 disabled
                 title="Em breve"
-                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                className="border-border bg-[#f2f3f7] text-muted-foreground"
               >
                 Atribuir responsável
               </Button>
@@ -1392,7 +1408,7 @@ export default function PrecatoriosPage() {
                 size="sm"
                 disabled
                 title="Em breve"
-                className="border-slate-900/10 bg-[#f4f5f8] text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                className="border-border bg-[#f2f3f7] text-muted-foreground"
               >
                 Gerar PDF
               </Button>
@@ -1400,7 +1416,7 @@ export default function PrecatoriosPage() {
                 variant="destructive"
                 size="sm"
                 onClick={() => setBatchDeleteDialogOpen(true)}
-                className="shadow-[0_8px_20px_-12px_rgba(244,63,94,0.65)]"
+                className="shadow-[0_8px_20px_-12px_rgba(220,38,38,0.5)]"
               >
                 Excluir
               </Button>
@@ -1408,7 +1424,7 @@ export default function PrecatoriosPage() {
                 variant="ghost"
                 size="sm"
                 onClick={() => setSelectedIds(new Set<string>())}
-                className="text-slate-500 dark:text-slate-300"
+                className="text-muted-foreground"
               >
                 Limpar
               </Button>

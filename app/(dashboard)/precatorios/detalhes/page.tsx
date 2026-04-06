@@ -151,11 +151,102 @@ function formatStructuredText(value: unknown): string {
   return String(value)
 }
 
+// ─── Clay design tokens (local — does not touch globals.css) ───────────────
+const sh = {
+  card: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)",
+  inset: "inset 5px 5px 12px rgba(0,0,0,.07), inset -4px -4px 10px rgba(255,255,255,.87)",
+  btnAc: "8px 8px 20px rgba(14,77,106,.42), -3px -3px 8px rgba(255,255,255,.3), inset 1px 1px 3px rgba(255,255,255,.14), inset -1px -1px 2px rgba(8,40,60,.3)",
+  btnGhost: "5px 5px 12px rgba(0,0,0,.07), -3px -3px 8px rgba(255,255,255,.92), inset 1px 1px 2px rgba(255,255,255,.87), inset -1px -1px 2px rgba(0,0,0,.04)",
+  sm: "7px 7px 16px rgba(0,0,0,.07), -4px -4px 10px rgba(255,255,255,.92), inset 1px 1px 2px rgba(255,255,255,.88), inset -1px -1px 2px rgba(0,0,0,.03)",
+  navAc: "6px 6px 14px rgba(14,77,106,.36), -2px -2px 6px rgba(255,255,255,.28), inset 1px 1px 3px rgba(255,255,255,.14), inset -1px -1px 2px rgba(8,40,60,.22)",
+  heroBlobAc: "12px 12px 28px rgba(14,77,106,.36), -5px -5px 14px rgba(255,255,255,.5), inset 1px 1px 4px rgba(255,255,255,.12), inset -1px -1px 2px rgba(8,40,60,.25)",
+} as const
+
+function ClayBtnAc({ children, onClick, disabled, className }: { children: ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-[7px] rounded-[13px] bg-[#0e4d6a] px-4 text-[12.5px] font-bold text-white transition hover:-translate-y-[2px] active:scale-[0.96] active:translate-y-[2px] disabled:pointer-events-none disabled:opacity-50 h-[38px] ${className ?? ""}`}
+      style={{ boxShadow: sh.btnAc }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ClayBtnGhost({ children, onClick, disabled, className }: { children: ReactNode; onClick?: () => void; disabled?: boolean; className?: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-[7px] rounded-[13px] border border-black/[0.08] bg-gradient-to-br from-white to-[#f4f5f8] px-4 text-[12.5px] font-bold text-[#374151] transition hover:-translate-y-[2px] hover:text-[#0b0c10] active:scale-[0.96] active:translate-y-[2px] disabled:pointer-events-none disabled:opacity-50 h-[38px] ${className ?? ""}`}
+      style={{ boxShadow: sh.btnGhost }}
+    >
+      {children}
+    </button>
+  )
+}
+
+function ClayCard({ children, className }: { children: ReactNode; className?: string }) {
+  return (
+    <div
+      className={`overflow-hidden rounded-[24px] border border-black/[0.07] bg-white transition-transform duration-200 hover:-translate-y-[2px] ${className ?? ""}`}
+      style={{ boxShadow: sh.card }}
+    >
+      {children}
+    </div>
+  )
+}
+
+function ClayCardHeader({ icon: Icon, title }: { icon: LucideIcon; title: string }) {
+  return (
+    <div className="flex items-center gap-[13px] border-b border-[#e8eaef] px-[22px] py-[18px] pb-[14px]">
+      <div
+        className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-[13px] border border-black/[0.07] bg-[#f2f3f7]"
+        style={{ boxShadow: sh.sm }}
+      >
+        <Icon className="h-[18px] w-[18px] stroke-[1.75] text-[#374151]" />
+      </div>
+      <span className="text-[15px] font-extrabold tracking-[-0.2px] text-[#0b0c10]">{title}</span>
+    </div>
+  )
+}
+
+function Field({ label, value, empty, className }: { label: string; value: ReactNode; empty?: boolean; className?: string }) {
+  return (
+    <div className={`flex flex-col gap-1 ${className ?? ""}`}>
+      <span className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">{label}</span>
+      <span className={`text-[13.5px] font-semibold leading-snug ${empty ? "italic text-[#9ca3af] font-normal" : "text-[#0b0c10]"}`}>
+        {value || (empty ? "Não informado" : value)}
+      </span>
+    </div>
+  )
+}
+
+function ValueBlob({ label, value, variant = "default" }: { label: string; value: string; variant?: "default" | "hero" | "positive" }) {
+  const blobStyle = variant === "hero"
+    ? { background: "#0e4d6a", boxShadow: sh.heroBlobAc }
+    : variant === "positive"
+    ? { background: "#f0fdf4", border: "1.5px solid #bbf7d0" }
+    : { boxShadow: sh.sm }
+  const labelCls = variant === "hero" ? "text-white/55" : variant === "positive" ? "text-[#166534]/70" : "text-[#6b7280]"
+  const valueCls = variant === "hero" ? "text-white" : variant === "positive" ? "text-[#15803d]" : "text-[#0b0c10]"
+  return (
+    <div className="relative overflow-hidden rounded-[18px] border border-black/[0.07] p-[18px] transition hover:-translate-y-[3px]" style={blobStyle}>
+      <span className={`mb-2 block text-[9.5px] font-bold uppercase tracking-[1.4px] ${labelCls}`}>{label}</span>
+      <span className={`block text-[22px] font-black leading-[1.15] tracking-[-0.8px] ${valueCls}`}>{value}</span>
+    </div>
+  )
+}
+
 const SectionTitle = ({ icon: Icon, title }: { icon?: LucideIcon; title: string }) => (
   <div className="flex items-center gap-2.5">
     {Icon ? (
-      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-primary/20 bg-gradient-to-br from-primary/20 to-primary/5 text-primary shadow-inner dark:border-primary/30 dark:from-primary/30 dark:to-primary/10">
-        <Icon className="h-4.5 w-4.5" />
+      <span className="inline-flex h-8 w-8 items-center justify-center rounded-lg border border-black/[0.07] bg-[#f2f3f7] text-[#0e4d6a]" style={{ boxShadow: "inset 3px 3px 7px rgba(0,0,0,.06), inset -2px -2px 5px rgba(255,255,255,.85)" }}>
+        <Icon className="h-4 w-4" />
       </span>
     ) : null}
     <span className="text-[1.65rem] font-semibold tracking-tight">{title}</span>
@@ -399,31 +490,31 @@ export default function PrecatorioDetailPage() {
     SEM_CONTATO: {
       label: "Sem contato",
       badgeClass:
-        "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+        "border-border bg-muted text-muted-foreground",
       dotClass: "bg-muted",
     },
     CONTATO_EM_ANDAMENTO: {
       label: "Contato em andamento",
       badgeClass:
-        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+        "border-primary/40 bg-primary/15 text-primary",
       dotClass: "bg-primary/15",
     },
     PEDIR_RETORNO: {
       label: "Pedir retorno",
       badgeClass:
-        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+        "border-primary/40 bg-primary/15 text-primary",
       dotClass: "bg-primary/15",
     },
     SEM_INTERESSE: {
       label: "Sem interesse",
       badgeClass:
-        "border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive",
+        "border-destructive/40 bg-destructive/15 text-destructive",
       dotClass: "bg-destructive/15",
     },
     TEM_INTERESSE: {
       label: "Tem interesse",
       badgeClass:
-        "border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary",
+        "border-primary/40 bg-primary/15 text-primary",
       dotClass: "bg-primary/15",
     },
   }
@@ -433,7 +524,7 @@ export default function PrecatorioDetailPage() {
       return {
         label: "Não informado",
         badgeClass:
-          "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+          "border-border bg-muted text-muted-foreground",
         dotClass: "bg-muted",
       }
     }
@@ -441,7 +532,7 @@ export default function PrecatorioDetailPage() {
       TRIAGEM_STATUS_META[normalized] || {
         label: normalized.replace(/_/g, " ").toLowerCase(),
         badgeClass:
-          "border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground",
+          "border-border bg-muted text-muted-foreground",
         dotClass: "bg-muted",
       }
     )
@@ -1281,29 +1372,29 @@ export default function PrecatorioDetailPage() {
   const getKanbanGlowClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
     switch (column?.id) {
       case "entrada":
-        return "shadow-[0_10px_24px_rgba(29,78,216,0.35)] dark:shadow-[0_10px_24px_rgba(96,165,250,0.35)]"
+        return "shadow-[0_10px_24px_rgba(29,78,216,0.35)]"
       case "triagem_interesse":
-        return "shadow-[0_10px_24px_rgba(67,56,202,0.35)] dark:shadow-[0_10px_24px_rgba(129,140,248,0.35)]"
+        return "shadow-[0_10px_24px_rgba(67,56,202,0.35)]"
       case "docs_credor":
-        return "shadow-[0_10px_24px_rgba(3,105,161,0.35)] dark:shadow-[0_10px_24px_rgba(56,189,248,0.35)]"
+        return "shadow-[0_10px_24px_rgba(3,105,161,0.35)]"
       case "analise_processual_inicial":
-        return "shadow-[0_10px_24px_rgba(14,116,144,0.35)] dark:shadow-[0_10px_24px_rgba(34,211,238,0.35)]"
+        return "shadow-[0_10px_24px_rgba(14,116,144,0.35)]"
       case "juridico":
-        return "shadow-[0_10px_24px_rgba(190,24,93,0.35)] dark:shadow-[0_10px_24px_rgba(251,113,133,0.35)]"
+        return "shadow-[0_10px_24px_rgba(190,24,93,0.35)]"
       case "pronto_calculo":
-        return "shadow-[0_10px_24px_rgba(194,65,12,0.35)] dark:shadow-[0_10px_24px_rgba(251,146,60,0.35)]"
+        return "shadow-[0_10px_24px_rgba(180,83,9,0.35)]"
       case "calculo_andamento":
-        return "shadow-[0_10px_24px_rgba(180,83,9,0.35)] dark:shadow-[0_10px_24px_rgba(251,191,36,0.35)]"
+        return "shadow-[0_10px_24px_rgba(180,83,9,0.35)]"
       case "calculo_concluido":
-        return "shadow-[0_10px_24px_rgba(21,128,61,0.35)] dark:shadow-[0_10px_24px_rgba(74,222,128,0.35)]"
+        return "shadow-[0_10px_24px_rgba(21,128,61,0.35)]"
       case "proposta_negociacao":
-        return "shadow-[0_10px_24px_rgba(161,98,7,0.35)] dark:shadow-[0_10px_24px_rgba(250,204,21,0.35)]"
+        return "shadow-[0_10px_24px_rgba(161,98,7,0.35)]"
       case "proposta_aceita":
-        return "shadow-[0_10px_24px_rgba(4,120,87,0.35)] dark:shadow-[0_10px_24px_rgba(52,211,153,0.35)]"
+        return "shadow-[0_10px_24px_rgba(4,120,87,0.35)]"
       case "certidoes":
-        return "shadow-[0_10px_24px_rgba(109,40,217,0.35)] dark:shadow-[0_10px_24px_rgba(167,139,250,0.35)]"
+        return "shadow-[0_10px_24px_rgba(109,40,217,0.35)]"
       case "escrituras":
-        return "shadow-[0_10px_24px_rgba(162,28,175,0.35)] dark:shadow-[0_10px_24px_rgba(232,121,249,0.35)]"
+        return "shadow-[0_10px_24px_rgba(162,28,175,0.35)]"
       default:
         return "shadow-[0_10px_24px_rgba(15,23,42,0.25)]"
     }
@@ -1312,34 +1403,34 @@ export default function PrecatorioDetailPage() {
   const getKanbanFillClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
     switch (column?.id) {
       case "entrada":
-        return "bg-blue-600 dark:bg-blue-500 text-white"
+        return "bg-blue-600 text-white"
       case "triagem_interesse":
-        return "bg-indigo-600 dark:bg-indigo-500 text-white"
+        return "bg-indigo-600 text-white"
       case "docs_credor":
-        return "bg-sky-600 dark:bg-sky-500 text-white"
+        return "bg-sky-600 text-white"
       case "analise_processual_inicial":
-        return "bg-cyan-600 dark:bg-cyan-500 text-white"
+        return "bg-cyan-600 text-white"
       case "juridico":
-        return "bg-rose-600 dark:bg-rose-500 text-white"
+        return "bg-rose-600 text-white"
       case "pronto_calculo":
-        return "bg-orange-600 dark:bg-orange-500 text-white"
+        return "bg-amber-600 text-white"
       case "calculo_andamento":
-        return "bg-amber-500 dark:bg-amber-400 text-zinc-900"
+        return "bg-amber-500 text-white"
       case "calculo_concluido":
-        return "bg-green-600 dark:bg-green-500 text-white"
+        return "bg-green-600 text-white"
       case "proposta_negociacao":
-        return "bg-yellow-500 dark:bg-yellow-400 text-zinc-900"
+        return "bg-yellow-500 text-white"
       case "proposta_aceita":
-        return "bg-emerald-600 dark:bg-emerald-500 text-white"
+        return "bg-emerald-600 text-white"
       case "certidoes":
-        return "bg-purple-600 dark:bg-purple-500 text-white"
+        return "bg-purple-600 text-white"
       case "escrituras":
-        return "bg-fuchsia-600 dark:bg-fuchsia-500 text-white"
+        return "bg-fuchsia-600 text-white"
       case "fechado":
       case "reprovado":
-        return "bg-zinc-700 dark:bg-zinc-600 text-white"
+        return "bg-zinc-700 text-white"
       case "encerrados":
-        return "bg-slate-700 dark:bg-slate-600 text-white"
+        return "bg-slate-700 text-white"
       default:
         return "bg-primary text-primary-foreground"
     }
@@ -1358,7 +1449,7 @@ export default function PrecatorioDetailPage() {
 
   const getKanbanToneButtonClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
     if (!column) {
-      return "bg-gradient-to-r from-primary to-orange-500 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
+      return "bg-primary text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3),inset_1px_1px_3px_rgba(255,255,255,.14),inset_-1px_-1px_2px_rgba(8,40,60,.3)] hover:bg-primary/90"
     }
     return `${getKanbanFillClass(column)} ring-1 ${column.color.ring} shadow-[0_10px_24px_rgba(15,23,42,0.18)] hover:opacity-90`
   }
@@ -1674,30 +1765,30 @@ export default function PrecatorioDetailPage() {
   const getStatusColor = (status: string | undefined) => {
     switch (status) {
       case "novo":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       case "em_andamento":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       case "concluido":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       case "cancelado":
-        return "border border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive"
+        return "border border-destructive/40 bg-destructive/15 text-destructive"
       default:
-        return "border border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground"
+        return "border border-border bg-muted text-muted-foreground"
     }
   }
 
   const getPrioridadeColor = (prioridade: string | undefined) => {
     switch (prioridade) {
       case "urgente":
-        return "border border-destructive/40 bg-destructive/15 text-destructive dark:border-destructive/40 dark:bg-destructive/15 dark:text-destructive"
+        return "border border-destructive/40 bg-destructive/15 text-destructive"
       case "alta":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       case "media":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       case "baixa":
-        return "border border-primary/40 bg-primary/15 text-primary dark:border-primary/40 dark:bg-primary/15 dark:text-primary"
+        return "border border-primary/40 bg-primary/15 text-primary"
       default:
-        return "border border-border bg-muted text-muted-foreground dark:border-border dark:bg-muted dark:text-muted-foreground"
+        return "border border-border bg-muted text-muted-foreground"
     }
   }
 
@@ -1738,11 +1829,11 @@ export default function PrecatorioDetailPage() {
   }
 
   const dashboardCardClass =
-    "group relative overflow-hidden rounded-2xl border border-border bg-gradient-to-br from-white/85 via-white/70 to-zinc-50/60 backdrop-blur-xl shadow-[0_8px_26px_rgba(15,23,42,0.08)] transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-[0_14px_40px_rgba(15,23,42,0.16)] dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/55 dark:to-zinc-900/45 dark:hover:border-primary/45 dark:hover:shadow-[0_18px_44px_rgba(0,0,0,0.38)]"
+    "group relative overflow-hidden rounded-[22px] border border-black/[0.07] bg-white transition-all duration-200 hover:-translate-y-[2px] shadow-[16px_16px_36px_rgba(0,0,0,.08),-8px_-8px_20px_rgba(255,255,255,.94),inset_1px_1px_4px_rgba(255,255,255,.9),inset_-1px_-1px_2px_rgba(0,0,0,.04)]"
   const verticalTabClass =
-    "relative flex w-full items-center justify-start gap-2.5 rounded-lg px-3 py-[7px] text-[13px] font-medium text-muted-foreground transition-all duration-150 hover:bg-muted/60 hover:text-foreground data-[state=active]:bg-primary/[0.11] data-[state=active]:text-primary data-[state=active]:font-semibold data-[state=active]:shadow-[inset_3px_0_0_0_hsl(var(--primary))] dark:hover:bg-muted/40 dark:hover:text-white dark:data-[state=active]:bg-primary/[0.18] dark:data-[state=active]:text-primary dark:data-[state=active]:shadow-[inset_3px_0_0_0_hsl(var(--primary))]"
+    "relative flex w-full items-center gap-[9px] rounded-[12px] px-3 py-2 text-[12.5px] font-semibold text-[#6b7280] transition-all duration-200 hover:translate-x-[2px] hover:bg-[#f2f3f7] hover:text-[#0b0c10] data-[state=active]:translate-x-[1px] data-[state=active]:bg-[#0e4d6a] data-[state=active]:text-white data-[state=active]:font-bold"
   const navSectionLabel =
-    "mb-0.5 px-3 pt-3 pb-0.5 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/40 select-none"
+    "block select-none px-3 pb-1 pt-[9px] text-[9px] font-bold uppercase tracking-[2px] text-[#9ca3af]"
 
   if (!id) {
     return (
@@ -1819,118 +1910,101 @@ export default function PrecatorioDetailPage() {
   }
 
   return (
-    <div className="relative min-h-[calc(100vh-4rem)]">
-      <div className="absolute inset-0 -z-10 bg-gradient-to-b from-zinc-50 via-white to-white dark:from-zinc-950 dark:via-zinc-950 dark:to-black" />
-      <div className="pointer-events-none absolute -top-24 left-1/2 -z-10 h-72 w-[42rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-primary/20 via-sky-200/10 to-emerald-200/10 blur-3xl dark:from-primary/20 dark:via-orange-400/10 dark:to-sky-400/10" />
-      <div className="pointer-events-none absolute top-28 right-[-9rem] -z-10 h-72 w-72 rounded-full bg-gradient-to-br from-amber-300/15 via-orange-300/10 to-cyan-300/10 blur-3xl dark:from-amber-500/18 dark:via-primary/14 dark:to-cyan-500/12" />
-      <div className="pointer-events-none absolute bottom-10 left-[-8rem] -z-10 h-64 w-64 rounded-full bg-gradient-to-br from-primary/10 via-rose-200/10 to-amber-200/10 blur-3xl dark:from-primary/12 dark:via-rose-400/8 dark:to-amber-400/10" />
+    <div className="relative min-h-[calc(100vh-4rem)] bg-[#f0f1f5]">
 
-      <div className="mx-auto max-w-7xl space-y-6 px-4 py-6 sm:px-6">
-        {/* Header */}
-        <motion.div
-          initial={reduceMotion ? { opacity: 1 } : { opacity: 0, y: 8 }}
-          animate={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0 }}
-          transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-          className="relative z-20 overflow-hidden rounded-3xl border border-border bg-white/90 px-5 py-5 shadow-[0_10px_30px_rgba(15,23,42,0.12)] backdrop-blur-xl lg:sticky lg:top-4 dark:border-border dark:bg-zinc-950/80 dark:shadow-[0_16px_42px_rgba(0,0,0,0.42)]"
+      <div className="mx-auto max-w-[1400px] space-y-4 px-4 py-4 sm:px-5 lg:px-6">
+        {/* Header Clay */}
+        <header
+          className="relative z-20 overflow-hidden rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.93)] px-5 py-5 backdrop-blur-[24px] lg:sticky lg:top-3"
+          style={{ boxShadow: sh.card }}
         >
-          <div className="pointer-events-none absolute -right-8 -top-10 h-24 w-24 rounded-full bg-primary/15 blur-2xl dark:bg-primary/20" />
-          <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+          <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
             <div className="flex items-start gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
+              {/* Botão voltar */}
+              <button
+                type="button"
                 onClick={() => router.back()}
-                className="mt-1 -ml-2 rounded-xl border border-border bg-background/75 hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
+                className="mt-[5px] flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[15px] border border-black/[0.07] bg-gradient-to-br from-white to-[#f5f6f9] text-[#6b7280] transition hover:-translate-y-[3px] hover:-translate-x-[1px] hover:text-[#0b0c10] active:scale-[0.94] active:translate-y-[1px]"
+                style={{ boxShadow: sh.sm }}
               >
-                <ArrowLeft className="h-6 w-6" />
-              </Button>
-              <div>
-                <div className="flex flex-wrap items-center gap-3">
-                  <h1 className="no-route-shiny text-[2.25rem] font-semibold leading-[1.08] tracking-tight text-foreground md:text-[3rem]">
-                    {precatorio.titulo}
-                  </h1>
-                  <span
-                    className={`${getPrioridadeColor(precatorio.prioridade)} inline-flex h-[2.1rem] items-center justify-center whitespace-nowrap rounded-full px-3 py-0 text-[13px] font-semibold leading-none shadow-sm`}
-                  >
-                    {precatorio.prioridade?.toUpperCase() || "M?DIA"}
-                  </span>
-                  <span
-                    className={`${getStatusColor(precatorio.status)} inline-flex h-[2.1rem] items-center justify-center gap-1.5 whitespace-nowrap rounded-full px-3 py-0 text-[13px] font-semibold leading-none shadow-sm`}
-                  >
-                    <span className="inline-flex items-center justify-center">
-                      {getStatusIcon(precatorio.status)}
+                <ArrowLeft className="h-[18px] w-[18px]" />
+              </button>
+
+              <div className="min-w-0 flex-1">
+                {/* Badge row */}
+                <div className="mb-[10px] flex flex-wrap items-center gap-1.5">
+                  {precatorio.prioridade && (
+                    <span className={`inline-flex h-6 items-center rounded-full border px-[10px] text-[10.5px] font-bold tracking-[0.3px] ${getPrioridadeColor(precatorio.prioridade)}`}>
+                      {precatorio.prioridade.toUpperCase()}
                     </span>
-                    <span className="inline-flex items-center font-semibold leading-none">
-                      {precatorio.status?.replace("_", " ").toUpperCase() || "NOVO"}
+                  )}
+                  {precatorio.status && (
+                    <span className={`inline-flex h-6 items-center rounded-full border px-[10px] text-[10.5px] font-bold tracking-[0.3px] ${getStatusColor(precatorio.status)}`}>
+                      {precatorio.status.replace(/_/g, " ").toUpperCase()}
                     </span>
-                  </span>
+                  )}
+                  {precatorio.natureza && (
+                    <span className="inline-flex h-6 items-center rounded-full border border-[#bbf7d0] bg-[#f0fdf4] px-[10px] text-[10.5px] font-bold tracking-[0.3px] text-[#15803d]">
+                      {precatorio.natureza}
+                    </span>
+                  )}
                 </div>
-                <p className="mt-1.5 text-[1.05rem] text-muted-foreground">Dados essenciais do precatório com visão completa do fluxo.</p>
+
+                {/* Título dois andares */}
+                <h1
+                  className="text-[26px] font-extrabold leading-[1.1] tracking-[-0.6px] md:text-[28px]"
+                  style={{ color: '#6b7280', WebkitTextFillColor: '#6b7280', backgroundImage: 'none' }}
+                >
+                  Precatório
+                  <strong
+                    className="block text-[32px] font-black tracking-[-1px] md:text-[38px]"
+                    style={{ color: '#0b0c10', WebkitTextFillColor: '#0b0c10', backgroundImage: 'none' }}
+                  >
+                    {precatorio.credor_nome || precatorio.titulo || "—"}
+                  </strong>
+                </h1>
+                <p className="mt-[5px] text-[12px] font-medium text-[#9ca3af]">
+                  Dados essenciais com visão completa do fluxo de trabalho.
+                </p>
               </div>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
+
+            {/* Ações */}
+            <div className="flex flex-wrap items-center gap-2 pt-[6px]">
               {isAdmin && !isEditing && (
-                <Button
-                  onClick={() => setAdminInterestModalOpen(true)}
-                  variant="outline"
-                  size="sm"
-                  className="h-10 rounded-xl border-border bg-background/80 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-                >
-                  <AlertCircle className="h-4 w-4 mr-2" />
+                <ClayBtnGhost onClick={() => setAdminInterestModalOpen(true)}>
+                  <AlertCircle className="h-[14px] w-[14px]" />
                   Sinalizar interesse
-                </Button>
+                </ClayBtnGhost>
               )}
               {!isEditing && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-                  onClick={() => {
-                    setActiveTab("timeline")
-                    syncTabToUrl("timeline")
-                  }}
-                >
-                  <Clock className="h-4 w-4 mr-2" />
+                <ClayBtnGhost onClick={() => { setActiveTab("timeline"); syncTabToUrl("timeline") }}>
+                  <Clock className="h-[14px] w-[14px]" />
                   Timeline
-                </Button>
+                </ClayBtnGhost>
               )}
-              {canEdit && !isEditing && (
-                <Button
-                  onClick={() => setIsEditing(true)}
-                  variant="outline"
-                  size="sm"
-                  className="h-10 rounded-xl border-border bg-background/85 px-4 shadow-sm hover:bg-background dark:border-border dark:bg-muted dark:hover:bg-muted"
-                >
-                  <Edit className="h-4 w-4 mr-2" />
-                  Editar
-                </Button>
-              )}
-              {isEditing && (
+              {isEditing ? (
                 <>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setIsEditing(false)}
-                    disabled={saving}
-                    className="h-10 rounded-xl px-4"
-                  >
-                    <X className="h-4 w-4 mr-2" />
+                  <ClayBtnGhost onClick={() => setIsEditing(false)} disabled={saving}>
+                    <X className="h-[14px] w-[14px]" />
                     Cancelar
-                  </Button>
-                  <Button
-                    onClick={handleSaveEdit}
-                    disabled={saving}
-                    size="sm"
-                    className="h-10 rounded-xl bg-gradient-to-r from-primary to-orange-500 px-4 text-white shadow-[0_10px_24px_rgba(251,146,60,0.35)] hover:from-primary/90 hover:to-orange-500/90"
-                  >
-                    <Save className="h-4 w-4 mr-2" />
+                  </ClayBtnGhost>
+                  <ClayBtnAc onClick={handleSaveEdit} disabled={saving}>
+                    <Save className="h-[14px] w-[14px]" />
                     {saving ? "Salvando..." : "Salvar"}
-                  </Button>
+                  </ClayBtnAc>
                 </>
+              ) : (
+                canEdit && (
+                  <ClayBtnGhost onClick={() => setIsEditing(true)}>
+                    <Edit className="h-[14px] w-[14px]" />
+                    Editar
+                  </ClayBtnGhost>
+                )
               )}
             </div>
           </div>
-        </motion.div>
+        </header>
 
         {isAdmin && (
           <Dialog open={adminInterestModalOpen} onOpenChange={setAdminInterestModalOpen}>
@@ -1973,7 +2047,7 @@ export default function PrecatorioDetailPage() {
                   </div>
                   <div className="space-y-2">
                     <Label>Crédito em foco</Label>
-                    <div className="rounded-xl border border-border bg-background/70 px-3 py-2 text-sm backdrop-blur-xl dark:border-border dark:bg-muted">
+                    <div className="rounded-xl border border-border bg-[#f2f3f7] px-3 py-2 text-sm">
                       {precatorioAdminLabel}
                     </div>
                   </div>
@@ -2014,94 +2088,174 @@ export default function PrecatorioDetailPage() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <div className="flex flex-col gap-4 lg:flex-row lg:gap-5 lg:items-start">
 
-            {/* ── Sidebar de navegação vertical ── */}
-            <aside className="lg:w-[220px] lg:shrink-0">
+            {/* ── Navegação mobile: select compacto ── */}
+            <div className="lg:hidden">
+              <select
+                value={activeTab}
+                onChange={(e) => setActiveTab(e.target.value)}
+                className="w-full rounded-[14px] border border-black/[0.08] bg-white px-3 py-2.5 text-[13px] font-semibold text-[#0b0c10] shadow-[6px_6px_14px_rgba(0,0,0,.06),-4px_-4px_10px_rgba(255,255,255,.9)] appearance-none focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/20"
+                style={{ backgroundImage: "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2.5'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E\")", backgroundRepeat: "no-repeat", backgroundPosition: "right 12px center" }}
+              >
+                <optgroup label="Processo">
+                  <option value="detalhes">Geral</option>
+                  <option value="datajud">DataJud</option>
+                </optgroup>
+                <optgroup label="Documentação">
+                  <option value="documentos">Documentos</option>
+                  <option value="oficio">Ofício</option>
+                  <option value="certidoes">Certidões</option>
+                  <option value="escrituras">Escrituras</option>
+                  <option value="contratos">Contratos</option>
+                  <option value="procuracao">Procuração</option>
+                </optgroup>
+                <optgroup label="Jurídico">
+                  <option value="juridico">Parecer Jurídico</option>
+                  {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico'))
+                    ? <option value="fechamento">Fechamento</option>
+                    : null}
+                </optgroup>
+                <optgroup label="Financeiro">
+                  <option value="calculo">Cálculo</option>
+                  <option value="comparativo">Projeção &amp; Comparativo</option>
+                  <option value="propostas">Propostas</option>
+                </optgroup>
+                <optgroup label="Gestão">
+                  <option value="agenda">Agenda</option>
+                </optgroup>
+              </select>
+            </div>
+
+            {/* ── Sidebar de navegação vertical (desktop) ── */}
+            <aside className="hidden lg:block lg:w-[220px] lg:shrink-0">
               <div className="lg:sticky lg:top-20">
-                <div className="rounded-2xl border border-border bg-background/75 py-2 backdrop-blur-xl dark:bg-muted/70 shadow-[0_2px_12px_rgba(15,23,42,0.06)] dark:shadow-[0_4px_16px_rgba(0,0,0,0.3)]">
+                <div className="rounded-[22px] border border-black/[0.07] bg-white py-2" style={{ boxShadow: "inset 5px 5px 12px rgba(0,0,0,.06), inset -4px -4px 10px rgba(255,255,255,.87)" }}>
                   <TabsList className="flex h-auto w-full flex-col items-stretch gap-0 bg-transparent p-0">
 
                     {/* Processo */}
                     <p className={navSectionLabel}>Processo</p>
                     <TabsTrigger value="detalhes" className={verticalTabClass}>
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileText className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Geral
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="datajud" className={verticalTabClass}>
-                      <FileSearch className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileSearch className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       DataJud
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
 
                     {/* Documentação */}
-                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <div className="mx-3 my-2 border-t border-[#e8eaef]" />
                     <p className={navSectionLabel}>Documentação</p>
                     <TabsTrigger value="documentos" className={verticalTabClass}>
-                      <CheckSquare className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <CheckSquare className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Documentos
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="oficio" className={verticalTabClass}>
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileText className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Ofício
-                      {(precatorio?.file_url || precatorio?.pdf_url) && (
-                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-primary/50" />
+                      {(precatorio?.file_url || precatorio?.pdf_url) ? (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/50 data-[state=active]:bg-white/80" />
+                      ) : (
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                       )}
                     </TabsTrigger>
                     <TabsTrigger value="certidoes" className={verticalTabClass}>
-                      <CheckSquare className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <CheckSquare className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Certidões
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="escrituras" className={verticalTabClass}>
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileText className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Escrituras
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="contratos" className={verticalTabClass}>
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileText className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Contratos
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="procuracao" className={verticalTabClass}>
-                      <FileText className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <FileText className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Procuração
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
 
                     {/* Jurídico */}
-                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <div className="mx-3 my-2 border-t border-[#e8eaef]" />
                     <p className={navSectionLabel}>Jurídico</p>
                     <TabsTrigger value="juridico" className={verticalTabClass}>
-                      <Scale className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <Scale className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Parecer Jurídico
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     {(userRole?.includes('admin') || userRole?.includes('financeiro') || userRole?.includes('juridico')) && (
                       <TabsTrigger value="fechamento" className={verticalTabClass}>
-                        <Gavel className="h-3.5 w-3.5 shrink-0" />
+                        <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                          <Gavel className="h-[14px] w-[14px] stroke-[1.75]" />
+                        </span>
                         Fechamento
+                        <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                       </TabsTrigger>
                     )}
 
                     {/* Financeiro */}
-                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <div className="mx-3 my-2 border-t border-[#e8eaef]" />
                     <p className={navSectionLabel}>Financeiro</p>
                     <TabsTrigger value="calculo" className={verticalTabClass}>
-                      <Calculator className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <Calculator className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Cálculo
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="comparativo" className={verticalTabClass}>
-                      <DollarSign className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <DollarSign className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Projeção & Comparativo
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
                     <TabsTrigger value="propostas" className={verticalTabClass}>
-                      <Percent className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef] transition-colors data-[state=active]:bg-white/20">
+                        <Percent className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Propostas
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20 data-[state=active]:bg-white/55" />
                     </TabsTrigger>
 
                     {/* Gestão */}
-                    <div className="mx-3 my-2 border-t border-border/50" />
+                    <div className="mx-3 my-2 border-t border-[#e8eaef]" />
                     <p className={navSectionLabel}>Gestão</p>
                     <button
                       type="button"
-                      className={`${verticalTabClass} data-[state=active]:bg-transparent`}
+                      className={verticalTabClass}
                       onClick={openAgendaForPrecatorio}
                     >
-                      <Calendar className="h-3.5 w-3.5 shrink-0" />
+                      <span className="flex h-[26px] w-[26px] flex-shrink-0 items-center justify-center rounded-[9px] bg-[#e8eaef]">
+                        <Calendar className="h-[14px] w-[14px] stroke-[1.75]" />
+                      </span>
                       Agenda
+                      <span className="ml-auto h-1.5 w-1.5 rounded-full bg-[#0e4d6a]/20" />
                     </button>
 
                   </TabsList>
@@ -2122,105 +2276,104 @@ export default function PrecatorioDetailPage() {
               {/* Tab: Detalhes */}
               <TabsContent value="detalhes" className="space-y-6">
 
-                {/* Barra de Status */}
-                <DetailSection className="relative overflow-hidden border-border bg-gradient-to-br from-white/85 via-white/72 to-zinc-50/60 p-5 md:p-6 shadow-[0_8px_24px_rgba(15,23,42,0.1)] backdrop-blur-xl dark:border-border dark:bg-gradient-to-br dark:from-zinc-950/75 dark:via-zinc-950/58 dark:to-zinc-900/45 dark:shadow-[0_14px_32px_rgba(0,0,0,0.4)]">
-                  <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.12),transparent_45%)] dark:bg-[radial-gradient(circle_at_top_right,rgba(56,189,248,0.16),transparent_50%)]" />
-                  <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
-                    <div className="min-w-0">
-                      <p className="text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground dark:text-muted-foreground">
-                        Status do crédito
+                {/* Barra de Status Clay */}
+                <ClayCard>
+                  <div className="p-5 md:p-6 space-y-5">
+                    {/* Progress bar */}
+                    <div>
+                      <div className="mb-[7px] flex justify-between text-[10px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">
+                        <span>Progresso do fluxo</span>
+                        <span>Etapa {currentColumnIndex + 1} de {KANBAN_COLUMNS.length}</span>
+                      </div>
+                      <div className="h-[5px] overflow-hidden rounded-[10px] bg-[#e8eaef]" style={{ boxShadow: "inset 2px 2px 4px rgba(0,0,0,.06), inset -1px -1px 3px rgba(255,255,255,.8)" }}>
+                        <div
+                          className="h-full rounded-[10px] bg-gradient-to-r from-[#22c55e] via-[#6366f1] to-[#0e4d6a] transition-all duration-700"
+                          style={{ width: `${Math.round(((currentColumnIndex + 1) / KANBAN_COLUMNS.length) * 100)}%` }}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                      <div className="min-w-0">
+                        <p className="mb-[10px] text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">
+                          Status do crédito
+                        </p>
+                        <div className="flex flex-wrap items-center gap-2.5">
+                          {/* chip-current */}
+                          <div className="inline-flex h-[38px] items-center gap-2 rounded-[22px] bg-[#0e4d6a] px-4 text-[13px] font-extrabold text-white" style={{ boxShadow: sh.btnAc }}>
+                            <span className="h-2 w-2 animate-pulse rounded-full bg-white/80" />
+                            {statusAtualLabel}
+                          </div>
+                          {/* chip-next */}
+                          {nextColumn ? (
+                            <div className="inline-flex h-[38px] items-center gap-[7px] rounded-[22px] border border-[#e8eaef] bg-white px-4 text-[13px] font-bold text-[#374151]" style={{ boxShadow: sh.sm }}>
+                              <ArrowRight className="h-[13px] w-[13px]" />
+                              {nextColumn.titulo}
+                            </div>
+                          ) : (
+                            <div className="inline-flex h-[38px] items-center gap-[7px] rounded-[22px] border border-[#e8eaef] bg-white px-4 text-[13px] font-bold text-[#9ca3af]" style={{ boxShadow: sh.sm }}>
+                              Fluxo finalizado
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex flex-wrap items-center gap-2">
+                        {canAdvanceToNextColumn ? (
+                          <ClayBtnAc onClick={handleAdvanceToNextStage} disabled={advancingStage}>
+                            <ArrowRight className="h-[14px] w-[14px]" />
+                            {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
+                          </ClayBtnAc>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    {/* Pipeline scroll */}
+                    <div className="rounded-2xl border border-black/[0.07] bg-[#f2f3f7] p-3" style={{ boxShadow: sh.inset }}>
+                      <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
+                        <div className="flex min-w-max items-center gap-2 pr-2">
+                          {KANBAN_COLUMNS.map((col, index) => {
+                            const hasCurrent = currentColumnIndex >= 0
+                            const isCurrent = hasCurrent && index === currentColumnIndex
+                            const isDoneBase = hasCurrent && index < currentColumnIndex
+                            const isSkippedJuridico =
+                              shouldSkipOptionalJuridico &&
+                              col.id === "juridico" &&
+                              currentColumnIndex > index
+                            const isDone = isDoneBase && !isSkippedJuridico
+                            const isNext = hasCurrent && nextColumnIndex >= 0 && index === nextColumnIndex
+
+                            let pipeClass: string
+                            let pipeContent: ReactNode = null
+
+                            if (isCurrent) {
+                              pipeClass = "inline-flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full px-3 text-[11.5px] font-extrabold text-white bg-[#0e4d6a] shadow-[5px_5px_12px_rgba(14,77,106,.34),-2px_-2px_6px_rgba(255,255,255,.5)]"
+                              pipeContent = <span className="h-2 w-2 rounded-full bg-white/80 animate-pulse" />
+                            } else if (isDone) {
+                              pipeClass = "inline-flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border border-[#bbf7d0] px-3 text-[11.5px] font-semibold bg-[#f0fdf4] text-[#15803d]"
+                              pipeContent = <CheckCircle2 className="h-3 w-3" />
+                            } else if (isNext) {
+                              pipeClass = "inline-flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border border-[#bfdbfe] px-3 text-[11.5px] font-semibold bg-[#eff6ff] text-[#1d4ed8]"
+                              pipeContent = <ArrowRight className="h-3 w-3" />
+                            } else {
+                              pipeClass = "inline-flex h-[34px] items-center gap-1.5 whitespace-nowrap rounded-full border border-black/[0.06] px-3 text-[11.5px] font-medium bg-black/[0.04] text-[#9ca3af]"
+                            }
+
+                            return (
+                              <div key={col.id} className={pipeClass}>
+                                {pipeContent}
+                                {col.titulo}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </ScrollShadow>
+                      <p className="px-1 pt-2 text-[10px] text-[#9ca3af]">
+                        Dica: role lateralmente para ver todas as etapas.
                       </p>
-
-                      <div className="mt-2 flex flex-wrap items-center gap-2.5">
-                        <Chip
-                          size="md"
-                          variant="flat"
-                          radius="full"
-                          className={`font-semibold ${getKanbanToneChipClass(currentColumn, { emphasized: true, glow: true })}`}
-                        >
-                          Atual: {statusAtualLabel}
-                        </Chip>
-                        {nextColumn ? (
-                          <Chip
-                            size="md"
-                            variant="flat"
-                            radius="full"
-                            className={`font-semibold ${getKanbanToneChipClass(nextColumn)}`}
-                          >
-                            Próxima: {nextColumn.titulo}
-                          </Chip>
-                        ) : (
-                          <Chip size="md" variant="flat" radius="full">
-                            Fluxo finalizado
-                          </Chip>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap items-center gap-2">
-                      {canAdvanceToNextColumn ? (
-                        <Button
-                          size="sm"
-                          className={`h-10 rounded-xl px-4 ${getKanbanToneButtonClass(nextColumn)}`}
-                          onClick={handleAdvanceToNextStage}
-                          disabled={advancingStage}
-                        >
-                          <ArrowRight className="h-4 w-4 mr-2" />
-                          {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
-                        </Button>
-                      ) : null}
                     </div>
                   </div>
-
-                  <div className="mt-4 rounded-2xl border border-border bg-gradient-to-r from-zinc-50/85 via-white/70 to-zinc-100/70 p-3 shadow-inner dark:border-border dark:bg-gradient-to-r dark:from-zinc-900/65 dark:via-zinc-900/50 dark:to-zinc-800/55">
-                    <ScrollShadow orientation="horizontal" hideScrollBar className="w-full py-1">
-                      <div className="flex min-w-max items-center gap-2.5 pr-2">
-                        {KANBAN_COLUMNS.map((col, index) => {
-                          const hasCurrent = currentColumnIndex >= 0
-                          const isCurrent = hasCurrent && index === currentColumnIndex
-                          const isDoneBase = hasCurrent && index < currentColumnIndex
-                          const isSkippedJuridico =
-                            shouldSkipOptionalJuridico &&
-                            col.id === "juridico" &&
-                            currentColumnIndex > index
-                          const isDone = isDoneBase && !isSkippedJuridico
-                          const isNext = hasCurrent && nextColumnIndex >= 0 && index === nextColumnIndex
-
-                          let chipStartContent: ReactNode = null
-                          let toneClass = getKanbanToneChipClass(col)
-
-                          if (isCurrent) {
-                            toneClass = getKanbanToneChipClass(col, { emphasized: true, glow: true })
-                            chipStartContent = <span className="h-2 w-2 rounded-full bg-white/85 dark:bg-white/75" />
-                          } else if (isDone) {
-                            toneClass = getKanbanToneChipClass(col)
-                            chipStartContent = <CheckCircle2 className="h-3.5 w-3.5" />
-                          } else if (isNext) {
-                            toneClass = getKanbanToneChipClass(col)
-                            chipStartContent = <ArrowRight className="h-3.5 w-3.5" />
-                          }
-
-                          return (
-                            <Chip
-                              key={col.id}
-                              size="lg"
-                              radius="full"
-                              variant="flat"
-                              startContent={chipStartContent}
-                              className={`whitespace-nowrap min-h-10 border-transparent ${toneClass} ${isCurrent ? "font-semibold" : "font-medium"}`}
-                            >
-                              {col.titulo}
-                            </Chip>
-                          )
-                        })}
-                      </div>
-                    </ScrollShadow>
-
-                    <p className="px-1 pt-2 text-xs text-muted-foreground">
-                      Dica: role lateralmente para ver todas as etapas.
-                    </p>
-                  </div>
-                </DetailSection>
+                </ClayCard>
 
                 <ModalSemInteresse
                   open={semInteresseModalOpen}
@@ -2238,41 +2391,38 @@ export default function PrecatorioDetailPage() {
                   {/* COLUNA 1: Dados Principais */}
                   <div className="flex flex-col gap-6">
                     {/* Identificação */}
-                    <Card className={`${dashboardCardClass} order-1`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={FileText} title="Identificação" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                    <ClayCard className="order-1">
+                      <ClayCardHeader icon={FileText} title="Identificação" />
+                      <div className="p-5 lg:px-[22px] lg:py-5">
                         {isEditing ? (
                           <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="md:col-span-2">
-                                <Label>Título</Label>
-                                <Input value={editData.titulo || ""} onChange={(e) => setEditData({ ...editData, titulo: e.target.value })} />
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Título</label>
+                                <input value={editData.titulo || ""} onChange={(e) => setEditData({ ...editData, titulo: e.target.value })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                               <div>
-                                <Label>Número do Precatório</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Número do Precatório</label>
+                                <input
                                   value={editData.numero_precatorio || ""}
                                   onChange={(e) => setEditData({ ...editData, numero_precatorio: maskProcesso(e.target.value) })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                               <div>
-                                <Label>Número do Processo</Label>
-                                <Input value={editData.numero_processo || ""} onChange={(e) => setEditData({ ...editData, numero_processo: maskProcesso(e.target.value) })} />
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Número do Processo</label>
+                                <input value={editData.numero_processo || ""} onChange={(e) => setEditData({ ...editData, numero_processo: maskProcesso(e.target.value) })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                               <div>
-                                <Label>Número do Ofício</Label>
-                                <Input value={editData.numero_oficio || ""} onChange={(e) => setEditData({ ...editData, numero_oficio: e.target.value })} />
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Número do Ofício</label>
+                                <input value={editData.numero_oficio || ""} onChange={(e) => setEditData({ ...editData, numero_oficio: e.target.value })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                               <div>
-                                <Label>Origem do Lead</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Origem do Lead</label>
                                 <select
                                   value={editData.origem_lead || ""}
                                   onChange={(e) => setEditData({ ...editData, origem_lead: e.target.value })}
-                                  className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-ring"
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 >
                                   <option value="">Não informada</option>
                                   <option value="Indicação">Indicação</option>
@@ -2288,61 +2438,40 @@ export default function PrecatorioDetailPage() {
                                 </select>
                               </div>
                             </div>
-                            <Separator className="my-4" />
+                            <div className="my-4 h-px bg-[#e8eaef]" />
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                               <div>
-                                <label className="text-sm font-medium text-muted-foreground">Status</label>
-                                <p className="text-base">{precatorio.status?.replace(/_/g, " ") || "-"}</p>
+                                <Field label="Status" value={precatorio.status?.replace(/_/g, " ") || "-"} />
                               </div>
                             </div>
                           </>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
-                            <InfoRow
-                              label="Número do Precatório"
-                              value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"}
-                              valueClassName="text-base font-semibold"
-                            />
-                            <InfoRow
-                              label="Número do Processo"
-                              value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"}
-                            />
-                            <InfoRow
-                              label="Número do Ofício"
-                              value={precatorio.numero_oficio || "-"}
-                            />
-                            <InfoRow
-                              label="Status"
-                              value={precatorio.status?.replace(/_/g, " ") || "-"}
-                            />
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Responsável</label>
-                              <div className="flex items-center gap-2 mt-1">
-                                <User className="h-4 w-4 text-muted-foreground" />
-                                <span className="text-base font-semibold">{precatorio.responsavel_dados?.nome || "-"}</span>
+                          <div className="grid grid-cols-2 gap-[18px] xl:grid-cols-4">
+                            <Field label="Nº do Precatório" value={precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : "-"} className="col-span-2 xl:col-span-1" empty={!precatorio.numero_precatorio} />
+                            <Field label="Nº do Processo" value={precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : "-"} empty={!precatorio.numero_processo} />
+                            <Field label="Nº do Ofício" value={precatorio.numero_oficio || "-"} empty={!precatorio.numero_oficio} />
+                            <Field label="Status" value={precatorio.status?.replace(/_/g, " ") || "-"} empty={!precatorio.status} />
+                            <div className="flex flex-col gap-1">
+                              <span className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Responsável</span>
+                              <div className="flex items-center gap-2">
+                                <User className="h-[13px] w-[13px] text-[#6b7280]" />
+                                <span className="text-[13.5px] font-semibold text-[#0b0c10]">{precatorio.responsavel_dados?.nome || "-"}</span>
                               </div>
                             </div>
-                            <InfoRow
-                              label="Origem do Lead"
-                              value={precatorio.origem_lead || "Não informada"}
-                            />
+                            <Field label="Origem do Lead" value={precatorio.origem_lead || "-"} empty={!precatorio.origem_lead} />
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
-                    <Card className={`${dashboardCardClass} order-3`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={FileText} title="Gestão de Análise" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-4">
+                    <ClayCard className="order-3">
+                      <ClayCardHeader icon={FileText} title="Gestão de Análise" />
+                      <div className="p-5 lg:px-[22px] lg:py-5 space-y-4">
                         {isEditing ? (
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <Label>Penhora</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Penhora</label>
                                 <Select
                                   value={booleanSelectValue(editData.analise_penhora)}
                                   onValueChange={(value) =>
@@ -2360,7 +2489,7 @@ export default function PrecatorioDetailPage() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label>Cessão</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Cessão</label>
                                 <Select
                                   value={booleanSelectValue(editData.analise_cessao)}
                                   onValueChange={(value) =>
@@ -2378,7 +2507,7 @@ export default function PrecatorioDetailPage() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label>Herdeiros habilitados</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Herdeiros habilitados</label>
                                 <Select
                                   value={
                                     editData.analise_herdeiros === true
@@ -2405,7 +2534,7 @@ export default function PrecatorioDetailPage() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label>Viabilidade do crédito</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Viabilidade do crédito</label>
                                 <Select
                                   value={booleanSelectValue(editData.analise_viavel)}
                                   onValueChange={(value) =>
@@ -2423,7 +2552,7 @@ export default function PrecatorioDetailPage() {
                                 </Select>
                               </div>
                               <div className="space-y-2">
-                                <Label>ITCMD</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">ITCMD</label>
                                 <Select
                                   value={booleanSelectValue(editData.analise_itcmd)}
                                   onValueChange={(value) =>
@@ -2468,13 +2597,14 @@ export default function PrecatorioDetailPage() {
                             </div>
 
                             <div className="space-y-2">
-                              <Label>Observações da análise</Label>
-                              <Textarea
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Observações da análise</label>
+                              <textarea
                                 value={editData.analise_observacoes || ""}
                                 onChange={(e) =>
                                   setEditData({ ...editData, analise_observacoes: e.target.value })
                                 }
                                 rows={4}
+                                className="w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-3 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                               />
                             </div>
                           </div>
@@ -2619,35 +2749,32 @@ export default function PrecatorioDetailPage() {
                             )}
                           </>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
                     {/* Vara de Origem e Devedor */}
-                    <Card className={`${dashboardCardClass} order-4`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={Gavel} title="Vara de Origem e Devedor" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                    <ClayCard className="order-4">
+                      <ClayCardHeader icon={Gavel} title="Vara de Origem e Devedor" />
+                      <div className="p-5 lg:px-[22px] lg:py-5">
                         {isEditing ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             {userRole?.includes("admin") && (
                               <div className="md:col-span-2">
-                                <Label>Vara de Origem</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Vara de Origem</label>
+                                <input
                                   placeholder="Ex: 2ª Vara Cível, Vara do Trabalho, etc"
                                   value={editData.tribunal || ""}
                                   onChange={(e) => setEditData({ ...editData, tribunal: e.target.value })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                             )}
                             <div>
-                              <Label>Devedor</Label>
-                              <Input value={editData.devedor || ""} onChange={(e) => setEditData({ ...editData, devedor: e.target.value })} />
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Devedor</label>
+                              <input value={editData.devedor || ""} onChange={(e) => setEditData({ ...editData, devedor: e.target.value })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                             </div>
                             <div>
-                              <Label>Esfera do Devedor</Label>
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Esfera do Devedor</label>
                               <Select
                                 value={editData.esfera_devedor || ""}
                                 onValueChange={(value) => setEditData({ ...editData, esfera_devedor: value })}
@@ -2666,32 +2793,24 @@ export default function PrecatorioDetailPage() {
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <InfoRow
-                              label="Vara de Origem"
-                              value={precatorio.tribunal || "-"}
-                              valueClassName="text-base font-semibold"
-                            />
-                            <InfoRow label="Devedor" value={precatorio.devedor || "-"} />
-                            <InfoRow label="Esfera do Devedor" value={getEsferaDevedorLabel(precatorio.esfera_devedor)} />
+                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-[18px]">
+                            <Field label="Vara de Origem" value={precatorio.tribunal || "-"} empty={!precatorio.tribunal} />
+                            <Field label="Devedor" value={precatorio.devedor || "-"} empty={!precatorio.devedor} />
+                            <Field label="Esfera do Devedor" value={getEsferaDevedorLabel(precatorio.esfera_devedor)} empty={!precatorio.esfera_devedor} />
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
                     {/* COLUNA 2: Financeiro e Datas */}
                     {/* Valores */}
-                    <Card className={`${dashboardCardClass} order-2`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={DollarSign} title="Valores" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                    <ClayCard className="order-2">
+                      <ClayCardHeader icon={DollarSign} title="Dados Financeiros" />
+                      <div className="p-5 lg:px-[22px] lg:py-5 space-y-5">
                         {isEditing && (canEditValorPrincipal || canEditValorAtualizado) && (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <Label>Valor Principal (R$)</Label>
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Valor Principal (R$)</label>
                               <CurrencyInput
                                 value={
                                   hasValue(editData.valor_principal) && editData.valor_principal !== ""
@@ -2704,7 +2823,7 @@ export default function PrecatorioDetailPage() {
                               />
                             </div>
                             <div className="space-y-2">
-                              <Label>Valor Atualizado (R$)</Label>
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Valor Atualizado (R$)</label>
                               {canEditValorAtualizado ? (
                                 <CurrencyInput
                                   value={
@@ -2716,7 +2835,7 @@ export default function PrecatorioDetailPage() {
                                   placeholder="R$ 0,00"
                                 />
                               ) : (
-                                <div className="rounded-md border border-input bg-muted/40 px-3 py-2 text-sm text-muted-foreground">
+                                <div className="rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-2 text-sm text-[#9ca3af]">
                                   {hasValue(precatorio.valor_atualizado) ? formatCurrency(Number(precatorio.valor_atualizado)) : "-"}
                                 </div>
                               )}
@@ -2724,114 +2843,88 @@ export default function PrecatorioDetailPage() {
                           </div>
                         )}
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-6">
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Valor Principal</label>
-                            <p className="text-lg font-semibold text-foreground">
-                              {(() => {
-                                const valorPrincipal = isEditing ? editData.valor_principal : precatorio.valor_principal
-                                return hasValue(valorPrincipal) && valorPrincipal !== ""
-                                  ? formatCurrency(Number(valorPrincipal))
-                                  : "-"
-                              })()}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Valor Atualizado</label>
-                            <p className="text-2xl font-bold text-foreground">
-                              {(() => {
-                                const valorAtualizado = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
-                                return hasValue(valorAtualizado) && valorAtualizado !== ""
-                                  ? formatCurrency(Number(valorAtualizado))
-                                  : "-"
-                              })()}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Saldo Líquido</label>
-                            <p className="text-xl font-bold text-foreground">
-                              {hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "-"}
-                            </p>
-                          </div>
+                        {/* Value blobs */}
+                        <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-3">
+                          <ValueBlob
+                            label="Valor Principal"
+                            value={(() => {
+                              const v = isEditing ? editData.valor_principal : precatorio.valor_principal
+                              return hasValue(v) && v !== "" ? formatCurrency(Number(v)) : "-"
+                            })()}
+                          />
+                          <ValueBlob
+                            label="Valor Atualizado"
+                            value={(() => {
+                              const v = isEditing ? editData.valor_atualizado : precatorio.valor_atualizado
+                              return hasValue(v) && v !== "" ? formatCurrency(Number(v)) : "-"
+                            })()}
+                            variant="hero"
+                          />
+                          <ValueBlob
+                            label="Saldo Líquido"
+                            value={hasValue(precatorio.saldo_liquido) ? formatCurrency(precatorio.saldo_liquido) : "-"}
+                            variant="positive"
+                          />
                         </div>
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">PSS</label>
-                            <p className="text-base text-foreground">
-                              {hasValue(precatorio.pss_valor)
-                                ? precatorio.pss_valor === 0
-                                  ? "Isento"
-                                  : formatCurrency(precatorio.pss_valor)
-                                : "-"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">IRPF</label>
-                            <p className="text-base text-foreground">
-                              {hasValue(precatorio.irpf_valor)
-                                ? formatCurrency(precatorio.irpf_valor)
-                                : precatorio.irpf_isento
-                                  ? "Isento"
-                                  : "-"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Honorários</label>
-                            <p className="text-base text-foreground">
-                              {hasValue(precatorio.honorarios_valor)
-                                ? formatCurrency(precatorio.honorarios_valor)
-                                : "-"}
-                            </p>
-                          </div>
-                        </div>
+                        <div className="h-px bg-[#e8eaef]" />
 
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Maior</label>
-                            <p className="text-xl font-bold text-destructive dark:text-destructive">
-                              {hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "-"}
-                            </p>
-                          </div>
-                          <div className="space-y-1">
-                            <label className="text-xs font-medium text-muted-foreground uppercase">Proposta Menor</label>
-                            <p className="text-xl font-bold text-primary dark:text-primary">
-                              {hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "-"}
-                            </p>
-                          </div>
+                        <div className="grid grid-cols-2 gap-[18px] xl:grid-cols-3">
+                          <Field
+                            label="PSS"
+                            value={hasValue(precatorio.pss_valor) ? (precatorio.pss_valor === 0 ? "Isento" : formatCurrency(precatorio.pss_valor)) : "-"}
+                            empty={!hasValue(precatorio.pss_valor)}
+                          />
+                          <Field
+                            label="IRPF"
+                            value={hasValue(precatorio.irpf_valor) ? formatCurrency(precatorio.irpf_valor) : precatorio.irpf_isento ? "Isento" : "-"}
+                            empty={!hasValue(precatorio.irpf_valor) && !precatorio.irpf_isento}
+                          />
+                          <Field
+                            label="Honorários"
+                            value={hasValue(precatorio.honorarios_valor) ? formatCurrency(precatorio.honorarios_valor) : "-"}
+                            empty={!hasValue(precatorio.honorarios_valor)}
+                          />
+                          <Field
+                            label="Proposta Maior"
+                            value={hasValue(precatorio.proposta_maior_valor) ? formatCurrency(precatorio.proposta_maior_valor) : "-"}
+                            empty={!hasValue(precatorio.proposta_maior_valor)}
+                          />
+                          <Field
+                            label="Proposta Menor"
+                            value={hasValue(precatorio.proposta_menor_valor) ? formatCurrency(precatorio.proposta_menor_valor) : "-"}
+                            empty={!hasValue(precatorio.proposta_menor_valor)}
+                          />
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
                     {/* Datas */}
-                    <Card className={`${dashboardCardClass} order-5`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={Calendar} title="Datas Importantes" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                    <ClayCard className="order-5">
+                      <ClayCardHeader icon={Calendar} title="Datas Importantes" />
+                      <div className="p-5 lg:px-[22px] lg:py-5">
                         {isEditing ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                             <div>
-                              <Label>Data Base</Label>
-                              <Input type="date" value={editData.data_base || ""} onChange={(e) => setEditData({ ...editData, data_base: e.target.value })} />
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Data Base</label>
+                              <input type="date" value={editData.data_base || ""} onChange={(e) => setEditData({ ...editData, data_base: e.target.value })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                             </div>
                             <div>
-                              <Label>Data de Expedição</Label>
-                              <Input type="date" value={editData.data_expedicao || ""} onChange={(e) => setEditData({ ...editData, data_expedicao: e.target.value })} />
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Data de Expedição</label>
+                              <input type="date" value={editData.data_expedicao || ""} onChange={(e) => setEditData({ ...editData, data_expedicao: e.target.value })} className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                             </div>
                             <div>
-                              <Label>LOA (Lei Orcamentaria Anual)</Label>
-                              <Input
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">LOA (Lei Orcamentaria Anual)</label>
+                              <input
                                 value={editData.loa || ""}
                                 onChange={(e) => setEditData({ ...editData, loa: e.target.value })}
                                 placeholder="Ex: LOA 2026"
+                                className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                               />
                             </div>
                             <div>
-                              <Label>Ano Orcamentario</Label>
-                              <Input
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Ano Orcamentario</label>
+                              <input
                                 type="number"
                                 min={1900}
                                 max={2999}
@@ -2847,11 +2940,12 @@ export default function PrecatorioDetailPage() {
                                   })
                                 }
                                 placeholder="Ex: 2026"
+                                className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                               />
                             </div>
                             <div>
-                              <Label>Previsao de Pagamento (Ano)</Label>
-                              <Input
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Previsao de Pagamento (Ano)</label>
+                              <input
                                 type="number"
                                 min={1900}
                                 max={2999}
@@ -2865,60 +2959,37 @@ export default function PrecatorioDetailPage() {
                                   })
                                 }
                                 placeholder="Ex: 2027"
+                                className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                               />
                             </div>
                           </div>
                         ) : (
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Data Base</label>
-                              <p className="text-base">{precatorio.data_base ? formatDate(precatorio.data_base) : "Não informada"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Data de Expedição</label>
-                              <p className="text-base">{precatorio.data_expedicao ? formatDate(precatorio.data_expedicao) : "Não informada"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Data de Cálculo</label>
-                              <p className="text-base">{precatorio.data_calculo ? formatDate(precatorio.data_calculo) : "Não realizado"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">LOA (Lei Orcamentaria Anual)</label>
-                              <p className="text-base">{precatorio.loa || "Nao informada"}</p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Ano Orcamentario</label>
-                              <p className="text-base">
-                                {hasValue(precatorio.ano_orcamentario) ? String(precatorio.ano_orcamentario) : "Nao informado"}
-                              </p>
-                            </div>
-                            <div>
-                              <label className="text-sm font-medium text-muted-foreground">Previsao de Pagamento (Ano)</label>
-                              <p className="text-base">
-                                {(() => {
-                                  const year = precatorio.previsao_pagamento
-                                    ? String(precatorio.previsao_pagamento).slice(0, 4)
-                                    : ""
-                                  return /^\d{4}$/.test(year) ? year : "Nao informada"
-                                })()}
-                              </p>
-                            </div>
+                          <div className="grid grid-cols-2 gap-[18px] lg:grid-cols-3">
+                            <Field label="Data Base" value={precatorio.data_base ? formatDate(precatorio.data_base) : "-"} empty={!precatorio.data_base} />
+                            <Field label="Data de Expedição" value={precatorio.data_expedicao ? formatDate(precatorio.data_expedicao) : "-"} empty={!precatorio.data_expedicao} />
+                            <Field label="Data de Cálculo" value={precatorio.data_calculo ? formatDate(precatorio.data_calculo) : "-"} empty={!precatorio.data_calculo} />
+                            <Field label="LOA" value={precatorio.loa || "-"} empty={!precatorio.loa} />
+                            <Field label="Ano Orcamentario" value={hasValue(precatorio.ano_orcamentario) ? String(precatorio.ano_orcamentario) : "-"} empty={!hasValue(precatorio.ano_orcamentario)} />
+                            <Field
+                              label="Previsao de Pagamento"
+                              value={(() => {
+                                const year = precatorio.previsao_pagamento ? String(precatorio.previsao_pagamento).slice(0, 4) : ""
+                                return /^\d{4}$/.test(year) ? year : "-"
+                              })()}
+                              empty={!precatorio.previsao_pagamento}
+                            />
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
                   </div>
 
                   {/* COLUNA 3: Partes e Observações */}
                   <div className="flex flex-col gap-6">
                     {/* Triagem de Interesse */}
-                    <Card className={`${dashboardCardClass} order-1`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={Users} title="Triagem de Interesse" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-3">
+                    <ClayCard className="order-1">
+                      <ClayCardHeader icon={Users} title="Triagem de Interesse" />
+                      <div className="p-5 lg:px-[22px] lg:py-5 space-y-3">
                         <div className="flex flex-wrap items-center gap-3">
                           <span
                             className={`inline-flex items-center gap-2 rounded-full border px-3 py-1 text-xs font-semibold ${triagemStatusMeta.badgeClass}`}
@@ -2982,34 +3053,31 @@ export default function PrecatorioDetailPage() {
                         </div>
                         {interesseObservacao && (
                           <div className="space-y-1">
-                            <p className="text-xs font-medium text-muted-foreground">Observação da triagem</p>
-                            <p className="text-sm leading-relaxed text-foreground">{interesseObservacao}</p>
+                            <p className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Observação da triagem</p>
+                            <p className="text-[13.5px] font-semibold leading-snug text-[#0b0c10]">{interesseObservacao}</p>
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
                     {/* Dados Bancários */}
-                    <Card className={`${dashboardCardClass} order-4`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={DollarSign} title="Dados Bancários" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-4">
+                    <ClayCard className="order-4">
+                      <ClayCardHeader icon={DollarSign} title="Dados Bancários" />
+                      <div className="p-5 lg:px-[22px] lg:py-5 space-y-4">
                         {isEditing ? (
                           <>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
-                                <Label>Banco</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Banco</label>
+                                <input
                                   placeholder="Ex: Banco do Brasil"
                                   value={editData.banco || ""}
                                   onChange={(e) => setEditData({ ...editData, banco: e.target.value })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                               <div>
-                                <Label>Tipo de Conta</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Tipo de Conta</label>
                                 <Select
                                   value={editData.tipo_conta || "corrente"}
                                   onValueChange={(value) => setEditData({ ...editData, tipo_conta: value })}
@@ -3027,26 +3095,28 @@ export default function PrecatorioDetailPage() {
                             </div>
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
-                                <Label>Agência</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Agência</label>
+                                <input
                                   placeholder="Sem dígito"
                                   value={editData.agencia || ""}
                                   onChange={(e) => setEditData({ ...editData, agencia: e.target.value })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                               <div>
-                                <Label>Conta</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Conta</label>
+                                <input
                                   placeholder="Com dígito"
                                   value={editData.conta || ""}
                                   onChange={(e) => setEditData({ ...editData, conta: e.target.value })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                             </div>
-                            <Separator className="my-2" />
+                            <div className="my-2 h-px bg-[#e8eaef]" />
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div>
-                                <Label>Tipo Chave PIX</Label>
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Tipo Chave PIX</label>
                                 <Select
                                   value={editData.tipo_chave_pix || "cpf"}
                                   onValueChange={(value) => setEditData({ ...editData, tipo_chave_pix: value })}
@@ -3063,143 +3133,122 @@ export default function PrecatorioDetailPage() {
                                 </Select>
                               </div>
                               <div>
-                                <Label>Chave PIX</Label>
-                                <Input
+                                <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Chave PIX</label>
+                                <input
                                   value={editData.chave_pix || ""}
                                   onChange={(e) => setEditData({ ...editData, chave_pix: e.target.value })}
+                                  className="mt-1 h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                                 />
                               </div>
                             </div>
                             <div>
-                              <Label>Observações Bancárias</Label>
-                              <Textarea
+                              <label className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Observações Bancárias</label>
+                              <textarea
                                 value={editData.observacoes_bancarias || ""}
                                 onChange={(e) => setEditData({ ...editData, observacoes_bancarias: e.target.value })}
                                 placeholder="Ex: Pagamento somente em nome do titular..."
+                                rows={3}
+                                className="mt-1 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-3 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
                               />
                             </div>
                           </>
                         ) : (
                           <>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Banco</label>
-                                <p className="text-base">{precatorio.banco || "-"}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Tipo</label>
-                                <p className="text-base capitalize">{precatorio.tipo_conta || "-"}</p>
-                              </div>
-                            </div>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Agência</label>
-                                <p className="text-base">{precatorio.agencia || "-"}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm font-medium text-muted-foreground">Conta</label>
-                                <p className="text-base">{precatorio.conta || "-"}</p>
-                              </div>
+                            <div className="grid grid-cols-2 gap-[18px]">
+                              <Field label="Banco" value={precatorio.banco || "-"} empty={!precatorio.banco} />
+                              <Field label="Tipo" value={precatorio.tipo_conta || "-"} empty={!precatorio.tipo_conta} className="capitalize" />
+                              <Field label="Agência" value={precatorio.agencia || "-"} empty={!precatorio.agencia} />
+                              <Field label="Conta" value={precatorio.conta || "-"} empty={!precatorio.conta} />
                             </div>
                             {precatorio.chave_pix && (
-                              <div className="bg-muted/30 p-3 rounded-md border mt-2">
-                                <label className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                              <div className="mt-3 rounded-[14px] bg-[#f2f3f7] p-3" style={{ boxShadow: sh.inset }}>
+                                <span className="text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af] flex items-center gap-1.5">
                                   <ExternalLink className="h-3 w-3" /> PIX ({precatorio.tipo_chave_pix || "Chave"})
-                                </label>
-                                <p className="text-base font-mono mt-1 select-all">{precatorio.chave_pix}</p>
+                                </span>
+                                <p className="mt-1 text-[13.5px] font-semibold font-mono text-[#0b0c10] select-all">{precatorio.chave_pix}</p>
                               </div>
                             )}
                             {precatorio.observacoes_bancarias && (
-                              <div className="mt-2">
-                                <label className="text-sm font-medium text-muted-foreground">Observações</label>
-                                <p className="text-sm mt-1">{precatorio.observacoes_bancarias}</p>
-                              </div>
+                              <Field label="Observações" value={precatorio.observacoes_bancarias} />
                             )}
                           </>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
-                    {/* Credor e Advogado - Compactados ou em Abas? Vou deixar em cards um abaixo do outro por enquanto */}
-                    <Card className={`${dashboardCardClass} order-2`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle icon={User} title="Partes (Credor/Adv)" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-6">
-                        {/* Renderiza Credor Form/View */}
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-sm uppercase text-muted-foreground">Credor</h4>
+                    {/* Credor e Advogado */}
+                    <ClayCard className="order-2">
+                      <ClayCardHeader icon={User} title="Partes (Credor / Advogado)" />
+                      <div className="p-5 lg:px-[22px] lg:py-5 space-y-5">
+                        {/* Credor */}
+                        <div>
+                          <p className="mb-3 text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Credor</p>
                           {isEditing ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="md:col-span-2">
-                                <Input value={editData.credor_nome || ""} onChange={(e) => setEditData({ ...editData, credor_nome: e.target.value })} placeholder="Nome do Credor" />
+                                <input value={editData.credor_nome || ""} onChange={(e) => setEditData({ ...editData, credor_nome: e.target.value })} placeholder="Nome do Credor" className="h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                               <div>
-                                <Input value={editData.credor_cpf_cnpj || ""} onChange={(e) => setEditData({ ...editData, credor_cpf_cnpj: e.target.value })} placeholder="CPF/CNPJ" />
+                                <input value={editData.credor_cpf_cnpj || ""} onChange={(e) => setEditData({ ...editData, credor_cpf_cnpj: e.target.value })} placeholder="CPF/CNPJ" className="h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                               <div>
-                                <Input value={editData.credor_telefone || ""} onChange={(e) => setEditData({ ...editData, credor_telefone: e.target.value })} placeholder="Telefone" />
+                                <input value={editData.credor_telefone || ""} onChange={(e) => setEditData({ ...editData, credor_telefone: e.target.value })} placeholder="Telefone" className="h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                               </div>
                             </div>
                           ) : (
                             <div className="space-y-2">
-                              <p className="font-medium text-base">{precatorio.credor_nome || "-"}</p>
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                                <p className="text-sm text-muted-foreground">{precatorio.credor_cpf_cnpj || "-"}</p>
-                                <p className="text-sm text-muted-foreground">{precatorio.credor_telefone || "-"}</p>
+                              <p className="text-[15px] font-bold text-[#0b0c10]">{precatorio.credor_nome || "-"}</p>
+                              <div className="grid grid-cols-2 gap-[12px]">
+                                <Field label="CPF/CNPJ" value={precatorio.credor_cpf_cnpj || "-"} empty={!precatorio.credor_cpf_cnpj} />
+                                <Field label="Telefone" value={precatorio.credor_telefone || "-"} empty={!precatorio.credor_telefone} />
                               </div>
                             </div>
                           )}
                         </div>
-                        <Separator />
-                        <div className="space-y-4">
-                          <h4 className="font-semibold text-sm uppercase text-muted-foreground">Advogado</h4>
+                        <div className="h-px bg-[#e8eaef]" />
+                        {/* Advogado */}
+                        <div>
+                          <p className="mb-3 text-[9.5px] font-bold uppercase tracking-[1.4px] text-[#9ca3af]">Advogado</p>
                           {isEditing ? (
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                              <Input value={editData.advogado_nome || ""} onChange={(e) => setEditData({ ...editData, advogado_nome: e.target.value })} placeholder="Nome do Advogado" />
-                              <Input value={editData.advogado_oab || ""} onChange={(e) => setEditData({ ...editData, advogado_oab: e.target.value })} placeholder="OAB" />
+                              <input value={editData.advogado_nome || ""} onChange={(e) => setEditData({ ...editData, advogado_nome: e.target.value })} placeholder="Nome do Advogado" className="h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
+                              <input value={editData.advogado_oab || ""} onChange={(e) => setEditData({ ...editData, advogado_oab: e.target.value })} placeholder="OAB" className="h-11 w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30" />
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                              <p className="font-medium text-base">{precatorio.advogado_nome || "-"}</p>
-                              <p className="text-sm text-muted-foreground">{precatorio.advogado_oab || "-"}</p>
+                            <div className="grid grid-cols-2 gap-[12px]">
+                              <Field label="Nome" value={precatorio.advogado_nome || "-"} empty={!precatorio.advogado_nome} />
+                              <Field label="OAB" value={precatorio.advogado_oab || "-"} empty={!precatorio.advogado_oab} />
                             </div>
                           )}
                         </div>
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
-
-                    <Card className={`${dashboardCardClass} order-3`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="flex items-center gap-2">
-                          <SectionTitle icon={Users} title="Herdeiros" />
-                          {herdeiros.length > 0 && (
-                            <Badge variant="secondary" className="ml-auto">
-                              {herdeiros.length}
-                            </Badge>
-                          )}
-                        </CardTitle>
-                        {canEdit && (
-                          <div className="pt-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={handleAddHerdeiro}
-                              disabled={herdeiroSaving}
-                            >
-                              Adicionar herdeiro
-                            </Button>
+                    {/* Herdeiros */}
+                    <ClayCard className="order-3">
+                      <div className="flex items-center justify-between border-b border-[#e8eaef] px-[22px] py-[18px] pb-[14px]">
+                        <div className="flex items-center gap-[13px]">
+                          <div className="flex h-[38px] w-[38px] flex-shrink-0 items-center justify-center rounded-[13px] border border-black/[0.07] bg-[#f2f3f7]" style={{ boxShadow: sh.sm }}>
+                            <Users className="h-[18px] w-[18px] stroke-[1.75] text-[#374151]" />
                           </div>
+                          <span className="text-[15px] font-extrabold tracking-[-0.2px] text-[#0b0c10]">Herdeiros</span>
+                          {herdeiros.length > 0 && (
+                            <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0e4d6a] px-1.5 text-[10px] font-bold text-white">
+                              {herdeiros.length}
+                            </span>
+                          )}
+                        </div>
+                        {canEdit && (
+                          <ClayBtnGhost onClick={handleAddHerdeiro} disabled={herdeiroSaving} className="h-[32px] text-[11.5px]">
+                            Adicionar herdeiro
+                          </ClayBtnGhost>
                         )}
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                      </div>
+                      <div className="p-5 lg:px-[22px] lg:py-5">
                         {herdeirosLoading ? (
-                          <p className="text-sm text-muted-foreground">Carregando herdeiros...</p>
+                          <p className="text-[13px] text-[#9ca3af]">Carregando herdeiros...</p>
                         ) : herdeiros.length === 0 ? (
-                          <p className="text-sm text-muted-foreground">Nenhum herdeiro informado.</p>
+                          <p className="text-[13px] italic text-[#9ca3af]">Nenhum herdeiro informado.</p>
                         ) : (
                           <div className="space-y-3">
                             {herdeiros.map((herdeiro) => (
@@ -3207,36 +3256,34 @@ export default function PrecatorioDetailPage() {
                                 key={herdeiro.id}
                                 type="button"
                                 onClick={() => handleOpenHerdeiro(herdeiro)}
-                                className="w-full text-left rounded-md border bg-muted/20 p-3 transition hover:border-primary/50 hover:bg-muted/30"
+                                className="w-full text-left rounded-[14px] border border-black/[0.07] bg-[#f2f3f7] p-3 transition hover:bg-white hover:-translate-y-[1px]"
+                                style={{ boxShadow: sh.sm }}
                               >
                                 <div className="flex items-start justify-between gap-3">
                                   <div className="space-y-1">
-                                    <p className="font-medium">{herdeiro.nome_completo || "Herdeiro"}</p>
+                                    <p className="text-[13.5px] font-bold text-[#0b0c10]">{herdeiro.nome_completo || "Herdeiro"}</p>
                                     {herdeiro.cpf && (
-                                      <p className="text-xs text-muted-foreground">CPF: {herdeiro.cpf}</p>
+                                      <p className="text-[11px] text-[#6b7280]">CPF: {herdeiro.cpf}</p>
                                     )}
                                     {herdeiro.telefone && (
-                                      <p className="text-xs text-muted-foreground">Telefone: {herdeiro.telefone}</p>
-                                    )}
-                                    {herdeiro.endereco && (
-                                      <p className="text-xs text-muted-foreground">Endereço: {herdeiro.endereco}</p>
+                                      <p className="text-[11px] text-[#6b7280]">Telefone: {herdeiro.telefone}</p>
                                     )}
                                     {herdeiro.email && (
-                                      <p className="text-xs text-muted-foreground">Email: {herdeiro.email}</p>
+                                      <p className="text-[11px] text-[#6b7280]">Email: {herdeiro.email}</p>
                                     )}
                                   </div>
                                   {formatPercent(herdeiro.percentual_participacao) && (
-                                    <Badge variant="outline" className="text-xs">
+                                    <span className="inline-flex h-6 items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2 text-[10.5px] font-bold text-[#1d4ed8]">
                                       {formatPercent(herdeiro.percentual_participacao)}
-                                    </Badge>
+                                    </span>
                                   )}
                                 </div>
                               </button>
                             ))}
                           </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
 
                     <Dialog
                       open={herdeiroModalOpen}
@@ -3434,21 +3481,58 @@ export default function PrecatorioDetailPage() {
                     </Dialog>
 
                     {/* Observações */}
-                    <Card className={`${dashboardCardClass} order-5`}>
-                      <CardHeader className="pb-3">
-                        <CardTitle>
-                          <SectionTitle title="Observações" />
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="pt-0">
+                    <ClayCard className="order-5">
+                      <ClayCardHeader icon={FileText} title="Observações" />
+                      <div className="p-5 lg:px-[22px] lg:py-5">
                         {isEditing ? (
-                          <Textarea value={editData.contatos || ""} onChange={(e) => setEditData({ ...editData, contatos: e.target.value })} rows={4} />
+                          <textarea
+                            value={editData.contatos || ""}
+                            onChange={(e) => setEditData({ ...editData, contatos: e.target.value })}
+                            rows={4}
+                            placeholder="Nenhuma observação."
+                            className="w-full rounded-[16px] border border-black/[0.06] bg-[#f2f3f7] px-4 py-3 text-sm text-[#0b0c10] placeholder:text-[#9ca3af] focus:outline-none focus:ring-2 focus:ring-[#0e4d6a]/30"
+                            style={{ boxShadow: sh.inset }}
+                          />
                         ) : (
-                          <p className="text-sm whitespace-pre-wrap">{precatorio.contatos || "Nenhuma observação."}</p>
+                          <div className="rounded-[16px] bg-[#f2f3f7] px-4 py-3 text-[13.5px] leading-relaxed text-[#374151] whitespace-pre-wrap" style={{ boxShadow: sh.inset }}>
+                            {precatorio.contatos || <span className="italic text-[#9ca3af]">Nenhuma observação.</span>}
+                          </div>
                         )}
-                      </CardContent>
-                    </Card>
+                      </div>
+                    </ClayCard>
                   </div>
+                </div>
+
+                {/* Footer bar */}
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border border-black/[0.07] bg-white px-5 py-3" style={{ boxShadow: sh.sm }}>
+                  <div className="flex flex-wrap gap-4 text-[11px] text-[#9ca3af]">
+                    {precatorio.created_at && (
+                      <span>Criado em {new Date(precatorio.created_at).toLocaleDateString("pt-BR")}</span>
+                    )}
+                    {precatorio.updated_at && (
+                      <span>Atualizado em {new Date(precatorio.updated_at).toLocaleDateString("pt-BR")}</span>
+                    )}
+                  </div>
+                  {canEdit && !isEditing && (
+                    <div className="flex items-center gap-2">
+                      <ClayBtnGhost onClick={() => setIsEditing(true)}>
+                        <Edit className="h-[14px] w-[14px]" />
+                        Editar dados
+                      </ClayBtnGhost>
+                    </div>
+                  )}
+                  {isEditing && (
+                    <div className="flex items-center gap-2">
+                      <ClayBtnGhost onClick={() => setIsEditing(false)} disabled={saving}>
+                        <X className="h-[14px] w-[14px]" />
+                        Cancelar
+                      </ClayBtnGhost>
+                      <ClayBtnAc onClick={handleSaveEdit} disabled={saving}>
+                        <Save className="h-[14px] w-[14px]" />
+                        {saving ? "Salvando..." : "Salvar alterações"}
+                      </ClayBtnAc>
+                    </div>
+                  )}
                 </div>
               </TabsContent>
 
@@ -3557,7 +3641,7 @@ export default function PrecatorioDetailPage() {
                 />
                 <div className="w-full">
                   {precatorio.status_kanban === "proposta_aceita" && (
-                    <Card className={`${dashboardCardClass} mb-4 border-primary/40 bg-primary/15 dark:border-primary/40 dark:bg-primary/15`}>
+                    <Card className={`${dashboardCardClass} mb-4 border-[#0e4d6a]/20 bg-[#e8f4f8]`}>
                       <CardContent className="py-4 flex items-start gap-3 text-primary">
                         <CheckCircle2 className="h-5 w-5 mt-0.5" />
                         <div>
@@ -3822,17 +3906,12 @@ export default function PrecatorioDetailPage() {
 
               {/* Tab: Timeline */}
               <TabsContent value="timeline" className="mt-0">
-                <Card className={dashboardCardClass}>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Clock className="h-5 w-5" />
-                      Linha do Tempo
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
+                <ClayCard>
+                  <ClayCardHeader icon={Clock} title="Linha do Tempo" />
+                  <div className="p-5 lg:px-[22px] lg:py-5">
                     <Timeline precatorioId={id} />
-                  </CardContent>
-                </Card>
+                  </div>
+                </ClayCard>
               </TabsContent>
             </motion.div>
           </AnimatePresence>

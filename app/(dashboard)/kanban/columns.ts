@@ -11,12 +11,16 @@ type KanbanColor = {
 export const KANBAN_COLUMNS: Array<{
   id: string
   titulo: string
+  kicker: string
+  meta: string
   color: KanbanColor
   statusIds?: string[]
 }> = [
   {
     id: "entrada",
-    titulo: "Entrada / Pre-cadastro",
+    titulo: "Entrada / Pré-cadastro",
+    kicker: "Recepção",
+    meta: "Precatórios aguardando cadastro inicial",
     color: {
       dot: "bg-blue-700 dark:bg-blue-400",
       bar: "bg-blue-700 dark:bg-blue-400",
@@ -28,6 +32,8 @@ export const KANBAN_COLUMNS: Array<{
   {
     id: "recebidos_admin",
     titulo: "Recebidos do Admin",
+    kicker: "Distribuição",
+    meta: "Aguardando direcionamento comercial",
     color: {
       dot: "bg-teal-700 dark:bg-teal-400",
       bar: "bg-teal-700 dark:bg-teal-400",
@@ -38,7 +44,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "triagem_interesse",
-    titulo: "Triagem (interesse do credor)",
+    titulo: "Triagem",
+    kicker: "Gate inicial",
+    meta: "Interesse e direcionamento do credor",
     color: {
       dot: "bg-indigo-700 dark:bg-indigo-400",
       bar: "bg-indigo-700 dark:bg-indigo-400",
@@ -50,6 +58,8 @@ export const KANBAN_COLUMNS: Array<{
   {
     id: "docs_credor",
     titulo: "Documentos do credor",
+    kicker: "Gate documental",
+    meta: "Coleta e validação dos documentos mínimos",
     color: {
       dot: "bg-sky-700 dark:bg-sky-400",
       bar: "bg-sky-700 dark:bg-sky-400",
@@ -60,7 +70,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "analise_processual_inicial",
-    titulo: "Pre Analise Juridica",
+    titulo: "Pré-análise jurídica",
+    kicker: "Gate processual",
+    meta: "Análise processual inicial e elegibilidade",
     color: {
       dot: "bg-cyan-700 dark:bg-cyan-400",
       bar: "bg-cyan-700 dark:bg-cyan-400",
@@ -71,7 +83,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "juridico",
-    titulo: "Juridico",
+    titulo: "Jurídico",
+    kicker: "Gate jurídico",
+    meta: "Parecer e análise de risco jurídico",
     color: {
       dot: "bg-rose-700 dark:bg-rose-400",
       bar: "bg-rose-700 dark:bg-rose-400",
@@ -82,7 +96,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "pronto_calculo",
-    titulo: "Pronto para calculo",
+    titulo: "Pronto para cálculo",
+    kicker: "Gate de cálculo",
+    meta: "Liberados para abertura da área de cálculo",
     color: {
       dot: "bg-orange-700 dark:bg-orange-400",
       bar: "bg-orange-700 dark:bg-orange-400",
@@ -93,7 +109,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "calculo_andamento",
-    titulo: "Calculo em andamento",
+    titulo: "Cálculo em andamento",
+    kicker: "Produção",
+    meta: "Atualização monetária em execução",
     color: {
       dot: "bg-amber-700 dark:bg-amber-400",
       bar: "bg-amber-700 dark:bg-amber-400",
@@ -104,7 +122,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "calculo_concluido",
-    titulo: "Calculo concluido",
+    titulo: "Cálculo concluído",
+    kicker: "Pronto para proposta",
+    meta: "Valores calculados e validados",
     color: {
       dot: "bg-green-700 dark:bg-green-400",
       bar: "bg-green-700 dark:bg-green-400",
@@ -115,7 +135,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "proposta_negociacao",
-    titulo: "Proposta / Negociacao",
+    titulo: "Proposta / Negociação",
+    kicker: "Comercial",
+    meta: "Proposta enviada, aguardando aceite",
     color: {
       dot: "bg-yellow-700 dark:bg-yellow-400",
       bar: "bg-yellow-700 dark:bg-yellow-400",
@@ -126,7 +148,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "proposta_aceita",
-    titulo: "Juridico de fechamento",
+    titulo: "Jurídico de fechamento",
+    kicker: "Gate final",
+    meta: "Proposta aceita, preparando fechamento",
     color: {
       dot: "bg-emerald-700 dark:bg-emerald-400",
       bar: "bg-emerald-700 dark:bg-emerald-400",
@@ -137,7 +161,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "certidoes",
-    titulo: "Certidoes (pos-aceite)",
+    titulo: "Certidões (pós-aceite)",
+    kicker: "Gate certidões",
+    meta: "Certidões e documentação final",
     color: {
       dot: "bg-purple-700 dark:bg-purple-400",
       bar: "bg-purple-700 dark:bg-purple-400",
@@ -149,6 +175,8 @@ export const KANBAN_COLUMNS: Array<{
   {
     id: "escrituras",
     titulo: "Escrituras",
+    kicker: "Formalização",
+    meta: "Lavra e assinatura das escrituras",
     color: {
       dot: "bg-fuchsia-700 dark:bg-fuchsia-400",
       bar: "bg-fuchsia-700 dark:bg-fuchsia-400",
@@ -160,6 +188,8 @@ export const KANBAN_COLUMNS: Array<{
   {
     id: "fechado",
     titulo: "Fechado",
+    kicker: "Concluído",
+    meta: "Operação finalizada com sucesso",
     color: {
       dot: "bg-zinc-800 dark:bg-zinc-500",
       bar: "bg-zinc-800 dark:bg-zinc-500",
@@ -171,6 +201,8 @@ export const KANBAN_COLUMNS: Array<{
   {
     id: "encerrados",
     titulo: "Pausados",
+    kicker: "Fila de espera",
+    meta: "Pausados ou sem interesse no momento",
     statusIds: ["pos_fechamento", "pausado_credor", "pausado_documentos", "sem_interesse"],
     color: {
       dot: "bg-slate-800 dark:bg-slate-500",
@@ -182,7 +214,9 @@ export const KANBAN_COLUMNS: Array<{
   },
   {
     id: "reprovado",
-    titulo: "Reprovado / nao elegivel",
+    titulo: "Reprovado / Não elegível",
+    kicker: "Encerrado",
+    meta: "Não elegível ou reprovado na análise",
     color: {
       dot: "bg-zinc-800 dark:bg-zinc-500",
       bar: "bg-zinc-800 dark:bg-zinc-500",

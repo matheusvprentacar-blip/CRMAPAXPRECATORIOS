@@ -1,49 +1,49 @@
 import type { ReactNode } from "react"
-
 import { cn } from "@/lib/utils"
 
+const AC = "#0e4d6a"
 const toneStyles = {
   primary: {
-    bar: "bg-primary",
-    ring: "ring-primary/20",
-    border: "border-primary/25",
-    badge: "bg-primary/15 text-primary border-primary/30",
-    value: "text-primary",
+    bar: { background: AC },
+    icon: { background: "rgba(14,77,106,0.1)", color: AC },
+    value: { color: AC },
+    badge: { background: "rgba(14,77,106,0.08)", border: "1px solid rgba(14,77,106,0.2)", color: AC },
+    wrap: { borderColor: "rgba(14,77,106,0.12)" },
   },
   success: {
-    bar: "bg-primary/15",
-    ring: "ring-primary",
-    border: "border-primary/40",
-    badge: "bg-primary/15 text-primary border-primary/40",
-    value: "text-primary",
+    bar: { background: "#15803d" },
+    icon: { background: "rgba(21,128,61,0.1)", color: "#15803d" },
+    value: { color: "#15803d" },
+    badge: { background: "rgba(21,128,61,0.08)", border: "1px solid rgba(21,128,61,0.2)", color: "#15803d" },
+    wrap: { borderColor: "rgba(21,128,61,0.12)" },
   },
   warning: {
-    bar: "bg-primary/15",
-    ring: "ring-primary",
-    border: "border-primary/40",
-    badge: "bg-primary/15 text-primary border-primary/40",
-    value: "text-primary",
+    bar: { background: "#92400e" },
+    icon: { background: "rgba(146,64,14,0.1)", color: "#92400e" },
+    value: { color: "#92400e" },
+    badge: { background: "rgba(146,64,14,0.08)", border: "1px solid rgba(146,64,14,0.2)", color: "#92400e" },
+    wrap: { borderColor: "rgba(146,64,14,0.12)" },
   },
   danger: {
-    bar: "bg-destructive/15",
-    ring: "ring-destructive",
-    border: "border-destructive/40",
-    badge: "bg-destructive/15 text-destructive border-destructive/40",
-    value: "text-destructive",
+    bar: { background: "#dc2626" },
+    icon: { background: "rgba(220,38,38,0.1)", color: "#dc2626" },
+    value: { color: "#dc2626" },
+    badge: { background: "rgba(220,38,38,0.08)", border: "1px solid rgba(220,38,38,0.2)", color: "#dc2626" },
+    wrap: { borderColor: "rgba(220,38,38,0.12)" },
   },
   info: {
-    bar: "bg-primary/15",
-    ring: "ring-primary",
-    border: "border-primary/40",
-    badge: "bg-primary/15 text-primary border-primary/40",
-    value: "text-primary",
+    bar: { background: "#1d4ed8" },
+    icon: { background: "rgba(29,78,216,0.1)", color: "#1d4ed8" },
+    value: { color: "#1d4ed8" },
+    badge: { background: "rgba(29,78,216,0.08)", border: "1px solid rgba(29,78,216,0.2)", color: "#1d4ed8" },
+    wrap: { borderColor: "rgba(29,78,216,0.12)" },
   },
   neutral: {
-    bar: "bg-muted-foreground/60",
-    ring: "ring-border/20",
-    border: "border-border/60",
-    badge: "bg-muted/40 text-muted-foreground border-border/60",
-    value: "text-foreground",
+    bar: { background: "#9ca3af" },
+    icon: { background: "#f0f1f5", color: "#6b7280" },
+    value: { color: "#374151" },
+    badge: { background: "#f0f1f5", border: "1px solid rgba(0,0,0,0.08)", color: "#6b7280" },
+    wrap: { borderColor: "rgba(0,0,0,0.07)" },
   },
 }
 
@@ -59,53 +59,48 @@ interface KpiCardProps {
   className?: string
 }
 
-export function KpiCard({
-  label,
-  value,
-  helper,
-  badge,
-  icon,
-  tone = "primary",
-  className,
-}: KpiCardProps) {
-  const styles = toneStyles[tone]
-
+export function KpiCard({ label, value, helper, badge, icon, tone = "primary", className }: KpiCardProps) {
+  const s = toneStyles[tone]
   return (
     <div
-      className={cn(
-        "relative overflow-hidden rounded-2xl border bg-card/80 p-4 shadow-sm backdrop-blur",
-        "ring-1",
-        styles.ring,
-        styles.border,
-        className,
-      )}
+      className={cn("relative overflow-hidden rounded-[18px] bg-white p-4", className)}
+      style={{
+        border: `1.5px solid ${s.wrap.borderColor}`,
+        boxShadow: "8px 8px 20px rgba(0,0,0,0.05),-4px -4px 12px rgba(255,255,255,0.9),inset 1px 1px 3px rgba(255,255,255,0.9),inset -1px -1px 2px rgba(0,0,0,0.03)",
+      }}
     >
-      <span className={cn("pointer-events-none absolute left-0 top-0 h-full w-1.5", styles.bar)} />
-      <div className="flex items-start justify-between gap-3">
+      {/* color bar */}
+      <span
+        className="pointer-events-none absolute left-0 top-0 h-full w-1.5 rounded-l-[17px]"
+        style={s.bar}
+      />
+      <div className="flex items-start justify-between gap-3 pl-1">
         <div className="min-w-0 space-y-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.2em] text-muted-foreground">
+          <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: "#9ca3af" }}>
             {label}
           </p>
           <div
-            className={cn(
-              "truncate text-[clamp(1rem,2.2vw,1.5rem)] font-semibold leading-tight tabular-nums tracking-tight",
-              "group-data-[pdf=open]:text-[clamp(0.85rem,1.4vw,1.1rem)]",
-              "group-data-[pdf=open]:whitespace-normal group-data-[pdf=open]:break-words group-data-[pdf=open]:overflow-visible group-data-[pdf=open]:text-clip group-data-[pdf=open]:leading-snug",
-              styles.value,
-            )}
+            className="truncate text-[clamp(1rem,2.2vw,1.45rem)] font-bold leading-tight tabular-nums tracking-tight"
+            style={s.value}
           >
             {value}
           </div>
-          {helper ? <p className="text-xs text-muted-foreground">{helper}</p> : null}
+          {helper ? <p className="text-[11px]" style={{ color: "#9ca3af" }}>{helper}</p> : null}
         </div>
-        <div className="flex flex-col items-end gap-2">
+        <div className="flex flex-col items-end gap-2 shrink-0">
           {badge ? (
-            <span className={cn("rounded-full border px-2.5 py-1 text-[10px] font-semibold uppercase tracking-wide", styles.badge)}>
+            <span
+              className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-wide"
+              style={s.badge}
+            >
               {badge}
             </span>
           ) : null}
           {icon ? (
-            <div className={cn("flex h-9 w-9 items-center justify-center rounded-full border", styles.badge)}>
+            <div
+              className="flex h-9 w-9 items-center justify-center rounded-full"
+              style={s.icon}
+            >
               {icon}
             </div>
           ) : null}

@@ -1,0 +1,2615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Kanban Clay — Visão Conceitual Aderente</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #f0f1f5;
+      --card: #ffffff;
+      --muted: #e8eaef;
+      --muted-lt: #f4f5f8;
+      --border: rgba(0,0,0,.07);
+      --text: #0b0c10;
+      --text-md: #374151;
+      --text-sm: #6b7280;
+      --text-xs: #9ca3af;
+      --accent: #0e4d6a;
+      --accent-lt: #1a6080;
+      --accent-soft: rgba(14,77,106,.08);
+      --green: #15803d;
+      --green-bg: #f0fdf4;
+      --green-br: #bbf7d0;
+      --amber: #92400e;
+      --amber-bg: #fffbeb;
+      --amber-br: #fde68a;
+      --blue: #1d4ed8;
+      --blue-bg: #eff6ff;
+      --blue-br: #bfdbfe;
+      --red: #b42318;
+      --red-bg: #fff1f2;
+      --red-br: #fecdd3;
+
+      --sh-card:
+        16px 16px 36px rgba(0,0,0,.08),
+        -8px -8px 20px rgba(255,255,255,.94),
+        inset 1px 1px 4px rgba(255,255,255,.9),
+        inset -1px -1px 2px rgba(0,0,0,.04);
+
+      --sh-card-hover:
+        20px 20px 42px rgba(0,0,0,.11),
+        -8px -8px 20px rgba(255,255,255,.96),
+        inset 1px 1px 4px rgba(255,255,255,.94),
+        inset -1px -1px 2px rgba(0,0,0,.05);
+
+      --sh-soft:
+        7px 7px 16px rgba(0,0,0,.07),
+        -4px -4px 10px rgba(255,255,255,.92),
+        inset 1px 1px 2px rgba(255,255,255,.88),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+
+      --sh-inset:
+        inset 5px 5px 12px rgba(0,0,0,.07),
+        inset -4px -4px 10px rgba(255,255,255,.87);
+
+      --sh-btn-ac:
+        8px 8px 20px rgba(14,77,106,.42),
+        -3px -3px 8px rgba(255,255,255,.28),
+        inset 1px 1px 3px rgba(255,255,255,.14),
+        inset -1px -1px 2px rgba(8,40,60,.28);
+
+      --radius-xl: 28px;
+      --radius-lg: 24px;
+      --radius-md: 18px;
+      --radius-sm: 14px;
+    }
+
+    html { font-size: 14px; scroll-behavior: smooth; overflow-x: hidden; }
+
+    body {
+      font-family: 'Plus Jakarta Sans', sans-serif;
+      min-height: 100vh;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.45;
+    }
+
+    .shell {
+      width: 100%;
+      max-width: none;
+      margin: 0 auto;
+      padding: 10px 8px 18px;
+    }
+
+    @keyframes cardIn {
+      from { opacity: 0; transform: translateY(16px) scale(.985); }
+      to { opacity: 1; transform: translateY(0) scale(1); }
+    }
+
+    .page-header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 20;
+      margin: 0;
+      padding: 14px 16px;
+      border-radius: 0;
+      border: none;
+      border-bottom: 1px solid rgba(14,77,106,.10);
+      background: linear-gradient(180deg, rgba(255,255,255,.98), rgba(248,250,253,.97));
+      backdrop-filter: blur(20px);
+      box-shadow:
+        0 4px 24px rgba(0,0,0,.08),
+        0 1px 4px rgba(0,0,0,.04);
+      transition: box-shadow .22s ease;
+    }
+
+    .page-header.is-hidden {
+      transform: translateY(-100%);
+      opacity: 0;
+      pointer-events: none;
+      box-shadow: none;
+    }
+
+    .page-header::before {
+      content: "";
+      position: absolute;
+      inset: 0 0 auto 0;
+      height: 4px;
+      border-radius: 0;
+      background: linear-gradient(90deg, var(--accent), #2d74a1, #7bb7d9);
+      opacity: .95;
+      pointer-events: none;
+    }
+
+    .page-header > * {
+      position: relative;
+      z-index: 1;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 18px;
+      flex-wrap: wrap;
+    }
+
+    .header-left {
+      display: flex;
+      align-items: flex-start;
+      gap: 16px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .btn-icon,
+    .filter-chip,
+    .mini-btn,
+    .action-btn,
+    .board-toggle button,
+    .nav-arrow {
+      font-family: inherit;
+      border: 0;
+      cursor: pointer;
+      transition: all .2s cubic-bezier(.34,1.56,.64,1);
+    }
+
+    .btn-icon {
+      width: 44px;
+      height: 44px;
+      flex-shrink: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 15px;
+      color: var(--text-sm);
+      background: linear-gradient(145deg, #fff, #f5f6f9);
+      border: 1.5px solid var(--border);
+      box-shadow: var(--sh-soft);
+    }
+
+    .btn-icon:hover { transform: translateY(-2px); color: var(--text); box-shadow: var(--sh-card); }
+
+    .badge-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-bottom: 10px;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      min-height: 24px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 10.5px;
+      font-weight: 700;
+      letter-spacing: .04em;
+      white-space: nowrap;
+      border: 1px solid transparent;
+    }
+
+    .pill-amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-br); }
+    .pill-blue { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-br); }
+    .pill-green { background: var(--green-bg); color: var(--green); border-color: var(--green-br); }
+    .pill-red { background: var(--red-bg); color: var(--red); border-color: var(--red-br); }
+    .pill-neutral { background: #f3f4f6; color: #4b5563; border-color: rgba(0,0,0,.07); }
+
+    .page-title {
+      font-size: 19px;
+      font-weight: 800;
+      line-height: 1.06;
+      letter-spacing: -.04em;
+      color: var(--text-sm);
+    }
+
+    .page-title strong {
+      display: block;
+      color: var(--text);
+      font-size: 26px;
+      font-weight: 900;
+      letter-spacing: -.06em;
+    }
+
+    .page-title-single {
+      color: var(--accent);
+      font-size: 28px;
+      font-weight: 900;
+      letter-spacing: -.06em;
+      line-height: .96;
+      margin-top: 2px;
+      text-shadow: 0 1px 0 rgba(255,255,255,.7);
+    }
+
+    .page-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 8px;
+      color: var(--text-xs);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .18em;
+      text-transform: uppercase;
+    }
+
+    .page-kicker::before {
+      content: "";
+      width: 8px;
+      height: 8px;
+      border-radius: 999px;
+      background: linear-gradient(180deg, var(--accent), #2d74a1);
+      box-shadow: 0 0 0 4px rgba(14,77,106,.08);
+    }
+
+    .header-actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+      padding-top: 2px;
+    }
+
+    .action-btn {
+      height: 38px;
+      padding: 0 15px;
+      border-radius: 13px;
+      font-size: 12.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .action-btn.ghost {
+      color: var(--text-md);
+      background: linear-gradient(145deg, #fff, #f4f5f8);
+      border: 1.5px solid rgba(0,0,0,.08);
+      box-shadow: var(--sh-soft);
+    }
+
+    .action-btn.primary {
+      color: #fff;
+      background: var(--accent);
+      box-shadow: var(--sh-btn-ac);
+    }
+
+    .action-btn:hover { transform: translateY(-2px); }
+
+    svg {
+      width: 15px;
+      height: 15px;
+      stroke: currentColor;
+      fill: none;
+      stroke-width: 1.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      flex-shrink: 0;
+    }
+
+    .summary-grid {
+      margin-top: 12px;
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 8px;
+    }
+
+    .summary-card {
+      padding: 11px 12px;
+      border-radius: 16px;
+      border: 1.5px solid rgba(14,77,106,.08);
+      background: linear-gradient(180deg, #ffffff, #f8fafc);
+      box-shadow: 8px 8px 18px rgba(0,0,0,.06), -4px -4px 10px rgba(255,255,255,.92), inset 1px 1px 2px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.02);
+    }
+
+    .summary-card .label {
+      font-size: 8.5px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: .16em;
+      color: #7b8794;
+    }
+
+    .summary-card .value {
+      margin-top: 6px;
+      font-size: 22px;
+      font-weight: 900;
+      letter-spacing: -.06em;
+      color: #07131d;
+      line-height: 1;
+    }
+
+    .summary-card .meta {
+      margin-top: 4px;
+      font-size: 10px;
+      color: #5f6b7a;
+    }
+
+    .summary-card.soft-green {
+      background: linear-gradient(145deg, #e8fdf0, #f3fef7);
+      border-color: rgba(21,128,61,.18);
+    }
+    .summary-card.soft-green .label { color: #166534; }
+    .summary-card.soft-green .value { color: #15803d; }
+
+    .summary-card.soft-amber {
+      background: linear-gradient(145deg, #fef3e2, #fffbf0);
+      border-color: rgba(180,83,9,.18);
+    }
+    .summary-card.soft-amber .label { color: #92400e; }
+    .summary-card.soft-amber .value { color: #b45309; }
+
+    .summary-card.soft-blue {
+      background: linear-gradient(145deg, #e0effe, #eef6ff);
+      border-color: rgba(14,77,106,.18);
+    }
+    .summary-card.soft-blue .label { color: #0e4d6a; }
+    .summary-card.soft-blue .value { color: #1a6080; }
+
+    .workspace {
+      display: block;
+      min-height: calc(100vh - 168px);
+    }
+
+    .main-stack {
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }
+
+    .surface {
+      background: var(--card);
+      border-radius: 26px;
+      border: 1.5px solid var(--border);
+      box-shadow: var(--sh-card);
+      overflow: hidden;
+      animation: cardIn .5s cubic-bezier(.34,1.56,.64,1) both;
+    }
+
+    .surface-header {
+      padding: 18px 20px 14px;
+      border-bottom: 1px solid var(--muted);
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .surface-title {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .surface-title strong {
+      font-size: 15px;
+      font-weight: 800;
+      letter-spacing: -.02em;
+      color: var(--text);
+    }
+
+    .surface-title span {
+      font-size: 11.5px;
+      color: var(--text-sm);
+    }
+
+    .surface-controls {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .search-box {
+      min-width: 280px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 0 14px;
+      border-radius: 14px;
+      border: 1.5px solid rgba(0,0,0,.06);
+      background: #f6f7fa;
+      box-shadow: inset 2px 2px 5px rgba(0,0,0,.03), inset -1px -1px 3px rgba(255,255,255,.7);
+    }
+
+    .search-box input {
+      width: 100%;
+      border: 0;
+      outline: 0;
+      background: transparent;
+      font: inherit;
+      color: var(--text);
+    }
+
+    .search-box input::placeholder { color: var(--text-xs); }
+
+    .filter-row {
+      padding: 14px 20px 0;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-chip {
+      height: 34px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: linear-gradient(145deg, #fff, #f4f5f8);
+      border: 1.5px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      color: var(--text-sm);
+      font-size: 11.5px;
+      font-weight: 700;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+    }
+
+    .filter-chip.active {
+      color: #fff;
+      background: var(--accent);
+      border-color: transparent;
+      box-shadow: var(--sh-btn-ac);
+    }
+
+    .board-toggle {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px;
+      border-radius: 999px;
+      background: var(--muted-lt);
+      box-shadow: var(--sh-inset);
+    }
+
+    .board-toggle button {
+      height: 30px;
+      padding: 0 12px;
+      border-radius: 999px;
+      background: transparent;
+      color: var(--text-sm);
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .board-toggle button.active {
+      background: var(--card);
+      color: var(--accent);
+      box-shadow: var(--sh-soft);
+    }
+
+
+    .board-shell {
+      position: relative;
+      padding: 10px 6px 10px;
+    }
+
+    .board-scroll {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      overflow-y: hidden;
+      padding: 0 2px 6px;
+      scroll-behavior: auto;
+      overscroll-behavior-x: contain;
+      -webkit-overflow-scrolling: touch;
+      will-change: scroll-position;
+    }
+
+    .board-scroll.drag-card-active {
+      cursor: default;
+    }
+
+    .board-scroll.drag-card-active::after {
+      opacity: .45;
+    }
+
+    .card.dragging {
+      pointer-events: none;
+    }
+
+    .card.dragging * {
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      pointer-events: auto;
+    }
+
+    .column {
+      position: relative;
+      z-index: 1;
+      width: 334px;
+      min-width: 334px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1.5px solid rgba(0,0,0,.06);
+      background: linear-gradient(180deg, #fcfcfd, #f7f8fb);
+      box-shadow: var(--sh-card);
+      overflow: clip;
+    }
+
+    .column.active {
+      border-color: rgba(14,77,106,.18);
+      box-shadow:
+        18px 18px 38px rgba(0,0,0,.08),
+        -8px -8px 20px rgba(255,255,255,.96),
+        inset 1px 1px 4px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.04),
+        0 0 0 2px rgba(14,77,106,.08);
+    }
+
+    .column-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid var(--muted);
+      background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,249,251,.97));
+      backdrop-filter: blur(8px);
+    }
+
+    .column-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .column-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+    }
+
+    .column-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .9;
+    }
+
+    .column-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .column-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-sm);
+    }
+
+    .column-count {
+      min-width: 40px;
+      height: 32px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1.5px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .column-progress {
+      margin-top: 12px;
+    }
+
+    .column-progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+      margin-bottom: 6px;
+    }
+
+    .column-progress-track {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--muted);
+      overflow: hidden;
+      box-shadow: inset 2px 2px 4px rgba(0,0,0,.05), inset -1px -1px 3px rgba(255,255,255,.75);
+    }
+
+    .column-progress-track > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-lt), var(--accent));
+    }
+
+    .column-body {
+      padding: 12px;
+      display: grid;
+      gap: 14px;
+      background: linear-gradient(180deg, #eef1f6, #f4f6fa);
+      min-height: 520px;
+      box-shadow: var(--sh-inset);
+    }
+
+    .card {
+      background: linear-gradient(180deg, #ffffff, #fbfcff);
+      border-radius: 22px;
+      border: 1.5px solid rgba(14,77,106,.10);
+      padding: 15px;
+      box-shadow:
+        14px 14px 30px rgba(0,0,0,.10),
+        -6px -6px 16px rgba(255,255,255,.98),
+        inset 1px 1px 3px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+      cursor: grab;
+      user-select: none;
+      transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease, border-color .22s ease, opacity .22s ease, background .22s ease;
+    }
+
+    .card:active { cursor: grabbing; }
+
+    .board-scroll::-webkit-scrollbar { height: 10px; }
+    .board-scroll::-webkit-scrollbar-track {
+      background: rgba(0,0,0,.05);
+      border-radius: 999px;
+    }
+    .board-scroll::-webkit-scrollbar-thumb {
+      background: linear-gradient(90deg, rgba(14,77,106,.28), rgba(14,77,106,.18));
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,.55);
+    }
+    .board-scroll::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(90deg, rgba(14,77,106,.38), rgba(14,77,106,.24));
+    }
+
+    .board-scroll::after {
+      content: "Shift + scroll ou barra inferior";
+      position: sticky;
+      right: 10px;
+      bottom: 2px;
+      margin-left: auto;
+      align-self: flex-end;
+      padding: 5px 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,.82);
+      border: 1px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      color: var(--text-xs);
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+      pointer-events: none;
+      backdrop-filter: blur(8px);
+    }
+
+    .board-scroll.drag-card-active::after {
+      opacity: .45;
+    }
+
+    .board-scroll.drag-card-active {
+      cursor: default;
+    }
+
+    .board-scroll.drag-card-active .card {
+      pointer-events: auto;
+    }
+
+    .card.dragging {
+      pointer-events: none;
+    }
+
+    .card.dragging * {
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      pointer-events: auto;
+    }
+
+    .column {
+      position: relative;
+      z-index: 1;
+      width: 334px;
+      min-width: 334px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1.5px solid rgba(0,0,0,.06);
+      background: linear-gradient(180deg, #fcfcfd, #f7f8fb);
+      box-shadow: var(--sh-card);
+      overflow: clip;
+    }
+
+    .column.active {
+      border-color: rgba(14,77,106,.18);
+      box-shadow:
+        18px 18px 38px rgba(0,0,0,.08),
+        -8px -8px 20px rgba(255,255,255,.96),
+        inset 1px 1px 4px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.04),
+        0 0 0 2px rgba(14,77,106,.08);
+    }
+
+    .column-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid var(--muted);
+      background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,249,251,.97));
+      backdrop-filter: blur(8px);
+    }
+
+    .column-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .column-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+    }
+
+    .column-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .9;
+    }
+
+    .column-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .column-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-sm);
+    }
+
+    .column-count {
+      min-width: 40px;
+      height: 32px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1.5px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .column-progress {
+      margin-top: 12px;
+    }
+
+    .column-progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+      margin-bottom: 6px;
+    }
+
+    .column-progress-track {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--muted);
+      overflow: hidden;
+      box-shadow: inset 2px 2px 4px rgba(0,0,0,.05), inset -1px -1px 3px rgba(255,255,255,.75);
+    }
+
+    .column-progress-track > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-lt), var(--accent));
+    }
+
+    .column-body {
+      padding: 12px;
+      display: grid;
+      gap: 14px;
+      background: linear-gradient(180deg, #eef1f6, #f4f6fa);
+      min-height: 520px;
+      box-shadow: var(--sh-inset);
+    }
+
+    .card {
+      background: linear-gradient(180deg, #ffffff, #fbfcff);
+      border-radius: 22px;
+      border: 1.5px solid rgba(14,77,106,.10);
+      padding: 15px;
+      box-shadow:
+        14px 14px 30px rgba(0,0,0,.10),
+        -6px -6px 16px rgba(255,255,255,.98),
+        inset 1px 1px 3px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+      cursor: grab;
+      user-select: none;
+      transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease, border-color .22s ease, opacity .22s ease, background .22s ease;
+    }
+
+    .card:active { cursor: grabbing; }
+
+    .card.dragging {
+      opacity: .95;
+      transform: rotate(1.4deg) scale(1.02);
+      box-shadow:
+        22px 22px 44px rgba(0,0,0,.16),
+        -8px -8px 22px rgba(255,255,255,.98),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03),
+        0 0 0 2px rgba(14,77,106,.12);
+      z-index: 12;
+    }
+
+    .card.drop-before {
+      box-shadow: 0 -4px 0 rgba(14,77,106,.24), var(--sh-card-hover);
+    }
+
+    .card.drop-after {
+      box-shadow: 0 4px 0 rgba(14,77,106,.24), var(--sh-card-hover);
+    }
+
+    .column-body.drag-over {
+      background: linear-gradient(180deg, #e8edf5, #f0f4fa);
+      outline: 2px dashed rgba(14,77,106,.22);
+      outline-offset: -6px;
+    }
+
+    .column-body.drag-over-empty {
+      background: linear-gradient(180deg, #e6eef6, #f1f5fb);
+    }
+
+    .card:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: rgba(14,77,106,.22);
+      box-shadow:
+        18px 18px 38px rgba(0,0,0,.12),
+        -8px -8px 20px rgba(255,255,255,.99),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+    }
+    .card.selected {
+      border-color: rgba(14,77,106,.26);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow:
+        20px 20px 42px rgba(0,0,0,.12),
+        -8px -8px 20px rgba(255,255,255,.99),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03),
+        0 0 0 2px rgba(14,77,106,.08);
+    }
+
+    .card.hidden { opacity: .24; transform: scale(.985); pointer-events: none; }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 900;
+      letter-spacing: -.025em;
+      color: #091017;
+      line-height: 1.2;
+    }
+
+    .card-process {
+      margin-top: 3px;
+      color: var(--text-xs);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .priority-tag {
+      min-width: 40px;
+      height: 34px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      background: var(--card);
+      color: var(--text-sm);
+    }
+
+    .priority-tag.high { background: var(--red-bg); color: var(--red); border-color: var(--red-br); }
+    .priority-tag.medium { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-br); }
+
+    .card-subtitle {
+      margin-top: 8px;
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.52;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 25px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.07);
+      white-space: nowrap;
+      box-shadow: 3px 3px 8px rgba(0,0,0,.05), -2px -2px 5px rgba(255,255,255,.9);
+    }
+
+    .mini-pill.green { background: var(--green-bg); color: var(--green); border-color: var(--green-br); }
+    .mini-pill.amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-br); }
+    .mini-pill.blue { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-br); }
+    .mini-pill.red { background: var(--red-bg); color: var(--red); border-color: var(--red-br); }
+    .mini-pill.gray { background: #f3f4f6; color: #4b5563; border-color: rgba(0,0,0,.06); }
+
+    .info-panel {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: var(--muted-lt);
+      box-shadow: var(--sh-inset);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-item label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-xs);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .info-item strong {
+      display: block;
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .gate-box {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .gate-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-xs);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .gate-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .gate-bars span {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.06);
+    }
+
+    .gate-bars span.on { background: linear-gradient(90deg, #22c55e, var(--accent)); }
+    .gate-bars span.warn { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+    .next-step {
+      margin-top: 12px;
+      padding: 12px 13px;
+      border-radius: 15px;
+      background: linear-gradient(180deg, #f7fbff, #eef5fb);
+      border: 1px solid rgba(14,77,106,.12);
+      color: var(--text-md);
+      font-size: 11.5px;
+      line-height: 1.55;
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,.8), 4px 4px 10px rgba(0,0,0,.04);
+    }
+
+    .next-step strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .card-footer {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .owner {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--accent);
+      box-shadow: 4px 4px 10px rgba(14,77,106,.34), -2px -2px 6px rgba(255,255,255,.35);
+      flex-shrink: 0;
+    }
+
+    .owner strong {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+
+    .owner span {
+      display: block;
+      color: var(--text-xs);
+      font-size: 10.5px;
+    }
+
+    .lock-badge {
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.06);
+      white-space: nowrap;
+    }
+
+    .lock-badge.open { color: var(--green); background: var(--green-bg); border-color: var(--green-br); }
+    .lock-badge.closed { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-br); }
+    .lock-badge.blocked { color: var(--red); background: var(--red-bg); border-color: var(--red-br); }
+
+
+    body.compact .info-panel,
+
+    .card.dragging {
+      pointer-events: none;
+    }
+
+    .card.dragging * {
+      pointer-events: none;
+    }
+
+    .nav-arrow {
+      pointer-events: auto;
+    }
+
+    .column {
+      position: relative;
+      z-index: 1;
+      width: 334px;
+      min-width: 334px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1.5px solid rgba(0,0,0,.06);
+      background: linear-gradient(180deg, #fcfcfd, #f7f8fb);
+      box-shadow: var(--sh-card);
+      overflow: clip;
+    }
+
+    .board-scroll::-webkit-scrollbar { height: 7px; }
+    .board-scroll::-webkit-scrollbar-thumb { background: rgba(0,0,0,.14); border-radius: 999px; }
+
+    .nav-arrow {
+      position: absolute;
+      top: 50%;
+      width: 40px;
+      height: 40px;
+      margin-top: -20px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-sm);
+      background: rgba(255,255,255,.88);
+      border: 1.5px solid rgba(0,0,0,.07);
+      box-shadow: var(--sh-soft);
+      z-index: 5;
+    }
+
+    .nav-arrow:hover { transform: translateY(-2px); color: var(--text); }
+    .nav-arrow.left { left: 12px; }
+    .nav-arrow.right { right: 12px; }
+
+    .column {
+      width: 334px;
+      min-width: 334px;
+      display: flex;
+      flex-direction: column;
+      border-radius: 22px;
+      border: 1.5px solid rgba(0,0,0,.06);
+      background: linear-gradient(180deg, #fcfcfd, #f7f8fb);
+      box-shadow: var(--sh-card);
+      overflow: clip;
+    }
+
+    .column.active {
+      border-color: rgba(14,77,106,.18);
+      box-shadow:
+        18px 18px 38px rgba(0,0,0,.08),
+        -8px -8px 20px rgba(255,255,255,.96),
+        inset 1px 1px 4px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.04),
+        0 0 0 2px rgba(14,77,106,.08);
+    }
+
+    .column-header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      padding: 16px 16px 14px;
+      border-bottom: 1px solid var(--muted);
+      background: linear-gradient(180deg, rgba(255,255,255,.97), rgba(248,249,251,.97));
+      backdrop-filter: blur(8px);
+    }
+
+    .column-top {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .column-kicker {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 7px;
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+    }
+
+    .column-kicker::before {
+      content: "";
+      width: 7px;
+      height: 7px;
+      border-radius: 999px;
+      background: currentColor;
+      opacity: .9;
+    }
+
+    .column-title {
+      font-size: 15px;
+      font-weight: 800;
+      color: var(--text);
+      letter-spacing: -.02em;
+    }
+
+    .column-meta {
+      margin-top: 4px;
+      font-size: 11px;
+      color: var(--text-sm);
+    }
+
+    .column-count {
+      min-width: 40px;
+      height: 32px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 999px;
+      background: var(--card);
+      border: 1.5px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      font-size: 12px;
+      font-weight: 800;
+      color: var(--accent);
+    }
+
+    .column-progress {
+      margin-top: 12px;
+    }
+
+    .column-progress-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .12em;
+      text-transform: uppercase;
+      color: var(--text-xs);
+      margin-bottom: 6px;
+    }
+
+    .column-progress-track {
+      height: 5px;
+      border-radius: 999px;
+      background: var(--muted);
+      overflow: hidden;
+      box-shadow: inset 2px 2px 4px rgba(0,0,0,.05), inset -1px -1px 3px rgba(255,255,255,.75);
+    }
+
+    .column-progress-track > span {
+      display: block;
+      height: 100%;
+      border-radius: inherit;
+      background: linear-gradient(90deg, var(--accent-lt), var(--accent));
+    }
+
+    .column-body {
+      padding: 12px;
+      display: grid;
+      gap: 14px;
+      background: linear-gradient(180deg, #eef1f6, #f4f6fa);
+      min-height: 520px;
+      box-shadow: var(--sh-inset);
+    }
+
+    .card {
+      background: linear-gradient(180deg, #ffffff, #fbfcff);
+      border-radius: 22px;
+      border: 1.5px solid rgba(14,77,106,.10);
+      padding: 15px;
+      box-shadow:
+        14px 14px 30px rgba(0,0,0,.10),
+        -6px -6px 16px rgba(255,255,255,.98),
+        inset 1px 1px 3px rgba(255,255,255,.92),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+      cursor: grab;
+      user-select: none;
+      transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s ease, border-color .22s ease, opacity .22s ease, background .22s ease;
+    }
+
+    .card:active { cursor: grabbing; }
+
+    .card.dragging {
+      opacity: .95;
+      transform: rotate(1.4deg) scale(1.02);
+      box-shadow:
+        22px 22px 44px rgba(0,0,0,.16),
+        -8px -8px 22px rgba(255,255,255,.98),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03),
+        0 0 0 2px rgba(14,77,106,.12);
+      z-index: 12;
+    }
+
+    .card.drop-before {
+      box-shadow: 0 -4px 0 rgba(14,77,106,.24), var(--sh-card-hover);
+    }
+
+    .card.drop-after {
+      box-shadow: 0 4px 0 rgba(14,77,106,.24), var(--sh-card-hover);
+    }
+
+    .column-body.drag-over {
+      background: linear-gradient(180deg, #e8edf5, #f0f4fa);
+      outline: 2px dashed rgba(14,77,106,.22);
+      outline-offset: -6px;
+    }
+
+    .column-body.drag-over-empty {
+      background: linear-gradient(180deg, #e6eef6, #f1f5fb);
+    }
+
+    .card:hover {
+      transform: translateY(-4px) scale(1.01);
+      border-color: rgba(14,77,106,.22);
+      box-shadow:
+        18px 18px 38px rgba(0,0,0,.12),
+        -8px -8px 20px rgba(255,255,255,.99),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03);
+    }
+    .card.selected {
+      border-color: rgba(14,77,106,.26);
+      background: linear-gradient(180deg, #ffffff, #f8fbff);
+      box-shadow:
+        20px 20px 42px rgba(0,0,0,.12),
+        -8px -8px 20px rgba(255,255,255,.99),
+        inset 1px 1px 3px rgba(255,255,255,.96),
+        inset -1px -1px 2px rgba(0,0,0,.03),
+        0 0 0 2px rgba(14,77,106,.08);
+    }
+    .card.hidden { opacity: .24; transform: scale(.985); pointer-events: none; }
+
+    .card-head {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .card-title {
+      font-size: 14.5px;
+      font-weight: 900;
+      letter-spacing: -.025em;
+      color: #091017;
+      line-height: 1.2;
+    }
+
+    .card-process {
+      margin-top: 3px;
+      color: var(--text-xs);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .priority-tag {
+      min-width: 40px;
+      height: 34px;
+      padding: 0 10px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 12px;
+      font-size: 11px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.06);
+      box-shadow: var(--sh-soft);
+      background: var(--card);
+      color: var(--text-sm);
+    }
+
+    .priority-tag.high { background: var(--red-bg); color: var(--red); border-color: var(--red-br); }
+    .priority-tag.medium { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-br); }
+
+    .card-subtitle {
+      margin-top: 8px;
+      color: #4b5563;
+      font-size: 12px;
+      line-height: 1.52;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 7px;
+      margin-top: 12px;
+    }
+
+    .mini-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      min-height: 25px;
+      padding: 0 10px;
+      border-radius: 999px;
+      font-size: 10px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.07);
+      white-space: nowrap;
+      box-shadow: 3px 3px 8px rgba(0,0,0,.05), -2px -2px 5px rgba(255,255,255,.9);
+    }
+
+    .mini-pill.green { background: var(--green-bg); color: var(--green); border-color: var(--green-br); }
+    .mini-pill.amber { background: var(--amber-bg); color: var(--amber); border-color: var(--amber-br); }
+    .mini-pill.blue { background: var(--blue-bg); color: var(--blue); border-color: var(--blue-br); }
+    .mini-pill.red { background: var(--red-bg); color: var(--red); border-color: var(--red-br); }
+    .mini-pill.gray { background: #f3f4f6; color: #4b5563; border-color: rgba(0,0,0,.06); }
+
+    .info-panel {
+      margin-top: 12px;
+      padding: 12px;
+      border-radius: 16px;
+      background: var(--muted-lt);
+      box-shadow: var(--sh-inset);
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+    }
+
+    .info-item label {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--text-xs);
+      font-size: 9.5px;
+      font-weight: 700;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .info-item strong {
+      display: block;
+      font-size: 12px;
+      color: var(--text);
+      font-weight: 700;
+      line-height: 1.35;
+    }
+
+    .gate-box {
+      margin-top: 12px;
+      display: grid;
+      gap: 8px;
+    }
+
+    .gate-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      font-size: 10px;
+      font-weight: 700;
+      color: var(--text-xs);
+      letter-spacing: .13em;
+      text-transform: uppercase;
+    }
+
+    .gate-bars {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 6px;
+    }
+
+    .gate-bars span {
+      height: 8px;
+      border-radius: 999px;
+      background: rgba(0,0,0,.06);
+    }
+
+    .gate-bars span.on { background: linear-gradient(90deg, #22c55e, var(--accent)); }
+    .gate-bars span.warn { background: linear-gradient(90deg, #f59e0b, #f97316); }
+
+    .next-step {
+      margin-top: 12px;
+      padding: 12px 13px;
+      border-radius: 15px;
+      background: linear-gradient(180deg, #f7fbff, #eef5fb);
+      border: 1px solid rgba(14,77,106,.12);
+      color: var(--text-md);
+      font-size: 11.5px;
+      line-height: 1.55;
+      box-shadow: inset 1px 1px 2px rgba(255,255,255,.8), 4px 4px 10px rgba(0,0,0,.04);
+    }
+
+    .next-step strong {
+      display: block;
+      margin-bottom: 4px;
+      color: var(--accent);
+      font-size: 9.5px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .card-footer {
+      margin-top: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+    }
+
+    .owner {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+    }
+
+    .avatar {
+      width: 32px;
+      height: 32px;
+      border-radius: 11px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      background: var(--accent);
+      box-shadow: 4px 4px 10px rgba(14,77,106,.34), -2px -2px 6px rgba(255,255,255,.35);
+      flex-shrink: 0;
+    }
+
+    .owner strong {
+      display: block;
+      font-size: 11.5px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 120px;
+    }
+
+    .owner span {
+      display: block;
+      color: var(--text-xs);
+      font-size: 10.5px;
+    }
+
+    .lock-badge {
+      min-height: 30px;
+      padding: 0 11px;
+      border-radius: 999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+      font-weight: 800;
+      border: 1px solid rgba(0,0,0,.06);
+      white-space: nowrap;
+    }
+
+    .lock-badge.open { color: var(--green); background: var(--green-bg); border-color: var(--green-br); }
+    .lock-badge.closed { color: var(--amber); background: var(--amber-bg); border-color: var(--amber-br); }
+    .lock-badge.blocked { color: var(--red); background: var(--red-bg); border-color: var(--red-br); }
+
+
+    body.compact .info-panel,
+    body.compact .next-step {
+      display: none;
+    }
+
+    @media (max-width: 1320px) {
+      .workspace { min-height: auto; }
+    }
+
+    @media (max-width: 980px) {
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .surface-header { align-items: flex-start; }
+      .search-box { min-width: 100%; }
+      .detail-grid, .info-panel, .readiness { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 680px) {
+      .shell { width: calc(100vw - 8px); padding: 8px 4px 18px; }
+      .page-header, .surface { border-radius: 20px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .page-title { font-size: 18px; }
+      .page-title strong { font-size: 24px; }
+      .column { width: 286px; min-width: 286px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="shell">
+    <header class="page-header">
+      <div class="header-top">
+        <div class="header-left">
+          <button class="btn-icon" title="Voltar">
+            <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+          </button>
+
+          <div>
+            <div class="page-kicker">Painel operacional</div>
+            <h1 class="page-title page-title-single">Kanban de Operação</h1>
+          </div>
+        </div>
+
+        <div class="header-actions">
+          <button class="action-btn ghost">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+            Ver critérios
+          </button>
+          <button class="action-btn ghost" id="compact-toggle-btn">
+            <svg viewBox="0 0 24 24"><path d="M4 7h16"/><path d="M4 12h16"/><path d="M4 17h16"/></svg>
+            Modo compacto
+          </button>
+          <button class="action-btn primary">
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            Aplicar direção no kanban real
+          </button>
+        </div>
+      </div>
+
+      <div class="summary-grid">
+        <article class="summary-card">
+          <span class="label">Cards visíveis</span>
+          <div class="value">28</div>
+          <div class="meta">Distribuídos nas etapas operacionais</div>
+        </article>
+        <article class="summary-card soft-amber">
+          <span class="label">Travados por gate</span>
+          <div class="value">09</div>
+          <div class="meta">Docs, certidões ou parecer pendente</div>
+        </article>
+        <article class="summary-card soft-green">
+          <span class="label">Pronto p/ cálculo</span>
+          <div class="value">04</div>
+          <div class="meta">Já liberados para abertura da área de cálculo</div>
+        </article>
+        <article class="summary-card soft-blue">
+          <span class="label">Valor em esteira</span>
+          <div class="value">R$ 8,4M</div>
+          <div class="meta">Visão rápida de impacto financeiro da fila</div>
+        </article>
+      </div>
+    </header>
+
+    <section class="workspace">
+      <div class="main-stack">
+        <section class="surface">
+          <div class="surface-header">
+            <div class="surface-title">
+              <strong>Filtros e comandos rápidos</strong>
+              <span>Mesmo vocabulário do projeto, com leitura mais limpa e objetiva.</span>
+            </div>
+
+            <div class="surface-controls">
+              <label class="search-box">
+                <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <input type="text" placeholder="Buscar por credor, número do processo, devedor ou bloqueio..." />
+              </label>
+
+              <div class="board-toggle">
+                <button class="active">Cards</button>
+                <button>Tabela</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="filter-row">
+            <button class="filter-chip active" data-filter="all">Todos</button>
+            <button class="filter-chip" data-filter="blocked">Travados</button>
+            <button class="filter-chip" data-filter="legal">Jurídico</button>
+            <button class="filter-chip" data-filter="calc">Pronto p/ cálculo</button>
+            <button class="filter-chip" data-filter="high">Alta prioridade</button>
+            <button class="filter-chip">Somente distribuídos</button>
+          </div>
+
+        </section>
+
+        <section class="surface">
+          <div class="surface-header">
+            <div class="surface-title">
+              <strong>Board kanban — versão conceitual aderente</strong>
+              <span>Cards com o que o operador precisa enxergar sem fugir da linguagem atual do sistema.</span>
+            </div>
+            <div class="surface-controls">
+              <span class="pill pill-neutral">Arraste horizontal para ver todas as colunas</span>
+            </div>
+          </div>
+
+          <div class="board-shell">
+            <button class="nav-arrow left" id="nav-left" title="Anterior">
+              <svg viewBox="0 0 24 24"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button class="nav-arrow right" id="nav-right" title="Próxima">
+              <svg viewBox="0 0 24 24"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+
+            <div class="board-scroll" id="board-scroll">
+              <article class="column">
+                <header class="column-header">
+                  <div class="column-top">
+                    <div>
+                      <span class="column-kicker">Gate inicial</span>
+                      <h3 class="column-title">Triagem</h3>
+                      <p class="column-meta">Interesse e direcionamento do credor</p>
+                    </div>
+                    <span class="column-count">3</span>
+                  </div>
+                  <div class="column-progress">
+                    <div class="column-progress-top"><span>Prontos para avançar</span><strong>33%</strong></div>
+                    <div class="column-progress-track"><span style="width:33%"></span></div>
+                  </div>
+                </header>
+
+                <div class="column-body" data-dropzone>
+                  <article class="card" data-card="triagem-1" data-tags="blocked high" data-step="1" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Maria Helena Costa</h4>
+                        <p class="card-process">0830029-45.1995.8.02.0001</p>
+                      </div>
+                      <span class="priority-tag high">Alta</span>
+                    </div>
+                    <p class="card-subtitle">TJAL · Município de Maceió · contato em andamento com retorno marcado para hoje.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill red">Interesse não confirmado</span>
+                      <span class="mini-pill amber">Recontato hoje · 14h</span>
+                    </div>
+                    <div class="info-panel">
+                      <div class="info-item"><label>Responsável</label><strong>Carla Menezes</strong></div>
+                      <div class="info-item"><label>Valor estimado</label><strong>R$ 1,24M</strong></div>
+                    </div>
+                    <div class="gate-box">
+                      <div class="gate-top"><span>Leitura de gates</span><strong>1/4</strong></div>
+                      <div class="gate-bars"><span class="on"></span><span class="warn"></span><span></span><span></span></div>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Registrar o desfecho do contato para liberar o avanço ou encerrar com motivo.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">CM</div>
+                        <div><strong>Carla Menezes</strong><span>Comercial</span></div>
+                      </div>
+                      <span class="lock-badge blocked">Cálculo bloqueado</span>
+                    </div>
+                  </article>
+
+                  <article class="card" data-card="triagem-2" data-tags="high" data-step="1" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Arísia Barros dos Santos</h4>
+                        <p class="card-process">1008871-11.2002.8.26.0053</p>
+                      </div>
+                      <span class="priority-tag medium">Média</span>
+                    </div>
+                    <p class="card-subtitle">TJSP · retorno confirmado · credora já sinalizou interesse em seguir.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill green">Tem interesse</span>
+                      <span class="mini-pill amber">Aguardando mover</span>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Mover para Docs do credor com checklist documental pré-carregado.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">AC</div>
+                        <div><strong>Alberto Cunha</strong><span>Comercial</span></div>
+                      </div>
+                      <span class="lock-badge closed">Aguardando docs</span>
+                    </div>
+                  </article>
+                </div>
+              </article>
+
+              <article class="column active">
+                <header class="column-header">
+                  <div class="column-top">
+                    <div>
+                      <span class="column-kicker" style="color:var(--accent);">Ponto operacional</span>
+                      <h3 class="column-title">Docs do credor</h3>
+                      <p class="column-meta">Onde o bloqueio precisa ficar óbvio</p>
+                    </div>
+                    <span class="column-count">4</span>
+                  </div>
+                  <div class="column-progress">
+                    <div class="column-progress-top"><span>Mínimos completos</span><strong>58%</strong></div>
+                    <div class="column-progress-track"><span style="width:58%"></span></div>
+                  </div>
+                </header>
+
+                <div class="column-body" data-dropzone>
+                  <article class="card selected" data-card="docs-1" data-tags="blocked high" data-step="2" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">José Raimundo de Lima</h4>
+                        <p class="card-process">0004123-67.1999.8.17.0001</p>
+                      </div>
+                      <span class="priority-tag high">Alta</span>
+                    </div>
+                    <p class="card-subtitle">TJPE · Estado de Pernambuco · card com boa tração, mas ainda sem todos os mínimos para sair da etapa.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill amber">Docs 6/8</span>
+                      <span class="mini-pill red">Residência pendente</span>
+                      <span class="mini-pill red">Dados bancários pendentes</span>
+                    </div>
+                    <div class="info-panel">
+                      <div class="info-item"><label>Último contato</label><strong>Ontem · 18:10</strong></div>
+                      <div class="info-item"><label>Próximo SLA</label><strong>Hoje · 16:00</strong></div>
+                      <div class="info-item"><label>Devedor</label><strong>Estado de PE</strong></div>
+                      <div class="info-item"><label>Valor estimado</label><strong>R$ 2,08M</strong></div>
+                    </div>
+                    <div class="gate-box">
+                      <div class="gate-top"><span>Leitura de gates</span><strong>2/4</strong></div>
+                      <div class="gate-bars"><span class="on"></span><span class="on"></span><span class="warn"></span><span></span></div>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Solicitar comprovante de residência atualizado e dados bancários para liberar Certidões.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">BM</div>
+                        <div><strong>Bianca Morais</strong><span>Backoffice documental</span></div>
+                      </div>
+                      <span class="lock-badge blocked">Ainda travado</span>
+                    </div>
+                  </article>
+
+                  <article class="card" data-card="docs-2" data-tags="blocked" data-step="2" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Helena Torres de Albuquerque</h4>
+                        <p class="card-process">7001122-98.2001.8.05.0001</p>
+                      </div>
+                      <span class="priority-tag medium">Média</span>
+                    </div>
+                    <p class="card-subtitle">TJBA · município · situação documental quase concluída.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill amber">Docs 5/8</span>
+                      <span class="mini-pill red">Certidão de casamento faltando</span>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Acionar fluxo de pendência documental com mensagem pronta e prazo de retorno.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">LS</div>
+                        <div><strong>Larissa Souza</strong><span>Backoffice</span></div>
+                      </div>
+                      <span class="lock-badge blocked">Bloqueio documental</span>
+                    </div>
+                  </article>
+                </div>
+              </article>
+
+              <article class="column">
+                <header class="column-header">
+                  <div class="column-top">
+                    <div>
+                      <span class="column-kicker">Validação externa</span>
+                      <h3 class="column-title">Certidões</h3>
+                      <p class="column-meta">Pendência, validade e exceção</p>
+                    </div>
+                    <span class="column-count">3</span>
+                  </div>
+                  <div class="column-progress">
+                    <div class="column-progress-top"><span>Certidões válidas</span><strong>41%</strong></div>
+                    <div class="column-progress-track"><span style="width:41%"></span></div>
+                  </div>
+                </header>
+
+                <div class="column-body" data-dropzone>
+                  <article class="card" data-card="cert-1" data-tags="blocked legal" data-step="3" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Rosa Helena Nascimento</h4>
+                        <p class="card-process">0058822-14.2000.8.19.0001</p>
+                      </div>
+                      <span class="priority-tag medium">Média</span>
+                    </div>
+                    <p class="card-subtitle">TJRJ · uma certidão expirada impede a sensação falsa de “quase pronto”.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill amber">Cert. 2/3</span>
+                      <span class="mini-pill red">Federal vencida</span>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Renovar certidão federal antes de liberar o card para cálculo.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">PR</div>
+                        <div><strong>Paulo Reis</strong><span>Certidões</span></div>
+                      </div>
+                      <span class="lock-badge blocked">Gate incompleto</span>
+                    </div>
+                  </article>
+
+                  <article class="card" data-card="cert-2" data-tags="legal" data-step="3" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Márcio Guedes Farias</h4>
+                        <p class="card-process">9087112-03.2005.8.06.0001</p>
+                      </div>
+                      <span class="priority-tag medium">Média</span>
+                    </div>
+                    <p class="card-subtitle">TJCE · certidões completas, mas com atenção jurídica registrada no contexto.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill green">Cert. 3/3</span>
+                      <span class="mini-pill amber">Sinal de risco jurídico</span>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Mover para pronto p/ cálculo mantendo a observação jurídica visível.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">FG</div>
+                        <div><strong>Felipe Gama</strong><span>Certidões</span></div>
+                      </div>
+                      <span class="lock-badge open">Pode avançar</span>
+                    </div>
+                  </article>
+                </div>
+              </article>
+
+              <article class="column">
+                <header class="column-header">
+                  <div class="column-top">
+                    <div>
+                      <span class="column-kicker">Área liberada</span>
+                      <h3 class="column-title">Pronto p/ cálculo</h3>
+                      <p class="column-meta">Cards realmente aptos para abrir cálculo</p>
+                    </div>
+                    <span class="column-count">2</span>
+                  </div>
+                  <div class="column-progress">
+                    <div class="column-progress-top"><span>Prontos para abrir</span><strong>100%</strong></div>
+                    <div class="column-progress-track"><span style="width:100%"></span></div>
+                  </div>
+                </header>
+
+                <div class="column-body" data-dropzone>
+                  <article class="card" data-card="calc-1" data-tags="calc high" data-step="4" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Ester de Assis Pereira</h4>
+                        <p class="card-process">0005512-31.1998.8.13.0001</p>
+                      </div>
+                      <span class="priority-tag high">Alta</span>
+                    </div>
+                    <p class="card-subtitle">TJMG · documentação e certidões completas, sem ruído para o cálculo assumir.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill green">Docs 8/8</span>
+                      <span class="mini-pill green">Cert. 3/3</span>
+                      <span class="mini-pill blue">Responsável cálculo definido</span>
+                    </div>
+                    <div class="info-panel">
+                      <div class="info-item"><label>Responsável cálculo</label><strong>João Vilar</strong></div>
+                      <div class="info-item"><label>Valor base</label><strong>R$ 1,87M</strong></div>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Abrir cálculo com data-base sugerida e histórico já contextualizado.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">JV</div>
+                        <div><strong>João Vilar</strong><span>Cálculo</span></div>
+                      </div>
+                      <span class="lock-badge open">Cálculo liberado</span>
+                    </div>
+                  </article>
+                </div>
+              </article>
+
+              <article class="column">
+                <header class="column-header">
+                  <div class="column-top">
+                    <div>
+                      <span class="column-kicker">Exceção qualificada</span>
+                      <h3 class="column-title">Análise jurídica</h3>
+                      <p class="column-meta">Motivo visível e retorno esperado</p>
+                    </div>
+                    <span class="column-count">2</span>
+                  </div>
+                  <div class="column-progress">
+                    <div class="column-progress-top"><span>Pareceres em SLA</span><strong>50%</strong></div>
+                    <div class="column-progress-track"><span style="width:50%"></span></div>
+                  </div>
+                </header>
+
+                <div class="column-body" data-dropzone>
+                  <article class="card" data-card="jur-1" data-tags="legal blocked" data-step="6" draggable="true">
+                    <div class="card-head">
+                      <div>
+                        <h4 class="card-title">Carlos Alberto Nogueira</h4>
+                        <p class="card-process">1185520-08.2004.8.15.0001</p>
+                      </div>
+                      <span class="priority-tag high">Alta</span>
+                    </div>
+                    <p class="card-subtitle">TJPB · indício de cessão de crédito com solicitação formal já registrada.</p>
+                    <div class="chip-row">
+                      <span class="mini-pill red">Motivo: cessão</span>
+                      <span class="mini-pill amber">Parecer pendente</span>
+                    </div>
+                    <div class="next-step"><strong>Próxima ação segura</strong>Aguardar parecer para devolver ao cálculo ou encerrar com impedimento.</div>
+                    <div class="card-footer">
+                      <div class="owner">
+                        <div class="avatar">JP</div>
+                        <div><strong>Juliana Prado</strong><span>Jurídico</span></div>
+                      </div>
+                      <span class="lock-badge blocked">Sob análise</span>
+                    </div>
+                  </article>
+                </div>
+              </article>
+            </div>
+          </div>
+        </section>
+      </div>
+
+    </section>
+  </div>
+
+  <script>
+    const dataMap = {
+      'triagem-1': {
+        title: 'Maria Helena Costa',
+        summary: 'Triagem com alta prioridade comercial. O foco é registrar o desfecho do contato antes que o card continue ocupando espaço sem decisão clara.',
+        badge: 'Triagem',
+        value: 'R$ 1,24M',
+        owner: 'Carla Menezes',
+        stage: 'Triagem',
+        next: 'Docs do credor',
+        step: 1,
+        readiness: 28,
+        readinessTitle: 'Prontidão baixa por falta de decisão',
+        readinessText: 'Aqui o board precisa cobrar ação comercial, não parecer bonito. A informação crítica é confirmar interesse ou encerrar com motivo.',
+        checks: [
+          { state: 'ok', title: 'Lead qualificado', text: 'Origem e tribunal já conferidos.' },
+          { state: 'block', title: 'Interesse do credor', text: 'Ainda não registrado formalmente.' },
+          { state: 'warn', title: 'Recontato previsto', text: 'Retorno agendado para hoje às 14h.' },
+          { state: 'block', title: 'Destino alternativo', text: 'Sem motivo de encerramento documentado.' }
+        ],
+        actions: [
+          { title: 'Registrar resultado do contato', text: 'Salvar TEM_INTERESSE, PEDIR_RETORNO ou SEM_INTERESSE.' },
+          { title: 'Enviar mensagem pronta', text: 'Disparar template para confirmação de interesse.' }
+        ],
+        timeline: [
+          { title: 'Ontem · 18:20', text: 'Tentativa de contato realizada sem retorno.' },
+          { title: 'Ontem · 18:23', text: 'Recontato programado para hoje às 14h.' },
+          { title: 'Hoje · agora', text: 'Card segue em triagem aguardando decisão.' }
+        ]
+      },
+      'docs-1': {
+        title: 'José Raimundo de Lima',
+        summary: 'Card em documentos do credor com dois bloqueios objetivos. O objetivo aqui é deixar a causa do travamento explícita sem mudar a lógica do projeto.',
+        badge: 'Docs do credor',
+        value: 'R$ 2,08M',
+        owner: 'Bianca Morais',
+        stage: 'Docs do credor',
+        next: 'Certidões',
+        step: 2,
+        readiness: 55,
+        readinessTitle: 'Pronto quando os mínimos estiverem íntegros',
+        readinessText: 'A régua resume o quanto o card pode sair da etapa sem gerar devolução, sem inventar métricas fora do contexto do projeto.',
+        checks: [
+          { state: 'ok', title: 'Interesse confirmado', text: 'Credor quer seguir com a operação.' },
+          { state: 'ok', title: 'Documento de identificação', text: 'RG e CPF já recebidos e validados.' },
+          { state: 'block', title: 'Comprovante de residência', text: 'Arquivo atual não atende à regra de 30 dias.' },
+          { state: 'block', title: 'Dados bancários', text: 'Conta ainda não foi confirmada pelo credor.' }
+        ],
+        actions: [
+          { title: 'Cobrar pendências agora', text: 'Solicitar os 2 itens faltantes com mensagem pronta.' },
+          { title: 'Marcar follow-up às 16h', text: 'Se não houver envio, o card continua destacado como travado.' },
+          { title: 'Pré-validar saída de coluna', text: 'Simular se já conseguiria entrar em Certidões.' }
+        ],
+        timeline: [
+          { title: 'Hoje · 09:12', text: 'RG e CPF recebidos por WhatsApp e validados.' },
+          { title: 'Hoje · 10:03', text: 'Sistema apontou ausência de comprovante recente.' },
+          { title: 'Hoje · 10:40', text: 'Dados bancários marcados como pendentes.' }
+        ]
+      },
+      'docs-2': {
+        title: 'Helena Torres de Albuquerque',
+        summary: 'Quase pronta, mas ainda dependendo de um documento específico. A melhoria aqui é tornar a pendência legível já no card.',
+        badge: 'Docs do credor',
+        value: 'R$ 910K',
+        owner: 'Larissa Souza',
+        stage: 'Docs do credor',
+        next: 'Certidões',
+        step: 2,
+        readiness: 49,
+        readinessTitle: 'Bloqueio documental específico',
+        readinessText: 'O board passa a dizer qual documento trava o avanço, reduzindo clique desnecessário no modal.',
+        checks: [
+          { state: 'ok', title: 'Interesse confirmado', text: 'Credora quer proposta.' },
+          { state: 'warn', title: 'Estado civil mapeado', text: 'Informação existe, mas sem comprovação documental.' },
+          { state: 'block', title: 'Certidão de casamento', text: 'Arquivo ainda não foi enviado.' },
+          { state: 'ok', title: 'Dados bancários', text: 'Conta já validada.' }
+        ],
+        actions: [
+          { title: 'Solicitar certidão', text: 'Disparar mensagem contextualizada.' },
+          { title: 'Agendar retorno', text: 'Definir prazo para não esfriar a operação.' }
+        ],
+        timeline: [
+          { title: 'Ontem · 15:07', text: 'Dados bancários confirmados.' },
+          { title: 'Ontem · 15:42', text: 'Pendência de certidão destacada no board.' }
+        ]
+      },
+      'cert-1': {
+        title: 'Rosa Helena Nascimento',
+        summary: 'Certidões quase concluídas, mas uma peça vencida impede o avanço seguro para cálculo.',
+        badge: 'Certidões',
+        value: 'R$ 1,36M',
+        owner: 'Paulo Reis',
+        stage: 'Certidões',
+        next: 'Pronto p/ cálculo',
+        step: 3,
+        readiness: 68,
+        readinessTitle: 'Quase pronta, mas ainda insegura',
+        readinessText: 'O objetivo não é só mostrar 2/3, mas evidenciar que o item pendente realmente bloqueia a etapa seguinte.',
+        checks: [
+          { state: 'ok', title: 'Triagem concluída', text: 'Interesse validado.' },
+          { state: 'ok', title: 'Documentação mínima', text: 'Checklist do credor completo.' },
+          { state: 'block', title: 'Certidão federal', text: 'Documento está vencido e precisa renovação.' },
+          { state: 'warn', title: 'Prontidão para cálculo', text: 'Liberar somente após a renovação.' }
+        ],
+        actions: [
+          { title: 'Renovar certidão federal', text: 'Atalho operacional com lembrete de validade.' },
+          { title: 'Avisar cálculo', text: 'Registrar que o card está quase pronto, mas ainda bloqueado.' }
+        ],
+        timeline: [
+          { title: 'Hoje · 08:10', text: 'Sistema marcou certidão federal como vencida.' },
+          { title: 'Hoje · 08:11', text: 'Card passou a ser tratado como bloqueado.' }
+        ]
+      },
+      'cert-2': {
+        title: 'Márcio Guedes Farias',
+        summary: 'Exemplo de card operacionalmente pronto, mas com um sinal jurídico que precisa acompanhar a movimentação.',
+        badge: 'Certidões',
+        value: 'R$ 2,44M',
+        owner: 'Felipe Gama',
+        stage: 'Certidões',
+        next: 'Pronto p/ cálculo',
+        step: 3,
+        readiness: 87,
+        readinessTitle: 'Liberável com contexto jurídico',
+        readinessText: 'Nem todo risco deve bloquear. Alguns só precisam continuar visíveis para quem assume a etapa seguinte.',
+        checks: [
+          { state: 'ok', title: 'Interesse confirmado', text: 'Fluxo comercial concluído.' },
+          { state: 'ok', title: 'Docs mínimos', text: 'Todos os itens recebidos.' },
+          { state: 'ok', title: 'Certidões válidas', text: 'Trio de certidões íntegro.' },
+          { state: 'warn', title: 'Atenção jurídica', text: 'Indício registrado sem impedimento formal.' }
+        ],
+        actions: [
+          { title: 'Mover para pronto cálculo', text: 'Levar a observação jurídica junto do card.' },
+          { title: 'Criar nota de atenção', text: 'Manter contexto visível na próxima etapa.' }
+        ],
+        timeline: [
+          { title: 'Hoje · 09:44', text: 'Última certidão validada.' },
+          { title: 'Hoje · 09:51', text: 'Observação jurídica registrada no contexto do card.' }
+        ]
+      },
+      'calc-1': {
+        title: 'Ester de Assis Pereira',
+        summary: 'Exemplo da etapa em que o botão de cálculo realmente faz sentido: tudo pronto, sem surpresas escondidas.',
+        badge: 'Pronto p/ cálculo',
+        value: 'R$ 1,87M',
+        owner: 'João Vilar',
+        stage: 'Pronto p/ cálculo',
+        next: 'Cálculo em andamento',
+        step: 4,
+        readiness: 100,
+        readinessTitle: 'Prontidão total para abrir cálculo',
+        readinessText: 'Quando o card chega aqui, a experiência precisa transmitir confiança e velocidade, não dúvida.',
+        checks: [
+          { state: 'ok', title: 'Interesse confirmado', text: 'Sem pendências comerciais.' },
+          { state: 'ok', title: 'Documentação mínima', text: 'Todos os documentos recebidos.' },
+          { state: 'ok', title: 'Certidões válidas', text: 'Sem pendências de validade.' },
+          { state: 'ok', title: 'Responsável cálculo', text: 'João Vilar já vinculado ao card.' }
+        ],
+        actions: [
+          { title: 'Abrir cálculo', text: 'Entrar direto com data-base sugerida.' },
+          { title: 'Encaminhar ao jurídico', text: 'Atalho caso surja exceção na análise inicial.' }
+        ],
+        timeline: [
+          { title: 'Hoje · 07:58', text: 'Docs e certidões validados.' },
+          { title: 'Hoje · 08:02', text: 'Responsável cálculo atribuído automaticamente.' }
+        ]
+      },
+      'jur-1': {
+        title: 'Carlos Alberto Nogueira',
+        summary: 'Fila jurídica tratada como exceção qualificada: motivo claro, dono visível e retorno esperado para o cálculo.',
+        badge: 'Análise jurídica',
+        value: 'R$ 3,02M',
+        owner: 'Juliana Prado',
+        stage: 'Análise jurídica',
+        next: 'Recálculo ou Fechado',
+        step: 6,
+        readiness: 46,
+        readinessTitle: 'Bloqueio nobre, não ruído',
+        readinessText: 'Quando o jurídico entra, o board deve explicar por que entrou e o que precisa acontecer para sair.',
+        checks: [
+          { state: 'ok', title: 'Card já estava em faixa de cálculo', text: 'Movimento faz sentido no fluxo.' },
+          { state: 'ok', title: 'Motivo registrado', text: 'Cessão de crédito descrita no contexto.' },
+          { state: 'block', title: 'Parecer jurídico', text: 'Ainda não devolvido com orientação final.' },
+          { state: 'warn', title: 'Saída após parecer', text: 'Pode voltar ao cálculo ou encerrar.' }
+        ],
+        actions: [
+          { title: 'Cobrar parecer', text: 'Lembrete interno já contextualizado.' },
+          { title: 'Preparar recálculo', text: 'Deixar próxima ação pronta após devolução.' }
+        ],
+        timeline: [
+          { title: 'Ontem · 17:20', text: 'Solicitação formal ao jurídico aberta com motivo e descrição.' },
+          { title: 'Hoje · 09:05', text: 'Jurídico assumiu o card como responsável principal.' }
+        ]
+      }
+    }
+
+    const pageHeader = document.querySelector('.page-header')
+    const shell = document.querySelector('.shell')
+
+    function syncShellPadding() {
+      shell.style.paddingTop = pageHeader.offsetHeight + 10 + 'px'
+    }
+    syncShellPadding()
+    window.addEventListener('resize', syncShellPadding)
+
+    const boardScroll = document.getElementById('board-scroll')
+    const cards = Array.from(document.querySelectorAll('.card'))
+    const filterChips = Array.from(document.querySelectorAll('.filter-chip[data-filter]'))
+    const dropzones = Array.from(document.querySelectorAll('[data-dropzone]'))
+    let draggedCard = null
+
+    boardScroll.setAttribute('title', 'Use a barra inferior ou Shift + scroll para rolar horizontalmente')
+    boardScroll.style.touchAction = 'auto'
+
+    boardScroll.addEventListener('wheel', (event) => {
+      if (!event.shiftKey) return
+      event.preventDefault()
+      boardScroll.scrollLeft += event.deltaY
+    }, { passive: false })
+
+    function renderSide(cardId) {
+      const item = dataMap[cardId]
+      if (!item) return
+
+      cards.forEach(card => card.classList.toggle('selected', card.dataset.card === cardId))
+    }
+
+    function clearDragState() {
+      document.querySelectorAll('.drop-before, .drop-after, .drag-over, .drag-over-empty, .dragging').forEach((el) => {
+        el.classList.remove('drop-before', 'drop-after', 'drag-over', 'drag-over-empty', 'dragging')
+      })
+    }
+
+    function getClosestCard(container, y) {
+      const siblings = Array.from(container.querySelectorAll('.card:not(.dragging):not(.hidden)'))
+      let closest = null
+      let closestOffset = Number.NEGATIVE_INFINITY
+
+      siblings.forEach((card) => {
+        const rect = card.getBoundingClientRect()
+        const offset = y - rect.top - rect.height / 2
+        if (offset < 0 && offset > closestOffset) {
+          closestOffset = offset
+          closest = card
+        }
+      })
+
+      return closest
+    }
+
+    cards.forEach(card => {
+      card.addEventListener('click', () => renderSide(card.dataset.card))
+
+      card.addEventListener('dragstart', () => {
+        draggedCard = card
+        boardScroll.classList.add('drag-card-active')
+        card.classList.add('dragging')
+      })
+
+      card.addEventListener('dragend', () => {
+        draggedCard = null
+        boardScroll.classList.remove('drag-card-active')
+        clearDragState()
+      })
+    })
+
+    dropzones.forEach((zone) => {
+      zone.addEventListener('dragover', (event) => {
+        event.preventDefault()
+        if (!draggedCard) return
+
+        clearDragState()
+        zone.classList.add('drag-over')
+
+        const afterElement = getClosestCard(zone, event.clientY)
+        if (!afterElement) {
+          zone.classList.add('drag-over-empty')
+          zone.appendChild(draggedCard)
+          return
+        }
+
+        const rect = afterElement.getBoundingClientRect()
+        const placeBefore = event.clientY < rect.top + rect.height / 2
+        afterElement.classList.add(placeBefore ? 'drop-before' : 'drop-after')
+
+        if (placeBefore) {
+          zone.insertBefore(draggedCard, afterElement)
+        } else {
+          zone.insertBefore(draggedCard, afterElement.nextSibling)
+        }
+      })
+
+      zone.addEventListener('drop', (event) => {
+        event.preventDefault()
+        boardScroll.classList.remove('drag-card-active')
+        clearDragState()
+      })
+
+      zone.addEventListener('dragleave', (event) => {
+        if (!zone.contains(event.relatedTarget)) {
+          zone.classList.remove('drag-over', 'drag-over-empty')
+          zone.querySelectorAll('.drop-before, .drop-after').forEach((el) => el.classList.remove('drop-before', 'drop-after'))
+        }
+      })
+    })
+
+    filterChips.forEach(chip => {
+      chip.addEventListener('click', () => {
+        filterChips.forEach(item => item.classList.remove('active'))
+        chip.classList.add('active')
+
+        const filter = chip.dataset.filter
+        cards.forEach(card => {
+          const tags = card.dataset.tags || ''
+          const show = filter === 'all' || tags.includes(filter)
+          card.classList.toggle('hidden', !show)
+        })
+      })
+    })
+
+    document.getElementById('compact-toggle-btn').addEventListener('click', () => {
+      document.body.classList.toggle('compact')
+    })
+
+    document.getElementById('nav-left').addEventListener('click', () => {
+      boardScroll.scrollBy({ left: -320, behavior: 'smooth' })
+    })
+
+    document.getElementById('nav-right').addEventListener('click', () => {
+      boardScroll.scrollBy({ left: 320, behavior: 'smooth' })
+    })
+
+    let lastWindowScrollY = window.scrollY
+
+    function syncHeaderVisibility() {
+      const currentScrollY = window.scrollY
+      const scrollingDown = currentScrollY > lastWindowScrollY
+      const shouldHide = currentScrollY > 90 && scrollingDown
+
+      pageHeader.classList.toggle('is-hidden', shouldHide)
+      document.body.classList.toggle('header-collapsed', shouldHide)
+      lastWindowScrollY = currentScrollY
+    }
+
+    window.addEventListener('scroll', syncHeaderVisibility, { passive: true })
+
+    renderSide('docs-1')
+    cards.forEach(card => card.classList.remove('selected'))
+    syncHeaderVisibility()
+
+    boardScroll.addEventListener('dragenter', () => {
+      boardScroll.classList.add('drag-card-active')
+    })
+
+    boardScroll.addEventListener('dragleave', (event) => {
+      if (!boardScroll.contains(event.relatedTarget)) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    })
+
+    boardScroll.addEventListener('drop', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('dragend', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    cards.forEach((card) => {
+      card.addEventListener('mousedown', (event) => event.stopPropagation())
+      card.addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true })
+    })
+
+    document.getElementById('nav-left').addEventListener('mousedown', (event) => event.stopPropagation())
+    document.getElementById('nav-right').addEventListener('mousedown', (event) => event.stopPropagation())
+    document.getElementById('nav-left').addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true })
+    document.getElementById('nav-right').addEventListener('touchstart', (event) => event.stopPropagation(), { passive: true })
+
+    window.addEventListener('blur', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    })
+
+    boardScroll.addEventListener('click', () => {
+      if (draggedCard) boardScroll.classList.remove('drag-card-active')
+    }, true)
+
+    boardScroll.addEventListener('scroll', () => {
+      const maxScroll = boardScroll.scrollWidth - boardScroll.clientWidth
+      if (boardScroll.scrollLeft <= 0 || boardScroll.scrollLeft >= maxScroll) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    }, { passive: true })
+
+    boardScroll.addEventListener('mouseenter', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('mouseleave', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('touchcancel', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    window.addEventListener('resize', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.getElementById('compact-toggle-btn').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.getElementById('nav-left').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.getElementById('nav-right').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('dragend', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('drop', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('pointerup', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('touchend', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    }, { passive: true })
+
+    document.addEventListener('touchcancel', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    }, { passive: true })
+
+    window.addEventListener('blur', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    })
+
+    boardScroll.addEventListener('scroll', () => {
+      const maxScroll = boardScroll.scrollWidth - boardScroll.clientWidth
+      if (boardScroll.scrollLeft <= 0 || boardScroll.scrollLeft >= maxScroll) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    }, { passive: true })
+
+    boardScroll.addEventListener('dragover', () => {
+      if (draggedCard) boardScroll.classList.add('drag-card-active')
+    })
+
+    boardScroll.addEventListener('dragenter', () => {
+      if (draggedCard) boardScroll.classList.add('drag-card-active')
+    })
+
+    boardScroll.addEventListener('dragleave', (event) => {
+      if (!boardScroll.contains(event.relatedTarget)) {
+        boardScroll.classList.remove('drag-card-active')
+      }
+    })
+
+    boardScroll.classList.remove('drag-card-active')
+
+    boardScroll.addEventListener('touchend', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('pointercancel', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('pointerup', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('pointerleave', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.addEventListener('pointermove', () => {
+      if (draggedCard) boardScroll.classList.add('drag-card-active')
+    })
+
+    boardScroll.addEventListener('dragover', () => {
+      if (draggedCard) boardScroll.classList.add('drag-card-active')
+    })
+
+    window.addEventListener('resize', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    filterChips.forEach((chip) => chip.addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    }))
+
+    cards.forEach((card) => card.addEventListener('click', () => {
+      if (!draggedCard) boardScroll.classList.remove('drag-card-active')
+    }))
+
+    document.getElementById('compact-toggle-btn').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.getElementById('nav-left').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    document.getElementById('nav-right').addEventListener('click', () => {
+      boardScroll.classList.remove('drag-card-active')
+    })
+
+    boardScroll.classList.remove('drag-card-active')
+  </script>
+</body>
+</html>

@@ -1164,7 +1164,7 @@ export default function DashboardPage() {
                 <p className="mt-3 text-[clamp(1.55rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
                   Dashboard Estratégico
                 </p>
-                <h1 className="mt-3 text-[clamp(1rem,3vw,2.2rem)] font-bold leading-[1.1] tracking-[-0.03em] text-foreground">
+                <h1 className="no-route-shiny mt-3 text-[clamp(1rem,3vw,2.2rem)] font-bold leading-[1.1] tracking-[-0.03em]" style={{ color: "#0e4d6a" }}>
                   Carteira, riscos e performance.
                 </h1>
                 <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[15px]">

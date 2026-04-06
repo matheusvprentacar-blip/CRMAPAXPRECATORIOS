@@ -11,8 +11,6 @@ import { StepIRPF } from "./steps/step-irpf"
 import { StepHonorarios } from "./steps/step-honorarios"
 import { StepPropostas } from "./steps/step-propostas"
 import { StepResumo } from "./steps/step-resumo"
-import { Card } from "./ui/card"
-import { Check, RotateCcw, Eye } from "@/components/icons"
 import { getSupabase } from "@/lib/supabase/client"
 import type { Precatorio } from "@/lib/types/database"
 import { PdfUploadButton } from "./pdf-upload-button"
@@ -29,9 +27,10 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { toast } from "sonner"
-import { MOTION } from "@/lib/motion"
 import { StepContainer } from "@/components/motion/StepContainer"
+import React from "react"
 
+// ─── Constants ────────────────────────────────────────────────────────────────
 const STORAGE_KEY = "calculadora_precatorios_progress"
 const PENDING_UPDATE_KEY = "calculadora_precatorios_pending_update"
 
@@ -41,900 +40,501 @@ const safeNumber = (val: any) => {
   const num = Number(val)
   return Number.isNaN(num) ? 0 : num
 }
-
 const savePendingUpdate = (payload: any) => {
   if (typeof window === "undefined") return
-  try {
-    localStorage.setItem(
-      PENDING_UPDATE_KEY,
-      JSON.stringify({ payload, savedAt: new Date().toISOString() })
-    )
-  } catch (error) {
-    console.error("[v0] Falha ao salvar payload pendente:", error)
-  }
+  try { localStorage.setItem(PENDING_UPDATE_KEY, JSON.stringify({ payload, savedAt: new Date().toISOString() })) } catch {}
 }
-
-const clearPendingUpdate = () => {
-  if (typeof window === "undefined") return
-  localStorage.removeItem(PENDING_UPDATE_KEY)
-}
-
-const isFetchFailure = (error: any) => {
-  const message = String(error?.message || "")
-  const details = String(error?.details || "")
-  return message.includes("Failed to fetch") || details.includes("Failed to fetch")
-}
+const clearPendingUpdate = () => { if (typeof window !== "undefined") localStorage.removeItem(PENDING_UPDATE_KEY) }
+const isFetchFailure = (error: any) => String(error?.message || "").includes("Failed to fetch") || String(error?.details || "").includes("Failed to fetch")
 
 export interface CalculadoraProgress {
-  precatorioId?: string
-  dados: any
-  etapaAtual: number
-  etapasCompletadas: number[]
-  pdfUrl: string | null
-  resultadosEtapas: any[]
+  precatorioId?: string; dados: any; etapaAtual: number; etapasCompletadas: number[]; pdfUrl: string | null; resultadosEtapas: any[]
+}
+interface CalculadoraPrecatoriosProps { precatorioId?: string; onUpdate?: () => void }
+
+// ─── Theme ────────────────────────────────────────────────────────────────────
+const T = {
+  bg:        "hsl(30 20% 98%)",        // padrão do sistema
+  sidebar:   "#ffffff",                // sidebar branca
+  surface:   "#f0f1f5",               // superfícies
+  border:    "rgba(0,0,0,0.07)",
+  accent:    "#0e4d6a",               // azul petróleo clay
+  accentDim: "rgba(14,77,106,0.08)",
+  accentMid: "rgba(14,77,106,0.25)",
+  textHi:    "#0b0c10",
+  textMid:   "#374151",
+  textLo:    "#9ca3af",
+  danger:    "#dc2626",
+  dangerBg:  "#fef2f2",
 }
 
-interface CalculadoraPrecatoriosProps {
-  precatorioId?: string
-  onUpdate?: () => void
+// ─── Icons ────────────────────────────────────────────────────────────────────
+const IC = {
+  check:   <svg viewBox="0 0 24 24" fill="none" strokeWidth={2.5} stroke="currentColor" className="w-3 h-3"><path strokeLinecap="round" strokeLinejoin="round" d="M4.5 12.75l6 6 9-13.5"/></svg>,
+  chevR:   <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M8.25 4.5l7.5 7.5-7.5 7.5"/></svg>,
+  chevL:   <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5L8.25 12l7.5-7.5"/></svg>,
+  doc:     <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"/></svg>,
+  reset:   <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M16.023 9.348h4.992v-.001M2.985 19.644v-4.992m0 0h4.992m-4.993 0l3.181 3.183a8.25 8.25 0 0013.803-3.7M4.031 9.865a8.25 8.25 0 0113.803-3.7l3.181 3.182m0-4.991v4.99"/></svg>,
+  close:   <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12"/></svg>,
+  menu:    <svg viewBox="0 0 24 24" fill="none" strokeWidth={2} stroke="currentColor" className="w-5 h-5"><path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5"/></svg>,
+  calc:    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M15.75 15.75V18m-7.5-6.75h.008v.008H8.25v-.008zm0 2.25h.008v.008H8.25V13.5zm0 2.25h.008v.008H8.25v-.008zm2.25-4.5h.008v.008H10.5v-.008zm0 2.25h.008v.008H10.5V13.5zm0 2.25h.008v.008H10.5v-.008zm2.25-4.5h.008v.008H12.75v-.008zm0 2.25h.008v.008H12.75V13.5zm0 2.25h.008v.008H12.75v-.008zm2.25-4.5h.008v.008H15v-.008zm0 2.25h.008v.008H15V13.5zm0 2.25h.008v.008H15v-.008zM8.25 6h7.5v2.25h-7.5V6z"/></svg>,
+  flag:    <svg viewBox="0 0 24 24" fill="none" strokeWidth={1.8} stroke="currentColor" className="w-4 h-4"><path strokeLinecap="round" strokeLinejoin="round" d="M3 3v1.5M3 21v-6m0 0l2.77-.693a9 9 0 016.208.682l.108.054a9 9 0 006.086.71l3.114-.732a48.524 48.524 0 01-.005-10.499l-3.11.732a9 9 0 01-6.085-.711l-.108-.054a9 9 0 00-6.208-.682L3 4.5M3 15V4.5"/></svg>,
 }
 
+// ─── Steps config ─────────────────────────────────────────────────────────────
+const STEPS = [
+  { label: "Dados básicos",         short: "Dados",       component: StepDadosBasicos },
+  { label: "Índices",               short: "Índices",     component: StepIndices },
+  { label: "Atualização monetária", short: "Atualização", component: StepAtualizacaoMonetaria },
+  { label: "PSS",                   short: "PSS",         component: StepPSS },
+  { label: "IRPF",                  short: "IRPF",        component: StepIRPF },
+  { label: "Honorários",            short: "Honorários",  component: StepHonorarios },
+  { label: "Propostas",             short: "Propostas",   component: StepPropostas },
+  { label: "Resumo",                short: "Resumo",      component: StepResumo },
+]
+
+// ─── Sidebar step item ────────────────────────────────────────────────────────
+function SideStep({ index, label, isActive, isDone, onClick, isLast }: {
+  index: number; label: string; isActive: boolean; isDone: boolean; onClick: () => void; isLast: boolean
+}) {
+  return (
+    <div className="relative">
+      {!isLast && (
+        <div className="absolute left-[15px] top-[32px] w-px h-[calc(100%+2px)]"
+          style={{ background: isDone ? `linear-gradient(to bottom,${T.accentMid},${T.accentDim})` : T.border }} />
+      )}
+      <button type="button" onClick={onClick}
+        className="relative w-full flex items-center gap-2.5 px-2 py-2 rounded-[12px] text-left transition-all duration-150"
+        style={{ background: isActive ? T.accentDim : "transparent" }}
+      >
+        {/* circle */}
+        <div className="shrink-0 flex items-center justify-center w-[30px] h-[30px] rounded-full text-[10px] font-black transition-all duration-150"
+          style={{
+            background: isActive ? T.accent : isDone ? T.accentDim : "#f0f1f5",
+            color: isActive ? "#ffffff" : isDone ? T.accent : T.textLo,
+            border: `1px solid ${isActive ? T.accent : isDone ? T.accentMid : "rgba(0,0,0,0.09)"}`,
+          }}>
+          {isDone && !isActive ? IC.check : <span>{index + 1}</span>}
+        </div>
+        {/* label */}
+        <div className="min-w-0 flex-1">
+          <p className="text-[12px] font-semibold truncate leading-tight transition-colors"
+            style={{ color: isActive ? T.accent : isDone ? T.textMid : T.textLo }}>
+            {label}
+          </p>
+          <p className="text-[9.5px] font-medium uppercase tracking-[0.1em] mt-0.5"
+            style={{ color: isActive ? T.accent : isDone ? T.accentMid : "#d1d5db" }}>
+            {isActive ? "Em andamento" : isDone ? "Concluída" : "Pendente"}
+          </p>
+        </div>
+        {isActive && <span style={{ color: T.accent }}>{IC.chevR}</span>}
+      </button>
+    </div>
+  )
+}
+
+// ─── Main ─────────────────────────────────────────────────────────────────────
 const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatoriosProps) => {
   const reduceMotion = useReducedMotion()
-  const [etapaAtual, setEtapaAtual] = useState(0)
-  const [dados, setDados] = useState<any>({})
+  const [etapaAtual, setEtapaAtual]           = useState(0)
+  const [dados, setDados]                     = useState<any>({})
   const [etapasCompletadas, setEtapasCompletadas] = useState<number[]>([])
-  const [pdfUrl, setPdfUrl] = useState<string | null>(null)
-  const [resultadosEtapas, setResultadosEtapas] = useState<any[]>([])
-  const [precatorioData, setPrecatorioData] = useState<Precatorio | null>(null)
-  const [loading, setLoading] = useState(false)
-  const [saving, setSaving] = useState(false)
+  const [pdfUrl, setPdfUrl]                   = useState<string | null>(null)
+  const [resultadosEtapas, setResultadosEtapas]   = useState<any[]>([])
+  const [precatorioData, setPrecatorioData]   = useState<Precatorio | null>(null)
+  const [loading, setLoading]                 = useState(false)
+  const [saving, setSaving]                   = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
-  const [showPdfSide, setShowPdfSide] = useState(false)
+  const [showPdfDrawer, setShowPdfDrawer]     = useState(false)
+  const [mobileSidebar, setMobileSidebar]     = useState(false)
+
   const fallbackDocs = useMemo(() => {
     if (!pdfUrl) return []
-    return [
-      {
-        id: "pdf-precatorio",
-        titulo: "Ofício Requisitório",
-        tipo: "oficio_requisitorio",
-        viewUrl: pdfUrl,
-        urlType: "legacy",
-      },
-    ]
+    return [{ id: "pdf-precatorio", titulo: "Ofício Requisitório", tipo: "oficio_requisitorio", viewUrl: pdfUrl, urlType: "legacy" }]
   }, [pdfUrl])
 
-  // Auto-open PDF side view when URL is loaded
+  useEffect(() => { if (pdfUrl) setShowPdfDrawer(true) }, [pdfUrl])
   useEffect(() => {
-    if (pdfUrl) {
-      setShowPdfSide(true)
-    }
-  }, [pdfUrl])
-
-  useEffect(() => {
-    if (precatorioId) {
-      loadPrecatorioFromSupabase(precatorioId)
-    } else {
-      loadFromLocalStorage()
-    }
+    if (precatorioId) loadPrecatorio(precatorioId)
+    else loadLocalStorage()
   }, [precatorioId])
 
-  const loadPrecatorioFromSupabase = async (id: string) => {
+  // ── loaders ──────────────────────────────────────────────────────────────
+  const loadPrecatorio = async (id: string) => {
     setLoading(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        console.error("[v0] Supabase não está configurado")
-        return
-      }
-
+      const supabase = getSupabase(); if (!supabase) return
       const { data, error } = await supabase.from("precatorios").select("*").eq("id", id).single()
-
-      if (error) {
-        console.error("[v0] Erro ao carregar precatório:", error)
-        return
+      if (error || !data) return
+      setPrecatorioData(data as Precatorio)
+      const prevAno = /^\d{4}$/.test(String(data.previsao_pagamento ?? "").slice(0,4)) ? String(data.previsao_pagamento).slice(0,4) : ""
+      if (data.pdf_url) { const u = await getPdfViewerUrl(data.pdf_url); if (u) setPdfUrl(u) }
+      setDados({
+        valorPrincipal: data.valor_principal||0, valorJuros: data.valor_juros||0, valorSelic: data.valor_selic||0,
+        dataBase: data.data_base||"", dataExpedicao: data.data_expedicao||"", dataCalculo: data.data_calculo||"",
+        credor: data.credor_nome||"", numeroProcesso: data.numero_processo||"", tribunal: data.tribunal||"",
+        loa: data.loa||"",
+        ano_orcamentario: data.ano_orcamentario != null ? String(data.ano_orcamentario) : "",
+        previsao_pagamento: prevAno,
+        analise_penhora: data.analise_penhora??null, analise_cessao: data.analise_cessao??null,
+        analise_herdeiros: data.analise_herdeiros??null, analise_viavel: data.analise_viavel??null,
+        analise_observacoes: data.analise_observacoes??"",
+        analise_penhora_valor: data.analise_penhora_valor??null, analise_penhora_percentual: data.analise_penhora_percentual??null,
+        analise_cessao_valor: data.analise_cessao_valor??null, analise_cessao_percentual: data.analise_cessao_percentual??null,
+        analise_adiantamento_valor: data.analise_adiantamento_valor??null, analise_adiantamento_percentual: data.analise_adiantamento_percentual??null,
+        analise_honorarios_valor: data.analise_honorarios_valor??null, analise_honorarios_percentual: data.analise_honorarios_percentual??null,
+        analise_itcmd: data.analise_itcmd??null, analise_itcmd_valor: data.analise_itcmd_valor??null, analise_itcmd_percentual: data.analise_itcmd_percentual??null,
+      })
+      if (data.dados_calculo?.resultadosEtapas) {
+        setResultadosEtapas(data.dados_calculo.resultadosEtapas)
+        setEtapasCompletadas(data.dados_calculo.etapasCompletadas||[])
       }
-
-      if (data) {
-        console.log("[v0] Precatório carregado do Supabase:", data)
-        setPrecatorioData(data as Precatorio)
-        const previsaoPagamentoRaw = data.previsao_pagamento ? String(data.previsao_pagamento).slice(0, 4) : ""
-        const previsaoPagamentoAno = /^\d{4}$/.test(previsaoPagamentoRaw) ? previsaoPagamentoRaw : ""
-
-        if (data.pdf_url) {
-          console.log("[v0] PDF encontrado (raw):", data.pdf_url)
-          // Resolver URL assinada se for storage:
-          const signedUrl = await getPdfViewerUrl(data.pdf_url)
-          if (signedUrl) {
-            console.log("[v0] PDF URL resolvida:", signedUrl)
-            setPdfUrl(signedUrl)
-          } else {
-            console.error("[v0] Falha ao resolver URL do PDF")
-          }
-        }
-
-        setDados({
-          valorPrincipal: data.valor_principal || 0,
-          valorJuros: data.valor_juros || 0,
-          valorSelic: data.valor_selic || 0,
-          dataBase: data.data_base || "",
-          dataExpedicao: data.data_expedicao || "",
-          dataCalculo: data.data_calculo || "",
-          credor: data.credor_nome || "",
-          numeroProcesso: data.numero_processo || "",
-          tribunal: data.tribunal || "",
-          loa: data.loa || "",
-          ano_orcamentario:
-            data.ano_orcamentario !== null && data.ano_orcamentario !== undefined
-              ? String(data.ano_orcamentario)
-              : "",
-          previsao_pagamento: previsaoPagamentoAno,
-          analise_penhora: data.analise_penhora ?? null,
-          analise_cessao: data.analise_cessao ?? null,
-          analise_herdeiros: data.analise_herdeiros ?? null,
-          analise_viavel: data.analise_viavel ?? null,
-          analise_observacoes: data.analise_observacoes ?? "",
-          analise_penhora_valor: data.analise_penhora_valor ?? null,
-          analise_penhora_percentual: data.analise_penhora_percentual ?? null,
-          analise_cessao_valor: data.analise_cessao_valor ?? null,
-          analise_cessao_percentual: data.analise_cessao_percentual ?? null,
-          analise_adiantamento_valor: data.analise_adiantamento_valor ?? null,
-          analise_adiantamento_percentual: data.analise_adiantamento_percentual ?? null,
-          analise_honorarios_valor: data.analise_honorarios_valor ?? null,
-          analise_honorarios_percentual: data.analise_honorarios_percentual ?? null,
-          analise_itcmd: data.analise_itcmd ?? null,
-          analise_itcmd_valor: data.analise_itcmd_valor ?? null,
-          analise_itcmd_percentual: data.analise_itcmd_percentual ?? null,
-        })
-
-        if (data.dados_calculo) {
-          try {
-            const calculoSalvo = data.dados_calculo as any
-            console.log("[v0] Cálculo salvo encontrado:", calculoSalvo)
-            if (calculoSalvo.resultadosEtapas) {
-              console.log("[v0] Restaurando resultados das etapas:", calculoSalvo.resultadosEtapas)
-              setResultadosEtapas(calculoSalvo.resultadosEtapas)
-              setEtapasCompletadas(calculoSalvo.etapasCompletadas || [])
-              console.log("[v0] Cálculo restaurado com sucesso!")
-            }
-          } catch (e) {
-            console.error("[v0] Erro ao restaurar cálculo salvo:", e)
-          }
-        }
-      }
-    } catch (error) {
-      console.error("[v0] Erro ao buscar precatório:", error)
-    } finally {
-      setLoading(false)
-    }
+    } finally { setLoading(false) }
   }
 
-  const loadFromLocalStorage = () => {
-    const savedProgress = localStorage.getItem(STORAGE_KEY)
-    if (savedProgress) {
-      try {
-        const progress: CalculadoraProgress = JSON.parse(savedProgress)
-        setDados(progress.dados || {})
-        setEtapaAtual(progress.etapaAtual || 0)
-        setEtapasCompletadas(progress.etapasCompletadas || [])
-        setPdfUrl(progress.pdfUrl || null)
-        setResultadosEtapas(progress.resultadosEtapas || [])
-      } catch (e) {
-        console.error("[v0] Erro ao carregar progresso da calculadora:", e)
-      }
-    }
+  const loadLocalStorage = () => {
+    const s = localStorage.getItem(STORAGE_KEY); if (!s) return
+    try {
+      const p: CalculadoraProgress = JSON.parse(s)
+      setDados(p.dados||{}); setEtapaAtual(p.etapaAtual||0); setEtapasCompletadas(p.etapasCompletadas||[])
+      setPdfUrl(p.pdfUrl||null); setResultadosEtapas(p.resultadosEtapas||[])
+    } catch {}
   }
 
   useEffect(() => {
-    if (!precatorioId) {
-      const progress: CalculadoraProgress = {
-        dados,
-        etapaAtual,
-        etapasCompletadas,
-        pdfUrl,
-        resultadosEtapas,
-      }
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(progress))
-    }
+    if (!precatorioId) localStorage.setItem(STORAGE_KEY, JSON.stringify({ dados, etapaAtual, etapasCompletadas, pdfUrl, resultadosEtapas }))
   }, [dados, etapaAtual, etapasCompletadas, pdfUrl, resultadosEtapas, precatorioId])
 
   useEffect(() => {
     if (typeof window === "undefined") return
-    const handler = () => {
-      toast.info("Conexão restabelecida. Você pode salvar o cálculo novamente.")
-    }
-    window.addEventListener("online", handler)
-    return () => window.removeEventListener("online", handler)
+    const h = () => toast.info("Conexão restabelecida.")
+    window.addEventListener("online", h); return () => window.removeEventListener("online", h)
   }, [])
 
   useEffect(() => {
-    const propostas = resultadosEtapas[5]
-    const honorarios = resultadosEtapas[4]
-
-    if (propostas?.base_calculo_liquida && honorarios?.honorarios) {
-      const baseCalculo = propostas.base_calculo_liquida
-      const honorariosPercentual = honorarios.honorarios.honorarios_percentual || 0
-      const adiantamentoPercentual = honorarios.honorarios.adiantamento_percentual || 0
-      const honorariosValor = Math.round(baseCalculo * (honorariosPercentual / 100) * 100) / 100
-      const adiantamentoValor = Math.round(baseCalculo * (adiantamentoPercentual / 100) * 100) / 100
-
-      if (
-        honorariosValor !== honorarios.honorarios.honorarios_valor ||
-        adiantamentoValor !== honorarios.honorarios.adiantamento_valor
-      ) {
-        setResultadosEtapas((prev) => {
-          const novos = [...prev]
-          novos[4] = {
-            ...novos[4],
-            honorarios: {
-              ...novos[4].honorarios,
-              honorarios_valor: honorariosValor,
-              adiantamento_valor: adiantamentoValor,
-            },
-          }
-          return novos
-        })
-      }
+    const pr = resultadosEtapas[5]; const ho = resultadosEtapas[4]
+    if (pr?.base_calculo_liquida && ho?.honorarios) {
+      const base = pr.base_calculo_liquida
+      const hv = Math.round(base*(ho.honorarios.honorarios_percentual||0)/100*100)/100
+      const av = Math.round(base*(ho.honorarios.adiantamento_percentual||0)/100*100)/100
+      if (hv!==ho.honorarios.honorarios_valor||av!==ho.honorarios.adiantamento_valor)
+        setResultadosEtapas(prev=>{ const n=[...prev]; n[4]={...n[4],honorarios:{...n[4].honorarios,honorarios_valor:hv,adiantamento_valor:av}}; return n })
     }
   }, [resultadosEtapas])
 
-  const handleCompletarEtapa = useCallback(
-    (etapa: number, resultado?: any) => {
-      console.log("[v0] ========== handleCompletarEtapa CHAMADO ==========")
-      console.log("[v0] Etapa:", etapa)
-      console.log("[v0] Resultado recebido:", resultado)
+  // ── handlers ─────────────────────────────────────────────────────────────
+  const handleCompletarEtapa = useCallback((etapa: number, resultado?: any) => {
+    if (!etapasCompletadas.includes(etapa)) setEtapasCompletadas(p=>[...p,etapa])
+    if (resultado) setResultadosEtapas(p=>{ const n=[...p]; n[etapa]=resultado; return n })
+    if (etapa < STEPS.length-1) setEtapaAtual(etapa+1)
+  }, [etapasCompletadas])
 
-      if (!etapasCompletadas.includes(etapa)) {
-        setEtapasCompletadas((prev) => [...prev, etapa])
-      }
-
-      if (resultado) {
-        setResultadosEtapas((prev) => {
-          const novos = [...prev]
-          novos[etapa] = resultado
-          console.log("[v0] Resultado salvo na posição", etapa, ":", novos[etapa])
-          return novos
-        })
-      }
-
-      if (etapa < steps.length - 1) {
-        setEtapaAtual(etapa + 1)
-      }
-    },
-    [etapasCompletadas],
-  )
-
-  const _salvarCalculoNoSupabase = async () => {
-    if (!precatorioId) {
-      console.error("[v0] Nenhum precatorioId definido")
-      return
-    }
-
-    setSaving(true)
-    try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        console.error("[v0] Supabase não está configurado")
-        return
-      }
-
-      const resumoFinal = resultadosEtapas[6]
-      const dadosBasicos = resultadosEtapas[0]
-      const propostas = resultadosEtapas[5]
-      const honorarios = resultadosEtapas[4]
-      const irpf = resultadosEtapas[4] || resultadosEtapas[3] // compat
-      const pss = resultadosEtapas[3] || resultadosEtapas[2] // compat
-      const atualizacao = resultadosEtapas[2] || resultadosEtapas[1]
-      const toYearNumberOrNull = (value: any) => {
-        const raw = String(value ?? "").trim()
-        if (!/^\d{4}$/.test(raw)) return null
-        const year = Number(raw)
-        return Number.isInteger(year) && year >= 1900 && year <= 2999 ? year : null
-      }
-      const toYearDateOrNull = (value: any) => {
-        const year = toYearNumberOrNull(value)
-        return year ? `${year}-01-01` : null
-      }
-      const loaValue = String((dadosBasicos?.loa ?? dados.loa ?? "") || "").trim() || null
-
-      const { error } = await supabase
-        .from("precatorios")
-        .update({
-          valor_principal: safeNumber(
-            dados.valor_principal_original ?? dados.valorPrincipal ?? atualizacao?.valorPrincipal ?? 0,
-          ),
-          valor_atualizado: safeNumber(
-            atualizacao?.valorAtualizado ?? atualizacao?.valor_atualizado ?? resumoFinal?.valor_atualizado ?? 0,
-          ),
-          saldo_liquido: safeNumber(
-            resumoFinal?.valorLiquidoCredor ?? resumoFinal?.base_liquida_final ?? 0,
-          ),
-          irpf_total: safeNumber(irpf?.irpf_valor ?? irpf?.irTotal ?? 0),
-          pss_total: safeNumber(pss?.pss_valor ?? pss?.pssTotal ?? 0),
-          pss_oficio_valor: pss?.pss_oficio_valor || 0,
-          honorarios_valor: safeNumber(
-            propostas?.honorarios_valor ??
-              honorarios?.honorarios?.honorarios_valor ??
-              honorarios?.honorarios_valor ??
-              0,
-          ),
-          adiantamento_valor: safeNumber(
-            propostas?.adiantamento_valor ??
-              honorarios?.honorarios?.adiantamento_valor ??
-              honorarios?.adiantamento_valor ??
-              0,
-          ),
-          menor_proposta: safeNumber(propostas?.menor_proposta ?? propostas?.menorProposta ?? 0),
-          maior_proposta: safeNumber(propostas?.maior_proposta ?? propostas?.maiorProposta ?? 0),
-          taxa_juros_moratorios: safeNumber(
-            atualizacao?.taxaJuros ?? atualizacao?.taxa_juros_moratorios ?? 0,
-          ),
-          qtd_salarios_minimos: safeNumber(resumoFinal?.qtdSalariosMinimos ?? 0),
-          loa: loaValue,
-          ano_orcamentario: toYearNumberOrNull(dadosBasicos?.ano_orcamentario ?? dados.ano_orcamentario),
-          previsao_pagamento: toYearDateOrNull(dadosBasicos?.previsao_pagamento ?? dados.previsao_pagamento),
-          dados_calculo: {
-            dados,
-            resultadosEtapas,
-            etapasCompletadas,
-            dataCalculo: new Date().toISOString(),
-            juros_mora_percentual: pss?.juros_mora_percentual || 0,
-          },
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", precatorioId)
-
-      if (error) {
-        console.error("[v0] Erro ao salvar cálculo:", error)
-        if (isFetchFailure(error)) {
-          savePendingUpdate({ precatorioId, dados, resultadosEtapas, etapasCompletadas })
-          toast.error("Falha de conexão com o Supabase. Salvamos localmente para você tentar novamente.")
-          return
-        }
-        toast.error("Erro ao salvar cálculo: " + error.message)
-      } else {
-        clearPendingUpdate()
-        console.log("[v0] Cálculo salvo com sucesso!")
-        toast.success("Cálculo salvo com sucesso!")
-      }
-    } catch (error) {
-      console.error("[v0] Erro ao salvar:", error)
-      if (isFetchFailure(error)) {
-        savePendingUpdate({ precatorioId, dados, resultadosEtapas, etapasCompletadas })
-        toast.error("Falha de conexão com o Supabase. Salvamos localmente para você tentar novamente.")
-        return
-      }
-      toast.error("Erro ao salvar cálculo")
-    } finally {
-      setSaving(false)
-    }
-  }
+  const voltar = () => { if (etapaAtual>0) setEtapaAtual(etapaAtual-1) }
+  const irParaEtapa = (i: number) => { setEtapaAtual(i); setMobileSidebar(false) }
 
   const finalizarCalculo = async () => {
-    if (!precatorioId) {
-      console.error("[v0] Nenhum precatorioId definido")
-      return
-    }
-
-    let updatePayload: any = null
+    if (!precatorioId) return
     setSaving(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        console.error("[v0] Supabase não está configurado")
-        return
-      }
-
-      const dadosBasicos = resultadosEtapas[0]
-      // Ordem ajustada: 0 Dados, 1 Índices, 2 Atualização, 3 PSS, 4 IRPF, 5 Honorários, 6 Propostas, 7 Resumo (compat)
-      const atualizacao = resultadosEtapas[2] || resultadosEtapas[1]
-      const pss = resultadosEtapas[3] || resultadosEtapas[2]
-      const irpf = resultadosEtapas[4] || resultadosEtapas[3]
-      const _honorarios = resultadosEtapas[5] || resultadosEtapas[4]
-      const propostas = resultadosEtapas[6] || resultadosEtapas[5]
-      const resumoFinal = resultadosEtapas[6] || resultadosEtapas[7] || {}
-
-      const emptyToNull = (v: any) => (v === "" || v === undefined ? null : v)
-      const toISODate = (v: any) => {
-        v = emptyToNull(v)
-        if (!v) return null
-        if (/^\d{4}-\d{2}-\d{2}$/.test(v)) return v
-        const m = String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
-        if (m) return `${m[3]}-${m[2]}-${m[1]}`
-        return null
-      }
-      const toYearNumberOrNull = (value: any) => {
-        const raw = String(value ?? "").trim()
-        if (!/^\d{4}$/.test(raw)) return null
-        const year = Number(raw)
-        return Number.isInteger(year) && year >= 1900 && year <= 2999 ? year : null
-      }
-      const toYearDateOrNull = (value: any) => {
-        const year = toYearNumberOrNull(value)
-        return year ? `${year}-01-01` : null
-      }
-      const loaValue = String((dadosBasicos?.loa ?? dados.loa ?? "") || "").trim() || null
-
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const valorAtualizadoFinal = safeNumber(
-        propostas?.valor_atualizado ||
-        atualizacao?.valorAtualizado ||
-        atualizacao?.valor_atualizado ||
-        resumoFinal?.valor_atualizado ||
-        resumoFinal?.valor_atualizado_final
-      )
-      const saldoLiquidoFinal = safeNumber(propostas?.base_liquida_final || resumoFinal?.base_liquida_final)
-
-      updatePayload = {
-        valor_principal: safeNumber(
-          valorAtualizadoFinal > 0
-            ? valorAtualizadoFinal
-            : (dadosBasicos?.valor_principal_original || dados.valorPrincipal)
-        ),
-        valor_juros: safeNumber(atualizacao?.valorJuros || atualizacao?.juros_mora),
-        valor_selic: safeNumber(atualizacao?.valorSelic || atualizacao?.multa),
-        valor_atualizado: valorAtualizadoFinal,
-        saldo_liquido: saldoLiquidoFinal,
-        data_base:
-          toISODate(dadosBasicos?.data_base || dados.dataBase) || toISODate(new Date().toISOString().slice(0, 10)),
-        data_expedicao:
-          toISODate(dadosBasicos?.data_expedicao || dados.dataExpedicao) ||
-          toISODate(new Date().toISOString().slice(0, 10)),
-        data_calculo: toISODate(new Date().toISOString().slice(0, 10)),
-        loa: loaValue,
-        ano_orcamentario: toYearNumberOrNull(dadosBasicos?.ano_orcamentario ?? dados.ano_orcamentario),
-        previsao_pagamento: toYearDateOrNull(dadosBasicos?.previsao_pagamento ?? dados.previsao_pagamento),
-        pss_valor: safeNumber(propostas?.pss_valor || pss?.pss_valor),
-        pss_oficio_valor: safeNumber(pss?.pss_oficio_valor),
-        irpf_valor: safeNumber(propostas?.irpf_valor || irpf?.valor_irpf || irpf?.irTotal),
-        honorarios_valor: safeNumber(propostas?.honorarios_valor),
-        adiantamento_valor: safeNumber(propostas?.adiantamento_valor),
-        proposta_menor_valor: safeNumber(propostas?.menor_proposta),
-        proposta_maior_valor: safeNumber(propostas?.maior_proposta),
-        proposta_menor_percentual: safeNumber(propostas?.percentual_menor),
-        proposta_maior_percentual: safeNumber(propostas?.percentual_maior),
-          dados_calculo: {
-            dadosBasicos,
-            atualizacao: {
-              ...atualizacao,
-              valorJuros: safeNumber(atualizacao?.valorJuros || atualizacao?.juros_mora),
-              valorSelic: safeNumber(atualizacao?.valorSelic || atualizacao?.multa),
-            },
-            pss,
-            irpf,
-            honorarios: {
-              honorarios_percentual: safeNumber(propostas?.honorarios_percentual),
-              honorarios_valor: safeNumber(propostas?.honorarios_valor),
-              adiantamento_percentual: safeNumber(propostas?.adiantamento_percentual),
-              adiantamento_valor: safeNumber(propostas?.adiantamento_valor),
-            },
-            propostas: {
-              base_liquida_pre_descontos: safeNumber(propostas?.base_liquida_pre_descontos),
-              honorarios_valor: safeNumber(propostas?.honorarios_valor),
-              adiantamento_valor: safeNumber(propostas?.adiantamento_valor),
-              base_liquida_final: safeNumber(propostas?.base_liquida_final),
-              percentual_menor: safeNumber(propostas?.percentual_menor),
-              percentual_maior: safeNumber(propostas?.percentual_maior),
-              menor_proposta: safeNumber(propostas?.menor_proposta),
-              maior_proposta: safeNumber(propostas?.maior_proposta),
-              menorProposta: safeNumber(propostas?.menor_proposta),
-              maiorProposta: safeNumber(propostas?.maior_proposta),
-              valor_atualizado: safeNumber(propostas?.valor_atualizado),
-              saldo_liquido: safeNumber(propostas?.base_liquida_final),
-            },
-          resumoFinal: {
-            ...resumoFinal,
-            valor_atualizado: valorAtualizadoFinal,
-            base_liquida_final: saldoLiquidoFinal,
-          },
-          resultadosEtapas,
-          juros_mora_percentual: safeNumber(pss?.juros_mora_percentual || atualizacao?.taxa_juros_moratorios),
-          observacoes: dados.observacoes || resumoFinal?.observacoes || "",
-        },
-        status: "calculado",
-        status_kanban: "calculo_concluido",
-        localizacao_kanban: "calculo_concluido",
-        responsavel_calculo_id: null,
+      const supabase = getSupabase(); if (!supabase) return
+      const db = resultadosEtapas[0], at = resultadosEtapas[2]||resultadosEtapas[1]
+      const pss = resultadosEtapas[3]||resultadosEtapas[2], irpf = resultadosEtapas[4]||resultadosEtapas[3]
+      const hon = resultadosEtapas[5]||resultadosEtapas[4], pr = resultadosEtapas[6]||resultadosEtapas[5]
+      const rs = resultadosEtapas[6]||resultadosEtapas[7]||{}
+      const toDate = (v:any)=>{ v=v||null; if(!v)return null; if(/^\d{4}-\d{2}-\d{2}$/.test(v))return v; const m=String(v).match(/^(\d{2})\/(\d{2})\/(\d{4})$/); return m?`${m[3]}-${m[2]}-${m[1]}`:null }
+      const toY = (v:any)=>{ const r=String(v??"").trim(); if(!/^\d{4}$/.test(r))return null; const y=Number(r); return y>=1900&&y<=2999?y:null }
+      const toYD = (v:any)=>{ const y=toY(v); return y?`${y}-01-01`:null }
+      const { data:{user} } = await supabase.auth.getUser()
+      const vaF = safeNumber(pr?.valor_atualizado||at?.valorAtualizado||at?.valor_atualizado||rs?.valor_atualizado)
+      const slF = safeNumber(pr?.base_liquida_final||rs?.base_liquida_final)
+      const payload:any = {
+        valor_principal: safeNumber(vaF>0?vaF:(db?.valor_principal_original||dados.valorPrincipal)),
+        valor_juros: safeNumber(at?.valorJuros||at?.juros_mora), valor_selic: safeNumber(at?.valorSelic||at?.multa),
+        valor_atualizado: vaF, saldo_liquido: slF,
+        data_base: toDate(db?.data_base||dados.dataBase), data_expedicao: toDate(db?.data_expedicao||dados.dataExpedicao),
+        data_calculo: toDate(db?.data_calculo||dados.dataCalculo),
+        irpf_total: safeNumber(irpf?.irpf_valor??irpf?.irTotal??0), pss_total: safeNumber(pss?.pss_valor??pss?.pssTotal??0),
+        pss_oficio_valor: pss?.pss_oficio_valor||0,
+        honorarios_valor: safeNumber(pr?.honorarios_valor??hon?.honorarios?.honorarios_valor??0),
+        adiantamento_valor: safeNumber(pr?.adiantamento_valor??hon?.honorarios?.adiantamento_valor??0),
+        menor_proposta: safeNumber(pr?.menor_proposta??pr?.menorProposta??0),
+        maior_proposta: safeNumber(pr?.maior_proposta??pr?.maiorProposta??0),
+        taxa_juros_moratorios: safeNumber(at?.taxaJuros??at?.taxa_juros_moratorios??0),
+        qtd_salarios_minimos: safeNumber(rs?.qtdSalariosMinimos??0),
+        loa: String((db?.loa??dados.loa??"")).trim()||null,
+        ano_orcamentario: toY(db?.ano_orcamentario??dados.ano_orcamentario),
+        previsao_pagamento: toYD(db?.previsao_pagamento??dados.previsao_pagamento),
+        status:"calculado", status_kanban:"calculo_concluido", localizacao_kanban:"calculo_concluido",
+        dados_calculo:{ dados,resultadosEtapas,etapasCompletadas,dataCalculo:new Date().toISOString(),juros_mora_percentual:pss?.juros_mora_percentual||0 },
         updated_at: new Date().toISOString(),
       }
-
-      console.log("[v0] Enviando payload de atualização:", updatePayload)
-
-      const { error } = await supabase
-        .from("precatorios")
-        .update(updatePayload)
-        .eq("id", precatorioId)
-
+      const {error} = await supabase.from("precatorios").update(payload).eq("id",precatorioId)
       if (error) {
-        console.error("[v0] Erro detalhado ao finalizar cálculo:", JSON.stringify(error, null, 2))
-        if (isFetchFailure(error)) {
-          savePendingUpdate({ precatorioId, updatePayload })
-          toast.error("Falha de conexão com o Supabase. Salvamos localmente para você tentar novamente.")
-          return
-        }
-        toast.error(`Erro ao salvar cálculo: ${error.message || error.details || "Erro desconhecido"}`)
-      } else {
-        clearPendingUpdate()
-        console.log("[v0] Cálculo finalizado com sucesso!")
-
-        // 1. Determinar próxima versão
-        const { count } = await supabase
-          .from("precatorio_calculos")
-          .select("*", { count: "exact", head: true })
-          .eq("precatorio_id", precatorioId)
-
-        const novaVersao = (count || 0) + 1
-
-        // 2. Salvar Histórico
-        const { error: histError } = await supabase.from("precatorio_calculos").insert({
-          precatorio_id: precatorioId,
-          versao: novaVersao,
-          data_base: dadosBasicos?.data_base,
-          valor_atualizado: valorAtualizadoFinal,
-          saldo_liquido: saldoLiquidoFinal,
-          premissas_json: updatePayload.dados_calculo,
-          premissas_resumo: `Cálculo finalizado v${novaVersao}`,
-          created_by: user?.id,
-          arquivo_pdf_url: null // Se tiver URL de PDF gerado, passar aqui. Por enquanto null.
-        })
-
-        if (histError) console.error("Erro ao salvar histórico:", histError)
-
-        // 3. Atualizar Precatório com nova versão
-        await supabase.from("precatorios").update({
-          calculo_ultima_versao: novaVersao
-        }).eq("id", precatorioId)
-
-        if (user) {
-          await supabase.from("atividades").insert({
-            precatorio_id: precatorioId,
-            usuario_id: user.id,
-            tipo: "calculo",
-            descricao: `Cálculo finalizado (v${novaVersao}) e salvo com sucesso`,
-            dados_novos: {
-              valor_principal: dadosBasicos?.valor_principal_original || dados.valorPrincipal || 0,
-              maior_proposta: propostas?.maior_proposta || 0,
-              valor_atualizado: propostas?.valor_atualizado || atualizacao?.valorAtualizado || 0,
-              percentual_maior: propostas?.percentual_maior || 0,
-              calculo_ultima_versao: novaVersao
-            }
-          })
-        }
-
-        toast.success("Cálculo finalizado! Status alterado para 'Calculado'.")
-
-        // Remove redirect and call onUpdate if provided
-        if (onUpdate) {
-          onUpdate()
-        }
+        if(isFetchFailure(error)){savePendingUpdate({precatorioId,payload});toast.error("Falha de conexão. Salvamos localmente.");return}
+        toast.error(`Erro: ${error.message}`); return
       }
-    } catch (error) {
-      console.error("[v0] Erro ao finalizar:", error)
-      if (isFetchFailure(error)) {
-        savePendingUpdate({ precatorioId, updatePayload })
-        toast.error("Falha de conexão com o Supabase. Salvamos localmente para você tentar novamente.")
-        return
-      }
+      clearPendingUpdate()
+      const {count} = await supabase.from("precatorio_calculos").select("*",{count:"exact",head:true}).eq("precatorio_id",precatorioId)
+      const v=(count||0)+1
+      await supabase.from("precatorio_calculos").insert({precatorio_id:precatorioId,versao:v,data_base:db?.data_base,valor_atualizado:vaF,saldo_liquido:slF,premissas_json:payload.dados_calculo,premissas_resumo:`Cálculo finalizado v${v}`,created_by:user?.id,arquivo_pdf_url:null})
+      await supabase.from("precatorios").update({calculo_ultima_versao:v}).eq("id",precatorioId)
+      if(user) await supabase.from("atividades").insert({precatorio_id:precatorioId,usuario_id:user.id,tipo:"calculo",descricao:`Cálculo finalizado (v${v})`,dados_novos:{valor_principal:db?.valor_principal_original||0,maior_proposta:pr?.maior_proposta||0,valor_atualizado:vaF,calculo_ultima_versao:v}})
+      toast.success("Cálculo finalizado com sucesso!")
+      if(onUpdate) onUpdate()
+    } catch(e) {
+      if(isFetchFailure(e)){savePendingUpdate({precatorioId});toast.error("Falha de conexão.");return}
       toast.error("Erro ao finalizar cálculo")
-    } finally {
-      setSaving(false)
-    }
-  }
-
-  const voltar = () => {
-    if (etapaAtual > 0) {
-      setEtapaAtual(etapaAtual - 1)
-    }
+    } finally { setSaving(false) }
   }
 
   const resetarCalculo = async () => {
-    if (!precatorioId) {
-      console.error("[v0] Nenhum precatorioId definido")
-      toast.error("Erro: ID do precatório não encontrado")
-      return
-    }
-
+    if (!precatorioId) return
     setSaving(true)
     try {
-      const supabase = getSupabase()
-      if (!supabase) {
-        console.error("[v0] Supabase não está configurado")
-        toast.error("Erro: Configuração do banco de dados inválida")
-        return
-      }
-
-      const { data: { user } } = await supabase.auth.getUser()
-
-      const { error: updateError } = await supabase
-        .from("precatorios")
-        .update({
-          dados_calculo: null,
-          pdf_url: null,
-          updated_at: new Date().toISOString(),
-        })
-        .eq("id", precatorioId)
-
-      if (updateError) {
-        console.error("[v0] Erro ao resetar cálculo:", updateError)
-        toast.error("Erro ao resetar cálculo: " + updateError.message)
-        return
-      }
-
-      if (user) {
-        await supabase.from("atividades").insert({
-          precatorio_id: precatorioId,
-          usuario_id: user.id,
-          tipo: "refazer_calculo" as any,
-          descricao: "Cálculo resetado - todos os dados foram limpos (inclusive PDF)",
-        })
-      }
-
-      setDados({})
-      setResultadosEtapas([])
-      setEtapasCompletadas([])
-      setPdfUrl(null)
-      setEtapaAtual(0)
-
-      console.log("[v0] Cálculo resetado com sucesso!")
-      toast.success("Cálculo e PDF resetados com sucesso!")
+      const supabase = getSupabase(); if (!supabase) return
+      const {data:{user}} = await supabase.auth.getUser()
+      const {error} = await supabase.from("precatorios").update({dados_calculo:null,pdf_url:null,updated_at:new Date().toISOString()}).eq("id",precatorioId)
+      if(error){toast.error("Erro ao resetar: "+error.message);return}
+      if(user) await supabase.from("atividades").insert({precatorio_id:precatorioId,usuario_id:user.id,tipo:"refazer_calculo" as any,descricao:"Cálculo resetado"})
+      setDados({}); setResultadosEtapas([]); setEtapasCompletadas([]); setPdfUrl(null); setEtapaAtual(0)
+      toast.success("Cálculo resetado com sucesso!")
       setShowResetDialog(false)
-    } catch (error) {
-      console.error("[v0] Erro ao resetar cálculo:", error)
-      toast.error("Erro ao resetar cálculo")
-    } finally {
-      setSaving(false)
-    }
+    } catch { toast.error("Erro ao resetar") } finally { setSaving(false) }
   }
 
-  const steps = [
-    { label: "Dados básicos", component: StepDadosBasicos },
-    { label: "Índices", component: StepIndices },
-    { label: "Atualização monetária", component: StepAtualizacaoMonetaria },
-    { label: "PSS", component: StepPSS },
-    { label: "IRPF", component: StepIRPF },
-    { label: "Honorários", component: StepHonorarios },
-    { label: "Propostas", component: StepPropostas },
-    { label: "Resumo", component: StepResumo },
-  ]
+  // ── derived ───────────────────────────────────────────────────────────────
+  const StepComponent = STEPS[etapaAtual]?.component
+  const pct = STEPS.length ? Math.min(100, Math.round(etapasCompletadas.length / STEPS.length * 100)) : 0
+  const canFinalizar = !!precatorioId && !saving && etapasCompletadas.includes(6) && !!resultadosEtapas[6]
 
-  const StepComponent = steps[etapaAtual]?.component
-  const progressoPercentual = steps.length
-    ? Math.min(100, Math.round((etapasCompletadas.length / steps.length) * 100))
-    : 0
-  const etapaAtualLabel = steps[etapaAtual]?.label ?? ""
-  const canFinalizar =
-    !!precatorioId && !saving && etapasCompletadas.includes(6) && !!resultadosEtapas[6]
-
-  const irParaEtapa = (index: number) => {
-    setEtapaAtual(index)
-  }
-
-  if (loading) {
-    return (
-      <Card className="p-8 border border-border/60 bg-card/80 shadow-[0_20px_60px_-45px_rgba(15,23,42,0.4)]">
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
-          <p className="ml-4 text-muted-foreground">Carregando dados do precatório...</p>
-        </div>
-      </Card>
-    )
-  }
+  if (loading) return (
+    <div className="flex items-center justify-center py-24" style={{ background: T.bg }}>
+      <div className="h-10 w-10 rounded-full border-[3px] animate-spin" style={{ borderColor: "rgba(14,77,106,0.15)", borderTopColor: T.accent }} />
+    </div>
+  )
 
   return (
-    <div className="relative space-y-6 calc-scope calc-container px-4 pb-10 pt-4 sm:px-6 lg:px-8">
-      <Card className="calc-card relative overflow-hidden">
-        <div className="pointer-events-none absolute -top-32 right-0 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-32 left-0 h-56 w-56 rounded-full bg-primary/15 blur-3xl" />
-        <div className="border-b border-border/60">
-          <div className="p-6">
-            <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
-              <div className="space-y-3">
-                <div className="space-y-1">
-                  <h2 className="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">Calculadora de Precatórios</h2>
-                  <p className="text-sm text-muted-foreground">Sistema completo de cálculo com validação por etapas e auditoria fiscal.</p>
+    <div className="flex h-[calc(100vh-76px)] overflow-hidden" style={{ background: T.bg }}>
+
+      {/* ── Mobile sidebar overlay ─────────────────────────────────────── */}
+      <AnimatePresence>
+        {mobileSidebar && (
+          <motion.div className="fixed inset-0 z-50 lg:hidden" style={{ background: "rgba(0,0,0,0.6)" }}
+            initial={{opacity:0}} animate={{opacity:1}} exit={{opacity:0}}
+            onClick={()=>setMobileSidebar(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      {/* ── Sidebar ───────────────────────────────────────────────────── */}
+      <aside className={`
+        fixed lg:relative inset-y-0 left-0 z-50 lg:z-auto
+        w-[220px] shrink-0 flex flex-col
+        transition-transform duration-300 ease-in-out
+        ${mobileSidebar ? "translate-x-0" : "-translate-x-full lg:translate-x-0"}
+      `}
+        style={{ background: T.sidebar, borderRight: `1px solid ${T.border}` }}
+      >
+        {/* Sidebar header */}
+        <div className="flex items-center justify-between px-4 h-14 shrink-0" style={{ borderBottom: `1px solid ${T.border}` }}>
+          <div>
+            <p className="text-[10px] font-bold uppercase tracking-[0.18em]" style={{ color: T.accentMid }}>Etapas</p>
+            <p className="text-[10px] mt-0.5" style={{ color: T.textLo }}>
+              {etapasCompletadas.length}/{STEPS.length} concluídas
+            </p>
+          </div>
+          <button type="button" className="lg:hidden w-7 h-7 flex items-center justify-center rounded-[8px]"
+            style={{ background: "rgba(255,255,255,0.05)", color: T.textMid }}
+            onClick={()=>setMobileSidebar(false)}>
+            {IC.close}
+          </button>
+        </div>
+
+        {/* Steps */}
+        <nav className="flex-1 overflow-y-auto px-2.5 py-3 space-y-0.5">
+          {STEPS.map((step, i) => (
+            <SideStep key={step.label} index={i} label={step.label}
+              isActive={i===etapaAtual} isDone={etapasCompletadas.includes(i)}
+              onClick={()=>irParaEtapa(i)} isLast={i===STEPS.length-1} />
+          ))}
+        </nav>
+
+        {/* Progress bar + finalize button */}
+        <div className="px-3 py-4 shrink-0" style={{ borderTop: `1px solid ${T.border}` }}>
+          <div className="flex items-center justify-between mb-1.5">
+            <p className="text-[10px]" style={{ color: T.textLo }}>Progresso</p>
+            <p className="text-[10px] font-bold" style={{ color: T.accent }}>{pct}%</p>
+          </div>
+          <div className="h-1 rounded-full overflow-hidden" style={{ background: "#e8eaef" }}>
+            <motion.div className="h-full rounded-full"
+              style={{ background: `linear-gradient(90deg,${T.accent},#1a6080)` }}
+              initial={false} animate={{ width: `${pct}%` }}
+              transition={{ duration: 0.5, ease: "easeOut" }}
+            />
+          </div>
+          {canFinalizar && (
+            <button type="button" onClick={finalizarCalculo} disabled={saving}
+              className="mt-3 w-full h-9 rounded-[12px] text-[12.5px] font-bold transition-all disabled:opacity-50"
+              style={{ background: T.accent, color: "#ffffff", boxShadow: `0 4px 14px ${T.accentMid}` }}>
+              {saving ? "Salvando..." : "Finalizar cálculo"}
+            </button>
+          )}
+        </div>
+      </aside>
+
+      {/* ── Main area ─────────────────────────────────────────────────── */}
+      <div className="flex-1 min-w-0 flex flex-col overflow-hidden">
+
+        {/* Top bar */}
+        <div className="flex items-center justify-between px-4 md:px-6 h-14 shrink-0"
+          style={{ background: T.sidebar, borderBottom: `1px solid ${T.border}` }}>
+
+          {/* Left: hamburger + credor + step info */}
+          <div className="flex items-center gap-3 min-w-0">
+            <button type="button" className="lg:hidden flex items-center justify-center w-8 h-8 rounded-[10px]"
+              style={{ background: "rgba(0,0,0,0.06)", color: T.textMid }}
+              onClick={()=>setMobileSidebar(true)}>
+              {IC.menu}
+            </button>
+            <div className="min-w-0">
+              {precatorioData?.credor_nome && (
+                <p className="text-[11px] font-bold truncate max-w-[220px]" style={{ color: T.textMid }}>
+                  {precatorioData.credor_nome}
+                </p>
+              )}
+              <p className="text-[12px] font-semibold" style={{ color: T.accent }}>
+                <span style={{ color: T.textLo }}>Etapa {etapaAtual+1}/{STEPS.length} · </span>
+                {STEPS[etapaAtual]?.label}
+              </p>
+            </div>
+          </div>
+
+          {/* Right: actions */}
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Dots navigation */}
+            <div className="hidden sm:flex items-center gap-1">
+              {STEPS.map((_,i)=>(
+                <button key={i} type="button" onClick={()=>irParaEtapa(i)}
+                  className="rounded-full transition-all duration-200"
+                  style={{
+                    width: i===etapaAtual?"18px":"5px", height:"5px",
+                    background: i===etapaAtual ? T.accent : etapasCompletadas.includes(i) ? T.accentMid : "#d1d5db",
+                  }}/>
+              ))}
+            </div>
+
+            <div className="hidden sm:block w-px h-6" style={{ background: T.border }} />
+
+            {precatorioId && (
+              <>
+                <button type="button" onClick={()=>setShowPdfDrawer(!showPdfDrawer)}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[11.5px] font-semibold transition-all"
+                  style={{
+                    background: showPdfDrawer ? T.accentDim : "rgba(255,255,255,0.05)",
+                    color: showPdfDrawer ? T.accent : T.textMid,
+                    border: `1px solid ${showPdfDrawer ? T.accentMid : T.border}`,
+                  }}>
+                  {IC.doc}
+                  <span className="hidden md:inline">Documentos</span>
+                </button>
+
+                <div className="flex items-center">
+                  <PdfUploadButton precatorioId={precatorioId} currentPdfUrl={pdfUrl}
+                    onUploadSuccess={async()=>loadPrecatorio(precatorioId)} />
                 </div>
-                <div className="flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
-                  {precatorioData?.credor_nome && (
-                    <span className="rounded-full border border-border/60 bg-background/70 px-2.5 py-1">
-                      <span className="font-semibold text-foreground">Credor:</span> {precatorioData.credor_nome}
-                    </span>
-                  )}
-                  {precatorioData?.numero_processo && (
-                    <span className="rounded-full border border-border/60 bg-background/70 px-2.5 py-1">
-                      <span className="font-semibold text-foreground">Processo:</span> {precatorioData.numero_processo}
-                    </span>
-                  )}
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-2.5 py-1 font-medium text-primary">
-                    {etapaAtualLabel || "Etapa em andamento"}
-                  </span>
-                </div>
-              </div>
 
-              {precatorioId && (
-                <div className="flex w-full flex-col gap-3 sm:items-end lg:w-auto">
-                  <div className="flex flex-wrap items-center gap-2 sm:justify-end">
-                    <button
-                      onClick={() => setShowPdfSide(!showPdfSide)}
-                      className={`inline-flex h-9 items-center gap-2 rounded-full border px-3 text-xs font-semibold shadow-sm transition-all sm:text-sm ${
-                        showPdfSide
-                          ? "border-primary/40 bg-primary/10 text-primary shadow-primary/10"
-                          : "border-border/60 bg-background/70 text-foreground hover:bg-muted/60"
-                      }`}
-                    >
-                      <Eye className="w-4 h-4" />
-                      {showPdfSide ? "Ocultar documentos" : "Visualizar documentos"}
-                    </button>
+                <button type="button" onClick={()=>setShowResetDialog(true)} disabled={saving}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[11.5px] font-semibold transition-all disabled:opacity-40"
+                  style={{ background: T.dangerBg, color: T.danger, border: `1px solid rgba(239,68,68,0.2)` }}>
+                  {IC.reset}
+                  <span className="hidden md:inline">Resetar</span>
+                </button>
+              </>
+            )}
+          </div>
+        </div>
 
-                    <div className="inline-flex items-center">
-                      <PdfUploadButton
-                        precatorioId={precatorioId}
-                        currentPdfUrl={pdfUrl}
-                        onUploadSuccess={async () => loadPrecatorioFromSupabase(precatorioId)}
-                      />
-                    </div>
+        {/* Step nav strip */}
+        <div className="flex items-center gap-2 px-4 md:px-6 h-10 shrink-0"
+          style={{ background: "#f0f1f5", borderBottom: `1px solid ${T.border}` }}>
+          <button type="button" onClick={voltar} disabled={etapaAtual===0}
+            className="flex items-center justify-center w-6 h-6 rounded-[7px] transition-colors disabled:opacity-20"
+            style={{ background: "rgba(0,0,0,0.05)", color: T.textMid }}>
+            {IC.chevL}
+          </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-[11px] truncate" style={{ color: T.textLo }}>
+              Navegue pelas etapas ou clique na sidebar
+            </p>
+          </div>
+          {canFinalizar && (
+            <div className="flex items-center gap-1.5 text-[10.5px] font-bold" style={{ color: T.accent }}>
+              {IC.flag} Pronto para finalizar
+            </div>
+          )}
+        </div>
 
-                    <button
-                      onClick={() => setShowResetDialog(true)}
-                      disabled={saving}
-                      className="inline-flex h-9 items-center gap-2 rounded-full border border-destructive/40 bg-destructive/15 px-3 text-xs font-semibold text-destructive shadow-sm transition hover:bg-destructive/15 disabled:opacity-50 disabled:cursor-not-allowed sm:text-sm"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      Resetar
-                    </button>
-                  </div>
+        {/* Step content + PDF drawer */}
+        <div className="flex flex-1 min-h-0 overflow-hidden">
 
-                </div>
+          {/* Step content area */}
+          <div className="flex-1 min-w-0 overflow-y-auto">
+            <div className="px-4 md:px-8 py-7 max-w-4xl">
+              {StepComponent && (
+                <StepContainer stepKey={`etapa-${etapaAtual}`}>
+                  <StepComponent
+                    dados={dados} setDados={setDados}
+                    onCompletar={(resultado:any)=>handleCompletarEtapa(etapaAtual,resultado)}
+                    resultadosEtapas={resultadosEtapas} voltar={voltar}
+                    precatorioId={precatorioId} saving={saving}
+                    onFinalizar={finalizarCalculo} canFinalizar={canFinalizar}
+                  />
+                </StepContainer>
               )}
             </div>
           </div>
+
+          {/* PDF Drawer — slides in as right column */}
+          <AnimatePresence>
+            {showPdfDrawer && (
+              <motion.div
+                className="shrink-0 flex flex-col overflow-hidden"
+                style={{
+                  width: "min(420px, 42vw)",
+                  borderLeft: `1px solid ${T.border}`,
+                  background: "#ffffff",
+                }}
+                initial={reduceMotion?{opacity:1}:{width:0,opacity:0}}
+                animate={reduceMotion?{opacity:1}:{width:"min(420px, 42vw)",opacity:1}}
+                exit={reduceMotion?{opacity:0}:{width:0,opacity:0}}
+                transition={{ duration: 0.28, ease: [0.32,0.72,0,1] }}
+              >
+                <DocumentosViewer
+                  precatorioId={precatorioId}
+                  onClose={()=>setShowPdfDrawer(false)}
+                  fallbackDocs={fallbackDocs}
+                  className="h-full"
+                />
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
-
-        <div className="px-6 py-4 border-b border-border/60 bg-gradient-to-r from-primary/10 via-transparent to-emerald-500/10">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Progresso</p>
-              <p className="text-lg font-semibold text-foreground">{etapaAtualLabel}</p>
-            </div>
-            <div className="text-right">
-              <p className="text-sm font-semibold text-foreground">{progressoPercentual}%</p>
-              <p className="text-xs text-muted-foreground">{etapasCompletadas.length} de {steps.length} etapas</p>
-            </div>
-          </div>
-          <div className="mt-3 h-2.5 rounded-full bg-muted/60">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-primary via-[hsl(var(--chart-2))] to-emerald-500 transition-all"
-              initial={false}
-              animate={{ width: `${progressoPercentual}%` }}
-              transition={
-                reduceMotion
-                  ? { duration: 0 }
-                  : { duration: MOTION.dur.ui, ease: MOTION.ease }
-              }
-            />
-          </div>
-        </div>
-
-        <div className="px-6 py-5">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Etapas</p>
-              <p className="text-xs text-muted-foreground">Navegue pela linha do tempo</p>
-            </div>
-            <span className="text-xs font-semibold text-foreground">{etapasCompletadas.length}/{steps.length}</span>
-          </div>
-
-          <div className="relative mt-4">
-            <div className="absolute left-3 right-3 top-1/2 h-px bg-border/60" />
-            <div className="flex gap-4 overflow-x-auto pb-3 hide-scrollbar">
-              {steps.map((step, index) => {
-                const isActive = index === etapaAtual
-                const isCompleted = etapasCompletadas.includes(index)
-                const statusLabel = isCompleted ? "Concluída" : isActive ? "Em andamento" : "Pendente"
-
-                return (
-                  <button
-                    key={step.label}
-                    type="button"
-                    aria-current={isActive ? "step" : undefined}
-                    onClick={() => irParaEtapa(index)}
-                    className={`relative z-10 flex min-w-[220px] items-center gap-3 rounded-full border px-4 py-2 text-left transition-all ${
-                      isActive
-                        ? "border-primary/40 bg-primary/15 text-primary shadow-lg shadow-primary/10 ring-1 ring-primary/30"
-                        : isCompleted
-                          ? "border-primary/40 bg-primary/15 text-primary shadow-sm"
-                          : "border-border/60 bg-background/70 text-muted-foreground hover:bg-muted/50"
-                    }`}
-                  >
-                    <span
-                      className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-full border text-xs font-semibold transition-colors ${
-                        isActive
-                          ? "border-primary bg-primary text-primary-foreground"
-                          : isCompleted
-                            ? "border-primary/40 bg-primary/15 text-white"
-                            : "border-border/60 bg-background text-muted-foreground"
-                      }`}
-                    >
-                      {isCompleted ? <Check className="h-4 w-4" /> : <span>{index + 1}</span>}
-                    </span>
-                    <div className="min-w-0">
-                      <p className={`text-sm font-semibold ${isActive || isCompleted ? "text-foreground" : "text-muted-foreground"}`}>
-                        {step.label}
-                      </p>
-                      <span
-                        className={`mt-1 inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${
-                          isActive
-                            ? "border-primary/30 bg-primary/10 text-primary"
-                            : isCompleted
-                              ? "border-primary/40 bg-primary/15 text-primary"
-                              : "border-border/60 bg-muted/40 text-muted-foreground"
-                        }`}
-                      >
-                        {statusLabel}
-                      </span>
-                    </div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-      </Card>
-
-      <div className={`grid gap-6 ${showPdfSide ? "lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]" : ""}`}>
-        <div className="min-w-0 group" data-pdf={showPdfSide ? "open" : "closed"}>
-          {StepComponent && (
-            <StepContainer stepKey={`etapa-${etapaAtual}`}>
-              <StepComponent
-                dados={dados}
-                setDados={setDados}
-                onCompletar={(resultado: any) => handleCompletarEtapa(etapaAtual, resultado)}
-                resultadosEtapas={resultadosEtapas}
-                voltar={voltar}
-                precatorioId={precatorioId}
-                saving={saving}
-                onFinalizar={finalizarCalculo}
-                canFinalizar={canFinalizar}
-              />
-            </StepContainer>
-          )}
-        </div>
-        <AnimatePresence initial={false}>
-          {showPdfSide && (
-            <motion.div
-              key="viewer-panel"
-              initial={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 20 }}
-              animate={reduceMotion ? { opacity: 1 } : { opacity: 1, x: 0 }}
-              exit={reduceMotion ? { opacity: 1 } : { opacity: 0, x: 14 }}
-              transition={{ duration: MOTION.dur.ui, ease: MOTION.ease }}
-              className="h-[calc(100vh-12rem)] rounded-2xl border border-border/60 bg-card/80 backdrop-blur overflow-hidden shadow-sm xl:sticky xl:top-28"
-            >
-              <DocumentosViewer
-                precatorioId={precatorioId}
-                onClose={() => setShowPdfSide(false)}
-                fallbackDocs={fallbackDocs}
-                className="h-full"
-              />
-            </motion.div>
-          )}
-        </AnimatePresence>
       </div>
+
+      {/* ── Reset Dialog ──────────────────────────────────────────────── */}
       <AlertDialog open={showResetDialog} onOpenChange={setShowResetDialog}>
-        <AlertDialogContent className="bg-background text-foreground border border-border shadow-xl">
+        <AlertDialogContent style={{ background:"#ffffff", border:`1px solid ${T.border}`, color: T.textHi }}>
           <AlertDialogHeader>
-            <AlertDialogTitle>Confirmar Reset do Cálculo</AlertDialogTitle>
-            <AlertDialogDescription>
-              Esta ação irá limpar todos os dados do cálculo atual. Todas as etapas preenchidas serão perdidas.
-              <br />
-              <strong>Esta ação não pode ser desfeita.</strong>
+            <AlertDialogTitle style={{ color: T.textHi }}>Confirmar Reset</AlertDialogTitle>
+            <AlertDialogDescription style={{ color: T.textMid }}>
+              Todos os dados do cálculo serão perdidos. <strong style={{ color: T.textHi }}>Esta ação não pode ser desfeita.</strong>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={resetarCalculo}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
+            <AlertDialogCancel style={{ background:"rgba(0,0,0,0.04)", border:`1px solid ${T.border}`, color:T.textMid }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={resetarCalculo} style={{ background:"rgba(220,38,38,0.8)", color:"white" }}>
               Confirmar Reset
             </AlertDialogAction>
           </AlertDialogFooter>

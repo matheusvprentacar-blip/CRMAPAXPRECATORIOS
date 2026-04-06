@@ -66,8 +66,6 @@ const _clayInsetClass = "rounded-[18px] border border-black/[0.06] bg-[#f2f3f7]"
 
 const clayGhostButtonClass = "inline-flex min-h-11 items-center gap-2 rounded-[15px] border border-black/[0.08] bg-white px-4 text-sm font-semibold text-[#374151] transition hover:-translate-y-0.5"
 
-const clayPrimaryButtonClass = "inline-flex min-h-11 items-center gap-2 rounded-[15px] bg-[#0e4d6a] px-4 text-sm font-semibold text-white transition hover:-translate-y-0.5"
-
 const clayBadgeClass = "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-[11px] font-bold uppercase tracking-[0.14em]"
 
 const clayCardShadow: React.CSSProperties = { boxShadow: "16px 16px 36px rgba(0,0,0,.08), -8px -8px 20px rgba(255,255,255,.94), inset 1px 1px 4px rgba(255,255,255,.9), inset -1px -1px 2px rgba(0,0,0,.04)" }
@@ -1561,76 +1559,97 @@ export default function ClientsPage() {
   return (
     <div className={clayPageClass}>
       <div className="space-y-4">
-        <section className="space-y-4 rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.92)] p-5 backdrop-blur-xl lg:p-6" style={clayCardShadow}>
-          <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
-            <div className="space-y-3">
-              <span className="inline-flex h-7 items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-3 text-[10px] font-extrabold uppercase tracking-[0.18em] text-[#1d4ed8]">
-                CRM operacional
-              </span>
-              <div className="space-y-2">
-                <p className="text-[26px] font-extrabold leading-none tracking-[-0.04em] text-[#6b7280] sm:text-[30px]">
-                  Gestão de
-                  <strong className="block text-[34px] font-black text-[#0b0c10] sm:text-[40px]">Clientes</strong>
+        <section className="relative overflow-hidden rounded-[28px] border border-black/[0.07] bg-[rgba(255,255,255,0.92)] backdrop-blur-xl" style={clayCardShadow}>
+          <div className="p-4 sm:p-7">
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1.35fr)_minmax(300px,.9fr)]">
+              <div>
+                <span className="inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-primary/10 px-3 py-1.5 text-[13px] font-bold tracking-wide text-primary">
+                  <span className="shrink-0">●</span>
+                  <span className="truncate">CRM Precatórios · gestão de clientes</span>
+                </span>
+                <p className="mt-3 text-[clamp(1.55rem,6vw,4.4rem)] font-black leading-none tracking-[-0.05em] text-primary">
+                  Clientes
                 </p>
-                <p className="max-w-3xl text-sm leading-6 text-[#6b7280]">
+                <h1 className="no-route-shiny mt-3 text-[clamp(1rem,3vw,2.2rem)] font-bold leading-[1.1] tracking-[-0.03em]" style={{ color: "#0e4d6a" }}>
+                  Todos os clientes em um só lugar.
+                </h1>
+                <p className="mt-2.5 max-w-2xl text-[13px] leading-relaxed text-muted-foreground sm:text-[15px]">
                   Gerencie carteira, contato, processos e histórico dos clientes em uma leitura operacional mais rápida.
                 </p>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{credores.length} clientes</span>
-                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{resumo.totalPrecatorios} processos</span>
-                <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>Atualizado em {ultimaAtualizacaoLabel}</span>
-              </div>
-            </div>
 
-            <div className="flex flex-wrap items-center gap-2 lg:justify-end">
-              <button type="button" disabled={!searchTerm} onClick={() => setSearchTerm("")} className={cx(clayGhostButtonClass, "disabled:pointer-events-none disabled:opacity-40")}>
-                <X className="h-4 w-4" />
-                Limpar busca
-              </button>
-              <button type="button" disabled={loading} onClick={() => loadCredores()} className={cx(clayPrimaryButtonClass, "disabled:pointer-events-none disabled:opacity-60")} style={clayPrimaryShadow}>
-                <RefreshCw className={cx("h-4 w-4", loading ? "animate-spin" : "")} />
-                Atualizar
-              </button>
+                <div className="mt-5 flex flex-col gap-2.5 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                  <button
+                    type="button"
+                    disabled={!searchTerm}
+                    onClick={() => setSearchTerm("")}
+                    className={cx(
+                      "inline-flex min-h-11 items-center gap-2 rounded-xl border border-border bg-background px-4 text-sm font-semibold text-muted-foreground transition hover:border-border hover:text-foreground",
+                      "disabled:pointer-events-none disabled:opacity-40"
+                    )}
+                  >
+                    <X className="h-4 w-4" />
+                    Limpar busca
+                  </button>
+                  <button
+                    type="button"
+                    disabled={loading}
+                    onClick={() => loadCredores()}
+                    className={cx(
+                      "inline-flex min-h-11 items-center gap-2 rounded-xl border-none bg-primary px-4 text-sm font-semibold text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3),inset_1px_1px_3px_rgba(255,255,255,.14),inset_-1px_-1px_2px_rgba(8,40,60,.3)] transition",
+                      "disabled:pointer-events-none disabled:opacity-60"
+                    )}
+                  >
+                    <RefreshCw className={cx("h-4 w-4", loading ? "animate-spin" : "")} />
+                    Atualizar
+                  </button>
+                </div>
+
+                <div className="mt-3 flex flex-wrap items-center gap-2">
+                  <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{credores.length} clientes</span>
+                  <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>{resumo.totalPrecatorios} processos</span>
+                  <span className={cx(clayBadgeClass, "border-[#e5e7eb] bg-[#f2f3f7] text-[#6b7280]")}>Atualizado em {ultimaAtualizacaoLabel}</span>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 content-start">
+                <KpiCard
+                  title="Total de clientes"
+                  value={credores.length}
+                  subtitle="Base consolidada"
+                  icon={<Users className="h-5 w-5" />}
+                  tone="primary"
+                  isLoading={loading}
+                />
+                <KpiCard
+                  title="Carteira atualizada"
+                  value={resumo.totalCarteira}
+                  subtitle={`Media de R$ ${formatCurrency(carteiraMedia)} por cliente`}
+                  icon={<FileText className="h-5 w-5" />}
+                  tone="success"
+                  isLoading={loading}
+                  prefix={"R$\u00A0"}
+                  decimals={2}
+                />
+                <KpiCard
+                  title="Clientes com contato"
+                  value={clientesComContato}
+                  subtitle={`${clientesSemContato} sem telefone/e-mail`}
+                  icon={<Users className="h-5 w-5" />}
+                  tone="default"
+                  isLoading={loading}
+                />
+                <KpiCard
+                  title="Clientes com status"
+                  value={clientesComStatus}
+                  subtitle={`${statusOptions.length} status distintos`}
+                  icon={<Clock className="h-5 w-5" />}
+                  tone="default"
+                  isLoading={loading}
+                />
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-4">
-            <KpiCard
-              title="Total de clientes"
-              value={credores.length}
-              subtitle="Base consolidada"
-              icon={<Users className="h-5 w-5" />}
-              tone="primary"
-              isLoading={loading}
-            />
-            <KpiCard
-              title="Carteira atualizada"
-              value={resumo.totalCarteira}
-              subtitle={`Media de R$ ${formatCurrency(carteiraMedia)} por cliente`}
-              icon={<FileText className="h-5 w-5" />}
-              tone="success"
-              isLoading={loading}
-              prefix={"R$\u00A0"}
-              decimals={2}
-            />
-            <KpiCard
-              title="Clientes com contato"
-              value={clientesComContato}
-              subtitle={`${clientesSemContato} sem telefone/e-mail`}
-              icon={<Users className="h-5 w-5" />}
-              tone="default"
-              isLoading={loading}
-            />
-            <KpiCard
-              title="Clientes com status"
-              value={clientesComStatus}
-              subtitle={`${statusOptions.length} status distintos`}
-              icon={<Clock className="h-5 w-5" />}
-              tone="default"
-              isLoading={loading}
-            />
-          </div>
         </section>
 
         <section>

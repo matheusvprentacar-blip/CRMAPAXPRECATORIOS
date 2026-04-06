@@ -1,0 +1,1159 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<title>Detalhes do Precatório — Clay v3</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  /* Superfícies */
+  --bg:       #f0f1f5;
+  --card:     #ffffff;
+  --muted:    #e8eaef;
+  --muted-lt: #f2f3f7;
+  --border:   rgba(0,0,0,.07);
+
+  /* Texto */
+  --tx:       #0b0c10;
+  --tx-md:    #374151;
+  --tx-sm:    #6b7280;
+  --tx-xs:    #9ca3af;
+
+  /* Ação principal: azul petróleo */
+  --ac:       #0e4d6a;
+  --ac-lt:    #1a6080;
+  --ac-xlt:   #2578a0;
+
+  /* Status funcionais */
+  --green:    #15803d;
+  --green-bg: #f0fdf4;
+  --green-br: #bbf7d0;
+  --amber:    #92400e;
+  --amber-bg: #fffbeb;
+  --amber-br: #fde68a;
+  --blue:     #1d4ed8;
+  --blue-bg:  #eff6ff;
+  --blue-br:  #bfdbfe;
+
+  /* Clay shadows — totalmente neutras */
+  --sh-card:
+    16px 16px 36px rgba(0,0,0,.08),
+    -8px -8px 20px rgba(255,255,255,.94),
+    inset 1px 1px 4px rgba(255,255,255,.9),
+    inset -1px -1px 2px rgba(0,0,0,.04);
+
+  --sh-card-hover:
+    22px 22px 48px rgba(0,0,0,.12),
+    -10px -10px 26px rgba(255,255,255,.97),
+    inset 1px 1px 4px rgba(255,255,255,.94),
+    inset -1px -1px 2px rgba(0,0,0,.05);
+
+  --sh-sm:
+    7px 7px 16px rgba(0,0,0,.07),
+    -4px -4px 10px rgba(255,255,255,.92),
+    inset 1px 1px 2px rgba(255,255,255,.88),
+    inset -1px -1px 2px rgba(0,0,0,.03);
+
+  --sh-btn-ac:
+    8px 8px 20px rgba(14,77,106,.42),
+    -3px -3px 8px rgba(255,255,255,.3),
+    inset 1px 1px 3px rgba(255,255,255,.14),
+    inset -1px -1px 2px rgba(8,40,60,.3);
+
+  --sh-btn-ac-press:
+    2px 2px 6px rgba(14,77,106,.5),
+    -1px -1px 3px rgba(255,255,255,.18),
+    inset 4px 4px 10px rgba(8,40,60,.3),
+    inset -2px -2px 4px rgba(255,255,255,.1);
+
+  --sh-btn-ghost:
+    5px 5px 12px rgba(0,0,0,.07),
+    -3px -3px 8px rgba(255,255,255,.92),
+    inset 1px 1px 2px rgba(255,255,255,.87),
+    inset -1px -1px 2px rgba(0,0,0,.04);
+
+  --sh-btn-ghost-press:
+    2px 2px 5px rgba(0,0,0,.09),
+    -1px -1px 3px rgba(255,255,255,.82),
+    inset 3px 3px 8px rgba(0,0,0,.09),
+    inset -2px -2px 4px rgba(255,255,255,.72);
+
+  --sh-nav-ac:
+    6px 6px 14px rgba(14,77,106,.36),
+    -2px -2px 6px rgba(255,255,255,.28),
+    inset 1px 1px 3px rgba(255,255,255,.14),
+    inset -1px -1px 2px rgba(8,40,60,.22);
+
+  --sh-inset:
+    inset 5px 5px 12px rgba(0,0,0,.07),
+    inset -4px -4px 10px rgba(255,255,255,.87);
+
+  --sh-header:
+    0 12px 32px rgba(0,0,0,.08),
+    0 2px 6px rgba(0,0,0,.04),
+    inset 0 1px 0 rgba(255,255,255,.96),
+    inset 0 -1px 0 rgba(0,0,0,.03);
+}
+
+html { font-size: 14px; scroll-behavior: smooth; }
+
+body {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  background: var(--bg);
+  color: var(--tx);
+  min-height: 100vh;
+  line-height: 1.55;
+  overflow-x: hidden;
+}
+
+.shell {
+  max-width: 1380px;
+  margin: 0 auto;
+  padding: 0 20px 80px;
+}
+
+/* ── ANIMATIONS ── */
+@keyframes cardIn {
+  from { opacity: 0; transform: translateY(22px) scale(.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes shimmer {
+  0%   { transform: translateX(-160%); }
+  100% { transform: translateX(300%); }
+}
+@keyframes progressIn {
+  from { width: 0; }
+  to   { width: 23%; }
+}
+@keyframes pulseStatusDot {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%       { opacity: .65; transform: scale(1.5); }
+}
+
+/* ── HEADER ── */
+.page-header {
+  position: sticky;
+  top: 12px;
+  z-index: 50;
+  margin: 18px 0 26px;
+  border-radius: 26px;
+  background: rgba(255,255,255,.93);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1.5px solid rgba(0,0,0,.07);
+  padding: 20px 26px;
+  box-shadow: var(--sh-header);
+  animation: cardIn .5s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.header-inner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.header-left { display: flex; align-items: flex-start; gap: 16px; flex: 1; min-width: 0; }
+
+.btn-back {
+  width: 44px; height: 44px;
+  border-radius: 15px;
+  border: 1.5px solid var(--border);
+  background: linear-gradient(145deg, #fff, #f5f6f9);
+  box-shadow: var(--sh-sm);
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; margin-top: 5px;
+  color: var(--tx-sm);
+  transition: all .22s cubic-bezier(.34,1.56,.64,1);
+}
+.btn-back:hover { transform: translateY(-3px) translateX(-1px); box-shadow: var(--sh-card); color: var(--tx); }
+.btn-back:active { transform: translateY(1px) scale(.94); box-shadow: var(--sh-btn-ghost-press); }
+.btn-back svg { width: 18px; height: 18px; }
+
+.header-titles { min-width: 0; flex: 1; }
+
+.badge-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 10px; }
+
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 24px; padding: 0 10px;
+  border-radius: 20px;
+  font-size: 10.5px; font-weight: 700; letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+.badge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-br); }
+.badge-blue  { background: var(--blue-bg);  color: var(--blue);  border: 1px solid var(--blue-br); }
+.badge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-br); }
+
+.page-title {
+  font-size: 26px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: var(--tx-sm);
+  line-height: 1.1;
+  margin-bottom: 2px;
+}
+.page-title strong {
+  display: block;
+  font-size: 32px;
+  font-weight: 900;
+  color: var(--tx);
+  letter-spacing: -1px;
+}
+@media (min-width: 768px) {
+  .page-title { font-size: 28px; }
+  .page-title strong { font-size: 38px; }
+}
+
+.page-subtitle { font-size: 12px; font-weight: 500; color: var(--tx-xs); margin-top: 5px; }
+
+.header-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; padding-top: 6px; }
+
+/* ── BUTTONS ── */
+.btn {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px; font-weight: 700;
+  padding: 0 16px; height: 38px;
+  border-radius: 13px;
+  cursor: pointer; border: none;
+  display: inline-flex; align-items: center; gap: 7px;
+  transition: all .2s cubic-bezier(.34,1.56,.64,1);
+  user-select: none; white-space: nowrap;
+  position: relative; overflow: hidden;
+}
+.btn::after {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.22), transparent);
+  transform: translateX(-160%);
+  pointer-events: none;
+}
+.btn:hover::after { animation: shimmer .5s ease forwards; }
+.btn:hover { transform: translateY(-2px); }
+.btn:active { transform: translateY(2px) scale(.96) !important; transition: all .08s !important; }
+
+.btn-ac {
+  background: var(--ac);
+  color: white;
+  box-shadow: var(--sh-btn-ac);
+  letter-spacing: 0.1px;
+}
+.btn-ac:active { box-shadow: var(--sh-btn-ac-press); }
+
+.btn-ghost {
+  background: linear-gradient(145deg, #fff, #f4f5f8);
+  color: var(--tx-md);
+  border: 1.5px solid rgba(0,0,0,.08);
+  box-shadow: var(--sh-btn-ghost);
+}
+.btn-ghost:hover { color: var(--tx); border-color: rgba(0,0,0,.14); }
+.btn-ghost:active { box-shadow: var(--sh-btn-ghost-press); }
+
+.btn svg { width: 14px; height: 14px; stroke: currentColor; fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; flex-shrink: 0; }
+.btn-ac svg { stroke: rgba(255,255,255,.9); }
+
+/* ── LAYOUT ── */
+.body-layout { display: flex; gap: 20px; align-items: flex-start; }
+
+/* ── LEFT NAV ── */
+.left-nav {
+  width: 212px;
+  flex-shrink: 0;
+  position: sticky;
+  top: 125px;
+  animation: cardIn .55s .06s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.nav-panel {
+  background: var(--card);
+  border-radius: 24px;
+  border: 1.5px solid var(--border);
+  padding: 10px 8px;
+  box-shadow: var(--sh-card);
+}
+
+.nav-section-label {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--tx-xs);
+  padding: 9px 12px 4px;
+  display: block;
+}
+
+.nav-divider {
+  height: 1px;
+  background: var(--muted);
+  margin: 7px 10px;
+}
+
+.nav-item {
+  display: flex; align-items: center; gap: 9px;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 12.5px; font-weight: 600;
+  color: var(--tx-sm);
+  transition: all .2s cubic-bezier(.34,1.56,.64,1);
+  user-select: none; position: relative;
+}
+.nav-item:hover {
+  background: var(--muted-lt);
+  color: var(--tx);
+  transform: translateX(2px);
+}
+.nav-item.active {
+  background: var(--ac);
+  color: white;
+  font-weight: 700;
+  box-shadow: var(--sh-nav-ac);
+  transform: translateX(1px);
+}
+
+.nav-dot {
+  position: absolute; right: 10px;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: rgba(14,77,106,.25);
+}
+.nav-item.active .nav-dot { background: rgba(255,255,255,.55); }
+
+.nav-icon {
+  width: 26px; height: 26px;
+  border-radius: 9px;
+  background: var(--muted);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: background .18s;
+}
+.nav-icon svg { width: 14px; height: 14px; stroke: var(--tx-sm); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; transition: stroke .18s; }
+.nav-item:hover .nav-icon { background: var(--muted); }
+.nav-item:hover .nav-icon svg { stroke: var(--tx); }
+.nav-item.active .nav-icon { background: rgba(255,255,255,.16); }
+.nav-item.active .nav-icon svg { stroke: rgba(255,255,255,.9); }
+
+/* ── MAIN ── */
+.main-content {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  gap: 18px;
+}
+.main-content > *:nth-child(1) { animation: cardIn .55s .09s cubic-bezier(.34,1.56,.64,1) both; }
+.main-content > *:nth-child(2) { animation: cardIn .55s .15s cubic-bezier(.34,1.56,.64,1) both; }
+.main-content > *:nth-child(3) { animation: cardIn .55s .21s cubic-bezier(.34,1.56,.64,1) both; }
+.main-content > *:nth-child(4) { animation: cardIn .55s .26s cubic-bezier(.34,1.56,.64,1) both; }
+.main-content > *:nth-child(5) { animation: cardIn .55s .31s cubic-bezier(.34,1.56,.64,1) both; }
+.main-content > *:nth-child(6) { animation: cardIn .55s .35s cubic-bezier(.34,1.56,.64,1) both; }
+
+/* ── CLAY CARD ── */
+.clay-card {
+  background: var(--card);
+  border-radius: 24px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-card);
+  overflow: hidden;
+  transition: box-shadow .26s ease, transform .26s ease;
+}
+.clay-card:hover { box-shadow: var(--sh-card-hover); transform: translateY(-2px); }
+
+.card-header {
+  padding: 18px 22px 14px;
+  border-bottom: 1px solid var(--muted);
+  display: flex; align-items: center; gap: 13px;
+}
+
+.card-icon {
+  width: 38px; height: 38px;
+  border-radius: 13px;
+  background: var(--muted-lt);
+  border: 1px solid var(--border);
+  box-shadow: var(--sh-sm);
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.card-icon svg { width: 18px; height: 18px; stroke: var(--tx-md); fill: none; stroke-width: 1.75; stroke-linecap: round; stroke-linejoin: round; }
+
+.card-title { font-size: 15px; font-weight: 800; letter-spacing: -0.2px; color: var(--tx); }
+
+.card-body { padding: 20px 22px 22px; }
+
+/* ── STATUS CARD ── */
+.status-card {
+  background: var(--card);
+  border-radius: 24px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-card);
+  padding: 22px 24px 18px;
+}
+
+.progress-wrap { margin-bottom: 18px; }
+.progress-meta {
+  display: flex; justify-content: space-between;
+  font-size: 10px; font-weight: 700; letter-spacing: 1.4px;
+  text-transform: uppercase; color: var(--tx-xs);
+  margin-bottom: 7px;
+}
+.progress-track {
+  height: 5px;
+  background: var(--muted);
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: inset 2px 2px 4px rgba(0,0,0,.06), inset -1px -1px 3px rgba(255,255,255,.8);
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #22c55e, #6366f1, var(--ac));
+  border-radius: 10px;
+  animation: progressIn 1s .6s cubic-bezier(.34,1.56,.64,1) both;
+}
+
+.status-row {
+  display: flex; align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px; flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.status-section-label {
+  font-size: 9.5px; font-weight: 700;
+  text-transform: uppercase; letter-spacing: 1.8px;
+  color: var(--tx-xs); margin-bottom: 10px;
+}
+
+.status-chips { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+
+.chip-current {
+  display: inline-flex; align-items: center; gap: 8px;
+  height: 38px; padding: 0 16px;
+  border-radius: 22px;
+  background: var(--ac);
+  color: white;
+  font-size: 13px; font-weight: 800;
+  white-space: nowrap;
+  box-shadow: var(--sh-btn-ac);
+}
+
+.chip-next {
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 38px; padding: 0 16px;
+  border-radius: 22px;
+  background: var(--card);
+  color: var(--tx-md);
+  font-size: 13px; font-weight: 700;
+  white-space: nowrap;
+  border: 1.5px solid var(--muted);
+  box-shadow: var(--sh-sm);
+}
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,.8);
+  flex-shrink: 0;
+  animation: pulseStatusDot 2s ease infinite;
+}
+
+/* Pipeline */
+.pipeline-outer {
+  background: var(--muted);
+  border-radius: 18px;
+  padding: 12px 14px 10px;
+  box-shadow: var(--sh-inset);
+  overflow-x: auto;
+}
+.pipeline-outer::-webkit-scrollbar { height: 3px; }
+.pipeline-outer::-webkit-scrollbar-track { background: rgba(0,0,0,.04); border-radius: 4px; }
+.pipeline-outer::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 4px; }
+
+.pipeline-chips { display: flex; align-items: center; width: max-content; gap: 0; padding-bottom: 2px; }
+
+.pipe-sep {
+  color: var(--tx-xs);
+  font-size: 10px; font-weight: 500;
+  padding: 0 4px;
+  flex-shrink: 0;
+}
+
+.pipe-chip {
+  display: inline-flex; align-items: center; gap: 5px;
+  height: 30px; padding: 0 12px;
+  border-radius: 20px;
+  font-size: 11px; font-weight: 700;
+  white-space: nowrap;
+  transition: transform .18s cubic-bezier(.34,1.56,.64,1);
+  cursor: default;
+}
+.pipe-chip:hover { transform: translateY(-2px); }
+
+.pipe-done {
+  background: var(--green-bg);
+  color: var(--green);
+  border: 1px solid var(--green-br);
+}
+.pipe-current {
+  background: var(--ac);
+  color: white;
+  font-weight: 800;
+  font-size: 11.5px;
+  height: 34px;
+  box-shadow: 5px 5px 12px rgba(14,77,106,.34), -2px -2px 6px rgba(255,255,255,.5);
+}
+.pipe-next {
+  background: var(--blue-bg);
+  color: var(--blue);
+  border: 1px solid var(--blue-br);
+}
+.pipe-future {
+  background: rgba(0,0,0,.04);
+  color: var(--tx-xs);
+  border: 1px solid rgba(0,0,0,.06);
+}
+
+.pipeline-hint { font-size: 10px; font-weight: 600; color: var(--tx-xs); margin-top: 8px; padding-left: 2px; }
+
+/* ── INFO GRID ── */
+.info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 18px;
+}
+.info-grid.cols-1 { grid-template-columns: 1fr; }
+.info-grid.cols-3 { grid-template-columns: repeat(3, 1fr); }
+.info-grid.cols-4 { grid-template-columns: repeat(4, 1fr); }
+.info-grid .span-2 { grid-column: span 2; }
+
+.info-field { display: flex; flex-direction: column; gap: 4px; }
+
+.field-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--tx-xs);
+}
+
+.field-value {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--tx);
+  word-break: break-word;
+  line-height: 1.4;
+}
+.field-value.empty { color: var(--tx-xs); font-weight: 400; font-style: italic; }
+
+/* ── VALUE BLOBS ── */
+.value-blobs { display: grid; grid-template-columns: repeat(3,1fr); gap: 14px; }
+
+.value-blob {
+  background: var(--muted-lt);
+  border-radius: 18px;
+  padding: 18px 18px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-sm);
+  transition: transform .22s cubic-bezier(.34,1.56,.64,1), box-shadow .22s;
+  position: relative; overflow: hidden;
+}
+.value-blob:hover { transform: translateY(-3px); box-shadow: var(--sh-card); }
+
+/* Blob hero — destaque em dark */
+.value-blob.hero {
+  background: var(--ac);
+  border-color: transparent;
+  box-shadow: 12px 12px 28px rgba(14,77,106,.36), -5px -5px 14px rgba(255,255,255,.5), inset 1px 1px 4px rgba(255,255,255,.12), inset -1px -1px 2px rgba(8,40,60,.25);
+}
+.value-blob.hero .blob-label { color: rgba(255,255,255,.55); }
+.value-blob.hero .blob-value { color: white; }
+
+/* Blob positive — verde sutil */
+.value-blob.positive {
+  background: var(--green-bg);
+  border-color: var(--green-br);
+}
+.value-blob.positive .blob-label { color: #166534; opacity: .7; }
+.value-blob.positive .blob-value { color: #15803d; }
+
+.blob-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.4px;
+  color: var(--tx-sm);
+  margin-bottom: 8px;
+  display: block;
+}
+
+.blob-value {
+  font-size: 22px;
+  font-weight: 900;
+  letter-spacing: -0.8px;
+  color: var(--tx);
+  display: block;
+  line-height: 1.15;
+}
+
+/* ── SECTION DIVIDER ── */
+.section-divider {
+  height: 1px;
+  background: var(--muted);
+  margin: 18px 0;
+}
+
+/* ── TWO COL ── */
+.two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.two-col.lg-first { grid-template-columns: 1.3fr 0.7fr; }
+
+/* ── INLINE BADGE ── */
+.inline-badge {
+  display: inline-flex; align-items: center;
+  height: 24px; padding: 0 10px;
+  border-radius: 12px;
+  font-size: 11px; font-weight: 700;
+  vertical-align: middle;
+}
+.ibadge-amber { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-br); }
+.ibadge-green { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-br); }
+
+/* ── AVATAR ── */
+.avatar {
+  width: 34px; height: 34px;
+  border-radius: 11px;
+  background: var(--ac);
+  display: flex; align-items: center; justify-content: center;
+  color: white;
+  font-weight: 800; font-size: 14px;
+  flex-shrink: 0;
+  box-shadow: 4px 4px 10px rgba(14,77,106,.36), -2px -2px 6px rgba(255,255,255,.3);
+}
+
+/* ── OBSERVATION AREA ── */
+.obs-area {
+  background: var(--muted-lt);
+  border-radius: 16px;
+  padding: 16px 18px;
+  box-shadow: var(--sh-inset);
+  font-size: 13.5px; font-weight: 500;
+  color: var(--tx-md);
+  line-height: 1.72;
+  min-height: 80px;
+}
+
+/* ── FOOTER ── */
+.footer-bar {
+  display: flex; align-items: center;
+  justify-content: space-between;
+  padding: 14px 22px;
+  background: var(--card);
+  border-radius: 20px;
+  border: 1.5px solid var(--border);
+  box-shadow: var(--sh-sm);
+  flex-wrap: wrap; gap: 12px;
+}
+
+.footer-meta {
+  font-size: 11.5px; font-weight: 600;
+  color: var(--tx-sm);
+  display: flex; align-items: center; gap: 7px;
+}
+.footer-meta::before {
+  content: '';
+  display: inline-block;
+  width: 6px; height: 6px; border-radius: 50%;
+  background: #22c55e;
+  box-shadow: 0 0 6px rgba(34,197,94,.5);
+  flex-shrink: 0;
+}
+
+.footer-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ── SCROLLBAR ── */
+::-webkit-scrollbar { width: 5px; height: 5px; }
+::-webkit-scrollbar-track { background: rgba(0,0,0,.04); border-radius: 5px; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,.18); border-radius: 5px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,.3); }
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <!-- ── HEADER ── -->
+  <header class="page-header">
+    <div class="header-inner">
+      <div class="header-left">
+        <button class="btn-back" title="Voltar">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+        </button>
+        <div class="header-titles">
+          <div class="badge-row">
+            <span class="badge badge-amber">MÉDIA PRIORIDADE</span>
+            <span class="badge badge-blue">NOVO</span>
+            <span class="badge badge-green">Atendimento</span>
+          </div>
+          <h1 class="page-title">
+            Precatório
+            <strong>ARISIA BARROS DOS SANTOS</strong>
+          </h1>
+          <p class="page-subtitle">Dados essenciais do precatório com visão completa do fluxo de trabalho.</p>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4m0 4h.01"/></svg>
+          Sinalizar interesse
+        </button>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+          Timeline
+        </button>
+        <button class="btn btn-ghost">
+          <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+          Editar
+        </button>
+        <button class="btn btn-ac">
+          <svg viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+          Salvar
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <div class="body-layout">
+
+    <!-- ── LEFT NAV ── -->
+    <aside class="left-nav">
+      <div class="nav-panel">
+        <span class="nav-section-label">Processo</span>
+
+        <div class="nav-item active" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.25A2.25 2.25 0 0 0 3 4.5v15a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 19.5V9a2.25 2.25 0 0 0-.659-1.591L15.75 3.659A2.25 2.25 0 0 0 14.159 3H10.5z"/></svg>
+          </div>
+          Geral
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          </div>
+          DataJud
+        </div>
+
+        <div class="nav-divider"></div>
+        <span class="nav-section-label">Documentação</span>
+
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M2.25 12.75V12A2.25 2.25 0 0 1 4.5 9.75h15A2.25 2.25 0 0 1 21.75 12v.75m-8.69-6.44-2.12-2.12a1.5 1.5 0 0 0-1.061-.44H4.5A2.25 2.25 0 0 0 2.25 6v12a2.25 2.25 0 0 0 2.25 2.25h15A2.25 2.25 0 0 0 21.75 18V9a2.25 2.25 0 0 0-2.25-2.25h-5.379a1.5 1.5 0 0 1-1.06-.44z"/></svg>
+          </div>
+          Documentos
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.25A2.25 2.25 0 0 0 3 4.5v15a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 19.5V9l-4.5-4.5z"/></svg>
+          </div>
+          Ofício
+          <div class="nav-dot"></div>
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M11.48 3.499a.562.562 0 0 1 1.04 0l2.125 5.111a.563.563 0 0 0 .475.345l5.518.442c.499.04.701.663.321.988l-4.204 3.602a.563.563 0 0 0-.182.557l1.285 5.385a.562.562 0 0 1-.84.61l-4.725-2.885a.563.563 0 0 0-.586 0L6.982 20.54a.562.562 0 0 1-.84-.61l1.285-5.386a.562.562 0 0 0-.182-.557l-4.204-3.602a.563.563 0 0 1 .321-.988l5.518-.442a.563.563 0 0 0 .475-.345L11.48 3.5z"/></svg>
+          </div>
+          Certidões
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 0 0 2.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 0 0-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 0 0 .75-.75 2.25 2.25 0 0 0-.1-.664m-5.8 0A2.251 2.251 0 0 1 13.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z"/></svg>
+          </div>
+          Escrituras
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M18.375 12.739l-7.693 7.693a4.5 4.5 0 0 1-6.364-6.364l10.94-10.94A3 3 0 0 1 19.5 7.372L8.552 18.32m.009-.01-.01.01m5.699-9.941-7.81 7.81a1.5 1.5 0 0 0 2.112 2.13"/></svg>
+          </div>
+          Contratos
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M16.862 4.487l1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L6.832 19.82a4.5 4.5 0 0 1-1.897 1.13l-2.685.8.8-2.685a4.5 4.5 0 0 1 1.13-1.897L16.863 4.487zm0 0L19.5 7.125"/></svg>
+          </div>
+          Procuração
+        </div>
+
+        <div class="nav-divider"></div>
+        <span class="nav-section-label">Jurídico</span>
+
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.97zm-16.5 0c-.99.143-1.99.317-3 .52m3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L2.25 4.97z"/></svg>
+          </div>
+          Parecer Jurídico
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M16.5 10.5V6.75a4.5 4.5 0 1 0-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 0 0 2.25-2.25v-6.75a2.25 2.25 0 0 0-2.25-2.25H6.75a2.25 2.25 0 0 0-2.25 2.25v6.75a2.25 2.25 0 0 0 2.25 2.25z"/></svg>
+          </div>
+          Fechamento
+        </div>
+
+        <div class="nav-divider"></div>
+        <span class="nav-section-label">Financeiro</span>
+
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="3" width="4" height="4" rx="1"/><rect x="10" y="3" width="4" height="4" rx="1"/><rect x="17" y="3" width="4" height="4" rx="1"/><rect x="3" y="10" width="4" height="4" rx="1"/><rect x="10" y="10" width="4" height="4" rx="1"/><rect x="17" y="10" width="4" height="4" rx="1"/><rect x="3" y="17" width="4" height="4" rx="1"/><rect x="10" y="17" width="4" height="4" rx="1"/><rect x="17" y="17" width="4" height="4" rx="1"/></svg>
+          </div>
+          Cálculo
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><path d="M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 0 1 3 19.875v-6.75zm6.75-9.75C9.75 2.754 10.254 2.25 10.875 2.25h2.25c.621 0 1.125.504 1.125 1.125v16.5c0 .621-.504 1.125-1.125 1.125h-2.25A1.125 1.125 0 0 1 9.75 19.875V3.375zm6.75 4.5c0-.621.504-1.125 1.125-1.125h2.25C20.496 6.75 21 7.254 21 7.875v12c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 0 1-1.125-1.125v-12z"/></svg>
+          </div>
+          Projeção
+        </div>
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v12m-3-2.818.879.659c1.171.879 3.07.879 4.242 0 1.172-.879 1.172-2.303 0-3.182C13.536 12.219 12.768 12 12 12c-.725 0-1.45-.22-2.003-.659-1.106-.879-1.106-2.303 0-3.182s2.9-.879 4.006 0l.415.33"/></svg>
+          </div>
+          Propostas
+        </div>
+
+        <div class="nav-divider"></div>
+        <span class="nav-section-label">Gestão</span>
+
+        <div class="nav-item" onclick="setActive(this)">
+          <div class="nav-icon">
+            <svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+          </div>
+          Agenda
+        </div>
+      </div>
+    </aside>
+
+    <!-- ── MAIN ── -->
+    <main class="main-content">
+
+      <!-- STATUS -->
+      <div class="status-card">
+        <div class="progress-wrap">
+          <div class="progress-meta">
+            <span>Progresso do fluxo</span>
+            <span>Etapa 3 de 13</span>
+          </div>
+          <div class="progress-track">
+            <div class="progress-fill" style="width:23%"></div>
+          </div>
+        </div>
+
+        <div class="status-row">
+          <div>
+            <p class="status-section-label">Status atual</p>
+            <div class="status-chips">
+              <div class="chip-current">
+                <div class="status-dot"></div>
+                Triagem — interesse do credor
+              </div>
+              <div class="chip-next">
+                <svg style="width:13px;height:13px;stroke:currentColor;fill:none;stroke-width:2;flex-shrink:0" viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+                Documentos do credor
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-ac" style="height:38px">
+            <svg viewBox="0 0 24 24"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+            Próxima fase
+          </button>
+        </div>
+
+        <div class="pipeline-outer">
+          <div class="pipeline-chips">
+            <div class="pipe-chip pipe-done">
+              <svg style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Entrada
+            </div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-done">
+              <svg style="width:11px;height:11px;stroke:currentColor;fill:none;stroke-width:2.5" viewBox="0 0 24 24"><polyline points="20 6 9 17 4 12"/></svg>
+              Recebido Admin
+            </div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-current">● Triagem</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-next">Documentos</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Pré Análise Jurídica</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Jurídico</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Pronto p/ cálculo</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Cálculo</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Cálculo concluído</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Negociação</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Jur. Fechamento</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Certidões</div>
+            <div class="pipe-sep">›</div>
+            <div class="pipe-chip pipe-future">Escrituras</div>
+          </div>
+        </div>
+        <p class="pipeline-hint">↔ Role para ver todas as etapas</p>
+      </div>
+
+      <!-- IDENTIFICAÇÃO + CREDOR -->
+      <div class="two-col lg-first">
+
+        <div class="clay-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24"><path d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.25A2.25 2.25 0 0 0 3 4.5v15a2.25 2.25 0 0 0 2.25 2.25h13.5A2.25 2.25 0 0 0 21 19.5V9a2.25 2.25 0 0 0-.659-1.591L15.75 3.659A2.25 2.25 0 0 0 14.159 3H10.5z"/></svg>
+            </div>
+            <span class="card-title">Identificação</span>
+          </div>
+          <div class="card-body">
+            <div class="info-grid">
+              <div class="info-field span-2">
+                <span class="field-label">Título</span>
+                <span class="field-value">Precatório 123456-2026 — ARISIA BARROS DOS SANTOS</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Nº do Precatório</span>
+                <span class="field-value">123456-2026</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Nº do Processo</span>
+                <span class="field-value">0830029-45.1995.8.02.0001</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Nº do Ofício</span>
+                <span class="field-value empty">Não informado</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Natureza</span>
+                <span class="field-value">
+                  <span class="inline-badge ibadge-amber">Alimentar</span>
+                </span>
+              </div>
+            </div>
+            <div class="section-divider"></div>
+            <div class="info-grid cols-3">
+              <div class="info-field">
+                <span class="field-label">Tribunal</span>
+                <span class="field-value">TJAL</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Devedor</span>
+                <span class="field-value">Município de Maceió</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Expedição</span>
+                <span class="field-value">15/03/1995</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="clay-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24"><path d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0zM4.501 20.118a7.5 7.5 0 0 1 14.998 0A17.933 17.933 0 0 1 12 21.75c-2.676 0-5.216-.584-7.499-1.632z"/></svg>
+            </div>
+            <span class="card-title">Credor</span>
+          </div>
+          <div class="card-body">
+            <div class="info-grid cols-1">
+              <div class="info-field">
+                <span class="field-label">Nome completo</span>
+                <span class="field-value" style="font-weight:800;font-size:14px">ARISIA BARROS DOS SANTOS</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">CPF / CNPJ</span>
+                <span class="field-value">012.345.678-90</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Telefone</span>
+                <span class="field-value">(82) 99812-3456</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">E-mail</span>
+                <span class="field-value">arisia.barros@email.com</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Endereço</span>
+                <span class="field-value">Rua das Flores, 241 — Farol, Maceió/AL</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- DADOS FINANCEIROS -->
+      <div class="clay-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24"><path d="M2.25 18.75a60.07 60.07 0 0 1 15.797 2.101c.727.198 1.453-.342 1.453-1.096V18.75M3.75 4.5v.75A.75.75 0 0 1 3 6h-.75m0 0v-.375c0-.621.504-1.125 1.125-1.125H20.25M2.25 6v9m18-10.5v.75c0 .414.336.75.75.75h.75m-1.5-1.5h.375c.621 0 1.125.504 1.125 1.125v9.75c0 .621-.504 1.125-1.125 1.125h-.375m1.5-1.5H21a.75.75 0 0 0-.75.75v.75m0 0H3.75m0 0h-.375a1.125 1.125 0 0 1-1.125-1.125V15m1.5 1.5v-.75A.75.75 0 0 0 3 15h-.75M15 10.5a3 3 0 1 1-6 0 3 3 0 0 1 6 0zm3 0h.008v.008H18V10.5zm-12 0h.008v.008H6V10.5z"/></svg>
+          </div>
+          <span class="card-title">Dados Financeiros</span>
+        </div>
+        <div class="card-body">
+          <div class="value-blobs">
+            <div class="value-blob">
+              <span class="blob-label">Valor Principal</span>
+              <span class="blob-value">R$ 804.323,82</span>
+            </div>
+            <div class="value-blob hero">
+              <span class="blob-label">Valor Atualizado</span>
+              <span class="blob-value">R$ 1.235.562,42</span>
+            </div>
+            <div class="value-blob positive">
+              <span class="blob-label">Correção Aplicada</span>
+              <span class="blob-value">+53,6%</span>
+            </div>
+          </div>
+          <div class="section-divider"></div>
+          <div class="info-grid cols-4">
+            <div class="info-field">
+              <span class="field-label">Honorários</span>
+              <span class="field-value">30%</span>
+            </div>
+            <div class="info-field">
+              <span class="field-label">Índice</span>
+              <span class="field-value">IPCA-E + Juros</span>
+            </div>
+            <div class="info-field">
+              <span class="field-label">Prioridade</span>
+              <span class="field-value">
+                <span class="inline-badge ibadge-amber">MÉDIA</span>
+              </span>
+            </div>
+            <div class="info-field">
+              <span class="field-label">Urgente</span>
+              <span class="field-value" style="color:var(--green);font-weight:700">Não</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ADVOGADO + RESPONSÁVEIS -->
+      <div class="two-col">
+
+        <div class="clay-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24"><path d="M12 3v17.25m0 0c-1.472 0-2.882.265-4.185.75M12 20.25c1.472 0 2.882.265 4.185.75M18.75 4.97A48.416 48.416 0 0 0 12 4.5c-2.291 0-4.545.16-6.75.47m13.5 0c1.01.143 2.01.317 3 .52m-3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.988 5.988 0 0 1-2.031.352 5.988 5.988 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L18.75 4.97zm-16.5 0c-.99.143-1.99.317-3 .52m3-.52 2.62 10.726c.122.499-.106 1.028-.589 1.202a5.989 5.989 0 0 1-2.031.352 5.989 5.989 0 0 1-2.031-.352c-.483-.174-.711-.703-.59-1.202L2.25 4.97z"/></svg>
+            </div>
+            <span class="card-title">Advogado</span>
+          </div>
+          <div class="card-body">
+            <div class="info-grid cols-1">
+              <div class="info-field">
+                <span class="field-label">Nome</span>
+                <span class="field-value">Dr. Roberto Carlos Lima</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">CPF / OAB</span>
+                <span class="field-value">123.456.789-00 / AL 9.876</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Escritório</span>
+                <span class="field-value">Lima & Associados Advogados</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="clay-card">
+          <div class="card-header">
+            <div class="card-icon">
+              <svg viewBox="0 0 24 24"><path d="M15 19.128a9.38 9.38 0 0 0 2.625.372 9.337 9.337 0 0 0 4.121-.952 4.125 4.125 0 0 0-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 0 1 8.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0 1 11.964-3.07M12 6.375a3.375 3.375 0 1 1-6.75 0 3.375 3.375 0 0 1 6.75 0zm8.25 2.25a2.625 2.625 0 1 1-5.25 0 2.625 2.625 0 0 1 5.25 0z"/></svg>
+            </div>
+            <span class="card-title">Responsáveis</span>
+          </div>
+          <div class="card-body">
+            <div class="info-grid cols-1">
+              <div class="info-field">
+                <span class="field-label">Operador responsável</span>
+                <div style="display:flex;align-items:center;gap:10px;margin-top:4px">
+                  <div class="avatar">C</div>
+                  <span class="field-value">Carlos Henrique</span>
+                </div>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Distribuído por</span>
+                <span class="field-value">Matheus Prentacar · 02/04/2026</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">Responsável cálculo</span>
+                <span class="field-value empty">Não atribuído</span>
+              </div>
+              <div class="info-field">
+                <span class="field-label">SLA</span>
+                <span class="inline-badge ibadge-green">No prazo</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- OBSERVAÇÕES -->
+      <div class="clay-card">
+        <div class="card-header">
+          <div class="card-icon">
+            <svg viewBox="0 0 24 24"><path d="M2.25 12.76c0 1.6 1.123 2.994 2.707 3.227 1.087.16 2.185.283 3.293.369V21l4.076-4.076a1.526 1.526 0 0 1 1.037-.443 48.282 48.282 0 0 0 5.68-.494c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z"/></svg>
+          </div>
+          <span class="card-title">Observações & Anotações</span>
+        </div>
+        <div class="card-body">
+          <div class="obs-area">
+            Credor localizável via celular após 14h. Manifestou interesse em proposta a partir de 70% do valor atualizado. Aguardando assinatura de procuração enviada pelos Correios em 28/03/2026.
+          </div>
+          <div style="display:flex;justify-content:flex-end;margin-top:12px">
+            <button class="btn btn-ghost" style="height:34px;font-size:12px">
+              <svg viewBox="0 0 24 24"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              Editar observações
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- FOOTER -->
+      <div class="footer-bar">
+        <div class="footer-meta">
+          Criado em 01/04/2026 · Última atualização: 02/04/2026 às 15:23
+        </div>
+        <div class="footer-actions">
+          <button class="btn btn-ghost" style="height:34px;font-size:12px">
+            <svg viewBox="0 0 24 24"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6M9 6V4h6v2"/></svg>
+            Excluir
+          </button>
+          <button class="btn btn-ghost" style="height:34px;font-size:12px">
+            <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+            Exportar PDF
+          </button>
+          <button class="btn btn-ac" style="height:34px;font-size:12px">
+            <svg viewBox="0 0 24 24"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+            Ver timeline completa
+          </button>
+        </div>
+      </div>
+
+    </main>
+  </div>
+</div>
+
+<script>
+function setActive(el) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  el.classList.add('active');
+}
+</script>
+</body>
+</html>

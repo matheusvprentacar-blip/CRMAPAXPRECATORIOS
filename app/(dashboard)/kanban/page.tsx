@@ -5,17 +5,14 @@
 import { useEffect, useMemo, useState, useRef, useCallback, useDeferredValue, memo, type RefObject, type KeyboardEvent as ReactKeyboardEvent } from "react"
 import { useRouter } from "next/navigation"
 import { DragDropContext, Droppable, Draggable } from "@hello-pangea/dnd"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Bell, Lock, LockOpen, Kanban, User, AlertCircle, ChevronLeft, ChevronRight } from "@/components/icons"
+import { Lock, LockOpen, Kanban, ChevronLeft, ChevronRight } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
 import { toast } from "@/components/ui/use-toast"
 import { maskProcesso } from "@/lib/masks"
-import { Progress } from "@/components/ui/progress"
-import { Separator } from "@/components/ui/separator"
 import {
   Dialog,
   DialogContent,
@@ -29,25 +26,12 @@ import { Textarea } from "@/components/ui/textarea"
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
 import { ModalSemInteresse } from "@/components/kanban/modal-sem-interesse"
-import ShinyText from "@/components/ui/shiny-text"
-import GlareHover from "@/components/ui/glare-hover"
 import { KANBAN_COLUMNS } from "./columns"
+import { KpiCard } from "@/components/kanban/kpi-card"
 import { useSidebar } from "@/components/ui/sidebar"
 import { X } from "@/components/icons"
 import type { FiltrosPrecatorios } from "@/lib/types/filtros"
 import { usePersistedFilters } from "@/hooks/use-persisted-filters"
-
-const KANBAN_SHINY_PROPS = {
-  speed: 2,
-  delay: 0,
-  color: "#ff8a00",
-  shineColor: "#ffd28c",
-  spread: 120,
-  direction: "left" as const,
-  yoyo: false,
-  pauseOnHover: false,
-  disabled: false,
-}
 
 // Colunas do Kanban com Gates (Base)
 const COLUNAS_BASE = KANBAN_COLUMNS.filter((coluna) => coluna.id !== "entrada")
@@ -157,9 +141,8 @@ interface PrecatorioCard {
   created_at: string
   updated_at?: string | null
 
-  file_url?: string | null // Campo de Ofício
+  file_url?: string | null
 
-  // Campos para filtros avançados
   nivel_complexidade?: "baixa" | "media" | "alta" | null
   sla_status?: "nao_iniciado" | "no_prazo" | "atencao" | "atrasado" | "concluido" | null
   tipo_atraso?: string | null
@@ -267,12 +250,10 @@ const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement | nul
     if (!container) return
 
     const onWheel = (e: WheelEvent) => {
-      // pinch-zoom/ctrl+scroll: deixa passar
       if (e.ctrlKey) return
 
       const target = e.target as HTMLElement | null
 
-      // Se o wheel está sobre uma coluna com scroll vertical e ainda dá pra scrollar, deixa o vertical funcionar.
       const scrollArea = target?.closest?.("[data-kanban-scroll]") as HTMLElement | null
       if (scrollArea) {
         const canScrollY = scrollArea.scrollHeight > scrollArea.clientHeight + 1
@@ -280,14 +261,12 @@ const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement | nul
           const atTop = scrollArea.scrollTop <= 0
           const atBottom = scrollArea.scrollTop + scrollArea.clientHeight >= scrollArea.scrollHeight - 1
 
-          // ainda tem espaço pra scroll vertical? deixa o browser cuidar.
           if ((e.deltaY < 0 && !atTop) || (e.deltaY > 0 && !atBottom)) {
             return
           }
         }
       }
 
-      // Shift+wheel -> horizontal (padrão de muitos sistemas)
       if (e.shiftKey) {
         container.scrollLeft += e.deltaY
         e.preventDefault()
@@ -297,14 +276,12 @@ const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement | nul
       const absX = Math.abs(e.deltaX || 0)
       const absY = Math.abs(e.deltaY || 0)
 
-      // Trackpad com gesto horizontal real
       if (absX > absY) {
         container.scrollLeft += e.deltaX
         e.preventDefault()
         return
       }
 
-      // Mouse wheel normal (vertical) vira horizontal
       container.scrollLeft += e.deltaY
       e.preventDefault()
     }
@@ -318,20 +295,21 @@ const useWheelToHorizontalScroll = (containerRef: RefObject<HTMLDivElement | nul
 
 const formatBR = (n: number) => n.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
 
+const formatM = (v: number) =>
+  v >= 1_000_000
+    ? `R$ ${(v / 1_000_000).toLocaleString("pt-BR", { maximumFractionDigits: 1 })}M`
+    : v >= 1_000
+      ? `R$ ${(v / 1_000).toLocaleString("pt-BR", { maximumFractionDigits: 0 })}K`
+      : formatBR(v)
+
 const getParecerLabel = (status?: string | null) => {
   switch (status) {
-    case "APROVADO":
-      return "Aprovado"
-    case "AJUSTAR_DADOS":
-      return "Ajustar dados"
-    case "RISCO_ALTO":
-      return "Risco alto"
-    case "IMPEDIMENTO":
-      return "Impedimento"
-    case "NAO_ELEGIVEL":
-      return "Não elegível"
-    default:
-      return status || "Parecer"
+    case "APROVADO": return "Aprovado"
+    case "AJUSTAR_DADOS": return "Ajustar dados"
+    case "RISCO_ALTO": return "Risco alto"
+    case "IMPEDIMENTO": return "Impedimento"
+    case "NAO_ELEGIVEL": return "Não elegível"
+    default: return status || "Parecer"
   }
 }
 
@@ -343,8 +321,58 @@ type KanbanCardItemProps = {
   isAtualizado: boolean
   podeCalculos: boolean
   isDragging: boolean
+  compacto: boolean
   onOpenDetails: (precatorioId: string, updatedAt?: string | null) => void
   onOpenCalculo: (precatorioId: string) => void
+}
+
+// Helpers para chips de interesse
+function getInteresseChip(status: string | null) {
+  switch (status) {
+    case "TEM_INTERESSE":
+      return { label: "Tem interesse", variant: "green" as const }
+    case "SEM_INTERESSE":
+      return { label: "Sem interesse", variant: "red" as const }
+    case "PEDIR_RETORNO":
+      return { label: "Pedir retorno", variant: "amber" as const }
+    case "CONTATO_EM_ANDAMENTO":
+      return { label: "Contato em andamento", variant: "blue" as const }
+    case "SEM_CONTATO":
+      return { label: "Sem contato", variant: "gray" as const }
+    default:
+      return null
+  }
+}
+
+function getSlaChip(status: string | null | undefined) {
+  switch (status) {
+    case "atrasado":
+      return { label: "Em atraso", variant: "red" as const }
+    case "atencao":
+      return { label: "Atenção SLA", variant: "amber" as const }
+    case "no_prazo":
+      return { label: "No prazo", variant: "green" as const }
+    default:
+      return null
+  }
+}
+
+type ChipVariant = "green" | "amber" | "blue" | "red" | "gray"
+
+const CHIP_CLASSES: Record<ChipVariant, string> = {
+  green: "bg-emerald-50 text-emerald-800 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800",
+  amber: "bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800",
+  blue: "bg-blue-50 text-blue-800 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800",
+  red: "bg-red-50 text-red-800 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800",
+  gray: "bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800/60 dark:text-zinc-400 dark:border-zinc-700",
+}
+
+function MiniPill({ label, variant }: { label: string; variant: ChipVariant }) {
+  return (
+    <span className={`inline-flex items-center min-h-[25px] px-2.5 rounded-full text-[10px] font-bold border whitespace-nowrap shadow-[3px_3px_8px_rgba(0,0,0,.05),-2px_-2px_5px_rgba(255,255,255,.9)] ${CHIP_CLASSES[variant]}`}>
+      {label}
+    </span>
+  )
 }
 
 const KanbanCardItem = memo(function KanbanCardItem({
@@ -353,154 +381,264 @@ const KanbanCardItem = memo(function KanbanCardItem({
   isAtualizado,
   podeCalculos,
   isDragging,
+  compacto,
   onOpenDetails,
   onOpenCalculo,
 }: KanbanCardItemProps) {
   const numeroPrecatorio = precatorio.numero_precatorio ? maskProcesso(precatorio.numero_precatorio) : null
-  const temValor = Boolean(
-    (precatorio.valor_atualizado && precatorio.valor_atualizado > 0) ||
-    (precatorio.valor_principal && precatorio.valor_principal > 0),
-  )
   const valorExibido =
-    (precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? precatorio.valor_atualizado : precatorio.valor_principal) ??
-    0
-  const nomeResponsavel = precatorio.responsavel_perfil?.nome?.split(" ")[0] || "Sem responsável"
+    (precatorio.valor_atualizado && precatorio.valor_atualizado > 0
+      ? precatorio.valor_atualizado
+      : precatorio.valor_principal) ?? 0
+  const temValor = valorExibido > 0
+  const nomeResponsavel = precatorio.responsavel_perfil?.nome?.split(" ")[0] || "—"
+  const nomeCompletoResponsavel = precatorio.responsavel_perfil?.nome || "—"
+  const initiais = (precatorio.responsavel_perfil?.nome || "?")
+    .split(" ")
+    .slice(0, 2)
+    .map((n: string) => n[0])
+    .join("")
+    .toUpperCase()
+
+  const interesseChip = getInteresseChip(precatorio.interesse_status)
+  const slaChip = getSlaChip(precatorio.sla_status)
+
+  // Gate bars: docs e certidões
+  const totalDocs = precatorio.resumo_itens?.total_docs ?? 0
+  const docsFilled = precatorio.resumo_itens?.docs_recebidos ?? 0
+  const totalCerts = precatorio.resumo_itens?.total_certidoes ?? 0
+  const certsFilled = precatorio.resumo_itens?.certidoes_recebidas ?? 0
+  const totalGates = totalDocs + totalCerts
+  const gatesFilled = docsFilled + certsFilled
+  const temGates = totalGates > 0
+
+  // Próxima ação contextual
+  const proximaAcao = (() => {
+    if (precatorio.motivo_atraso_calculo) return `Resolver atraso: ${precatorio.motivo_atraso_calculo}`
+    if (precatorio.interesse_status === "PEDIR_RETORNO" && precatorio.data_recontato)
+      return `Recontato em ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`
+    if (precatorio.interesse_status === "SEM_CONTATO") return "Realizar primeiro contato com o credor"
+    if (colunaId === "docs_credor" && precatorio.resumo_itens && precatorio.resumo_itens.percentual_docs < 100)
+      return "Cobrar documentação pendente do credor"
+    if (colunaId === "juridico" && !precatorio.juridico_parecer_status) return "Aguardando parecer jurídico"
+    if (colunaId === "pronto_calculo") return "Abrir área de cálculo e iniciar atualização"
+    return null
+  })()
+
+  const temBloqueio =
+    precatorio.juridico_parecer_status === "IMPEDIMENTO" ||
+    precatorio.juridico_parecer_status === "RISCO_ALTO" ||
+    !!precatorio.motivo_atraso_calculo
 
   return (
-    <Card
+    <div
       onClick={() => onOpenDetails(precatorio.id, precatorio.updated_at)}
-      className={`cursor-grab active:cursor-grabbing min-h-[9.5rem] rounded-2xl border bg-background group hover:border-primary/35 transition-all duration-200 select-none ${isDragging
-        ? "shadow-2xl ring-2 ring-primary/60"
-        : precatorio.motivo_atraso_calculo
-          ? "border-red-500/80 dark:border-red-500/80 ring-1 ring-red-500/25"
-          : "border-border"
-        }`}
+      className={[
+        "cursor-grab active:cursor-grabbing select-none",
+        "rounded-[22px] border bg-white dark:bg-zinc-900",
+        "transition-all duration-200",
+        "hover:-translate-y-1 hover:scale-[1.01]",
+        isDragging
+          ? "opacity-95 rotate-[1.4deg] scale-[1.02] shadow-[22px_22px_44px_rgba(0,0,0,.16),-8px_-8px_22px_rgba(255,255,255,.98),inset_1px_1px_3px_rgba(255,255,255,.96),inset_-1px_-1px_2px_rgba(0,0,0,.03)] ring-2 ring-[rgba(14,77,106,.12)] z-10"
+          : "shadow-[14px_14px_30px_rgba(0,0,0,.10),-6px_-6px_16px_rgba(255,255,255,.98),inset_1px_1px_3px_rgba(255,255,255,.92),inset_-1px_-1px_2px_rgba(0,0,0,.03)]",
+        temBloqueio
+          ? "border-red-300/80 dark:border-red-700/60"
+          : isAtualizado
+            ? "border-blue-300/70 dark:border-blue-600/50"
+            : "border-[rgba(14,77,106,.10)]",
+      ].join(" ")}
     >
-      <CardContent className="p-3.5">
-        <div className="space-y-2.5 min-w-0">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex flex-1 items-start min-w-0">
-              <h4 className="min-w-0 flex-1 font-semibold text-sm leading-tight text-orange-500 dark:text-orange-400 line-clamp-2 break-words transition-colors">
-                {precatorio.titulo || numeroPrecatorio || "Sem título"}
-              </h4>
-            </div>
-            {isAtualizado && (
-              <span
-                className="flex h-5 w-5 items-center justify-center rounded-full bg-red-500/15 text-red-500"
-                title="Atualizado"
-              >
-                <Bell className="h-3.5 w-3.5" />
-              </span>
-            )}
-          </div>
+      <div className="p-[15px] space-y-3">
 
-          <div className="space-y-1.5">
+        {/* Cabeçalho: nome + prioridade */}
+        <div className="flex items-start justify-between gap-2.5">
+          <div className="min-w-0 flex-1">
+            <h4 className="text-[14.5px] font-black leading-tight tracking-[-0.025em] text-foreground line-clamp-2 break-words">
+              {precatorio.credor_nome || precatorio.titulo || "Sem nome"}
+            </h4>
             {numeroPrecatorio && (
-              <div className="flex min-w-0 items-center gap-1.5 text-xs">
-                <span className="text-foreground/60 dark:text-zinc-400 shrink-0">Precatório:</span>
-                <span className="font-medium text-foreground dark:text-zinc-100 truncate" title={numeroPrecatorio}>
-                  {numeroPrecatorio}
-                </span>
-              </div>
-            )}
-            <div className="flex min-w-0 items-center gap-1 text-xs text-foreground/60 dark:text-zinc-400">
-              <User className="h-3 w-3 shrink-0" />
-              <p className="min-w-0 truncate" title={precatorio.credor_nome || undefined}>
-                {precatorio.credor_nome || "Credor não informado"}
+              <p className="text-[10px] font-bold tracking-[0.14em] uppercase text-muted-foreground mt-0.5 truncate">
+                {numeroPrecatorio}
               </p>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-1 pt-0.5">
-            {colunaId === "encerrados" && (
-              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
-                {ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
-              </Badge>
             )}
+          </div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
             {precatorio.urgente && (
-              <Badge variant="destructive" className="text-[0.5625rem] h-4 px-1.5">
-                Urgente
-              </Badge>
-            )}
-            {precatorio.titular_falecido && (
-              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
-                Titular falecido
-              </Badge>
-            )}
-            {precatorio.calculo_desatualizado && (
-              <Badge
-                variant="outline"
-                className="text-[0.5625rem] h-4 px-1.5 border-amber-300 text-amber-700 dark:text-amber-300"
-              >
-                Cálculo desatualizado
-              </Badge>
-            )}
-
-            {precatorio.calculo_ultima_versao > 0 && (
-              <Badge variant="secondary" className="text-[0.5625rem] h-4 px-1.5">
-                v{precatorio.calculo_ultima_versao}
-              </Badge>
-            )}
-
-
-            {precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status && (
-              <Badge
-                variant="outline"
-                className="text-[0.5625rem] h-4 px-1.5 border-red-200 text-red-700 dark:text-red-300"
-              >
-                Jurídico: {getParecerLabel(precatorio.juridico_parecer_status)}
-              </Badge>
-            )}
-
-            {precatorio.motivo_atraso_calculo && (
-              <Badge variant="destructive" className="text-[0.5625rem] h-4 px-1.5 animate-pulse">
-                <AlertCircle className="h-2.5 w-2.5 mr-1" />
-                Em Atraso
-              </Badge>
-            )}
-          </div>
-
-          {temValor && (
-            <div className="grid grid-cols-[auto_1fr] items-center gap-x-2 rounded-xl border border-border bg-muted/60 px-2.5 py-2">
-              <span className={`text-[0.625rem] uppercase tracking-wide leading-none font-medium ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-600 dark:text-emerald-500" : "text-muted-foreground"}`}>
-                {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Atualizado:" : "Principal:"}
+              <span className="inline-flex items-center min-w-[40px] h-[34px] px-2.5 rounded-xl text-[11px] font-bold border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-950/40 text-red-700 dark:text-red-300 shadow-[3px_3px_8px_rgba(0,0,0,.05),-2px_-2px_5px_rgba(255,255,255,.9)]">
+                Alta
               </span>
-              <span className={`min-w-0 text-right text-[0.9375rem] font-semibold tabular-nums whitespace-nowrap leading-none ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-500" : "text-foreground dark:text-zinc-100"}`}>
-                {formatBR(valorExibido)}
+            )}
+            {!precatorio.urgente && precatorio.prioridade && precatorio.prioridade >= 3 && (
+              <span className="inline-flex items-center min-w-[40px] h-[34px] px-2.5 rounded-xl text-[11px] font-bold border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 shadow-[3px_3px_8px_rgba(0,0,0,.05),-2px_-2px_5px_rgba(255,255,255,.9)]">
+                Média
               </span>
-            </div>
-          )}
-
-          <div className="pt-0.5 flex items-center justify-between gap-2 min-w-0">
-            <div
-              className="min-w-0 flex items-center gap-1 text-[0.6875rem] text-foreground/65 dark:text-zinc-400 bg-muted/60 px-2 py-1 rounded-lg max-w-[58%]"
-              title={`Responsável: ${precatorio.responsavel_perfil?.nome || "Não definido"}`}
-            >
-              <User className="h-3 w-3 shrink-0" />
-              <span className="truncate">{nomeResponsavel}</span>
-            </div>
-
-            {podeCalculos ? (
-              <div
-                className="h-7 shrink-0 px-2.5 rounded-lg border border-emerald-400/35 bg-emerald-500/10 text-[0.625rem] text-emerald-300 inline-flex items-center"
-                title="Acesso ao cálculo liberado"
-              >
-                <LockOpen className="h-3 w-3 mr-1.5" />
-                Cálculo liberado
-              </div>
-            ) : (
-              <div
-                className="h-7 shrink-0 px-2.5 rounded-lg border border-border bg-muted/60 text-[0.625rem] text-foreground/70 dark:text-zinc-400 inline-flex items-center"
-                title="Cálculo bloqueado até cumprir os requisitos"
-              >
-                <Lock className="h-3 w-3 mr-1.5" />
-                Bloqueado
-              </div>
             )}
           </div>
         </div>
-      </CardContent>
-    </Card>
+
+        {/* Subtitle: tribunal + devedor */}
+        {(precatorio.tribunal || precatorio.devedor) && (
+          <p className="text-[12px] text-muted-foreground leading-snug line-clamp-2">
+            {[precatorio.tribunal, precatorio.devedor].filter(Boolean).join(" · ")}
+          </p>
+        )}
+
+        {/* Chips de status */}
+        {(interesseChip || slaChip || precatorio.titular_falecido || colunaId === "encerrados" || precatorio.calculo_desatualizado || (precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status)) && (
+          <div className="flex flex-wrap gap-1.5 mt-3">
+            {interesseChip && <MiniPill label={interesseChip.label} variant={interesseChip.variant} />}
+            {slaChip && <MiniPill label={slaChip.label} variant={slaChip.variant} />}
+            {precatorio.titular_falecido && (
+              <MiniPill label="Titular falecido" variant="gray" />
+            )}
+            {colunaId === "encerrados" && (
+              <MiniPill
+                label={ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
+                variant="gray"
+              />
+            )}
+            {precatorio.calculo_desatualizado && (
+              <MiniPill label="Cálculo desatualizado" variant="amber" />
+            )}
+            {precatorio.status_kanban === "pronto_calculo" && precatorio.juridico_parecer_status && (
+              <MiniPill
+                label={`Jurídico: ${getParecerLabel(precatorio.juridico_parecer_status)}`}
+                variant="red"
+              />
+            )}
+          </div>
+        )}
+
+        {/* Info panel: responsável + valor */}
+        {!compacto && (
+          <div
+            className="mt-3 p-3 rounded-2xl grid grid-cols-2 gap-2.5"
+            style={{
+              background: "var(--muted-lt, #f4f5f8)",
+              boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07),inset -4px -4px 10px rgba(255,255,255,.87)",
+            }}
+          >
+            <div>
+              <span className="block mb-1 text-[9.5px] font-bold tracking-[0.14em] uppercase text-muted-foreground">
+                Responsável
+              </span>
+              <strong className="block text-[12px] font-bold text-foreground leading-snug truncate">
+                {nomeResponsavel}
+              </strong>
+            </div>
+            {temValor && (
+              <div>
+                <span className="block mb-1 text-[9.5px] font-bold tracking-[0.14em] uppercase text-muted-foreground">
+                  {precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "Valor atualizado" : "Valor principal"}
+                </span>
+                <strong className={`block text-[12px] font-bold leading-snug truncate ${precatorio.valor_atualizado && precatorio.valor_atualizado > 0 ? "text-emerald-700 dark:text-emerald-400" : "text-foreground"}`}>
+                  {formatBR(valorExibido)}
+                </strong>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Gate bars */}
+        {temGates && (
+          <div className="mt-3 space-y-2">
+            <div className="flex items-center justify-between text-[10px] font-bold tracking-[0.13em] uppercase text-muted-foreground">
+              <span>Leitura de gates</span>
+              <strong>{gatesFilled}/{totalGates}</strong>
+            </div>
+            <div className="flex gap-1.5">
+              {Array.from({ length: totalDocs }).map((_, i) => (
+                <span
+                  key={`doc-${i}`}
+                  className="flex-1 h-2 rounded-full"
+                  style={{
+                    background: i < docsFilled
+                      ? "linear-gradient(90deg, #22c55e, #0e4d6a)"
+                      : "rgba(0,0,0,.06)",
+                  }}
+                />
+              ))}
+              {totalDocs > 0 && totalCerts > 0 && <span className="w-1" />}
+              {Array.from({ length: totalCerts }).map((_, i) => (
+                <span
+                  key={`cert-${i}`}
+                  className="flex-1 h-2 rounded-full"
+                  style={{
+                    background: i < certsFilled
+                      ? "linear-gradient(90deg, #f59e0b, #f97316)"
+                      : "rgba(0,0,0,.06)",
+                  }}
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Próxima ação */}
+        {!compacto && proximaAcao && (
+          <div
+            className="mt-3 px-3 py-3 rounded-[15px]"
+            style={{
+              background: "linear-gradient(180deg,#f7fbff,#eef5fb)",
+              border: "1px solid rgba(14,77,106,.12)",
+              boxShadow: "inset 1px 1px 2px rgba(255,255,255,.8),4px 4px 10px rgba(0,0,0,.04)",
+            }}
+          >
+            <strong className="block mb-1 text-[9.5px] font-black tracking-[0.14em] uppercase text-[#0e4d6a]">
+              Próxima ação segura
+            </strong>
+            <span className="text-[11.5px] text-foreground/80 leading-snug line-clamp-2">{proximaAcao}</span>
+          </div>
+        )}
+
+        {/* Rodapé: avatar + lock badge */}
+        <div className="flex items-center justify-between gap-2.5 mt-3">
+          <div className="flex items-center gap-2 min-w-0">
+            <div
+              className="w-8 h-8 rounded-[11px] flex items-center justify-center text-white text-[11px] font-black shrink-0"
+              style={{
+                background: "#0e4d6a",
+                boxShadow: "4px 4px 10px rgba(14,77,106,.34),-2px -2px 6px rgba(255,255,255,.35)",
+              }}
+            >
+              {initiais}
+            </div>
+            <div className="min-w-0">
+              <strong className="block text-[11.5px] font-bold text-foreground leading-tight truncate max-w-[120px]">
+                {nomeCompletoResponsavel}
+              </strong>
+            </div>
+          </div>
+
+          {podeCalculos ? (
+            <span
+              className="inline-flex items-center gap-1.5 min-h-[30px] px-3 rounded-full text-[10px] font-black border whitespace-nowrap"
+              style={{
+                background: "#f0fdf4",
+                color: "#15803d",
+                borderColor: "#bbf7d0",
+              }}
+            >
+              <LockOpen className="h-3 w-3" />
+              Cálculo liberado
+            </span>
+          ) : (
+            <span
+              className="inline-flex items-center gap-1.5 min-h-[30px] px-3 rounded-full text-[10px] font-black border whitespace-nowrap"
+              style={{
+                background: "#fffbeb",
+                color: "#92400e",
+                borderColor: "#fde68a",
+              }}
+            >
+              <Lock className="h-3 w-3" />
+              Bloqueado
+            </span>
+          )}
+        </div>
+
+      </div>
+    </div>
   )
 })
 
@@ -511,7 +649,9 @@ type KanbanColumnProps = {
   totalCards: number
   columnWidthClass: string
   isDragging: boolean
+  compacto: boolean
   updatedPrecatorios: Set<string>
+  matchFiltroRapido: (p: PrecatorioCard) => boolean
   podeAcessarCalculos: (precatorio: PrecatorioCard) => boolean
   onOpenDetails: (precatorioId: string, updatedAt?: string | null) => void
   onOpenCalculo: (precatorioId: string) => void
@@ -524,124 +664,167 @@ const KanbanColumn = memo(function KanbanColumn({
   totalCards,
   columnWidthClass,
   isDragging,
+  compacto,
   updatedPrecatorios,
+  matchFiltroRapido,
   podeAcessarCalculos,
   onOpenDetails,
   onOpenCalculo,
 }: KanbanColumnProps) {
-  const c = coluna.color
   const progressValue = totalCards > 0 ? Math.round((precatorios.length / totalCards) * 100) : 0
+  const c = coluna.color
 
   return (
     <div
       data-kanban-column="true"
-      className={`flex-shrink-0 ${columnWidthClass} h-full flex flex-col ${isDragging ? "" : "snap-start"
-        }`}
+      className={`flex-shrink-0 ${columnWidthClass} flex flex-col ${isDragging ? "" : "snap-start"}`}
     >
       <Droppable droppableId={coluna.id}>
         {(provided, snapshot) => (
-          <Card
+          <div
             ref={provided.innerRef}
             {...provided.droppableProps}
-            className={`flex flex-col h-full rounded-2xl ring-1 ${c.ring} bg-background/95 border border-border`}
+            className="flex flex-col h-full rounded-[22px] overflow-clip"
+            style={{
+              border: snapshot.isDraggingOver
+                ? "1.5px solid rgba(14,77,106,.18)"
+                : "1.5px solid rgba(0,0,0,.06)",
+              background: "linear-gradient(180deg,#fcfcfd,#f7f8fb)",
+              boxShadow: snapshot.isDraggingOver
+                ? "18px 18px 38px rgba(0,0,0,.08),-8px -8px 20px rgba(255,255,255,.96),inset 1px 1px 4px rgba(255,255,255,.92),inset -1px -1px 2px rgba(0,0,0,.04),0 0 0 2px rgba(14,77,106,.08)"
+                : "16px 16px 36px rgba(0,0,0,.08),-8px -8px 20px rgba(255,255,255,.94),inset 1px 1px 4px rgba(255,255,255,.9),inset -1px -1px 2px rgba(0,0,0,.04)",
+            }}
           >
-            <CardHeader
-              className={`p-0 z-10 rounded-t-2xl sticky top-0 shadow-sm ring-1 ${c.ring} ${c.bg} border-b border-border`}
+            {/* Column Header */}
+            <div
+              className="sticky top-0 z-10 px-4 pb-3.5 pt-4"
+              style={{
+                borderBottom: "1px solid #e8eaef",
+                background: "linear-gradient(180deg,rgba(255,255,255,.97),rgba(248,249,251,.97))",
+                backdropFilter: "blur(8px)",
+              }}
             >
-              <GlareHover
-                glareColor="#ffffff"
-                glareOpacity={0.3}
-                glareAngle={-30}
-                glareSize={300}
-                transitionDuration={800}
-                playOnce={false}
-                className="rounded-t-2xl px-3 pb-2 pt-3"
-              >
-                <div className="flex items-start gap-2">
+              <div className="flex items-start justify-between gap-2.5">
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className={`h-4 w-1.5 rounded-full ${c.bar}`} />
-                    <span className={`h-2.5 w-2.5 rounded-full ${c.dot}`} />
-                    <CardTitle className={`text-[0.8125rem] font-semibold truncate ${c.text}`}>{coluna.titulo}</CardTitle>
+                  {/* Kicker */}
+                  <div
+                    className={`inline-flex items-center gap-2 mb-1.5 text-[9.5px] font-bold tracking-[0.16em] uppercase ${c.text}`}
+                  >
+                    <span className={`h-[7px] w-[7px] rounded-full ${c.dot} opacity-90`} />
+                    {coluna.kicker}
                   </div>
-                  <CardDescription className="mt-1 text-xs text-zinc-700 dark:text-zinc-300 line-clamp-1">
-                    {progressValue}% do pipeline • {formatBR(totalColuna)}
-                  </CardDescription>
+                  <h3 className="text-[15px] font-black text-foreground tracking-[-0.02em] leading-tight">
+                    {coluna.titulo}
+                  </h3>
+                  <p className="text-[11px] text-muted-foreground mt-1 line-clamp-1">
+                    {coluna.meta}
+                  </p>
                 </div>
-                <Badge variant="secondary" className="shrink-0 text-[0.6875rem] h-6 px-2.5 py-0 rounded-full">
+                {/* Count badge */}
+                <span
+                  className="shrink-0 inline-flex items-center justify-center min-w-[40px] h-8 px-2.5 rounded-full text-[12px] font-black"
+                  style={{
+                    background: "#fff",
+                    border: "1.5px solid rgba(0,0,0,.06)",
+                    color: "#0e4d6a",
+                    boxShadow: "7px 7px 16px rgba(0,0,0,.07),-4px -4px 10px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.88),inset -1px -1px 2px rgba(0,0,0,.03)",
+                  }}
+                >
                   {precatorios.length}
-                </Badge>
+                </span>
               </div>
-                <div className="mt-1.5 flex items-center gap-2">
-                <Progress
-                  value={progressValue}
-                  className="h-1 bg-zinc-200/70 dark:bg-zinc-800/70"
-                />
-                <span className="text-[0.6875rem] text-zinc-700 dark:text-zinc-300 tabular-nums">{progressValue}%</span>
+
+              {/* Progress bar */}
+              <div className="mt-3">
+                <div className="flex items-center justify-between text-[10px] font-bold tracking-[0.12em] uppercase text-muted-foreground mb-1.5">
+                  <span>
+                    {totalCards > 0 ? "Prontos para avançar" : "Sem cards"}
+                    {totalColuna > 0 && ` · ${formatM(totalColuna)}`}
+                  </span>
+                  <strong>{progressValue}%</strong>
                 </div>
-              </GlareHover>
-            </CardHeader>
-
-            <CardContent className="flex-1 min-h-0 p-0 overflow-hidden">
-              <div
-                data-kanban-scroll
-                className={`space-y-2.5 p-2.5 h-full max-h-[65vh] md:max-h-[68vh] xl:max-h-[72vh] min-h-[7.5rem] overflow-y-auto overscroll-contain pr-3 rounded-b-2xl transition-all duration-200 [&_[data-rfd-placeholder-context-id]]:rounded-xl [&_[data-rfd-placeholder-context-id]]:border-2 [&_[data-rfd-placeholder-context-id]]:border-dashed [&_[data-rfd-placeholder-context-id]]:border-primary/45 [&_[data-rfd-placeholder-context-id]]:bg-primary/10 [&_[data-rfd-placeholder-context-id]]:transition-all [&_[data-rfd-placeholder-context-id]]:duration-200 ${
-                  snapshot.isDraggingOver
-                    ? "bg-primary/10 ring-2 ring-primary/30"
-                    : "bg-muted/40"
-                }`}
-                style={{ scrollbarGutter: "stable both-edges" }}
-              >
-                {precatorios.map((precatorio, index) => {
-                  const podeCalculos = podeAcessarCalculos(precatorio)
-                  const isAtualizado = updatedPrecatorios.has(precatorio.id)
-
-                  return (
-                    <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
-                      {(provided, snapshot) => {
-                        const dragStyle = provided.draggableProps.style as any
-
-                        const draggingCard = (
-                          <div
-                            ref={provided.innerRef}
-                            {...provided.draggableProps}
-                            {...provided.dragHandleProps}
-                            data-kanban-item="true"
-                            className={snapshot.isDragging ? "pointer-events-none" : ""}
-                            style={{
-                              ...dragStyle,
-                              zIndex: snapshot.isDragging ? 20 : "auto",
-                            }}
-                          >
-                            <KanbanCardItem
-                              precatorio={precatorio}
-                              colunaId={coluna.id}
-                              isAtualizado={isAtualizado}
-                              podeCalculos={podeCalculos}
-                              isDragging={snapshot.isDragging}
-                              onOpenDetails={onOpenDetails}
-                              onOpenCalculo={onOpenCalculo}
-                            />
-                          </div>
-                        )
-
-                        return draggingCard
-                      }}
-                    </Draggable>
-                  )
-                })}
-                {provided.placeholder}
-                {precatorios.length === 0 && (
-                  <div className="flex flex-col items-center justify-center py-6 opacity-70">
-                    <div className="border-2 border-dashed border-muted-foreground/30 rounded-xl p-3 mb-2">
-                      <Kanban className="h-6 w-6 text-muted-foreground/50" />
-                    </div>
-                    <p className="text-xs text-muted-foreground">Arraste aqui</p>
-                  </div>
-                )}
+                <div
+                  className="h-[5px] rounded-full overflow-hidden"
+                  style={{
+                    background: "#e8eaef",
+                    boxShadow: "inset 2px 2px 4px rgba(0,0,0,.05),inset -1px -1px 3px rgba(255,255,255,.75)",
+                  }}
+                >
+                  <span
+                    className={`block h-full rounded-full ${c.bar}`}
+                    style={{ width: `${progressValue}%`, transition: "width .5s ease" }}
+                  />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+
+            {/* Column body */}
+            <div
+              data-kanban-scroll
+              className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-3 space-y-3.5 max-h-[65vh] md:max-h-[68vh] xl:max-h-[72vh]"
+              style={{
+                background: snapshot.isDraggingOver
+                  ? "linear-gradient(180deg,#e8edf5,#f0f4fa)"
+                  : "linear-gradient(180deg,#eef1f6,#f4f6fa)",
+                boxShadow: "inset 5px 5px 12px rgba(0,0,0,.07),inset -4px -4px 10px rgba(255,255,255,.87)",
+                outline: snapshot.isDraggingOver ? "2px dashed rgba(14,77,106,.22)" : "none",
+                outlineOffset: "-6px",
+              }}
+            >
+              {precatorios.map((precatorio, index) => {
+                const podeCalculos = podeAcessarCalculos(precatorio)
+                const isAtualizado = updatedPrecatorios.has(precatorio.id)
+                const visivelNoFiltro = matchFiltroRapido(precatorio)
+
+                return (
+                  <Draggable draggableId={precatorio.id} index={index} key={precatorio.id}>
+                    {(provided, snapshot) => {
+                      const dragStyle = provided.draggableProps.style as any
+                      return (
+                        <div
+                          ref={provided.innerRef}
+                          {...provided.draggableProps}
+                          {...provided.dragHandleProps}
+                          data-kanban-item="true"
+                          className={snapshot.isDragging ? "pointer-events-none" : ""}
+                          style={{
+                            ...dragStyle,
+                            zIndex: snapshot.isDragging ? 20 : "auto",
+                            opacity: visivelNoFiltro ? 1 : 0.18,
+                            pointerEvents: visivelNoFiltro ? "auto" : "none",
+                            transition: "opacity .2s ease",
+                          }}
+                        >
+                          <KanbanCardItem
+                            precatorio={precatorio}
+                            colunaId={coluna.id}
+                            isAtualizado={isAtualizado}
+                            podeCalculos={podeCalculos}
+                            isDragging={snapshot.isDragging}
+                            compacto={compacto}
+                            onOpenDetails={onOpenDetails}
+                            onOpenCalculo={onOpenCalculo}
+                          />
+                        </div>
+                      )
+                    }}
+                  </Draggable>
+                )
+              })}
+              {provided.placeholder}
+              {precatorios.length === 0 && (
+                <div className="flex flex-col items-center justify-center py-8 opacity-50">
+                  <div
+                    className="rounded-2xl p-3 mb-2"
+                    style={{ border: "2px dashed rgba(0,0,0,.12)" }}
+                  >
+                    <Kanban className="h-6 w-6 text-muted-foreground" />
+                  </div>
+                  <p className="text-xs text-muted-foreground">Arraste aqui</p>
+                </div>
+              )}
+            </div>
+          </div>
         )}
       </Droppable>
     </div>
@@ -654,7 +837,10 @@ export default function KanbanPageNewGates() {
   const router = useRouter()
   const scrollContainerRef = useRef<HTMLDivElement>(null)
   const [precatorios, setPrecatorios] = useState<PrecatorioCard[]>([])
+  const [totalReal, setTotalReal] = useState<number | null>(null)
   const [loading, setLoading] = useState(true)
+  const [compacto, setCompacto] = useState(false)
+  const [filtroRapido, setFiltroRapido] = useState<"all" | "blocked" | "legal" | "calc" | "high">("all")
   const { filtros, updateFiltros, clearFiltros, filtrosAtivos } = usePersistedFilters("filtros:kanban")
   const [updatedPrecatorios, setUpdatedPrecatorios] = useState<Set<string>>(new Set())
   const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as string[]
@@ -833,6 +1019,15 @@ export default function KanbanPageNewGates() {
         setLoading(true)
       }
 
+      // Conta o total real sem limite de 1000
+      supabase
+        .from("precatorios")
+        .select("id", { count: "exact", head: true })
+        .is("deleted_at", null)
+        .then(({ count }) => {
+          if (count !== null) setTotalReal(count)
+        })
+
       const selectFieldsLegacy = `
         id,
         titulo,
@@ -904,14 +1099,14 @@ export default function KanbanPageNewGates() {
           if (retryError) throw retryError
           precatoriosData = retryData
         } else {
-        console.warn("[Kanban] Falha no select detalhado, tentando fallback:", error)
-        const { data: fallbackData, error: fallbackError } = await supabase
-          .from("precatorios")
-          .select(selectFieldsLegacy)
-          .is("deleted_at", null)
-          .order("created_at", { ascending: false })
-        if (fallbackError) throw fallbackError
-        precatoriosData = fallbackData
+          console.warn("[Kanban] Falha no select detalhado, tentando fallback:", error)
+          const { data: fallbackData, error: fallbackError } = await supabase
+            .from("precatorios")
+            .select(selectFieldsLegacy)
+            .is("deleted_at", null)
+            .order("created_at", { ascending: false })
+          if (fallbackError) throw fallbackError
+          precatoriosData = fallbackData
         }
       } else {
         if (escriturasSchemaReadyRef.current === null) {
@@ -1047,6 +1242,32 @@ export default function KanbanPageNewGates() {
     () => getFilteredPrecatorios(precatorios, deferredFiltros),
     [precatorios, deferredFiltros, getFilteredPrecatorios]
   )
+
+  // Filtro rápido — aplicado por card no render (mantém colunas visíveis, apenas esconde cards)
+  const matchFiltroRapido = useCallback((p: PrecatorioCard): boolean => {
+    switch (filtroRapido) {
+      case "all": return true
+      case "blocked":
+        return (
+          p.juridico_parecer_status === "IMPEDIMENTO" ||
+          p.juridico_parecer_status === "RISCO_ALTO" ||
+          !!p.motivo_atraso_calculo ||
+          p.sla_status === "atrasado"
+        )
+      case "legal":
+        return (
+          p.status_kanban === "juridico" ||
+          p.status_kanban === "analise_processual_inicial" ||
+          p.status_kanban === "proposta_aceita"
+        )
+      case "calc":
+        return COLUNAS_CALCULO_PERMITIDO.includes(p.status_kanban)
+      case "high":
+        return p.urgente === true || (typeof p.prioridade === "number" && p.prioridade >= 3)
+      default:
+        return true
+    }
+  }, [filtroRapido])
   const responsaveisFiltro = useMemo(() => {
     const ids = new Set<string>()
     const nomesPorId = new Map<string, string>()
@@ -1072,6 +1293,7 @@ export default function KanbanPageNewGates() {
       }))
       .sort((a, b) => a.nome.localeCompare(b.nome, "pt-BR"))
   }, [precatorios])
+
   const responsavelAtivo = useMemo(() => {
     if (!filtros.responsavel_id) return null
     const responsavel = responsaveisFiltro.find((item) => item.id === filtros.responsavel_id)
@@ -1100,7 +1322,7 @@ export default function KanbanPageNewGates() {
 
     filteredPrecatorios.forEach((precatorio) => {
       let statusToUse = precatorio.status_kanban
-      
+
       if (
         statusToUse === "entrada" &&
         precatorio.distribuido_por_admin &&
@@ -1538,8 +1760,8 @@ export default function KanbanPageNewGates() {
   const [canScrollRight, setCanScrollRight] = useState(false)
   const isSidebarCollapsed = !isMobile && sidebarState === "collapsed"
   const columnWidthClass = isSidebarCollapsed
-    ? "min-w-[268px] w-[268px] md:min-w-[292px] md:w-[292px] xl:min-w-[324px] xl:w-[324px]"
-    : "min-w-[248px] w-[248px] md:min-w-[272px] md:w-[272px] xl:min-w-[300px] xl:w-[300px]"
+    ? "min-w-[282px] w-[282px] md:min-w-[308px] md:w-[308px] xl:min-w-[334px] xl:w-[334px]"
+    : "min-w-[260px] w-[260px] md:min-w-[286px] md:w-[286px] xl:min-w-[320px] xl:w-[320px]"
 
   const updateScrollButtons = useCallback(() => {
     const container = scrollContainerRef.current
@@ -1674,121 +1896,274 @@ export default function KanbanPageNewGates() {
     return () => window.cancelAnimationFrame(frame)
   }, [updateScrollButtons, filteredPrecatorios.length])
 
-  // ✅ FIX 1: wheel vertical -> scroll horizontal (nativo, passive:false)
   useWheelToHorizontalScroll(scrollContainerRef)
-
-  // ✅ FIX 2: auto-scroll durante drag perto das bordas
   useHorizontalAutoScroll(isDragging, scrollContainerRef)
+
+  // ---- KPIs ----
+  const totalVisivel = filteredPrecatorios.length
+
+  const formatBRL = (v: number) => v.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+
+  const kpiContagens = useMemo(() => {
+    const ativos = filteredPrecatorios.filter(p =>
+      !["encerrados", "reprovado", "fechado"].includes(p.status_kanban)
+    ).length
+    const semResponsavel = filteredPrecatorios.filter(p => !p.responsavel).length
+    const comUrgencia = filteredPrecatorios.filter(p => p.urgente === true || (typeof p.prioridade === "number" && p.prioridade >= 3)).length
+    const hoje = new Date()
+    hoje.setHours(0, 0, 0, 0)
+    const atualizadosHoje = filteredPrecatorios.filter(p => {
+      const d = p.updated_at ? new Date(p.updated_at) : null
+      return d && d >= hoje
+    }).length
+    return [
+      { label: "Total de precatórios", value: totalReal ?? totalVisivel, sub: "Base completa no sistema" },
+      { label: "Ativos no board", value: ativos, sub: "Excluindo pausados e encerrados" },
+      { label: "Sem responsável", value: semResponsavel, sub: "Aguardando atribuição" },
+      { label: "Atualizados hoje", value: atualizadosHoje, sub: "Movimentados ou editados hoje" },
+      { label: "Com urgência", value: comUrgencia, sub: "Marcados como urgente ou prioridade alta" },
+    ]
+  }, [filteredPrecatorios, totalReal, totalVisivel])
+
+  const kpiStatus = useMemo(() => {
+    const travados = filteredPrecatorios.filter(p =>
+      p.juridico_parecer_status === "IMPEDIMENTO" ||
+      p.juridico_parecer_status === "RISCO_ALTO" ||
+      !!p.motivo_atraso_calculo ||
+      p.sla_status === "atrasado"
+    ).length
+    const emTriagem = grupos.triagem_interesse?.length || 0
+    const emJuridico = grupos.juridico?.length || 0
+    const juridFechamento = grupos.proposta_aceita?.length || 0
+    const pausados = grupos.encerrados?.length || 0
+    const reprovados = grupos.reprovado?.length || 0
+    return [
+      { label: "Travados por gate", value: String(travados).padStart(2, "0"), sub: "Docs, certidões ou parecer pendente" },
+      { label: "Em triagem", value: String(emTriagem).padStart(2, "0"), sub: "Aguardando interesse do credor" },
+      { label: "Em jurídico", value: String(emJuridico).padStart(2, "0"), sub: "Análise jurídica em andamento" },
+      { label: "Jurídico de fechamento", value: String(juridFechamento).padStart(2, "0"), sub: "Proposta aceita, preparando fechamento" },
+      { label: "Pausados", value: String(pausados).padStart(2, "0"), sub: "Sem interesse ou aguardando credor" },
+      { label: "Reprovados", value: String(reprovados).padStart(2, "0"), sub: "Não elegíveis ou reprovados" },
+    ]
+  }, [filteredPrecatorios, grupos])
+
+  const kpiCalculo = useMemo(() => {
+    const prontos = grupos.pronto_calculo?.length || 0
+    const emAndamento = grupos.calculo_andamento?.length || 0
+    const concluidos = grupos.calculo_concluido?.length || 0
+    const semResp = filteredPrecatorios.filter(p =>
+      COLUNAS_CALCULO_PERMITIDO.includes(p.status_kanban) && !p.responsavel_calculo_id
+    ).length
+    return [
+      { label: "Pronto p/ cálculo", value: String(prontos).padStart(2, "0"), sub: "Liberados para abertura da área" },
+      { label: "Cálculo em andamento", value: String(emAndamento).padStart(2, "0"), sub: "Atualização monetária em execução" },
+      { label: "Cálculo concluído", value: String(concluidos).padStart(2, "0"), sub: "Valores calculados e validados" },
+      { label: "Sem responsável de cálculo", value: String(semResp).padStart(2, "0"), sub: "Nas etapas de cálculo sem atribuição" },
+    ]
+  }, [filteredPrecatorios, grupos])
+
+  const kpiValores = useMemo(() => {
+    const soma = (status?: string[]) => filteredPrecatorios
+      .filter(p => !status || status.includes(p.status_kanban))
+      .reduce((acc, p) => {
+        const v = (p.valor_atualizado && p.valor_atualizado > 0 ? p.valor_atualizado : p.valor_principal) ?? 0
+        return acc + v
+      }, 0)
+    const somaAtualizado = filteredPrecatorios
+      .filter(p => p.valor_atualizado && p.valor_atualizado > 0)
+      .reduce((acc, p) => acc + (p.valor_atualizado ?? 0), 0)
+    return [
+      { label: "Valor em esteira", value: formatBRL(soma()), sub: "Todos os precatórios ativos" },
+      { label: "Valor em triagem", value: formatBRL(soma(["triagem_interesse"])), sub: "Etapa de triagem de interesse" },
+      { label: "Valor p/ cálculo", value: formatBRL(soma(COLUNAS_CALCULO_PERMITIDO)), sub: "Nas etapas de cálculo" },
+      { label: "Valor atualizado", value: formatBRL(somaAtualizado), sub: "Com valor_atualizado preenchido" },
+      { label: "Valor em negociação", value: formatBRL(soma(["proposta_negociacao"])), sub: "Proposta enviada ou em negociação" },
+      { label: "Valor fechado", value: formatBRL(soma(["fechado"])), sub: "Operações finalizadas" },
+    ]
+  }, [filteredPrecatorios])
 
   if (loading) {
     return (
-      <div className="min-w-0 w-full max-w-full overflow-hidden px-3 md:px-4 lg:px-5 py-3 h-full min-h-0 flex flex-col space-y-4">
-        <div className="space-y-3 border-b pb-4">
-          <div className="h-8 w-60 rounded-xl bg-muted/60 animate-pulse" />
-          <div className="h-4 w-80 rounded-lg bg-muted/40 animate-pulse" />
-        </div>
-        <div className="flex-1 min-h-0 overflow-hidden">
-          <div className="flex gap-4 overflow-hidden">
-            {colunasVisiveis.slice(0, 4).map((coluna) => (
-              <div
-                key={coluna.id}
-                className={`${columnWidthClass} h-full flex flex-col`}
-              >
-                <div className="h-full rounded-2xl border border-border/60 bg-muted/30 animate-pulse" />
-              </div>
+      <div className="min-w-0 w-full max-w-full overflow-hidden flex flex-col h-full">
+        {/* Skeleton header */}
+        <div
+          className="px-4 py-3.5 border-b"
+          style={{
+            background: "linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,253,.97))",
+            borderColor: "rgba(14,77,106,.10)",
+          }}
+        >
+          <div className="h-7 w-56 rounded-xl bg-muted/50 animate-pulse mb-2" />
+          <div className="grid grid-cols-4 gap-2 mt-3">
+            {[0, 1, 2, 3].map((i) => (
+              <div key={i} className="h-16 rounded-2xl bg-muted/40 animate-pulse" />
             ))}
           </div>
+        </div>
+        {/* Skeleton board */}
+        <div className="flex-1 min-h-0 overflow-hidden flex gap-3 p-3">
+          {colunasVisiveis.slice(0, 5).map((coluna) => (
+            <div key={coluna.id} className={`${columnWidthClass} flex-shrink-0`}>
+              <div className="h-full min-h-[520px] rounded-[22px] bg-muted/30 animate-pulse" />
+            </div>
+          ))}
         </div>
       </div>
     )
   }
 
   return (
-    <div className="min-w-0 w-full max-w-full overflow-hidden px-3 md:px-4 lg:px-5 py-3 h-full min-h-0 flex flex-col space-y-4">
-      {/* Header Premium */}
-      <div className="flex flex-col gap-3 border-b border-border dark:border-zinc-800/70 pb-4">
-        <div className="min-w-0 flex flex-col xl:flex-row xl:items-center justify-between gap-3">
+    <div className="min-w-0 w-full max-w-full overflow-hidden flex flex-col h-full">
+
+      {/* ====== HEADER FIXO ESTILO CONCEITUAL ====== */}
+      <div
+        className="z-10 px-4 pb-3 pt-3.5 border-b flex-shrink-0"
+        style={{
+          background: "linear-gradient(180deg,rgba(255,255,255,.98),rgba(248,250,253,.97))",
+          borderColor: "rgba(14,77,106,.10)",
+          boxShadow: "0 4px 24px rgba(0,0,0,.08),0 1px 4px rgba(0,0,0,.04)",
+        }}
+      >
+        {/* Top row: título + ações */}
+        <div className="flex items-start justify-between gap-4 flex-wrap mb-3">
           <div className="min-w-0">
-            <h1 className="text-2xl md:text-4xl font-bold tracking-tight w-fit">
-              <ShinyText text="Kanban Workflow" className="align-middle" {...KANBAN_SHINY_PROPS} />
+            <div
+              className="inline-flex items-center gap-2 mb-1.5 text-[9.5px] font-black tracking-[0.18em] uppercase"
+              style={{ color: "#9ca3af" }}
+            >
+              <span
+                className="h-2 w-2 rounded-full"
+                style={{ background: "linear-gradient(180deg,#0e4d6a,#2d74a1)", boxShadow: "0 0 0 4px rgba(14,77,106,.08)" }}
+              />
+              Painel operacional
+            </div>
+            <h1
+              className="no-route-shiny text-[26px] font-black leading-none tracking-[-0.06em]"
+              style={{ color: "#0e4d6a", textShadow: "0 1px 0 rgba(255,255,255,.7)" }}
+            >
+              Kanban de Operação
             </h1>
-            <p className="text-muted-foreground mt-1 text-base">Fluxo controlado com gates de validação automática</p>
           </div>
-          <div className="min-w-0 flex w-full flex-wrap items-center gap-2 sm:flex-nowrap xl:w-auto">
-            <div className="min-w-0 w-full flex-1 xl:w-80">
+
+          <div className="flex flex-wrap items-center gap-2">
+            {/* SearchBar */}
+            <div className="min-w-[240px]">
               <SearchBar
                 value={filtros.termo || ""}
                 onChange={setSearchTerm}
                 onClear={() => setSearchTerm("")}
-                placeholder="Filtrar cards..."
+                placeholder="Buscar por credor, processo, devedor..."
                 autoSearch={true}
                 showButton={false}
               />
             </div>
-            <div className="shrink-0">
-              <AdvancedFilters
-                filtros={filtros}
-                onFilterChange={updateFiltros}
-                onClearFilters={clearFiltros}
-                totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
-                responsaveis={responsaveisFiltro}
-                showResponsavelFilter={responsaveisFiltro.length > 0}
-                showDistribuicaoFilter={true}
-              />
-            </div>
+            {/* AdvancedFilters */}
+            <AdvancedFilters
+              filtros={filtros}
+              onFilterChange={updateFiltros}
+              onClearFilters={clearFiltros}
+              totalFiltrosAtivos={filtrosAtivos.length + (filtros.responsavel_id ? 1 : 0)}
+              responsaveis={responsaveisFiltro}
+              showResponsavelFilter={responsaveisFiltro.length > 0}
+              showDistribuicaoFilter={true}
+            />
+            {/* Modo compacto toggle */}
+            <button
+              type="button"
+              onClick={() => setCompacto((v) => !v)}
+              className={[
+                "h-9 px-3.5 rounded-[13px] text-[12.5px] font-bold inline-flex items-center gap-1.5 transition-all duration-200",
+                compacto
+                  ? "text-white"
+                  : "border text-foreground/80 hover:-translate-y-px",
+              ].join(" ")}
+              style={
+                compacto
+                  ? {
+                    background: "#0e4d6a",
+                    boxShadow: "8px 8px 20px rgba(14,77,106,.42),-3px -3px 8px rgba(255,255,255,.28),inset 1px 1px 3px rgba(255,255,255,.14),inset -1px -1px 2px rgba(8,40,60,.28)",
+                  }
+                  : {
+                    background: "linear-gradient(145deg,#fff,#f4f5f8)",
+                    borderColor: "rgba(0,0,0,.08)",
+                    boxShadow: "7px 7px 16px rgba(0,0,0,.07),-4px -4px 10px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.88),inset -1px -1px 2px rgba(0,0,0,.03)",
+                  }
+              }
+            >
+              <svg viewBox="0 0 24 24" className="w-3.5 h-3.5" stroke="currentColor" fill="none" strokeWidth="2">
+                <path d="M4 7h16M4 12h16M4 17h16" />
+              </svg>
+              {compacto ? "Expandido" : "Compacto"}
+            </button>
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 text-xs">
-          <Badge variant="secondary" className="px-2.5 py-1 rounded-full bg-muted text-foreground border border-border">
-            Total: {precatorios.length}
-          </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
-            Visíveis: {filteredPrecatorios.length}
-          </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
-            Pronto cálculo: {grupos.pronto_calculo?.length || 0}
-          </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
-            Em cálculo: {grupos.calculo_andamento?.length || 0}
-          </Badge>
-          <Badge variant="outline" className="px-2.5 py-1 rounded-full border-border text-foreground/75 dark:border-zinc-700/70 dark:text-zinc-200">
-            Encerrados: {(grupos.fechado?.length || 0) + (grupos.encerrados?.length || 0)}
-          </Badge>
+        {/* KPIs 4 cards rotativos */}
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+          <KpiCard
+            metrics={kpiContagens}
+            colors={{
+              bg: "linear-gradient(180deg,#ffffff,#f8fafc)",
+              border: "rgba(14,77,106,.08)",
+              label: "#7b8794",
+              value: "#07131d",
+              sub: "#5f6b7a",
+              dot: "#0e4d6a",
+            }}
+          />
+          <KpiCard
+            metrics={kpiStatus}
+            colors={{
+              bg: "linear-gradient(145deg,#fef3e2,#fffbf0)",
+              border: "rgba(180,83,9,.18)",
+              label: "#92400e",
+              value: "#b45309",
+              sub: "#92400e",
+              dot: "#b45309",
+            }}
+          />
+          <KpiCard
+            metrics={kpiCalculo}
+            colors={{
+              bg: "linear-gradient(145deg,#e0effe,#eef6ff)",
+              border: "rgba(14,77,106,.18)",
+              label: "#0e4d6a",
+              value: "#1a6080",
+              sub: "#0e4d6a",
+              dot: "#1a6080",
+            }}
+          />
+          <KpiCard
+            metrics={kpiValores}
+            colors={{
+              bg: "linear-gradient(145deg,#e8fdf0,#f3fef7)",
+              border: "rgba(21,128,61,.18)",
+              label: "#166534",
+              value: "#15803d",
+              sub: "#166534",
+              dot: "#15803d",
+            }}
+          />
         </div>
 
-        <Separator />
-
+        {/* Filtros ativos */}
         {(filtrosAtivos.length > 0 || !!filtros.responsavel_id) && (
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider mr-2">Filtros:</span>
+          <div className="flex items-center gap-2 flex-wrap mt-2.5">
+            <span className="text-[9.5px] font-bold uppercase tracking-[0.14em] text-muted-foreground mr-1">Filtros:</span>
             {filtros.responsavel_id && (
-              <Badge
-                variant="secondary"
-                className="flex items-center gap-1.5 px-2.5 py-1"
-              >
+              <Badge variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1 text-xs">
                 <span className="font-semibold">Responsável:</span>
                 <span>{responsavelAtivo}</span>
-                <button
-                  onClick={() => removeFiltro("responsavel_id")}
-                  className="ml-1 hover:text-destructive transition-colors"
-                >
+                <button onClick={() => removeFiltro("responsavel_id")} className="ml-1 hover:text-destructive transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
             )}
             {filtrosAtivos.map((filtro, index) => (
-              <Badge
-                key={index}
-                variant="secondary"
-                className="flex items-center gap-1.5 px-2.5 py-1"
-              >
+              <Badge key={index} variant="secondary" className="flex items-center gap-1.5 px-2.5 py-1 text-xs">
                 <span className="font-semibold">{filtro.label}:</span>
                 <span>{filtro.displayValue}</span>
-                <button
-                  onClick={() => removeFiltro(filtro.key)}
-                  className="ml-1 hover:text-destructive transition-colors"
-                >
+                <button onClick={() => removeFiltro(filtro.key)} className="ml-1 hover:text-destructive transition-colors">
                   <X className="h-3 w-3" />
                 </button>
               </Badge>
@@ -1800,39 +2175,92 @@ export default function KanbanPageNewGates() {
         )}
       </div>
 
-      {filteredPrecatorios.length === 0 && (
-        <div className="rounded-2xl border border-dashed border-border/70 bg-muted/30 p-6 text-center text-sm text-muted-foreground">
-          Nenhum precatório encontrado com os filtros atuais. Ajuste os filtros ou limpe a busca para ver todos.
-        </div>
-      )}
-
-      <div className="min-w-0 max-w-full flex-1 min-h-0 overflow-hidden flex flex-col">
-        <DragDropContext
-          onDragEnd={(result) => {
-            setIsDragging(false)
-            void onDragEnd(result)
-          }}
-          onDragStart={() => {
-            setIsDragging(true)
-          }}
+      {/* ====== FILTER CHIPS RÁPIDOS ====== */}
+      <div
+        className="px-4 py-2 border-b flex-shrink-0 flex flex-wrap items-center gap-2"
+        style={{ borderColor: "rgba(14,77,106,.07)", background: "rgba(248,250,253,.95)" }}
+      >
+        {([
+          { id: "all", label: "Todos" },
+          { id: "blocked", label: "Travados" },
+          { id: "legal", label: "Jurídico" },
+          { id: "calc", label: "Pronto p/ cálculo" },
+          { id: "high", label: "Alta prioridade" },
+        ] as const).map((chip) => (
+          <button
+            key={chip.id}
+            type="button"
+            onClick={() => setFiltroRapido(chip.id)}
+            className="h-[34px] px-3.5 rounded-full text-[11.5px] font-bold transition-all duration-200"
+            style={
+              filtroRapido === chip.id
+                ? {
+                    background: "#0e4d6a",
+                    color: "#fff",
+                    border: "1.5px solid transparent",
+                    boxShadow: "8px 8px 20px rgba(14,77,106,.42),-3px -3px 8px rgba(255,255,255,.28),inset 1px 1px 3px rgba(255,255,255,.14),inset -1px -1px 2px rgba(8,40,60,.28)",
+                  }
+                : {
+                    background: "linear-gradient(145deg,#fff,#f4f5f8)",
+                    color: "#374151",
+                    border: "1.5px solid rgba(0,0,0,.06)",
+                    boxShadow: "7px 7px 16px rgba(0,0,0,.07),-4px -4px 10px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.88),inset -1px -1px 2px rgba(0,0,0,.03)",
+                  }
+            }
+          >
+            {chip.label}
+          </button>
+        ))}
+        <span
+          className="ml-auto text-[10px] font-semibold"
+          style={{ color: "#9ca3af" }}
         >
-          <div className="relative min-w-0 max-w-full h-full overflow-hidden">
+          {filtroRapido === "all"
+            ? filteredPrecatorios.length
+            : filteredPrecatorios.filter(matchFiltroRapido).length
+          } card{filteredPrecatorios.length !== 1 ? "s" : ""}
+        </span>
+      </div>
+
+      {/* ====== BOARD ====== */}
+      {filteredPrecatorios.length === 0 ? (
+        <div className="flex-1 flex items-center justify-center p-8">
+          <div
+            className="rounded-2xl border-2 border-dashed p-8 text-center max-w-sm"
+            style={{ borderColor: "rgba(0,0,0,.08)" }}
+          >
+            <Kanban className="h-8 w-8 text-muted-foreground/40 mx-auto mb-3" />
+            <p className="text-sm text-muted-foreground font-medium">
+              Nenhum precatório encontrado com os filtros atuais.
+            </p>
+            <p className="text-xs text-muted-foreground mt-1 opacity-70">
+              Ajuste os filtros ou limpe a busca para ver todos.
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex-1 min-h-0 overflow-hidden relative">
+          <DragDropContext
+            onDragEnd={(result) => {
+              setIsDragging(false)
+              void onDragEnd(result)
+            }}
+            onDragStart={() => setIsDragging(true)}
+          >
             <div
               ref={scrollContainerRef}
               id="kanban-scroll-container"
               tabIndex={0}
               onKeyDown={handleKanbanKeyDown}
               aria-label="Painel kanban com navegação horizontal"
-              className="kanban-horizontal-scroll w-full h-full overflow-x-auto overflow-y-hidden pb-3 px-1 md:px-1.5 overscroll-x-contain"
+              className={`w-full h-full overflow-x-auto overflow-y-hidden overscroll-x-contain pb-3 px-3 ${isDragging ? "snap-none" : "snap-x snap-proximity"}`}
               style={{
                 WebkitOverflowScrolling: "touch",
                 overscrollBehaviorX: "contain",
                 scrollbarGutter: "stable both-edges",
               }}
             >
-              <div
-                className={`flex min-w-max h-full gap-2.5 md:gap-3 ${isDragging ? "snap-none" : "snap-x snap-proximity"}`}
-              >
+              <div className="flex min-w-max h-full gap-3 pt-3">
                 {colunasVisiveis.map((coluna) => {
                   const precatoriosColuna = grupos[coluna.id] || []
                   const totalColuna = totaisColuna[coluna.id] || 0
@@ -1846,7 +2274,9 @@ export default function KanbanPageNewGates() {
                       totalCards={filteredPrecatorios.length}
                       columnWidthClass={columnWidthClass}
                       isDragging={isDragging}
+                      compacto={compacto}
                       updatedPrecatorios={updatedPrecatorios}
+                      matchFiltroRapido={matchFiltroRapido}
                       podeAcessarCalculos={podeAcessarCalculos}
                       onOpenDetails={abrirDetalhe}
                       onOpenCalculo={abrirAreaCalculos}
@@ -1856,6 +2286,7 @@ export default function KanbanPageNewGates() {
               </div>
             </div>
 
+            {/* Gradients de scroll */}
             {canScrollLeft && (
               <div className="pointer-events-none absolute inset-y-0 left-0 z-10 w-14 bg-gradient-to-r from-background via-background/85 to-transparent" />
             )}
@@ -1863,11 +2294,18 @@ export default function KanbanPageNewGates() {
               <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-14 bg-gradient-to-l from-background via-background/85 to-transparent" />
             )}
 
+            {/* Nav arrows */}
             {canScrollLeft && (
               <button
                 type="button"
                 onClick={() => scrollToAdjacentColumn("left")}
-                className="absolute left-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
+                className="absolute left-3 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full inline-flex items-center justify-center transition-all duration-200 hover:-translate-y-[calc(50%+2px)]"
+                style={{
+                  background: "rgba(255,255,255,.88)",
+                  border: "1.5px solid rgba(0,0,0,.07)",
+                  color: "#6b7280",
+                  boxShadow: "7px 7px 16px rgba(0,0,0,.07),-4px -4px 10px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.88),inset -1px -1px 2px rgba(0,0,0,.03)",
+                }}
                 aria-label="Ir para a coluna anterior"
               >
                 <ChevronLeft className="h-4 w-4" />
@@ -1877,15 +2315,23 @@ export default function KanbanPageNewGates() {
               <button
                 type="button"
                 onClick={() => scrollToAdjacentColumn("right")}
-                className="absolute right-2 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full border border-border bg-background shadow-sm flex items-center justify-center text-foreground/70 dark:text-zinc-300 hover:text-foreground dark:hover:text-zinc-100 transition"
+                className="absolute right-3 top-1/2 -translate-y-1/2 z-20 h-10 w-10 rounded-full inline-flex items-center justify-center transition-all duration-200 hover:-translate-y-[calc(50%+2px)]"
+                style={{
+                  background: "rgba(255,255,255,.88)",
+                  border: "1.5px solid rgba(0,0,0,.07)",
+                  color: "#6b7280",
+                  boxShadow: "7px 7px 16px rgba(0,0,0,.07),-4px -4px 10px rgba(255,255,255,.92),inset 1px 1px 2px rgba(255,255,255,.88),inset -1px -1px 2px rgba(0,0,0,.03)",
+                }}
                 aria-label="Ir para a próxima coluna"
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
             )}
-          </div>
-        </DragDropContext>
-      </div>
+          </DragDropContext>
+        </div>
+      )}
+
+      {/* ====== MODAIS ====== */}
 
       <Dialog open={encerradosDialog.open} onOpenChange={(open) => setEncerradosDialog((prev) => ({ ...prev, open }))}>
         <DialogContent>
@@ -1896,9 +2342,7 @@ export default function KanbanPageNewGates() {
           <div className="space-y-3">
             <Select
               value={encerradosDialog.colunaDestino}
-              onValueChange={(value) =>
-                setEncerradosDialog((prev) => ({ ...prev, colunaDestino: value }))
-              }
+              onValueChange={(value) => setEncerradosDialog((prev) => ({ ...prev, colunaDestino: value }))}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Selecione o status" />
@@ -2034,7 +2478,7 @@ export default function KanbanPageNewGates() {
               .from("notifications")
               .insert({
                 user_id: profile.id,
-                title: `Recontato agendado - ${precatorioLabel}`,
+                title: `Recontado agendado - ${precatorioLabel}`,
                 body: `Recontato marcado para ${dateLabel}.`,
                 kind: "warn",
                 link_url: `/precatorios/detalhes?id=${precatorioId}&tab=detalhes`,
@@ -2132,5 +2576,3 @@ export default function KanbanPageNewGates() {
     </div>
   )
 }
-
-

@@ -1,11 +1,11 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import CountUp from "react-countup"
+import { type CSSProperties, useCallback, useDeferredValue, useEffect, useMemo, useRef, useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Button as HeroButton } from "@heroui/react"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { useAuth } from "@/lib/auth/auth-context"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,19 +13,31 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
   ChevronDown,
   ChevronUp,
   Download,
   ExternalLink,
   Eye,
   FileText,
+  CheckCircle2,
   Loader2,
   Megaphone,
+  Layers,
+  Mail,
   Paperclip,
+  Plus,
   Send,
+  Search,
+  RefreshCw,
   Sparkles,
   Trash2,
+  Users2,
+  Clock3,
   X,
 } from "@/components/icons"
 import { toast } from "sonner"
@@ -80,6 +92,123 @@ type AiEnvelope = {
   ok?: boolean
   data?: unknown
   error?: string
+}
+
+type InboxFilter = "all" | "unread" | "attachments" | "alerts"
+type MetricTone = "slate" | "blue" | "amber" | "emerald"
+
+const cx = (...classes: Array<string | false | null | undefined>) => classes.filter(Boolean).join(" ")
+
+const shellCardClass =
+  "rounded-[24px] border border-black/[0.07] bg-white shadow-[16px_16px_36px_rgba(0,0,0,.08),-8px_-8px_20px_rgba(255,255,255,.94),inset_1px_1px_4px_rgba(255,255,255,.9),inset_-1px_-1px_2px_rgba(0,0,0,.04)]"
+
+const innerShellClass =
+  "rounded-[20px] border border-black/[0.06] bg-white shadow-[8px_8px_20px_rgba(0,0,0,.06),-4px_-4px_12px_rgba(255,255,255,.92),inset_1px_1px_3px_rgba(255,255,255,.88),inset_-1px_-1px_2px_rgba(0,0,0,.03)]"
+
+const labelChipClass =
+  "inline-flex items-center gap-1.5 rounded-full border border-black/[0.08] bg-[#0e4d6a]/10 px-3 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#0e4d6a]"
+
+const metricToneClass: Record<MetricTone, string> = {
+  slate: "border-black/[0.07] bg-[#f2f3f7] text-[#0b0c10]",
+  blue: "border-[#0e4d6a]/20 bg-[#e0effe] text-[#0e4d6a]",
+  amber: "border-amber-200 bg-amber-50 text-[#92400e]",
+  emerald: "border-emerald-200 bg-[#f0fdf4] text-[#15803d]",
+}
+
+function normalizeSearchText(value: string) {
+  return value
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+}
+
+function matchesQuery(valueParts: Array<string | null | undefined>, query: string) {
+  if (!query) return true
+  const normalized = normalizeSearchText(valueParts.filter(Boolean).join(" "))
+  return normalized.includes(query)
+}
+
+function getScopeLabel(scope: ComunicadoTargetScope, recipientName?: string | null) {
+  if (scope === "individual") return recipientName ? `Individual · ${recipientName}` : "Individual"
+  if (scope === "equipe") return "Equipe inteira"
+  return "Somente operadores"
+}
+
+function getToneLabel(tone: string) {
+  switch (tone) {
+    case "formal":
+      return "Formal"
+    case "direto":
+      return "Direto"
+    case "inspirador":
+      return "Inspirador"
+    default:
+      return "Neutro"
+  }
+}
+
+function MetricTile({
+  tone = "slate",
+  label,
+  value,
+  hint,
+  icon,
+  loading,
+}: {
+  tone?: MetricTone
+  label: string
+  value: number
+  hint: string
+  icon: React.ReactNode
+  loading?: boolean
+}) {
+  return (
+    <div className={cx("rounded-[18px] border p-3.5 shadow-[8px_8px_18px_rgba(0,0,0,.06),-4px_-4px_10px_rgba(255,255,255,.92),inset_1px_1px_2px_rgba(255,255,255,.9),inset_-1px_-1px_2px_rgba(0,0,0,.02)]", metricToneClass[tone])}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-[9px] font-black uppercase tracking-[0.18em] opacity-60">{label}</div>
+          <div className="mt-1.5 text-[clamp(1.3rem,2vw,1.9rem)] font-black leading-none tracking-[-0.05em] tabular-nums">
+            {loading ? (
+              <span className="block h-7 w-16 animate-pulse rounded-xl bg-black/10" />
+            ) : (
+              <CountUp end={Number.isFinite(value) ? value : 0} duration={0.85} separator="." />
+            )}
+          </div>
+          <div className="mt-1 text-[10px] font-medium opacity-60">{hint}</div>
+        </div>
+        <div className="grid h-9 w-9 shrink-0 place-items-center rounded-[11px] bg-white/70 shadow-[inset_2px_2px_5px_rgba(0,0,0,.07),inset_-2px_-2px_5px_rgba(255,255,255,.8)] text-[#0e4d6a]">
+          {icon}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function ChecklistItem({
+  done,
+  label,
+  hint,
+}: {
+  done: boolean
+  label: string
+  hint: string
+}) {
+  return (
+    <div className="flex items-start gap-3 rounded-[16px] border border-black/[0.07] bg-[#f2f3f7] p-3 shadow-[inset_3px_3px_7px_rgba(0,0,0,.05),inset_-2px_-2px_5px_rgba(255,255,255,.85)]">
+      <div
+        className={cx(
+          "mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full",
+          done ? "bg-[#f0fdf4] text-[#15803d]" : "bg-[#f2f3f7] text-[#9ca3af]"
+        )}
+      >
+        {done ? <CheckCircle2 className="h-4 w-4" /> : <AlertTriangle className="h-4 w-4" />}
+      </div>
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-[#0b0c10]">{label}</div>
+        <div className="text-[11px] leading-5 text-[#6b7280]">{hint}</div>
+      </div>
+    </div>
+  )
 }
 
 function normalizeAiText(input: unknown): string {
@@ -451,7 +580,7 @@ export default function ComunicadosPage() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null)
   const [aiDraft, setAiDraft] = useState<AiDraft | null>(null)
 
-  const fileInputRef = useRef<HTMLInputElement>(null) // Added this line
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const [recipientOptions, setRecipientOptions] = useState<RecipientOption[]>([])
   const [selectedIndividualRecipientId, setSelectedIndividualRecipientId] = useState("")
@@ -462,10 +591,15 @@ export default function ComunicadosPage() {
   const [adminComunicados, setAdminComunicados] = useState<AdminComunicadoRow[]>([])
   const [expandedAdminRows, setExpandedAdminRows] = useState<Record<string, boolean>>({})
   const [deletingComunicadoId, setDeletingComunicadoId] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState<"inbox" | "compose" | "archive">("inbox")
+  const [query, setQuery] = useState("")
+  const [inboxFilter, setInboxFilter] = useState<InboxFilter>("all")
 
   const roles = useMemo(() => normalizeRoles(profile?.role), [profile?.role])
   const isAdmin = roles.includes("admin")
   const userId = profile?.id
+  const deferredQuery = useDeferredValue(query)
+  const normalizedQuery = useMemo(() => normalizeSearchText(deferredQuery.trim()), [deferredQuery])
 
   const unreadCount = useMemo(
     () =>
@@ -473,6 +607,141 @@ export default function ComunicadosPage() {
       myIndividualAlerts.filter((item) => !item.read_at).length,
     [myComunicados, myIndividualAlerts]
   )
+
+  const receivedCount = myComunicados.length + myIndividualAlerts.length
+  const readCount = Math.max(receivedCount - unreadCount, 0)
+  const teamUnreadCount = myComunicados.filter((item) => !item.visualizado_em && !item.dispensado_em).length
+  const alertUnreadCount = myIndividualAlerts.filter((item) => !item.read_at).length
+  const attachmentCount = myComunicados.filter((item) => Boolean(item.comunicado?.anexo_url)).length
+  const publishedCount = adminComunicados.length
+  const publishedAttachmentCount = adminComunicados.filter((item) => Boolean(item.anexo_url)).length
+  const latestPublishedLabel = adminComunicados[0]?.publicado_em ? formatDateTime(adminComunicados[0].publicado_em) : "Sem publicações"
+  const selectedRecipient = useMemo(
+    () => recipientOptions.find((item) => item.id === selectedIndividualRecipientId) || null,
+    [recipientOptions, selectedIndividualRecipientId]
+  )
+  const finalPublishedMessage = mensagemPublicada.trim() || mensagemOriginal.trim()
+  const canPublish =
+    isAdmin &&
+    Boolean(titulo.trim()) &&
+    Boolean(mensagemOriginal.trim()) &&
+    Boolean(finalPublishedMessage) &&
+    (escopo !== "individual" || Boolean(selectedIndividualRecipientId))
+
+  useEffect(() => {
+    if (!isAdmin && activeTab !== "inbox") {
+      setActiveTab("inbox")
+    }
+  }, [activeTab, isAdmin])
+
+  const filteredMyComunicados = useMemo(() => {
+    return myComunicados
+      .filter((item) => {
+        const comunicado = item.comunicado
+        if (!comunicado) return false
+
+        const isUnread = !item.visualizado_em && !item.dispensado_em
+        if (inboxFilter === "unread" && !isUnread) return false
+        if (inboxFilter === "attachments" && !comunicado.anexo_url) return false
+        if (inboxFilter === "alerts") return false
+
+        return matchesQuery(
+          [
+            comunicado.titulo,
+            comunicado.mensagem_publicada,
+            comunicado.mensagem_original,
+            comunicado.anexo_nome,
+            comunicado.escopo,
+            item.enviado_em,
+          ],
+          normalizedQuery
+        )
+      })
+      .sort((a, b) => {
+        const aUnread = !a.visualizado_em && !a.dispensado_em
+        const bUnread = !b.visualizado_em && !b.dispensado_em
+        if (aUnread !== bUnread) return Number(bUnread) - Number(aUnread)
+        return new Date(b.enviado_em).getTime() - new Date(a.enviado_em).getTime()
+      })
+  }, [inboxFilter, myComunicados, normalizedQuery])
+
+  const filteredMyIndividualAlerts = useMemo(() => {
+    return myIndividualAlerts
+      .filter((item) => {
+        const isUnread = !item.read_at
+        if (inboxFilter === "unread" && !isUnread) return false
+        if (inboxFilter === "attachments") return false
+
+        return matchesQuery([item.title, item.body, item.event_type, item.entity_type, item.created_at], normalizedQuery)
+      })
+      .sort((a, b) => {
+        const aUnread = !a.read_at
+        const bUnread = !b.read_at
+        if (aUnread !== bUnread) return Number(bUnread) - Number(aUnread)
+        return new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+      })
+  }, [inboxFilter, myIndividualAlerts, normalizedQuery])
+
+  const filteredAdminComunicados = useMemo(() => {
+    return adminComunicados.filter((item) =>
+      matchesQuery(
+        [
+          item.titulo,
+          item.mensagem_publicada,
+          item.mensagem_original,
+          item.anexo_nome,
+          item.escopo,
+          item.publicado_em,
+        ],
+        normalizedQuery
+      )
+    )
+  }, [adminComunicados, normalizedQuery])
+
+  const composeChecklist = useMemo(
+    () => [
+      {
+        done: Boolean(titulo.trim()),
+        label: "Título definido",
+        hint: "O assunto aparece no topo da publicação.",
+      },
+      {
+        done: Boolean(mensagemOriginal.trim()),
+        label: "Mensagem base pronta",
+        hint: "Use a IA ou escreva diretamente o texto que será revisado.",
+      },
+      {
+        done: Boolean(finalPublishedMessage),
+        label: "Versão final pronta",
+        hint: "O conteúdo publicado é o que o time vai receber.",
+      },
+      {
+        done: escopo !== "individual" || Boolean(selectedIndividualRecipientId),
+        label: "Público selecionado",
+        hint: escopo === "individual" ? "Escolha o destinatário para envio exclusivo." : "O comunicado vai para o escopo escolhido.",
+      },
+      {
+        done: Boolean(selectedFile),
+        label: "Anexo opcional",
+        hint: "Arquivos podem ser adicionados sem travar a publicação.",
+      },
+    ],
+    [escopo, finalPublishedMessage, mensagemOriginal, selectedFile, selectedIndividualRecipientId, titulo]
+  )
+
+  const inboxFilterStats = useMemo(
+    () => ({
+      all: receivedCount,
+      unread: unreadCount,
+      attachments: attachmentCount,
+      alerts: myIndividualAlerts.length,
+    }),
+    [attachmentCount, myIndividualAlerts.length, receivedCount, unreadCount]
+  )
+  const showTeamFeed = inboxFilter !== "alerts"
+  const showAlertsFeed = inboxFilter !== "attachments"
+  const visibleInboxCount = filteredMyComunicados.length + filteredMyIndividualAlerts.length
+  const composeScopeLabel = getScopeLabel(escopo, selectedRecipient?.nome)
 
   const loadRecipientOptions = useCallback(async () => {
     if (!supabase || !isAdmin) {
@@ -998,548 +1267,1097 @@ export default function ComunicadosPage() {
       ? "border-primary ring-1 ring-primary/40"
       : ""
 
-  return (
-    <div className="container mx-auto max-w-7xl space-y-6">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Comunicados</h1>
-          <p className="text-muted-foreground">
-            Canal oficial para avisos e atualizações da administração.
-          </p>
-        </div>
-        <div className="flex gap-2">
-          <Badge variant={unreadCount > 0 ? "default" : "secondary"}>
-            {unreadCount} pendente(s)
-          </Badge>
-          <Badge variant="outline">{myComunicados.length + myIndividualAlerts.length} recebido(s)</Badge>
-        </div>
-      </div>
+  const renderTeamComunicadoCard = (row: UserComunicadoRow) => {
+    const comunicado = row.comunicado
+    if (!comunicado) return null
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Megaphone className="w-5 h-5 text-primary" />
-              Novo comunicado para a equipe
-            </CardTitle>
-            <CardDescription>
-              Crie o comunicado, refine com IA e publique para operadores, equipe inteira ou individual.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-2">
-              <div className="space-y-2">
-                <Label htmlFor="titulo">Título</Label>
-                <Input
-                  id="titulo"
-                  value={titulo}
-                  onChange={(e) => setTitulo(e.target.value)}
-                  placeholder="Ex.: Nova versão do sistema disponível"
-                />
-              </div>
-              <div className="grid gap-4 md:grid-cols-2">
-                <div className="space-y-2">
-                  <Label>Escopo</Label>
-                  <Select
-                    value={escopo}
-                    onValueChange={(value) => setEscopo(value as ComunicadoTargetScope)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Selecione o público" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="operadores">Somente operadores</SelectItem>
-                      <SelectItem value="equipe">Equipe inteira</SelectItem>
-                      <SelectItem value="individual">Individual</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label>Tom da IA</Label>
-                  <Select value={tomIA} onValueChange={setTomIA}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Tom de escrita" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="neutro">Neutro</SelectItem>
-                      <SelectItem value="formal">Formal</SelectItem>
-                      <SelectItem value="direto">Direto</SelectItem>
-                      <SelectItem value="inspirador">Inspirador</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-            </div>
+    const isUnread = !row.visualizado_em && !row.dispensado_em
+    const hasAttachment = Boolean(comunicado.anexo_url)
 
-            {escopo === "individual" && (
-              <div className="space-y-2">
-                <Label>Destinatario individual (nome e cargo)</Label>
-                <Select
-                  value={selectedIndividualRecipientId || "__none__"}
-                  onValueChange={(value) =>
-                    setSelectedIndividualRecipientId(value === "__none__" ? "" : value)
-                  }
-                  disabled={loadingRecipients || recipientOptions.length === 0}
-                >
-                  <SelectTrigger>
-                    <SelectValue
-                      placeholder={loadingRecipients ? "Carregando usuarios..." : "Selecione o usuario"}
-                    />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {recipientOptions.length === 0 ? (
-                      <SelectItem value="__none__">Nenhum usuario ativo encontrado</SelectItem>
-                    ) : (
-                      recipientOptions.map((recipient) => (
-                        <SelectItem key={recipient.id} value={recipient.id}>
-                          {recipient.label}
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
-
+    return (
+      <Card key={row.id} className={cx(innerShellClass, "overflow-hidden", highlightedCardClass(comunicado.id))}>
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
             <div className="space-y-2">
-              <Label htmlFor="mensagem-original">Mensagem original</Label>
-              <Textarea
-                id="mensagem-original"
-                rows={7}
-                value={mensagemOriginal}
-                onChange={(e) => {
-                  setMensagemOriginal(e.target.value)
-                  if (!mensagemPublicada.trim()) {
-                    setMensagemPublicada(e.target.value)
-                  }
-                }}
-                placeholder="Escreva aqui o comunicado que será enviado à equipe..."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="mensagem-publicada">Mensagem final (publicada)</Label>
-              <Textarea
-                id="mensagem-publicada"
-                rows={7}
-                value={mensagemPublicada}
-                onChange={(e) => setMensagemPublicada(e.target.value)}
-                placeholder="Versão final que será exibida para todos."
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="anexo-comunicado">Anexo opcional</Label>
-              <div>
-                <input
-                  id="anexo-comunicado"
-                  type="file"
-                  className="hidden"
-                  ref={fileInputRef}
-                  onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                />
-
-                <div className="flex flex-col sm:flex-row sm:items-center gap-3">
-                  <HeroButton
-                    variant="flat"
-                    onPress={() => fileInputRef.current?.click()}
-                  >
-                    <Paperclip className="w-4 h-4" />
-                    Escolher arquivo
-                  </HeroButton>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-muted-foreground break-all">
-                      {selectedFile
-                        ? `${selectedFile.name} (${formatBytes(selectedFile.size)})`
-                        : "Nenhum arquivo escolhido"}
-                    </span>
-                    {selectedFile && (
-                      <HeroButton
-                        isIconOnly
-                        size="sm"
-                        variant="light"
-                        color="danger"
-                        onPress={() => {
-                          setSelectedFile(null)
-                          if (fileInputRef.current) {
-                            fileInputRef.current.value = ""
-                          }
-                        }}
-                        aria-label="Remover anexo"
-                      >
-                        <X className="w-4 h-4" />
-                      </HeroButton>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="flex flex-wrap gap-2">
-              <Button
-                variant="outline"
-                onClick={() => void handleReviewWithAI()}
-                disabled={aiLoading || publishing}
-              >
-                {aiLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Revisando...
-                  </>
-                ) : (
-                  <>
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Revisar com IA
-                  </>
-                )}
-              </Button>
-
-              <Button
-                onClick={() => void handlePublish()}
-                disabled={
-                  publishing ||
-                  aiLoading ||
-                  (escopo === "individual" && !selectedIndividualRecipientId)
-                }
-              >
-                {publishing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Publicando...
-                  </>
-                ) : (
-                  <>
-                    <Send className="w-4 h-4 mr-2" />
-                    Publicar comunicado
-                  </>
-                )}
-              </Button>
-            </div>
-
-            {aiDraft && (
-              <Card className="bg-muted/30">
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-base flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-primary" />
-                    Sugestão da IA
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Título sugerido</p>
-                    <p className="text-sm">{aiDraft.titulo_sugerido}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs font-semibold text-muted-foreground uppercase">Mensagem revisada</p>
-                    <p className="text-sm whitespace-pre-line">{aiDraft.mensagem_revisada}</p>
-                  </div>
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => {
-                        setTitulo((prev) => prev || aiDraft.titulo_sugerido)
-                        setMensagemPublicada(aiDraft.mensagem_revisada)
-                      }}
-                    >
-                      Usar texto revisado
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => setMensagemPublicada(aiDraft.versao_curta)}
-                    >
-                      Usar versão curta
-                    </Button>
-                  </div>
-                  {aiDraft.observacoes?.length > 0 && (
-                    <div className="space-y-1">
-                      <p className="text-xs font-semibold text-muted-foreground uppercase">Observações</p>
-                      {aiDraft.observacoes.map((obs, idx) => (
-                        <p key={`${obs}-${idx}`} className="text-xs text-muted-foreground">
-                          • {obs}
-                        </p>
-                      ))}
-                    </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className={cx(
+                    "rounded-full border-[color:var(--com-border)] px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]",
+                    isUnread ? "bg-amber-50 text-amber-700" : "bg-slate-50 text-slate-600"
                   )}
-                </CardContent>
-              </Card>
-            )}
-          </CardContent>
-        </Card>
-      )}
+                >
+                  Equipe
+                </Badge>
+                {hasAttachment ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-[color:var(--com-border)] bg-slate-50 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-600"
+                  >
+                    Anexo
+                  </Badge>
+                ) : null}
+                {row.dispensado_em ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-[color:var(--com-border)] bg-white px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--com-muted)]"
+                  >
+                    Dispensado
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]">{comunicado.titulo}</h3>
+                <p className="text-xs font-medium text-[var(--com-muted)]">
+                  Publicado em {formatDateTime(comunicado.publicado_em)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              {isUnread ? (
+                <Badge className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                  Novo
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                  Lido
+                </Badge>
+              )}
+              {hasAttachment ? (
+                <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                  PDF
+                </Badge>
+              ) : null}
+            </div>
+          </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Meus comunicados</CardTitle>
-          <CardDescription>
-            Leia os avisos da administração, incluindo comunicados gerais e envios individuais.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          {!loading && myComunicados.length === 0 && myIndividualAlerts.length === 0 && (
-            <p className="text-sm text-muted-foreground">Nenhum comunicado recebido até o momento.</p>
-          )}
+          <p className="whitespace-pre-line text-sm leading-6 text-[var(--com-ink)]/82">
+            {comunicado.mensagem_publicada}
+          </p>
 
-          {myComunicados.map((row) => {
-            const comunicado = row.comunicado
-            if (!comunicado) return null
-
-            const isUnread = !row.visualizado_em && !row.dispensado_em
-            const hasAttachment = Boolean(comunicado.anexo_url)
-
-            return (
-              <Card key={row.id} className={highlightedCardClass(comunicado.id)}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="space-y-1">
-                      <h3 className="font-semibold">{comunicado.titulo}</h3>
-                      <p className="text-xs text-muted-foreground">
-                        Publicado em {formatDateTime(comunicado.publicado_em)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      {isUnread ? (
-                        <Badge>Não lido</Badge>
-                      ) : (
-                        <Badge variant="secondary">Lido</Badge>
-                      )}
-                      {row.dispensado_em && <Badge variant="outline">Dispensado</Badge>}
-                    </div>
-                  </div>
-
-                  <p className="text-sm whitespace-pre-line">{comunicado.mensagem_publicada}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {isUnread && (
-                      <Button size="sm" onClick={() => void markRead(row.comunicado_id)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        Confirmar leitura
-                      </Button>
-                    )}
-
-                    {hasAttachment && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => void downloadAttachment(row)}
-                      >
-                        <Download className="w-4 h-4 mr-2" />
-                        Baixar anexo
-                      </Button>
-                    )}
-
-                    {isUnread && (
-                      <Button
-                        size="sm"
-                        variant="secondary"
-                        onClick={() => void dismissComunicado(row.comunicado_id)}
-                      >
-                        Agora não
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
-
-          {myIndividualAlerts.map((alert) => {
-            const isUnread = !alert.read_at
-            const canOpenTarget = Boolean(
-              alert.link_url || (alert.entity_type === "precatorio" && alert.entity_id)
-            )
-
-            return (
-              <Card key={alert.id}>
-                <CardContent className="p-4 space-y-3">
-                  <div className="flex flex-wrap items-center justify-between gap-2">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-semibold">{alert.title}</h3>
-                        <Badge variant="outline">{getIndividualAlertLabel(alert.event_type)}</Badge>
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        Recebido em {formatDateTime(alert.created_at)}
-                      </p>
-                    </div>
-                    <div className="flex gap-2">
-                      {isUnread ? <Badge>Não lido</Badge> : <Badge variant="secondary">Lido</Badge>}
-                    </div>
-                  </div>
-
-                  <p className="text-sm whitespace-pre-line">{alert.body}</p>
-
-                  <div className="flex flex-wrap gap-2">
-                    {isUnread && (
-                      <Button size="sm" onClick={() => void markIndividualAlertRead(alert.id)}>
-                        <Eye className="w-4 h-4 mr-2" />
-                        Confirmar leitura
-                      </Button>
-                    )}
-
-                    {canOpenTarget && (
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => openIndividualAlertTarget(alert)}
-                      >
-                        <ExternalLink className="w-4 h-4 mr-2" />
-                        Abrir referência
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )
-          })}
+          <div className="flex flex-wrap items-center gap-2">
+            {isUnread ? (
+              <Button size="sm" onClick={() => void markRead(row.comunicado_id)}>
+                <Eye className="h-4 w-4" />
+                Confirmar leitura
+              </Button>
+            ) : null}
+            {hasAttachment ? (
+              <Button size="sm" variant="outline" onClick={() => void downloadAttachment(row)}>
+                <Download className="h-4 w-4" />
+                Baixar anexo
+              </Button>
+            ) : null}
+            {isUnread ? (
+              <Button size="sm" variant="secondary" onClick={() => void dismissComunicado(row.comunicado_id)}>
+                Agora não
+              </Button>
+            ) : null}
+          </div>
         </CardContent>
       </Card>
+    )
+  }
 
-      {isAdmin && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Painel de leitura</CardTitle>
-            <CardDescription>
-              Acompanhe quem visualizou cada comunicado publicado.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            {!loading && adminComunicados.length === 0 && (
-              <p className="text-sm text-muted-foreground">Nenhum comunicado publicado ainda.</p>
+  const renderAlertCard = (alert: IndividualAlertRow) => {
+    const isUnread = !alert.read_at
+    const canOpenTarget = Boolean(alert.link_url || (alert.entity_type === "precatorio" && alert.entity_id))
+
+    return (
+      <Card key={alert.id} className={innerShellClass}>
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-[color:var(--com-border)] bg-sky-50 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-[var(--com-blue)]"
+                >
+                  Alerta individual
+                </Badge>
+                <Badge variant="outline" className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]">
+                  {getIndividualAlertLabel(alert.event_type)}
+                </Badge>
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]">{alert.title}</h3>
+                <p className="text-xs font-medium text-[var(--com-muted)]">
+                  Recebido em {formatDateTime(alert.created_at)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              {isUnread ? (
+                <Badge className="rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-amber-700">
+                  Novo
+                </Badge>
+              ) : (
+                <Badge variant="secondary" className="rounded-full px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em]">
+                  Lido
+                </Badge>
+              )}
+            </div>
+          </div>
+
+          <p className="whitespace-pre-line text-sm leading-6 text-[var(--com-ink)]/82">{alert.body}</p>
+
+          <div className="flex flex-wrap items-center gap-2">
+            {isUnread ? (
+              <Button size="sm" onClick={() => void markIndividualAlertRead(alert.id)}>
+                <Eye className="h-4 w-4" />
+                Confirmar leitura
+              </Button>
+            ) : null}
+            {canOpenTarget ? (
+              <Button size="sm" variant="outline" onClick={() => openIndividualAlertTarget(alert)}>
+                <ExternalLink className="h-4 w-4" />
+                Abrir referência
+              </Button>
+            ) : null}
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
+
+  const renderPublishedCard = (comunicado: AdminComunicadoRow) => {
+    const destinatarios = comunicado.comunicado_destinatarios || []
+    const total = destinatarios.length
+    const visualizados = destinatarios.filter((item) => item.visualizado_em).length
+    const pendentes = total - visualizados
+    const percentual = total > 0 ? Math.round((visualizados / total) * 100) : 0
+    const expanded = Boolean(expandedAdminRows[comunicado.id])
+
+    return (
+      <Card key={comunicado.id} className={cx(innerShellClass, "overflow-hidden", highlightedCardClass(comunicado.id))}>
+        <CardContent className="space-y-4 p-4 sm:p-5">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-2">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge
+                  variant="outline"
+                  className="rounded-full border-[color:var(--com-border)] bg-slate-50 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-slate-600"
+                >
+                  {getScopeLabel(comunicado.escopo as ComunicadoTargetScope)}
+                </Badge>
+                <Badge
+                  variant={comunicado.ativo ? "secondary" : "outline"}
+                  className="rounded-full px-2.5 py-1 text-[10px] uppercase tracking-[0.16em]"
+                >
+                  {comunicado.ativo ? "Ativo" : "Inativo"}
+                </Badge>
+                {comunicado.anexo_url ? (
+                  <Badge
+                    variant="outline"
+                    className="rounded-full border-[color:var(--com-border)] bg-amber-50 px-2.5 py-1 text-[10px] uppercase tracking-[0.16em] text-amber-700"
+                  >
+                    Com anexo
+                  </Badge>
+                ) : null}
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]">{comunicado.titulo}</h3>
+                <p className="text-xs font-medium text-[var(--com-muted)]">
+                  Publicado em {formatDateTime(comunicado.publicado_em)}
+                </p>
+              </div>
+            </div>
+            <div className="flex flex-wrap justify-end gap-2">
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() =>
+                  setExpandedAdminRows((prev) => ({
+                    ...prev,
+                    [comunicado.id]: !prev[comunicado.id],
+                  }))
+                }
+              >
+                {expanded ? (
+                  <>
+                    <ChevronUp className="h-4 w-4" />
+                    Ocultar detalhes
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="h-4 w-4" />
+                    Ver detalhes
+                  </>
+                )}
+              </Button>
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => void handleDeleteComunicado(comunicado)}
+                disabled={deletingComunicadoId === comunicado.id}
+              >
+                {deletingComunicadoId === comunicado.id ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Excluindo...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    Excluir
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
+
+          <p className="whitespace-pre-line text-sm leading-6 text-[var(--com-ink)]/82">
+            {comunicado.mensagem_publicada}
+          </p>
+
+          <div className="grid gap-3 sm:grid-cols-4">
+            <div className="rounded-[18px] border border-[color:var(--com-border)] bg-white/80 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--com-muted)]">Destinatários</div>
+              <div className="mt-2 text-xl font-black tabular-nums text-[var(--com-ink)]">{total}</div>
+            </div>
+            <div className="rounded-[18px] border border-[color:var(--com-border)] bg-emerald-50 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-[var(--com-emerald)]">Visualizados</div>
+              <div className="mt-2 text-xl font-black tabular-nums text-[var(--com-emerald)]">{visualizados}</div>
+            </div>
+            <div className="rounded-[18px] border border-[color:var(--com-border)] bg-amber-50 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-700">Pendentes</div>
+              <div className="mt-2 text-xl font-black tabular-nums text-amber-700">{pendentes}</div>
+            </div>
+            <div className="rounded-[18px] border border-[color:var(--com-border)] bg-slate-50 p-3">
+              <div className="text-[10px] font-black uppercase tracking-[0.16em] text-slate-600">Leitura</div>
+              <div className="mt-2 text-xl font-black tabular-nums text-slate-900">{percentual}%</div>
+            </div>
+          </div>
+
+          <div className="h-2 overflow-hidden rounded-full bg-slate-100">
+            <div className="h-full rounded-full bg-[var(--com-blue)] transition-all" style={{ width: `${percentual}%` }} />
+          </div>
+
+          {comunicado.anexo_url ? (
+            <div className="flex items-center gap-2 rounded-[18px] border border-[color:var(--com-border)] bg-white/80 px-3 py-2 text-xs text-[var(--com-muted)]">
+              <FileText className="h-3.5 w-3.5" />
+              Anexo: {comunicado.anexo_nome || "arquivo"} ({formatBytes(comunicado.anexo_tamanho || 0)})
+            </div>
+          ) : null}
+
+          {expanded ? (
+            <>
+              <Separator />
+              <div className="overflow-hidden rounded-[22px] border border-[color:var(--com-border)] bg-white/80">
+                <div className="max-h-80 overflow-auto">
+                  <table className="w-full text-sm">
+                    <thead className="sticky top-0 bg-white/95">
+                      <tr className="border-b border-[color:var(--com-border)] text-left">
+                        <th className="px-3 py-3 font-semibold text-[var(--com-muted)]">Usuário</th>
+                        <th className="px-3 py-3 font-semibold text-[var(--com-muted)]">Status</th>
+                        <th className="px-3 py-3 font-semibold text-[var(--com-muted)]">Visualizado em</th>
+                        <th className="px-3 py-3 font-semibold text-[var(--com-muted)]">Anexo</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {destinatarios.map((dest) => (
+                        <tr key={dest.id} className="border-b border-[color:var(--com-border)] last:border-none">
+                          <td className="px-3 py-3">
+                            <p className="font-semibold text-[var(--com-ink)]">{dest.usuarios?.nome || "Usuário"}</p>
+                            <p className="text-xs text-[var(--com-muted)]">{dest.usuarios?.email || "-"}</p>
+                          </td>
+                          <td className="px-3 py-3">
+                            {dest.visualizado_em ? (
+                              <Badge variant="secondary">Visualizado</Badge>
+                            ) : dest.dispensado_em ? (
+                              <Badge variant="outline">Dispensado</Badge>
+                            ) : (
+                              <Badge>Pendente</Badge>
+                            )}
+                          </td>
+                          <td className="px-3 py-3 text-[var(--com-muted)]">{formatDateTime(dest.visualizado_em)}</td>
+                          <td className="px-3 py-3 text-[var(--com-muted)]">{formatDateTime(dest.baixou_anexo_em)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          ) : null}
+        </CardContent>
+      </Card>
+    )
+  }
+
+  return (
+    <div className='min-h-screen bg-[#f0f1f5]'>
+      <div className='mx-auto max-w-7xl space-y-4 px-3 py-4 sm:px-6 sm:py-6 lg:px-8 lg:py-8'>
+
+        {/* ===== HERO TITLE — padrão Clay ===== */}
+        <section className={shellCardClass}>
+          <div className='p-5 sm:p-7'>
+            <div className='grid gap-6 lg:grid-cols-[minmax(0,1.2fr)_minmax(300px,.8fr)]'>
+
+              {/* Esquerda — identidade */}
+              <div>
+                <span className='inline-flex max-w-full items-center gap-2 overflow-hidden rounded-full bg-[#0e4d6a]/10 px-3 py-1.5 text-[11px] font-bold tracking-wide text-[#0e4d6a]'>
+                  <span className='shrink-0'>●</span>
+                  <span className='truncate'>CRM Precatórios · comunicação interna</span>
+                </span>
+
+                <p className='mt-3 text-[clamp(1.8rem,5vw,3.8rem)] font-black leading-none tracking-[-0.06em] text-[#0e4d6a]'>
+                  Comunicados
+                </p>
+
+                <h1 className='mt-2 text-[clamp(.95rem,2.5vw,1.4rem)] font-bold leading-snug tracking-[-0.03em] text-[#0b0c10]'>
+                  Caixa unificada de avisos e alertas.
+                </h1>
+
+                <p className='mt-2 max-w-xl text-[13px] leading-relaxed text-[#6b7280]'>
+                  Busque, filtre e publique comunicados sem perder contexto.
+                  {' '}{teamUnreadCount > 0 && <span className='font-semibold text-[#0e4d6a]'>{teamUnreadCount} não lidos da equipe.</span>}
+                </p>
+
+                <div className='mt-4 flex flex-wrap gap-2'>
+                  <button
+                    onClick={() => setActiveTab('inbox')}
+                    className='inline-flex h-9 items-center gap-2 rounded-[13px] bg-[#0e4d6a] px-4 text-[12.5px] font-bold text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3)] transition-all hover:-translate-y-[2px] active:translate-y-[1px] active:scale-[.97]'
+                  >
+                    <Mail className='h-3.5 w-3.5' />
+                    Ver caixa
+                  </button>
+                  {isAdmin && (
+                    <button
+                      onClick={() => setActiveTab('compose')}
+                      className='inline-flex h-9 items-center gap-2 rounded-[13px] bg-[#0e4d6a] px-4 text-[12.5px] font-bold text-white shadow-[8px_8px_20px_rgba(14,77,106,.42),-3px_-3px_8px_rgba(255,255,255,.3)] transition-all hover:-translate-y-[2px] active:translate-y-[1px] active:scale-[.97]'
+                    >
+                      <Plus className='h-3.5 w-3.5' />
+                      Novo comunicado
+                    </button>
+                  )}
+                  <button
+                    onClick={() => void loadData()}
+                    disabled={loading}
+                    className='inline-flex h-9 items-center gap-2 rounded-[13px] border border-black/[0.08] bg-white px-4 text-[12.5px] font-bold text-[#374151] shadow-[6px_6px_14px_rgba(0,0,0,.06),-3px_-3px_8px_rgba(255,255,255,.9)] transition-all hover:-translate-y-[2px] disabled:opacity-50 active:translate-y-[1px] active:scale-[.97]'
+                  >
+                    <RefreshCw className={cx('h-3.5 w-3.5', loading && 'animate-spin')} />
+                    Atualizar
+                  </button>
+                </div>
+              </div>
+
+              {/* Direita — KPI cards */}
+              <div className='grid grid-cols-2 gap-3'>
+                <MetricTile tone='blue' label='Recebidos' value={receivedCount} hint='Caixa unificada' icon={<Mail className='h-5 w-5' />} loading={loading} />
+                <MetricTile tone='amber' label='Não lidos' value={unreadCount} hint='Pendentes de leitura' icon={<Bell className='h-5 w-5' />} loading={loading} />
+                <MetricTile tone='emerald' label='Lidos' value={readCount} hint='Já confirmados' icon={<CheckCircle2 className='h-5 w-5' />} loading={loading} />
+                <MetricTile tone='slate' label='Com anexo' value={attachmentCount} hint='Com arquivo' icon={<Paperclip className='h-5 w-5' />} loading={loading} />
+              </div>
+
+            </div>
+          </div>
+        </section>
+
+        <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'inbox' | 'compose' | 'archive')}>
+          <div className='flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between'>
+            {/* Tabs clay — segmented */}
+            <TabsList className='h-auto w-full gap-1 rounded-[16px] border border-black/[0.07] bg-white p-1.5 shadow-[inset_4px_4px_10px_rgba(0,0,0,.06),inset_-3px_-3px_8px_rgba(255,255,255,.87)] sm:inline-flex sm:w-auto'>
+              <TabsTrigger
+                value='inbox'
+                className='rounded-[12px] px-4 py-2 text-[12.5px] font-semibold text-[#6b7280] transition-all data-[state=active]:bg-[#0e4d6a] data-[state=active]:font-bold data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_10px_rgba(14,77,106,.35)]'
+              >
+                Recebidos
+              </TabsTrigger>
+              {isAdmin ? (
+                <>
+                  <TabsTrigger
+                    value='compose'
+                    className='rounded-[12px] px-4 py-2 text-[12.5px] font-semibold text-[#6b7280] transition-all data-[state=active]:bg-[#0e4d6a] data-[state=active]:font-bold data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_10px_rgba(14,77,106,.35)]'
+                  >
+                    Escrever
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value='archive'
+                    className='rounded-[12px] px-4 py-2 text-[12.5px] font-semibold text-[#6b7280] transition-all data-[state=active]:bg-[#0e4d6a] data-[state=active]:font-bold data-[state=active]:text-white data-[state=active]:shadow-[4px_4px_10px_rgba(14,77,106,.35)]'
+                  >
+                    Arquivo
+                  </TabsTrigger>
+                </>
+              ) : null}
+            </TabsList>
+
+            {/* Ações secundárias */}
+            <div className='flex flex-wrap gap-2'>
+              <button
+                onClick={() => { setQuery(''); setInboxFilter('all'); setActiveTab('inbox') }}
+                className='inline-flex h-9 items-center gap-1.5 rounded-[12px] border border-black/[0.08] bg-white px-3 text-[12px] font-semibold text-[#374151] shadow-[5px_5px_12px_rgba(0,0,0,.05),-3px_-3px_7px_rgba(255,255,255,.9)] transition-all hover:-translate-y-[1px] active:scale-[.97]'
+              >
+                <X className='h-3.5 w-3.5' />
+                Limpar
+              </button>
+              <button
+                onClick={() => void loadData()}
+                disabled={loading}
+                className='inline-flex h-9 items-center gap-1.5 rounded-[12px] border border-black/[0.08] bg-white px-3 text-[12px] font-semibold text-[#374151] shadow-[5px_5px_12px_rgba(0,0,0,.05),-3px_-3px_7px_rgba(255,255,255,.9)] transition-all hover:-translate-y-[1px] disabled:opacity-50 active:scale-[.97]'
+              >
+                <RefreshCw className={cx('h-3.5 w-3.5', loading && 'animate-spin')} />
+                Atualizar
+              </button>
+              {isAdmin && (
+                <button
+                  onClick={() => setActiveTab('compose')}
+                  className='inline-flex h-9 items-center gap-1.5 rounded-[12px] bg-[#0e4d6a] px-3 text-[12px] font-bold text-white shadow-[6px_6px_16px_rgba(14,77,106,.4),-2px_-2px_6px_rgba(255,255,255,.28)] transition-all hover:-translate-y-[1px] active:scale-[.97]'
+                >
+                  <Plus className='h-3.5 w-3.5' />
+                  Novo
+                </button>
+              )}
+            </div>
+          </div>
+          <TabsContent value='inbox' className='mt-4 space-y-4'>
+            <div className={cx(innerShellClass, 'p-4 sm:p-5')}>
+              <div className='flex flex-wrap items-start justify-between gap-3'>
+                <div>
+                  <h2 className='text-[15px] font-black tracking-[-0.03em] text-[#0b0c10]'>Buscar e filtrar</h2>
+                  <p className='mt-0.5 text-[12px] text-[#6b7280]'>Título, mensagem, anexos e alertas.</p>
+                </div>
+                <div className='flex flex-wrap gap-1.5'>
+                  {[
+                    { label: `${visibleInboxCount} visíveis`, active: true },
+                    { label: `${inboxFilterStats.unread} abertos` },
+                    { label: `${inboxFilterStats.attachments} c/ anexo` },
+                    { label: `${inboxFilterStats.alerts} alertas` },
+                  ].map(({ label, active }) => (
+                    <span
+                      key={label}
+                      className={cx(
+                        'inline-flex h-6 items-center rounded-full px-2.5 text-[10px] font-bold uppercase tracking-[0.14em]',
+                        active
+                          ? 'bg-[#0e4d6a]/10 text-[#0e4d6a]'
+                          : 'border border-black/[0.08] bg-[#f2f3f7] text-[#6b7280]'
+                      )}
+                    >
+                      {label}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className='mt-4 grid gap-3 lg:grid-cols-[minmax(0,1fr)_auto]'>
+                <div className='relative'>
+                  <Search className='pointer-events-none absolute left-3.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9ca3af]' />
+                  <Input
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    placeholder='Buscar por título, mensagem, anexo ou alerta…'
+                    className='h-11 rounded-[14px] border-black/[0.08] bg-[#f2f3f7] pl-10 pr-12 text-[13px] shadow-[inset_4px_4px_10px_rgba(0,0,0,.06),inset_-3px_-3px_8px_rgba(255,255,255,.87)] focus-visible:ring-[#0e4d6a]/30'
+                  />
+                  {query ? (
+                    <button
+                      type='button'
+                      className='absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-[#9ca3af] hover:text-[#374151]'
+                      onClick={() => setQuery('')}
+                    >
+                      <X className='h-3.5 w-3.5' />
+                    </button>
+                  ) : null}
+                </div>
+
+                <div className='flex flex-wrap gap-1.5'>
+                  {(['all', 'unread', 'attachments', 'alerts'] as const).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setInboxFilter(f)}
+                      className={cx(
+                        'inline-flex h-9 items-center rounded-[11px] px-3 text-[12px] font-semibold transition-all active:scale-[.97]',
+                        inboxFilter === f
+                          ? 'bg-[#0e4d6a] text-white shadow-[4px_4px_10px_rgba(14,77,106,.35)]'
+                          : 'border border-black/[0.08] bg-white text-[#6b7280] shadow-[4px_4px_10px_rgba(0,0,0,.05),-2px_-2px_6px_rgba(255,255,255,.9)] hover:text-[#374151]'
+                      )}
+                    >
+                      {{ all: 'Todos', unread: 'Não lidos', attachments: 'Anexo', alerts: 'Alertas' }[f]}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              {inboxFilter !== 'all' && (
+                <div className='mt-3 flex items-center gap-2 rounded-[12px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] text-amber-900'>
+                  <AlertTriangle className='h-3.5 w-3.5 shrink-0' />
+                  {inboxFilter === 'unread' ? 'Mostrando apenas não lidos.'
+                    : inboxFilter === 'attachments' ? 'Mostrando apenas com anexo.'
+                    : 'Mostrando apenas alertas individuais.'}
+                </div>
+              )}
+            </div>
+
+            {loading ? (
+              <div className='grid gap-6 xl:grid-cols-2'>
+                {[0, 1].map((index) => (
+                  <div key={index} className={cx(innerShellClass, 'animate-pulse p-4 sm:p-5 lg:p-6')}>
+                    <div className='h-4 w-32 rounded-full bg-slate-200/80' />
+                    <div className='mt-4 h-5 w-3/4 rounded-full bg-slate-200/80' />
+                    <div className='mt-2 h-3 w-1/2 rounded-full bg-slate-200/80' />
+                    <div className='mt-5 space-y-3'>
+                      <div className='h-3 w-full rounded-full bg-slate-200/80' />
+                      <div className='h-3 w-5/6 rounded-full bg-slate-200/80' />
+                      <div className='h-10 w-40 rounded-2xl bg-slate-200/80' />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className='grid gap-6 xl:grid-cols-2'>
+                {showTeamFeed ? (
+                  <Card className={innerShellClass}>
+                    <CardContent className='space-y-4 p-4 sm:p-5 lg:p-6'>
+                      <div className='flex flex-wrap items-start justify-between gap-3'>
+                        <div className='space-y-1'>
+                          <h3 className='flex items-center gap-2 text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                            <Mail className='h-4 w-4 text-[var(--com-blue)]' />
+                            Comunicados da equipe
+                          </h3>
+                          <p className='text-sm text-[var(--com-muted)]'>
+                            Mensagens gerais para a operacao.
+                          </p>
+                        </div>
+                        <Badge variant='outline' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                          {filteredMyComunicados.length} itens
+                        </Badge>
+                      </div>
+
+                      <div className='space-y-4'>
+                        {filteredMyComunicados.length > 0 ? (
+                          filteredMyComunicados.map(renderTeamComunicadoCard)
+                        ) : (
+                          <div className='flex flex-col gap-3 rounded-[24px] border border-dashed border-[color:var(--com-border)] bg-white/70 p-5'>
+                            <div className='flex items-start gap-3'>
+                              <div className='grid h-10 w-10 place-items-center rounded-2xl bg-slate-100 text-slate-500'>
+                                <Mail className='h-4 w-4' />
+                              </div>
+                              <div className='space-y-1'>
+                                <p className='font-semibold text-[var(--com-ink)]'>Nenhum comunicado encontrado.</p>
+                                <p className='text-sm text-[var(--com-muted)]'>
+                                  Tente ajustar a busca ou limpar os filtros.
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => {
+                                setQuery('')
+                                setInboxFilter('all')
+                              }}
+                            >
+                              <X className='h-4 w-4' />
+                              Limpar filtros
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+
+                {showAlertsFeed ? (
+                  <Card className={innerShellClass}>
+                    <CardContent className='space-y-4 p-4 sm:p-5 lg:p-6'>
+                      <div className='flex flex-wrap items-start justify-between gap-3'>
+                        <div className='space-y-1'>
+                          <h3 className='flex items-center gap-2 text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                            <Bell className='h-4 w-4 text-[var(--com-emerald)]' />
+                            Alertas individuais
+                          </h3>
+                          <p className='text-sm text-[var(--com-muted)]'>
+                            Notificacoes direcionadas ao seu usuario.
+                          </p>
+                        </div>
+                        <Badge variant='outline' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                          {filteredMyIndividualAlerts.length} itens
+                        </Badge>
+                      </div>
+
+                      <div className='space-y-4'>
+                        {filteredMyIndividualAlerts.length > 0 ? (
+                          filteredMyIndividualAlerts.map(renderAlertCard)
+                        ) : (
+                          <div className='flex flex-col gap-3 rounded-[24px] border border-dashed border-[color:var(--com-border)] bg-white/70 p-5'>
+                            <div className='flex items-start gap-3'>
+                              <div className='grid h-10 w-10 place-items-center rounded-2xl bg-emerald-50 text-[var(--com-emerald)]'>
+                                <Bell className='h-4 w-4' />
+                              </div>
+                              <div className='space-y-1'>
+                                <p className='font-semibold text-[var(--com-ink)]'>Nenhum alerta encontrado.</p>
+                                <p className='text-sm text-[var(--com-muted)]'>
+                                  Tente ajustar a busca ou limpar os filtros.
+                                </p>
+                              </div>
+                            </div>
+                            <Button
+                              variant='outline'
+                              size='sm'
+                              onClick={() => {
+                                setQuery('')
+                                setInboxFilter('all')
+                              }}
+                            >
+                              <X className='h-4 w-4' />
+                              Limpar filtros
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </CardContent>
+                  </Card>
+                ) : null}
+              </div>
             )}
+          </TabsContent>
 
-            {adminComunicados.map((comunicado) => {
-              const destinatarios = comunicado.comunicado_destinatarios || []
-              const total = destinatarios.length
-              const visualizados = destinatarios.filter((item) => item.visualizado_em).length
-              const pendentes = total - visualizados
-              const percentual = total > 0 ? Math.round((visualizados / total) * 100) : 0
-              const expanded = Boolean(expandedAdminRows[comunicado.id])
+          {isAdmin ? (
+            <TabsContent value='compose' className='mt-6 space-y-6'>
+              <div className='grid gap-6 xl:grid-cols-[minmax(0,1.15fr)_minmax(340px,0.85fr)]'>
+                <Card className={innerShellClass}>
+                  <CardContent className='space-y-5 p-4 sm:p-5 lg:p-6'>
+                    <div className='space-y-1'>
+                      <h2 className='text-xl font-black tracking-[-0.03em] text-[var(--com-ink)]'>Escrever comunicado</h2>
+                      <p className='text-sm text-[var(--com-muted)]'>
+                        Escreva uma vez, refine com IA e publique no escopo certo.
+                      </p>
+                    </div>
 
-              return (
-                <Card key={comunicado.id} className={highlightedCardClass(comunicado.id)}>
-                  <CardContent className="p-4 space-y-3">
-                    <div className="flex flex-wrap items-center justify-between gap-2">
-                      <div>
-                        <h3 className="font-semibold">{comunicado.titulo}</h3>
-                        <p className="text-xs text-muted-foreground">
-                          Publicado em {formatDateTime(comunicado.publicado_em)}
-                        </p>
+                    <div className='grid gap-4 md:grid-cols-2'>
+                      <div className='space-y-2'>
+                        <Label htmlFor='titulo'>Titulo</Label>
+                        <Input
+                          id='titulo'
+                          value={titulo}
+                          onChange={(e) => setTitulo(e.target.value)}
+                          placeholder='Ex.: Nova versao do sistema disponivel'
+                          className='h-11 rounded-[18px] border-[color:var(--com-border)] bg-white/90'
+                        />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() =>
-                            setExpandedAdminRows((prev) => ({
-                              ...prev,
-                              [comunicado.id]: !prev[comunicado.id],
-                            }))
+
+                      <div className='grid gap-4 sm:grid-cols-2'>
+                        <div className='space-y-2'>
+                          <Label>Escopo</Label>
+                          <Select value={escopo} onValueChange={(value) => setEscopo(value as ComunicadoTargetScope)}>
+                            <SelectTrigger className='h-11 rounded-[18px] border-[color:var(--com-border)] bg-white/90'>
+                              <SelectValue placeholder='Selecione o publico' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='operadores'>Somente operadores</SelectItem>
+                              <SelectItem value='equipe'>Equipe inteira</SelectItem>
+                              <SelectItem value='individual'>Individual</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className='space-y-2'>
+                          <Label>Tom da IA</Label>
+                          <Select value={tomIA} onValueChange={setTomIA}>
+                            <SelectTrigger className='h-11 rounded-[18px] border-[color:var(--com-border)] bg-white/90'>
+                              <SelectValue placeholder='Tom de escrita' />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value='neutro'>Neutro</SelectItem>
+                              <SelectItem value='formal'>Formal</SelectItem>
+                              <SelectItem value='direto'>Direto</SelectItem>
+                              <SelectItem value='inspirador'>Inspirador</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+                    </div>
+
+                    {escopo === 'individual' ? (
+                      <div className='space-y-2'>
+                        <Label>Destinatario individual</Label>
+                        <Select
+                          value={selectedIndividualRecipientId || '__none__'}
+                          onValueChange={(value) => setSelectedIndividualRecipientId(value === '__none__' ? '' : value)}
+                          disabled={loadingRecipients || recipientOptions.length === 0}
+                        >
+                          <SelectTrigger className='h-11 rounded-[18px] border-[color:var(--com-border)] bg-white/90'>
+                            <SelectValue placeholder={loadingRecipients ? 'Carregando usuarios...' : 'Selecione o usuario'} />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {recipientOptions.length === 0 ? (
+                              <SelectItem value='__none__'>Nenhum usuario ativo encontrado</SelectItem>
+                            ) : (
+                              recipientOptions.map((recipient) => (
+                                <SelectItem key={recipient.id} value={recipient.id}>
+                                  {recipient.label}
+                                </SelectItem>
+                              ))
+                            )}
+                          </SelectContent>
+                        </Select>
+                        <div className='flex items-start gap-3 rounded-[20px] border border-[color:var(--com-border)] bg-sky-50/70 p-3 text-sm text-[var(--com-muted)]'>
+                          <Users2 className='mt-0.5 h-4 w-4 text-[var(--com-blue)]' />
+                          <p>
+                            {selectedRecipient
+                              ? `Vai para ${selectedRecipient.nome} (${selectedRecipient.roleLabel}).`
+                              : 'Selecione um destinatario para liberar a publicacao.'}
+                          </p>
+                        </div>
+                      </div>
+                    ) : null}
+
+                    <div className='space-y-2'>
+                      <Label htmlFor='mensagemOriginal'>Mensagem base</Label>
+                      <Textarea
+                        id='mensagemOriginal'
+                        value={mensagemOriginal}
+                        onChange={(e) => {
+                          setMensagemOriginal(e.target.value)
+                          if (!mensagemPublicada.trim()) {
+                            setMensagemPublicada(e.target.value)
                           }
-                        >
-                          {expanded ? (
-                            <>
-                              <ChevronUp className="w-4 h-4 mr-1" />
-                              Ocultar detalhes
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-4 h-4 mr-1" />
-                              Ver detalhes
-                            </>
-                          )}
-                        </Button>
-                        <Button
-                          variant="destructive"
-                          size="sm"
-                          onClick={() => void handleDeleteComunicado(comunicado)}
-                          disabled={deletingComunicadoId === comunicado.id}
-                        >
-                          {deletingComunicadoId === comunicado.id ? (
-                            <>
-                              <Loader2 className="w-4 h-4 mr-1 animate-spin" />
-                              Excluindo...
-                            </>
-                          ) : (
-                            <>
-                              <Trash2 className="w-4 h-4 mr-1" />
-                              Excluir
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </div>
-
-                    <div className="flex flex-wrap gap-2 text-xs">
-                      <Badge variant="outline">{total} destinatário(s)</Badge>
-                      <Badge variant="secondary">{visualizados} visualizado(s)</Badge>
-                      <Badge>{pendentes} pendente(s)</Badge>
-                      <Badge variant="outline">{percentual}% lido</Badge>
-                    </div>
-
-                    <div className="h-2 w-full rounded bg-muted overflow-hidden">
-                      <div
-                        className="h-full bg-primary transition-all"
-                        style={{ width: `${percentual}%` }}
+                        }}
+                        placeholder='Descreva o comunicado com contexto e instrucao claras.'
+                        className='min-h-[180px] rounded-[22px] border-[color:var(--com-border)] bg-white/90'
                       />
                     </div>
 
-                    {comunicado.anexo_url && (
-                      <div className="text-xs text-muted-foreground flex items-center gap-2">
-                        <FileText className="w-3 h-3" />
-                        Anexo: {comunicado.anexo_nome || "arquivo"} ({formatBytes(comunicado.anexo_tamanho || 0)})
+                    <div className='space-y-2'>
+                      <div className='flex items-center justify-between gap-3'>
+                        <Label htmlFor='mensagemPublicada'>Mensagem final para publicar</Label>
+                        <span className='text-xs font-medium text-[var(--com-muted)]'>
+                          {finalPublishedMessage.length} caracteres
+                        </span>
                       </div>
-                    )}
+                      <Textarea
+                        id='mensagemPublicada'
+                        value={mensagemPublicada}
+                        onChange={(e) => setMensagemPublicada(e.target.value)}
+                        placeholder='Se ficar vazio, a mensagem base sera usada.'
+                        className='min-h-[180px] rounded-[22px] border-[color:var(--com-border)] bg-white/90'
+                      />
+                    </div>
 
-                    {expanded && (
-                      <>
-                        <Separator />
-                        <div className="max-h-72 overflow-auto rounded border">
-                          <table className="w-full text-sm">
-                            <thead className="sticky top-0 bg-muted/70">
-                              <tr className="border-b">
-                                <th className="text-left px-3 py-2">Usuário</th>
-                                <th className="text-left px-3 py-2">Status</th>
-                                <th className="text-left px-3 py-2">Visualizado em</th>
-                                <th className="text-left px-3 py-2">Download anexo</th>
-                              </tr>
-                            </thead>
-                            <tbody>
-                              {destinatarios.map((dest) => (
-                                <tr key={dest.id} className="border-b last:border-none">
-                                  <td className="px-3 py-2">
-                                    <p className="font-medium">{dest.usuarios?.nome || "Usuário"}</p>
-                                    <p className="text-xs text-muted-foreground">
-                                      {dest.usuarios?.email || "-"}
-                                    </p>
-                                  </td>
-                                  <td className="px-3 py-2">
-                                    {dest.visualizado_em ? (
-                                      <Badge variant="secondary">Visualizado</Badge>
-                                    ) : dest.dispensado_em ? (
-                                      <Badge variant="outline">Dispensado</Badge>
-                                    ) : (
-                                      <Badge>Pendente</Badge>
-                                    )}
-                                  </td>
-                                  <td className="px-3 py-2">{formatDateTime(dest.visualizado_em)}</td>
-                                  <td className="px-3 py-2">{formatDateTime(dest.baixou_anexo_em)}</td>
-                                </tr>
-                              ))}
-                            </tbody>
-                          </table>
+                    <div className='space-y-3 rounded-[22px] border border-[color:var(--com-border)] bg-white/70 p-4'>
+                      <div className='flex flex-wrap items-center justify-between gap-3'>
+                        <div>
+                          <p className='text-sm font-semibold text-[var(--com-ink)]'>Anexo opcional</p>
+                          <p className='text-xs text-[var(--com-muted)]'>
+                            Adicione um arquivo sem travar a publicacao.
+                          </p>
                         </div>
-                      </>
-                    )}
+                        <div className='flex flex-wrap gap-2'>
+                          <Button type='button' variant='outline' onClick={() => fileInputRef.current?.click()}>
+                            <Paperclip className='h-4 w-4' />
+                            Escolher arquivo
+                          </Button>
+                          {selectedFile ? (
+                            <Button
+                              type='button'
+                              variant='ghost'
+                              onClick={() => {
+                                setSelectedFile(null)
+                                if (fileInputRef.current) {
+                                  fileInputRef.current.value = ''
+                                }
+                              }}
+                            >
+                              <X className='h-4 w-4' />
+                              Remover
+                            </Button>
+                          ) : null}
+                        </div>
+                      </div>
+
+                      <input
+                        ref={fileInputRef}
+                        type='file'
+                        accept='.pdf,.doc,.docx,.txt,image/*'
+                        className='hidden'
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                      />
+
+                      {selectedFile ? (
+                        <div className='flex flex-wrap items-center gap-2 rounded-[18px] border border-[color:var(--com-border)] bg-white/90 px-3 py-2 text-sm text-[var(--com-ink)]'>
+                          <FileText className='h-4 w-4 text-[var(--com-blue)]' />
+                          <span className='font-medium'>{selectedFile.name}</span>
+                          <span className='text-[var(--com-muted)]'>{formatBytes(selectedFile.size)}</span>
+                        </div>
+                      ) : (
+                        <div className='rounded-[18px] border border-dashed border-[color:var(--com-border)] px-3 py-3 text-sm text-[var(--com-muted)]'>
+                          Nenhum anexo selecionado.
+                        </div>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
-              )
-            })}
-          </CardContent>
-        </Card>
-      )}
+                <div className='space-y-6'>
+                  <Card className={innerShellClass}>
+                    <CardContent className='space-y-4 p-4 sm:p-5 lg:p-6'>
+                      <div className='flex flex-wrap items-start justify-between gap-3'>
+                        <div className='space-y-1'>
+                          <h3 className='flex items-center gap-2 text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                            <Sparkles className='h-4 w-4 text-[var(--com-amber)]' />
+                            Revisao assistida
+                          </h3>
+                          <p className='text-sm text-[var(--com-muted)]'>
+                            A IA revisa a mensagem base antes da publicacao.
+                          </p>
+                        </div>
+                        <Badge variant='outline' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                          {getToneLabel(tomIA)}
+                        </Badge>
+                      </div>
+
+                      <Button
+                        className='w-full'
+                        onClick={() => void handleReviewWithAI()}
+                        disabled={aiLoading || !mensagemOriginal.trim()}
+                      >
+                        {aiLoading ? (
+                          <>
+                            <Loader2 className='h-4 w-4 animate-spin' />
+                            Processando...
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className='h-4 w-4' />
+                            Reescrever com IA
+                          </>
+                        )}
+                      </Button>
+
+                      {aiDraft ? (
+                        <div className='space-y-4 rounded-[22px] border border-[color:var(--com-border)] bg-slate-50/80 p-4'>
+                          <div className='space-y-1'>
+                            <p className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                              Titulo sugerido
+                            </p>
+                            <p className='text-sm font-semibold text-[var(--com-ink)]'>{aiDraft.titulo_sugerido}</p>
+                          </div>
+                          <div className='space-y-1'>
+                            <p className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                              Mensagem revisada
+                            </p>
+                            <p className='whitespace-pre-line text-sm leading-6 text-[var(--com-ink)]/85'>
+                              {aiDraft.mensagem_revisada}
+                            </p>
+                          </div>
+                          <div className='flex flex-wrap gap-2'>
+                            <Button
+                              size='sm'
+                              variant='secondary'
+                              onClick={() => {
+                                setTitulo((prev) => prev || aiDraft.titulo_sugerido)
+                                setMensagemPublicada(aiDraft.mensagem_revisada)
+                              }}
+                            >
+                              Usar texto revisado
+                            </Button>
+                            <Button size='sm' variant='outline' onClick={() => setMensagemPublicada(aiDraft.versao_curta)}>
+                              Usar versao curta
+                            </Button>
+                          </div>
+                          {aiDraft.observacoes?.length > 0 ? (
+                            <div className='space-y-1'>
+                              <p className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                                Observacoes
+                              </p>
+                              {aiDraft.observacoes.map((obs, idx) => (
+                                <p key={`${obs}-${idx}`} className='text-xs text-[var(--com-muted)]'>
+                                  - {obs}
+                                </p>
+                              ))}
+                            </div>
+                          ) : null}
+                        </div>
+                      ) : (
+                        <div className='rounded-[22px] border border-dashed border-[color:var(--com-border)] bg-white/70 p-4 text-sm text-[var(--com-muted)]'>
+                          Escreva a mensagem base e clique em Reescrever com IA para gerar uma sugestao.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  <Card className={innerShellClass}>
+                    <CardContent className='space-y-4 p-4 sm:p-5 lg:p-6'>
+                      <div className='space-y-1'>
+                        <h3 className='flex items-center gap-2 text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                          <FileText className='h-4 w-4 text-[var(--com-blue)]' />
+                          Preview final
+                        </h3>
+                        <p className='text-sm text-[var(--com-muted)]'>
+                          O que voce ver aqui e o que sera enviado.
+                        </p>
+                      </div>
+
+                      <div className='rounded-[24px] border border-[color:var(--com-border)] bg-white/85 p-4'>
+                        <div className='flex flex-wrap items-start justify-between gap-3'>
+                          <div className='space-y-1'>
+                            <p className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                              Titulo
+                            </p>
+                            <h4 className='text-xl font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                              {titulo.trim() || aiDraft?.titulo_sugerido || 'Titulo do comunicado'}
+                            </h4>
+                          </div>
+                          <Badge variant='outline' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                            {composeScopeLabel}
+                          </Badge>
+                        </div>
+
+                        <div className='mt-4 whitespace-pre-line text-sm leading-6 text-[var(--com-ink)]/82'>
+                          {finalPublishedMessage || 'A mensagem final aparecera aqui assim que voce preencher o campo.'}
+                        </div>
+
+                        <div className='mt-4 flex flex-wrap gap-2'>
+                          <Badge variant='secondary' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                            <CheckCircle2 className='h-3.5 w-3.5' />
+                            {selectedFile ? formatBytes(selectedFile.size) : 'Sem anexo'}
+                          </Badge>
+                          {selectedRecipient ? (
+                            <Badge variant='outline' className='rounded-full px-3 py-1 text-[10px] uppercase tracking-[0.16em]'>
+                              <Users2 className='h-3.5 w-3.5' />
+                              {selectedRecipient.nome}
+                            </Badge>
+                          ) : null}
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                  <Card className={innerShellClass}>
+                    <CardContent className='space-y-4 p-4 sm:p-5 lg:p-6'>
+                      <div className='space-y-1'>
+                        <h3 className='flex items-center gap-2 text-lg font-black tracking-[-0.03em] text-[var(--com-ink)]'>
+                          <CheckCircle2 className='h-4 w-4 text-[var(--com-emerald)]' />
+                          Checklist operacional
+                        </h3>
+                        <p className='text-sm text-[var(--com-muted)]'>
+                          Complete os itens abaixo antes de publicar.
+                        </p>
+                      </div>
+
+                      <div className='grid gap-3'>
+                        {composeChecklist.map((item) => (
+                          <ChecklistItem key={item.label} done={item.done} label={item.label} hint={item.hint} />
+                        ))}
+                      </div>
+
+                      <div className='rounded-[22px] border border-[color:var(--com-border)] bg-white/85 p-4'>
+                        <Button
+                          className='w-full'
+                          onClick={() => void handlePublish()}
+                          disabled={!canPublish || publishing || aiLoading}
+                        >
+                          {publishing ? (
+                            <>
+                              <Loader2 className='h-4 w-4 animate-spin' />
+                              Publicando...
+                            </>
+                          ) : (
+                            <>
+                              <Send className='h-4 w-4' />
+                              Publicar comunicado
+                            </>
+                          )}
+                        </Button>
+                        <p className='mt-2 text-xs leading-5 text-[var(--com-muted)]'>
+                          {canPublish
+                            ? 'Pronto para publicar no escopo selecionado.'
+                            : 'Complete os campos obrigatorios para liberar a publicacao.'}
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+          ) : null}
+
+          {isAdmin ? (
+            <TabsContent value='archive' className='mt-6 space-y-6'>
+              <Card className={innerShellClass}>
+                <CardContent className='grid gap-4 p-4 sm:p-5 lg:grid-cols-[1.2fr_1fr_auto] lg:items-end lg:p-6'>
+                  <div className='space-y-2'>
+                    <div className={labelChipClass}>
+                      <Layers className='h-3.5 w-3.5' />
+                      Arquivo publicado
+                    </div>
+                    <h2 className='text-2xl font-black tracking-[-0.05em] text-[var(--com-ink)]'>
+                      Historico de publicacoes
+                    </h2>
+                    <p className='text-sm text-[var(--com-muted)]'>
+                      A busca acima tambem filtra o arquivo por titulo, mensagem e anexo.
+                    </p>
+                  </div>
+
+                  <div className='grid gap-3 sm:grid-cols-3'>
+                    <div className='rounded-[20px] border border-[color:var(--com-border)] bg-white/85 p-3'>
+                      <div className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                        Publicados
+                      </div>
+                      <div className='mt-2 text-xl font-black tabular-nums text-[var(--com-ink)]'>{publishedCount}</div>
+                    </div>
+                    <div className='rounded-[20px] border border-[color:var(--com-border)] bg-white/85 p-3'>
+                      <div className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                        Com anexo
+                      </div>
+                      <div className='mt-2 text-xl font-black tabular-nums text-[var(--com-ink)]'>{publishedAttachmentCount}</div>
+                    </div>
+                    <div className='rounded-[20px] border border-[color:var(--com-border)] bg-white/85 p-3'>
+                      <div className='text-[10px] font-black uppercase tracking-[0.18em] text-[var(--com-muted)]'>
+                        Ultima publicacao
+                      </div>
+                      <div className='mt-2 text-sm font-semibold leading-5 text-[var(--com-ink)]'>
+                        {latestPublishedLabel}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className='flex flex-wrap gap-2'>
+                    <Button variant='outline' onClick={() => setActiveTab('compose')}>
+                      <Plus className='h-4 w-4' />
+                      Novo comunicado
+                    </Button>
+                    <Button variant='ghost' onClick={() => setExpandedAdminRows({})}>
+                      <X className='h-4 w-4' />
+                      Recolher detalhes
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {loading ? (
+                <div className='space-y-4'>
+                  {[0, 1].map((index) => (
+                    <div key={index} className={cx(innerShellClass, 'animate-pulse p-4 sm:p-5 lg:p-6')}>
+                      <div className='h-4 w-32 rounded-full bg-slate-200/80' />
+                      <div className='mt-4 h-5 w-3/4 rounded-full bg-slate-200/80' />
+                      <div className='mt-2 h-3 w-1/2 rounded-full bg-slate-200/80' />
+                      <div className='mt-5 space-y-3'>
+                        <div className='h-3 w-full rounded-full bg-slate-200/80' />
+                        <div className='h-3 w-5/6 rounded-full bg-slate-200/80' />
+                        <div className='h-3 w-2/3 rounded-full bg-slate-200/80' />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : filteredAdminComunicados.length > 0 ? (
+                <div className='space-y-4'>{filteredAdminComunicados.map(renderPublishedCard)}</div>
+              ) : (
+                <div className='flex flex-col gap-3 rounded-[24px] border border-dashed border-[color:var(--com-border)] bg-white/75 p-5'>
+                  <div className='flex items-start gap-3'>
+                    <div className='grid h-10 w-10 place-items-center rounded-2xl bg-slate-100 text-slate-500'>
+                      <Layers className='h-4 w-4' />
+                    </div>
+                    <div className='space-y-1'>
+                      <p className='font-semibold text-[var(--com-ink)]'>Nenhuma publicacao encontrada.</p>
+                      <p className='text-sm text-[var(--com-muted)]'>
+                        Ajuste a busca para encontrar comunicados no arquivo.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </TabsContent>
+          ) : null}
+        </Tabs>
+      </div>
     </div>
   )
 }

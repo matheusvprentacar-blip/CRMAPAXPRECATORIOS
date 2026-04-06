@@ -63,22 +63,18 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${montserrat.variable} ${robotoMono.variable}`} suppressHydrationWarning>
       <head>
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/react-grab/dist/index.global.js"
-            crossOrigin="anonymous"
-            strategy="beforeInteractive"
-          />
-        )}
-        {process.env.NODE_ENV === "development" && (
-          <Script
-            src="//unpkg.com/@react-grab/codex/dist/client.global.js"
-            strategy="lazyOnload"
-          />
-        )}
+        <Script
+          src="//unpkg.com/react-grab/dist/index.global.js"
+          crossOrigin="anonymous"
+          strategy="beforeInteractive"
+        />
+        <Script
+          src="//unpkg.com/@react-grab/codex/dist/client.global.js"
+          strategy="lazyOnload"
+        />
       </head>
       <body className="font-sans antialiased">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+        <ThemeProvider attribute="class" forcedTheme="light" disableTransitionOnChange>
           <AuthProvider>
             <PDFViewerProvider>
               <Providers>{children}</Providers>
