@@ -1,11 +1,7 @@
 /** @type {import('next').NextConfig} */
-const isTauriBuild = process.env.TAURI_BUILD === "1";
 const appVersion = process.env.npm_package_version || "0.0.0";
 const nextConfig = {
   reactStrictMode: false,
-  // Build web permanece server/runtime normal.
-  // Build Tauri final usa export estático para gerar `out/`.
-  output: isTauriBuild ? "export" : undefined,
   images: { unoptimized: true },
 
   // 👉 Otimizações de produção (mantidas, mas simples)

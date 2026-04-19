@@ -51,7 +51,7 @@ crmapaxprecatorios/
 - Componente responsável: `components/tauri/desktop-migration-blocker.tsx`.
 - O build para Tauri permanece apenas para essa etapa final de desligamento, usando:
   - `npm run build:tauri`
-  - `TAURI_BUILD=1` para gerar `out/` via `next build` com `output: "export"`.
+  - script `scripts/build-tauri-shutdown.mjs`, que gera um `out/` estático de descontinuação (sem depender de `next build` e sem `output: "export"`).
 
 ## Providers (Contextos)
 

@@ -1,6 +1,6 @@
 {
   "name": "Blackbox AI clone",
-  "version": "1.6.45",
+  "version": "1.6.46",
   "private": true,
   "scripts": {
     "dev": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev",
@@ -10,7 +10,7 @@
     "dev:turbo": "next dev --turbo",
     "dev:turbo:clean": "node -e \"const fs=require('fs');for(const n of fs.readdirSync('.')){if(n==='.next'||n.startsWith('.next-dev-'))fs.rmSync(n,{recursive:true,force:true})}\" && next dev --turbo",
     "build": "next build",
-    "build:tauri": "cross-env TAURI_BUILD=1 next build",
+    "build:tauri": "node ./scripts/build-tauri-shutdown.mjs",
     "start": "next start",
     "lint": "next lint",
     "audit:overlays": "node ./scripts/audit-overlay-transparency.mjs",
