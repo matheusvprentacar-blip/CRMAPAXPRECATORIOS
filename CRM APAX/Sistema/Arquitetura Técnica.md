@@ -45,6 +45,14 @@ crmapaxprecatorios/
 > [!info] Execução
 > A aplicação opera em modo **web-only** via Google Chrome. O runtime principal é Next.js no navegador.
 
+## Encerramento Desktop (Tauri)
+
+- A release final do desktop exibe um bloqueio de migração para web em `https://precatorios.grupoapax.com`.
+- Componente responsável: `components/tauri/desktop-migration-blocker.tsx`.
+- O build para Tauri permanece apenas para essa etapa final de desligamento, usando:
+  - `npm run build:tauri`
+  - `TAURI_BUILD=1` para gerar `out/` via `next build` com `output: "export"`.
+
 ## Providers (Contextos)
 
 | Provider | Arquivo | Responsabilidade |
