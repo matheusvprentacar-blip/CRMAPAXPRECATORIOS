@@ -88,7 +88,7 @@ export function ModalDuplicata({
           dono_usuario_id: novoResponsavel,
           responsavel: novoResponsavel,
           updated_at: new Date().toISOString(),
-        })
+        } as never)
         .eq("id", duplicata.id)
 
       if (error) throw new Error(error.message)

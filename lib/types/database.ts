@@ -1,12 +1,16 @@
+import type { OperatorTag } from "@/lib/users/operator-tag"
+
 export interface Usuario {
   id: string
   nome: string
   email: string
   telefone?: string
   role: string[]
+  operator_tag?: OperatorTag | null
   ativo: boolean
   created_at: string
   updated_at: string
+  horarios_permitidos?: import("@/lib/auth/horarios").HorariosPermitidos | null
   // HR Fields
   admission_date?: string
   position?: string

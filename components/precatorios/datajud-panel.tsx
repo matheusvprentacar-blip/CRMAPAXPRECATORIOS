@@ -36,11 +36,6 @@ type ApiErrorPayload = {
   details?: string
 }
 
-function isTauriRuntime(): boolean {
-  if (typeof window === "undefined") return false
-  return "__TAURI_INTERNALS__" in window || "__TAURI__" in window
-}
-
 function isDataJudSuccess(value: unknown): value is DataJudConsultaSuccess {
   return Boolean(
     value &&
@@ -176,39 +171,28 @@ export function DataJudConsultaPanel({
     setError(null)
 
     try {
-      let payload: unknown
-
-      if (isTauriRuntime()) {
-        const { invoke } = await import("@tauri-apps/api/core")
-        payload = await invoke<DataJudConsultaSuccess>("consultar_datajud", {
+      const res = await fetch("/api/precatorios/datajud", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
           numeroProcesso: numeroNormalizado,
-          tribunalAlias: resolution.alias,
-          endpoint: resolution.endpoint,
-        })
-      } else {
-        const res = await fetch("/api/precatorios/datajud", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            numeroProcesso: numeroNormalizado,
-          }),
-        })
+        }),
+      })
 
-        payload = await res.json().catch(() => null)
-        if (!res.ok || !isDataJudSuccess(payload)) {
-          const apiError = payload && typeof payload === "object" ? (payload as ApiErrorPayload) : null
-          const message =
-            apiError && typeof apiError.error === "string" && apiError.error.trim().length > 0
-              ? apiError.error
-              : `Falha ao consultar DataJud (${res.status}).`
-          const details =
-            apiError && typeof apiError.details === "string" && apiError.details.trim().length > 0
-              ? ` ${apiError.details}`
-              : ""
-          throw new Error(`${message}${details}`)
-        }
+      const payload = await res.json().catch(() => null)
+      if (!res.ok || !isDataJudSuccess(payload)) {
+        const apiError = payload && typeof payload === "object" ? (payload as ApiErrorPayload) : null
+        const message =
+          apiError && typeof apiError.error === "string" && apiError.error.trim().length > 0
+            ? apiError.error
+            : `Falha ao consultar DataJud (${res.status}).`
+        const details =
+          apiError && typeof apiError.details === "string" && apiError.details.trim().length > 0
+            ? ` ${apiError.details}`
+            : ""
+        throw new Error(`${message}${details}`)
       }
 
       if (!isDataJudSuccess(payload)) {

@@ -1,0 +1,33 @@
+{
+	"nodes":[
+		{"id":"a1f3c8d94e7b1021","type":"group","x":640,"y":-560,"width":760,"height":420,"label":"Nó mestre do cálculo","color":"#dbeafe"},
+		{"id":"b2e4d9a05f8c2132","type":"file","x":720,"y":-480,"width":600,"height":260,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Nó Mestre do Cálculo","color":"#0e4d6a"},
+		{"id":"c3f5ea10609d3243","type":"group","x":1460,"y":-560,"width":430,"height":420,"label":"Sincronização","color":"#e0f2fe"},
+		{"id":"d4a6fb2171ae4354","type":"file","x":1515,"y":-470,"width":320,"height":240,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Sincronização com Obsidian","color":"5"},
+		{"id":"e5b70c3282bf5465","type":"group","x":-180,"y":10,"width":2450,"height":980,"label":"Etapas do cálculo","color":"#eff6ff"},
+		{"id":"f6c81d4393c06776","type":"file","x":0,"y":100,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 1 — Dados Básicos","color":"2"},
+		{"id":"07d92e54a4d17887","type":"file","x":560,"y":100,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 2 — Índices e corte normativo","color":"3"},
+		{"id":"18ea3f65b5e28998","type":"file","x":1120,"y":100,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 3 — Atualização Monetária","color":"5"},
+		{"id":"29fb4076c6f39aa9","type":"file","x":1680,"y":100,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 4 — PSS","color":"1"},
+		{"id":"3a0c5187d704abb0","type":"file","x":0,"y":500,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 5 — IRPF","color":"1"},
+		{"id":"4b1d6298e815bcc1","type":"file","x":560,"y":500,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 6 — Honorários e Adiantamentos","color":"2"},
+		{"id":"5c2e73a9f926cdd2","type":"file","x":1120,"y":500,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 7 — Propostas","color":"4"},
+		{"id":"6d3f84ba0a37dee3","type":"file","x":1680,"y":500,"width":520,"height":320,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Etapa 8 — Resumo e Persistência","color":"4"},
+		{"id":"7e4095cb1b48eff4","type":"group","x":200,"y":1060,"width":1800,"height":390,"label":"Regras e fechamento","color":"#fef3c7"},
+		{"id":"8f51a6dc2c590005","type":"file","x":280,"y":1140,"width":760,"height":240,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Regras da Engine","color":"3"},
+		{"id":"9062b7ed3d6a1116","type":"file","x":1160,"y":1140,"width":760,"height":240,"file":"Processos/Fluxo de Cálculo.md","subpath":"#Fórmulas de Fechamento","color":"2"}
+	],
+	"edges":[
+		{"id":"a7b1c2d3e4f50617","fromNode":"b2e4d9a05f8c2132","fromSide":"bottom","fromEnd":"none","toNode":"f6c81d4393c06776","toSide":"top","toEnd":"arrow","label":"início operacional"},
+		{"id":"b8c2d3e4f5061728","fromNode":"f6c81d4393c06776","fromSide":"right","fromEnd":"none","toNode":"07d92e54a4d17887","toSide":"left","toEnd":"arrow"},
+		{"id":"c9d3e4f506172839","fromNode":"07d92e54a4d17887","fromSide":"right","fromEnd":"none","toNode":"18ea3f65b5e28998","toSide":"left","toEnd":"arrow"},
+		{"id":"dae4f5061728394a","fromNode":"18ea3f65b5e28998","fromSide":"right","fromEnd":"none","toNode":"29fb4076c6f39aa9","toSide":"left","toEnd":"arrow"},
+		{"id":"ebf5061728394a5b","fromNode":"29fb4076c6f39aa9","fromSide":"bottom","fromEnd":"none","toNode":"3a0c5187d704abb0","toSide":"top","toEnd":"arrow"},
+		{"id":"fc061728394a5b6c","fromNode":"3a0c5187d704abb0","fromSide":"right","fromEnd":"none","toNode":"4b1d6298e815bcc1","toSide":"left","toEnd":"arrow"},
+		{"id":"0d1728394a5b6c7d","fromNode":"4b1d6298e815bcc1","fromSide":"right","fromEnd":"none","toNode":"5c2e73a9f926cdd2","toSide":"left","toEnd":"arrow"},
+		{"id":"1e28394a5b6c7d8e","fromNode":"5c2e73a9f926cdd2","fromSide":"right","fromEnd":"none","toNode":"6d3f84ba0a37dee3","toSide":"left","toEnd":"arrow"},
+		{"id":"2f394a5b6c7d8e9f","fromNode":"b2e4d9a05f8c2132","fromSide":"right","fromEnd":"none","toNode":"d4a6fb2171ae4354","toSide":"left","toEnd":"arrow","label":"edite a nota para refletir no guia"},
+		{"id":"304a5b6c7d8e9fa0","fromNode":"6d3f84ba0a37dee3","fromSide":"bottom","fromEnd":"none","toNode":"8f51a6dc2c590005","toSide":"top","toEnd":"arrow","label":"regras finais"},
+		{"id":"415b6c7d8e9fa0b1","fromNode":"6d3f84ba0a37dee3","fromSide":"bottom","fromEnd":"none","toNode":"9062b7ed3d6a1116","toSide":"top","toEnd":"arrow","label":"fórmulas de fechamento"}
+	]
+}

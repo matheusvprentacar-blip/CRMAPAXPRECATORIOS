@@ -44,6 +44,9 @@ interface CreditoAtendimento {
   valor_atualizado: number
   created_at: string
   natureza: string | null
+  responsavel: string | null
+  dono_usuario_id: string | null
+  responsavel_nome?: string | null
 }
 
 const STATUS_CONFIG: Record<string, { label: string; color: string; dot: string; border: string }> = {
@@ -100,8 +103,8 @@ function CreditoCard({
 }) {
   const [open, setOpen] = useState(false)
   const [modalTentativa, setModalTentativa] = useState(false)
+  const [tentativaResultadoInicial, setTentativaResultadoInicial] = useState<"interessado" | undefined>(undefined)
   const [refreshKey, setRefreshKey] = useState(0)
-  const [loadingInteresse, setLoadingInteresse] = useState(false)
   const [loadingSemInteresse, setLoadingSemInteresse] = useState(false)
 
   const status = credito.status_atendimento ?? "na_fila"
@@ -113,30 +116,25 @@ function CreditoCard({
     onTentativaSuccess()
   }
 
-  const marcarStatus = async (novoStatus: "interessado" | "sem_interesse") => {
-    const setter = novoStatus === "interessado" ? setLoadingInteresse : setLoadingSemInteresse
-    setter(true)
+  const marcarSemInteresse = async () => {
+    setLoadingSemInteresse(true)
     try {
       const supabase = createBrowserClient()
       if (!supabase) throw new Error("Supabase não inicializado")
 
       const { error } = await supabase
         .from("precatorios")
-        .update({ status_atendimento: novoStatus })
+        .update({ status_atendimento: "sem_interesse" } as never)
         .eq("id", credito.id)
 
       if (error) throw new Error(error.message)
 
-      if (novoStatus === "interessado") {
-        toast.success("Crédito marcado como Interessado e enviado para Pendentes.")
-      } else {
-        toast.success("Crédito arquivado como Sem interesse.")
-      }
+      toast.success("Crédito arquivado como Sem interesse.")
       onTentativaSuccess()
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao atualizar status")
     } finally {
-      setter(false)
+      setLoadingSemInteresse(false)
     }
   }
 
@@ -188,6 +186,12 @@ function CreditoCard({
               {credito.devedor && (
                 <span className="text-xs text-muted-foreground">{credito.devedor}</span>
               )}
+              {credito.responsavel_nome && (
+                <span className="flex items-center gap-1">
+                  <span className="text-xs font-medium text-foreground/60">Operador</span>
+                  {credito.responsavel_nome}
+                </span>
+              )}
             </div>
 
             {isAdmin && (credito.valor_principal > 0 || credito.valor_atualizado > 0) && (
@@ -215,7 +219,10 @@ function CreditoCard({
                 size="sm"
                 variant="outline"
                 className="h-8 gap-1.5 text-xs"
-                onClick={() => setModalTentativa(true)}
+                onClick={() => {
+                  setTentativaResultadoInicial(undefined)
+                  setModalTentativa(true)
+                }}
               >
                 <Phone className="h-3.5 w-3.5" />
                 Registrar contato
@@ -224,21 +231,21 @@ function CreditoCard({
                 <Button
                   size="sm"
                   className="h-8 flex-1 gap-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white"
-                  onClick={() => marcarStatus("interessado")}
-                  disabled={loadingInteresse || loadingSemInteresse}
+                  onClick={() => {
+                    setTentativaResultadoInicial("interessado")
+                    setModalTentativa(true)
+                  }}
+                  disabled={loadingSemInteresse}
                 >
-                  {loadingInteresse
-                    ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    : <ThumbsUp className="h-3.5 w-3.5" />
-                  }
+                  <ThumbsUp className="h-3.5 w-3.5" />
                   Interessado
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
                   className="h-8 flex-1 gap-1.5 text-xs border-red-200 text-red-600 hover:bg-red-50 hover:text-red-700"
-                  onClick={() => marcarStatus("sem_interesse")}
-                  disabled={loadingInteresse || loadingSemInteresse}
+                  onClick={marcarSemInteresse}
+                  disabled={loadingSemInteresse}
                 >
                   {loadingSemInteresse
                     ? <Loader2 className="h-3.5 w-3.5 animate-spin" />
@@ -291,6 +298,7 @@ function CreditoCard({
         precatorioId={credito.id}
         credorNome={credito.credor_nome}
         onSuccess={handleTentativaSuccess}
+        initialResultado={tentativaResultadoInicial}
       />
     </Card>
   )
@@ -322,7 +330,11 @@ function StatCard({
 
 export default function AtendimentoPage() {
   const { profile } = useAuth()
-  const isAdmin = profile?.role?.includes("admin") ?? false
+  const roles = profile?.role ?? []
+  const isAdmin = roles.includes("admin")
+  const isAgenteAtendimento = roles.includes("agente_atendimento")
+  const isOperadorAtendimento =
+    (roles.includes("operador_comercial") || roles.includes("operador")) && !isAdmin && !isAgenteAtendimento
 
   const [creditos, setCreditos] = useState<CreditoAtendimento[]>([])
   const [loading, setLoading] = useState(true)
@@ -337,22 +349,33 @@ export default function AtendimentoPage() {
       const supabase = createBrowserClient()
       if (!supabase) return
 
-      const { data, error } = await supabase
+      let query = supabase
         .from("precatorios")
         .select(
-          "id, credor_nome, credor_cpf_cnpj, credor_telefone, numero_precatorio, numero_processo, tribunal, devedor, status_atendimento, valor_principal, valor_atualizado, created_at, natureza"
+          "id, credor_nome, credor_cpf_cnpj, credor_telefone, numero_precatorio, numero_processo, tribunal, devedor, status_atendimento, valor_principal, valor_atualizado, created_at, natureza, responsavel, dono_usuario_id, responsavel_usuario:usuarios!precatorios_responsavel_fkey(nome)"
         )
         .eq("origem", "atendimento")
         .order("created_at", { ascending: false })
 
+      if (isOperadorAtendimento && profile?.id) {
+        query = query.or(`responsavel.eq.${profile.id},dono_usuario_id.eq.${profile.id}`)
+      }
+
+      const { data, error } = await query
+
       if (error) throw error
-      setCreditos(data ?? [])
+      setCreditos(
+        (data ?? []).map((credito: any) => ({
+          ...credito,
+          responsavel_nome: credito.responsavel_usuario?.nome ?? null,
+        }))
+      )
     } catch (err) {
       toast.error("Erro ao carregar créditos de atendimento")
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [isOperadorAtendimento, profile?.id])
 
   useEffect(() => {
     fetchCreditos()
@@ -380,7 +403,7 @@ export default function AtendimentoPage() {
   }
 
   return (
-    <RoleGuard allowedRoles={["admin", "agente_atendimento"]}>
+    <RoleGuard allowedRoles={["admin", "agente_atendimento", "operador_comercial", "operador"]}>
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">

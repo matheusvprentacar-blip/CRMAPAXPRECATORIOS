@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -11,6 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
+import { Input } from "@/components/ui/input"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Loader2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
@@ -23,6 +24,7 @@ interface ModalNovaTentativaProps {
   precatorioId: string
   credorNome: string
   onSuccess: () => void
+  initialResultado?: Resultado
 }
 
 type Tipo = "ligacao" | "whatsapp" | "email"
@@ -47,18 +49,48 @@ export function ModalNovaTentativa({
   precatorioId,
   credorNome,
   onSuccess,
+  initialResultado,
 }: ModalNovaTentativaProps) {
   const { profile } = useAuth()
   const [tipo, setTipo] = useState<Tipo | "">("")
   const [resultado, setResultado] = useState<Resultado | "">("")
   const [observacoes, setObservacoes] = useState("")
+  const [contatoNome, setContatoNome] = useState("")
+  const [contatoTelefone, setContatoTelefone] = useState("")
+  const [interesseReceberProposta, setInteresseReceberProposta] = useState<"sim" | "nao" | "">("")
   const [saving, setSaving] = useState(false)
+  const isResultadoInteressado = resultado === "interessado"
+
+  useEffect(() => {
+    if (!open) return
+    setTipo("")
+    setResultado(initialResultado ?? "")
+    setObservacoes("")
+    setContatoNome("")
+    setContatoTelefone("")
+    setInteresseReceberProposta("")
+  }, [open, initialResultado])
+
+  useEffect(() => {
+    if (isResultadoInteressado) return
+    setContatoNome("")
+    setContatoTelefone("")
+    setInteresseReceberProposta("")
+  }, [isResultadoInteressado])
 
   const handleSave = async () => {
     if (!tipo || !resultado) {
       toast.error("Preencha o tipo e o resultado da tentativa.")
       return
     }
+
+    if (isResultadoInteressado) {
+      if (!contatoNome.trim() || !contatoTelefone.trim() || !interesseReceberProposta) {
+        toast.error("Para interessado, informe nome, telefone e se deseja receber proposta.")
+        return
+      }
+    }
+
     setSaving(true)
     try {
       const supabase = createBrowserClient()
@@ -76,7 +108,10 @@ export function ModalNovaTentativa({
           tipo,
           resultado,
           observacoes: observacoes.trim() || null,
-        })
+          contato_nome: isResultadoInteressado ? contatoNome.trim() : null,
+          contato_telefone: isResultadoInteressado ? contatoTelefone.trim() : null,
+          interesse_receber_proposta: isResultadoInteressado ? interesseReceberProposta === "sim" : null,
+        } as never)
 
       if (insertError) throw new Error(insertError.message)
 
@@ -89,7 +124,7 @@ export function ModalNovaTentativa({
 
       const { error: updateError } = await supabase
         .from("precatorios")
-        .update({ status_atendimento: novoStatus })
+        .update({ status_atendimento: novoStatus } as never)
         .eq("id", precatorioId)
 
       if (updateError) throw new Error(updateError.message)
@@ -98,6 +133,9 @@ export function ModalNovaTentativa({
       setTipo("")
       setResultado("")
       setObservacoes("")
+      setContatoNome("")
+      setContatoTelefone("")
+      setInteresseReceberProposta("")
       onSuccess()
       onOpenChange(false)
     } catch (err) {
@@ -143,6 +181,41 @@ export function ModalNovaTentativa({
               </SelectContent>
             </Select>
           </div>
+
+          {isResultadoInteressado && (
+            <>
+              <div className="space-y-1">
+                <Label>Nome de quem recebeu a chamada *</Label>
+                <Input
+                  placeholder="Nome completo"
+                  value={contatoNome}
+                  onChange={(e) => setContatoNome(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Telefone que atendeu *</Label>
+                <Input
+                  placeholder="(00) 00000-0000"
+                  value={contatoTelefone}
+                  onChange={(e) => setContatoTelefone(e.target.value)}
+                />
+              </div>
+
+              <div className="space-y-1">
+                <Label>Tem interesse em receber proposta? *</Label>
+                <Select value={interesseReceberProposta} onValueChange={(v) => setInteresseReceberProposta(v as "sim" | "nao")}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Selecione..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="sim">Sim</SelectItem>
+                    <SelectItem value="nao">Não</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </>
+          )}
 
           <div className="space-y-1">
             <Label>Observações (opcional)</Label>

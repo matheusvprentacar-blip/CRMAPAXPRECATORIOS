@@ -1,13 +1,11 @@
 /** @type {import('next').NextConfig} */
-const isProdBuild = process.env.NODE_ENV === "production";
-const isVercelBuild = process.env.VERCEL === "1";
+const isTauriBuild = process.env.TAURI_BUILD === "1";
 const appVersion = process.env.npm_package_version || "0.0.0";
 const nextConfig = {
   reactStrictMode: false,
-  // Em dev mantemos server features (ex.: route handlers).
-  // Em produção na Vercel precisamos de runtime server para /api/*.
-  // O export estático continua para builds locais/Tauri.
-  output: isProdBuild && !isVercelBuild ? "export" : undefined,
+  // Build web permanece server/runtime normal.
+  // Build Tauri final usa export estático para gerar `out/`.
+  output: isTauriBuild ? "export" : undefined,
   images: { unoptimized: true },
 
   // 👉 Otimizações de produção (mantidas, mas simples)

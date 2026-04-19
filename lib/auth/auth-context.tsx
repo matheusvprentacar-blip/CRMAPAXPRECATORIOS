@@ -6,6 +6,8 @@ import { createContext, useContext, useEffect, useState } from "react"
 import type { User } from "@supabase/supabase-js"
 import { createBrowserClient, getSupabasePublicConfig, probeSupabaseAuthConnectivity } from "@/lib/supabase/client"
 import { useRouter } from "next/navigation"
+import { isMissingOperatorTagColumnError, type OperatorTag } from "@/lib/users/operator-tag"
+import type { HorariosPermitidos } from "@/lib/auth/horarios"
 
 export type UserRole =
   | "admin"
@@ -27,8 +29,20 @@ interface UserProfile {
   email: string
   nome: string
   role: UserRole[]  // Mudado para array - permite até 2 roles
+  operator_tag?: OperatorTag | null
   foto_url?: string
   telefone?: string
+  horarios_permitidos?: HorariosPermitidos | null
+}
+
+type UserProfileRow = {
+  id: string
+  email: string
+  nome: string
+  role?: UserRole[] | UserRole | null
+  operator_tag?: OperatorTag | null
+  foto_url?: string | null
+  telefone?: string | null
 }
 
 function normalizeProfileRoles(rawRole: unknown): UserRole[] {
@@ -184,11 +198,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     try {
-      const { data, error } = await supabase
+      let profileResponse = await supabase
         .from("usuarios")
-        .select("id, nome, email, role, foto_url, telefone") // Selecionar campos explícitos
+        .select("id, nome, email, role, operator_tag, foto_url, telefone, horarios_permitidos")
         .eq("id", userId)
         .single()
+
+      if (profileResponse.error && isMissingOperatorTagColumnError(profileResponse.error)) {
+        profileResponse = await supabase
+          .from("usuarios")
+          .select("id, nome, email, role, foto_url, telefone")
+          .eq("id", userId)
+          .single()
+      }
+
+      const { data, error } = profileResponse
 
       if (error) {
         throw error
@@ -198,12 +222,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error("Perfil não encontrado")
       }
 
-      const roleArray = normalizeProfileRoles(data.role)
+      const profileRow = data as unknown as UserProfileRow
+      const roleArray = normalizeProfileRoles(profileRow.role)
 
       setProfile({
-        ...data,
-        role: roleArray
-      } as UserProfile)
+        id: profileRow.id,
+        email: profileRow.email,
+        nome: profileRow.nome,
+        role: roleArray,
+        operator_tag: profileRow.operator_tag ?? null,
+        foto_url: profileRow.foto_url ?? undefined,
+        telefone: profileRow.telefone ?? undefined,
+        horarios_permitidos: (profileRow as any).horarios_permitidos ?? null,
+      })
     } catch (error: unknown) {
       console.error("[v0] Erro ao carregar perfil (Catch):", JSON.stringify(error, null, 2))
       const errorMessage = error instanceof Error ? error.message : null
@@ -264,7 +295,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email,
         nome,
         role, // Agora é array
-      })
+      } as never)
 
       if (profileError) throw profileError
     }
@@ -287,7 +318,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!supabase) throw new Error("Supabase não está configurado")
     if (!user) throw new Error("Usuário não autenticado")
 
-    const { error } = await supabase.from("usuarios").update(updates).eq("id", user.id)
+    const { error } = await supabase.from("usuarios").update(updates as never).eq("id", user.id)
     if (error) throw error
 
     setProfile((prev) => (prev ? { ...prev, ...updates } : null))

@@ -1,6 +1,7 @@
 ﻿"use client"
 
 import { useCallback, useEffect, useMemo, useState, type ComponentType } from "react"
+import type jsPDFType from "jspdf"
 import {
   Activity,
   AlertTriangle,
@@ -51,7 +52,7 @@ interface TelemetryEventRow {
   user_id: string
   session_id: string
   event_type: string
-  source: "web" | "tauri" | "hybrid"
+  source: "web"
   event_data: Record<string, unknown> | null
   occurred_at: string
   usuario: TelemetryUser | null
@@ -64,7 +65,7 @@ interface TelemetryUserOption {
   eventsCount: number
 }
 
-type RangeKey = "24h" | "7d" | "30d" | "all"
+type RangeKey = "24h" | "7d" | "15d"
 
 const EVENT_LABELS: Record<string, string> = {
   session_started: "Sessão iniciada",
@@ -86,19 +87,20 @@ const EVENT_LABELS: Record<string, string> = {
 const RANGE_LABELS: Record<RangeKey, string> = {
   "24h": "Últimas 24 horas",
   "7d": "Últimos 7 dias",
-  "30d": "Últimos 30 dias",
-  all: "Tudo carregado",
+  "15d": "Últimos 15 dias",
 }
 
 const SOURCE_LABELS: Record<TelemetryEventRow["source"], string> = {
   web: "Web",
-  tauri: "Desktop (Tauri)",
-  hybrid: "Híbrido",
 }
 
-const TELEMETRY_SELECT =
-  "id, user_id, session_id, event_type, source, event_data, occurred_at, usuario:usuarios(nome, email, role)"
-const TELEMETRY_PAGE_SIZE = 500
+const TELEMETRY_EVENTS_SELECT = "id, user_id, session_id, event_type, source, event_data, occurred_at"
+
+const RANGE_MS: Record<RangeKey, number> = {
+  "24h": 86_400_000,
+  "7d": 604_800_000,
+  "15d": 1_296_000_000,
+}
 const RECENT_EVENTS_PAGE_SIZE_OPTIONS = [20, 50, 100] as const
 const SESSIONS_PAGE_SIZE_OPTIONS = [10, 20, 50] as const
 const GLASS_PANEL_CLASS =
@@ -449,7 +451,7 @@ export default function TelemetriaPage() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [selectedUserId, setSelectedUserId] = useState<string>("all")
-  const [rangeKey, setRangeKey] = useState<RangeKey>("24h")
+  const [rangeKey, setRangeKey] = useState<RangeKey>("15d")
   const [recentEventsFrom, setRecentEventsFrom] = useState("")
   const [recentEventsTo, setRecentEventsTo] = useState("")
   const [eventTypeFilter, setEventTypeFilter] = useState<string>("all")
@@ -463,7 +465,7 @@ export default function TelemetriaPage() {
   const [sessionsSourceFilter, setSessionsSourceFilter] = useState<"all" | TelemetryEventRow["source"]>("all")
   const [sessionsSearchTerm, setSessionsSearchTerm] = useState("")
 
-  const loadTelemetry = useCallback(async (isRefresh = false) => {
+  const loadTelemetry = useCallback(async (isRefresh = false, forRangeKey: RangeKey = "15d") => {
     const supabase = getSupabase()
 
     if (!supabase) {
@@ -478,17 +480,22 @@ export default function TelemetriaPage() {
 
     setError(null)
 
+    // 1. Filtro server-side por data (janela do período selecionado)
+    const cutoffISO = new Date(Date.now() - RANGE_MS[forRangeKey]).toISOString()
+
+    // Pagina com range() para superar o limite padrão de 1000 linhas do PostgREST
     const rawRows: Array<Record<string, unknown>> = []
     let from = 0
+    const PAGE = 1000
 
     while (true) {
-      const to = from + TELEMETRY_PAGE_SIZE - 1
       const { data: pageData, error: pageError } = await supabase
         .from("telemetria_uso")
-        .select(TELEMETRY_SELECT)
+        .select(TELEMETRY_EVENTS_SELECT)
+        .gte("occurred_at", cutoffISO)
         .order("occurred_at", { ascending: false })
         .order("id", { ascending: false })
-        .range(from, to)
+        .range(from, from + PAGE - 1)
 
       if (pageError) {
         setError(pageError.message || "Não foi possível carregar os eventos de telemetria.")
@@ -498,14 +505,30 @@ export default function TelemetriaPage() {
         return
       }
 
-      const pageRows = (pageData ?? []) as Array<Record<string, unknown>>
-      if (pageRows.length === 0) break
+      const page = (pageData ?? []) as Array<Record<string, unknown>>
+      rawRows.push(...page)
 
-      rawRows.push(...pageRows)
+      if (page.length < PAGE) break
+      from += PAGE
+    }
 
-      if (pageRows.length < TELEMETRY_PAGE_SIZE) break
+    // 2. Query separada de usuários — elimina N+1 join por evento
+    const uniqueUserIds = [...new Set(rawRows.map((r) => String(r.user_id ?? "")).filter(Boolean))]
+    const usersMap = new Map<string, TelemetryUser>()
 
-      from += TELEMETRY_PAGE_SIZE
+    if (uniqueUserIds.length > 0) {
+      const { data: usersData } = await supabase
+        .from("usuarios")
+        .select("id, nome, email, role")
+        .in("id", uniqueUserIds)
+
+      for (const u of (usersData ?? []) as Array<Record<string, unknown>>) {
+        usersMap.set(String(u.id ?? ""), {
+          nome: typeof u.nome === "string" ? u.nome : null,
+          email: typeof u.email === "string" ? u.email : null,
+          role: Array.isArray(u.role) ? u.role.filter((r): r is string => typeof r === "string") : null,
+        })
+      }
     }
 
     const rows = rawRows.map((row) => ({
@@ -513,10 +536,10 @@ export default function TelemetriaPage() {
       user_id: String(row.user_id ?? ""),
       session_id: String(row.session_id ?? ""),
       event_type: String(row.event_type ?? ""),
-      source: (row.source as "web" | "tauri" | "hybrid") ?? "web",
+      source: "web" as const,
       event_data: (row.event_data as Record<string, unknown> | null) ?? null,
       occurred_at: String(row.occurred_at ?? ""),
-      usuario: normalizeUser(row.usuario),
+      usuario: usersMap.get(String(row.user_id ?? "")) ?? null,
     }))
 
     setEvents(rows)
@@ -525,8 +548,8 @@ export default function TelemetriaPage() {
   }, [])
 
   useEffect(() => {
-    void loadTelemetry()
-  }, [loadTelemetry])
+    void loadTelemetry(false, rangeKey)
+  }, [loadTelemetry, rangeKey])
 
   const userOptions = useMemo<TelemetryUserOption[]>(() => {
     const byUser = new Map<string, TelemetryUserOption>()
@@ -564,18 +587,12 @@ export default function TelemetriaPage() {
     return userOptions.find((option) => option.userId === selectedUserId) ?? null
   }, [selectedUserId, userOptions])
 
+  // Dados já chegam filtrados do servidor; thin-filter client-side garante precisão
   const rangeFilteredEvents = useMemo(() => {
-    if (rangeKey === "all") return byUserFiltered
-    const now = Date.now()
-    const ms =
-      rangeKey === "24h"
-        ? 24 * 60 * 60 * 1000
-        : rangeKey === "7d"
-          ? 7 * 24 * 60 * 60 * 1000
-          : 30 * 24 * 60 * 60 * 1000
+    const cutoff = Date.now() - RANGE_MS[rangeKey]
     return byUserFiltered.filter((e) => {
       const t = safeMs(e.occurred_at)
-      return t !== null && t >= now - ms
+      return t !== null && t >= cutoff
     })
   }, [byUserFiltered, rangeKey])
 
@@ -768,7 +785,7 @@ export default function TelemetriaPage() {
 
   const sourcePie = useMemo(() => {
     const counts = countByKey(rangeFilteredEvents.map((e) => e.source))
-    const arr = (["web", "tauri", "hybrid"] as const)
+    const arr = (["web"] as const)
       .map((k) => ({ key: k, label: SOURCE_LABELS[k], value: counts.get(k) ?? 0 }))
       .filter((x) => x.value > 0)
     return arr.length ? arr : [{ key: "web" as const, label: "Web", value: 0 }]
@@ -823,16 +840,7 @@ export default function TelemetriaPage() {
         .join(",")
     })
 
-    const header = [
-      "ocorrido_em",
-      "usuario",
-      "email",
-      "evento",
-      "origem",
-      "session_id",
-      "user_id",
-      "payload_compacto",
-    ]
+    const header = ["ocorrido_em", "usuario", "email", "evento", "origem", "session_id", "user_id", "payload_compacto"]
       .map((cell) => escapeCsv(cell))
       .join(",")
 
@@ -847,6 +855,171 @@ export default function TelemetriaPage() {
     document.body.removeChild(link)
     URL.revokeObjectURL(url)
   }, [recentEventsFiltered])
+
+  const exportRelatorioPdf = useCallback(async () => {
+    const eventsToExport = selectedUserId === "all" ? events : events.filter((e) => e.user_id === selectedUserId)
+    if (eventsToExport.length === 0) return
+
+    const [{ default: jsPDF }, { default: autoTable }] = await Promise.all([
+      import("jspdf"),
+      import("jspdf-autotable"),
+    ])
+
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" }) as jsPDFType & {
+      lastAutoTable: { finalY: number }
+    }
+
+    const now = new Date()
+    const cutoff = new Date(now.getTime() - RANGE_MS["15d"])
+    const fmtDate = (d: Date) => d.toLocaleDateString("pt-BR")
+    const fmtDT = (d: Date) =>
+      d.toLocaleString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric", hour: "2-digit", minute: "2-digit" })
+
+    const sessionsAll = buildSessions(eventsToExport)
+
+    // Agrupa por usuário
+    const byUser = new Map<
+      string,
+      { label: string; email: string | null; sessions: typeof sessionsAll; firstMs: number; lastMs: number }
+    >()
+    for (const s of sessionsAll) {
+      const u = byUser.get(s.user_id) ?? {
+        label: s.user_label,
+        email: s.email,
+        sessions: [],
+        firstMs: s.started_at_ms,
+        lastMs: s.ended_at_ms,
+      }
+      u.sessions.push(s)
+      u.firstMs = Math.min(u.firstMs, s.started_at_ms)
+      u.lastMs = Math.max(u.lastMs, s.ended_at_ms)
+      byUser.set(s.user_id, u)
+    }
+
+    // ── CABEÇALHO ──────────────────────────────────────────────────
+    const AZUL: [number, number, number] = [14, 77, 106]
+    const BRANCO: [number, number, number] = [255, 255, 255]
+    const CINZA_LINHA: [number, number, number] = [245, 248, 250]
+
+    doc.setFillColor(...AZUL)
+    doc.rect(0, 0, 210, 30, "F")
+
+    doc.setTextColor(...BRANCO)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(15)
+    doc.text("CRM APAX  —  Relatório de Telemetria", 14, 12)
+
+    doc.setFont("helvetica", "normal")
+    doc.setFontSize(8.5)
+    doc.text(`Período: ${fmtDate(cutoff)}  a  ${fmtDate(now)}     Gerado em: ${fmtDT(now)}`, 14, 20)
+    doc.text(
+      `${eventsToExport.length.toLocaleString("pt-BR")} eventos  •  ${sessionsAll.length} sessões  •  ${byUser.size} usuário(s)`,
+      14,
+      26,
+    )
+
+    // ── RESUMO POR USUÁRIO ─────────────────────────────────────────
+    let y = 38
+    doc.setTextColor(30, 30, 30)
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.text("Resumo por usuário", 14, y)
+    y += 2
+
+    const userRows = Array.from(byUser.values()).map((u) => {
+      const workedMs = u.sessions.reduce((a, s) => a + s.worked_ms, 0)
+      const durationMs = u.sessions.reduce((a, s) => a + s.duration_ms, 0)
+      const locks = u.sessions.reduce((a, s) => a + s.locks, 0)
+      const reauth = u.sessions.reduce((a, s) => a + s.reauth_failed, 0)
+      const idlePct =
+        durationMs > 0 ? clamp(((durationMs - workedMs) / durationMs) * 100, 0, 100).toFixed(0) + "%" : "-"
+      return [
+        u.label,
+        u.email ?? "-",
+        fmtDT(new Date(u.firstMs)),
+        fmtDT(new Date(u.lastMs)),
+        formatDuration(workedMs),
+        formatDuration(durationMs),
+        idlePct,
+        u.sessions.length,
+        locks,
+        reauth,
+      ]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Usuário", "E-mail", "Primeiro acesso", "Último acesso", "Ativo", "Total", "Ocioso", "Sessões", "Locks", "Falhas"]],
+      body: userRows,
+      styles: { fontSize: 7.5, cellPadding: 1.8 },
+      headStyles: { fillColor: AZUL, textColor: BRANCO, fontStyle: "bold", fontSize: 7.5 },
+      alternateRowStyles: { fillColor: CINZA_LINHA },
+      margin: { left: 14, right: 14 },
+    })
+
+    // ── SESSÕES DETALHADAS ─────────────────────────────────────────
+    y = doc.lastAutoTable.finalY + 10
+
+    // Nova página se não houver espaço suficiente
+    if (y > 240) {
+      doc.addPage()
+      y = 16
+    }
+
+    doc.setFont("helvetica", "bold")
+    doc.setFontSize(10)
+    doc.setTextColor(30, 30, 30)
+    doc.text("Sessões detalhadas", 14, y)
+    y += 2
+
+    const sessionRows = sessionsAll.map((s) => {
+      const risk = riskLabel(s.risk_score)
+      return [
+        fmtDT(new Date(s.started_at_ms)),
+        fmtDT(new Date(s.ended_at_ms)),
+        s.user_label,
+        SOURCE_LABELS[s.source],
+        formatDuration(s.duration_ms),
+        formatDuration(s.worked_ms),
+        s.idle_pct.toFixed(0) + "%",
+        s.locks,
+        s.reauth_failed,
+        risk.text,
+      ]
+    })
+
+    autoTable(doc, {
+      startY: y,
+      head: [["Início", "Fim", "Usuário", "Origem", "Duração", "Ativo", "Ocioso", "Locks", "Falhas", "Risco"]],
+      body: sessionRows,
+      styles: { fontSize: 7, cellPadding: 1.5 },
+      headStyles: { fillColor: AZUL, textColor: BRANCO, fontStyle: "bold", fontSize: 7 },
+      alternateRowStyles: { fillColor: CINZA_LINHA },
+      margin: { left: 14, right: 14 },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 9) {
+          const v = String(data.cell.raw)
+          if (v === "Alto") data.cell.styles.textColor = [180, 0, 0]
+          else if (v === "Médio") data.cell.styles.textColor = [160, 100, 0]
+          else data.cell.styles.textColor = [0, 130, 60]
+        }
+      },
+    })
+
+    // ── RODAPÉ EM TODAS AS PÁGINAS ─────────────────────────────────
+    const total = doc.getNumberOfPages()
+    for (let i = 1; i <= total; i++) {
+      doc.setPage(i)
+      doc.setFontSize(7.5)
+      doc.setTextColor(160)
+      doc.setFont("helvetica", "normal")
+      doc.text("CRM APAX  —  Confidencial", 14, 291)
+      doc.text(`Pág. ${i} / ${total}`, 105, 291, { align: "center" })
+      doc.text(fmtDate(now), 196, 291, { align: "right" })
+    }
+
+    doc.save(`relatorio-telemetria-${now.toISOString().slice(0, 10)}.pdf`)
+  }, [events, selectedUserId])
 
   return (
     <RoleGuard allowedRoles={["admin"]}>
@@ -876,10 +1049,13 @@ export default function TelemetriaPage() {
                 </div>
                 <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                   <span>
-                    Lote: <span className="font-medium text-foreground">{TELEMETRY_PAGE_SIZE}</span>
+                    Eventos carregados:{" "}
+                    <span className="font-medium text-foreground">
+                      {loading ? "…" : events.length.toLocaleString("pt-BR")}
+                    </span>
                   </span>
                   <span>
-                    Limite: <span className="font-medium text-foreground">sem teto (até fim da paginação)</span>
+                    Período: <span className="font-medium text-foreground">{RANGE_LABELS[rangeKey]}</span>
                   </span>
                 </div>
               </div>
@@ -928,15 +1104,24 @@ export default function TelemetriaPage() {
                   <SelectContent>
                     <SelectItem value="24h">{RANGE_LABELS["24h"]}</SelectItem>
                     <SelectItem value="7d">{RANGE_LABELS["7d"]}</SelectItem>
-                    <SelectItem value="30d">{RANGE_LABELS["30d"]}</SelectItem>
-                    <SelectItem value="all">{RANGE_LABELS["all"]}</SelectItem>
+                    <SelectItem value="15d">{RANGE_LABELS["15d"]}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
 
-              <Button variant="outline" onClick={() => void loadTelemetry(true)} disabled={loading || refreshing}>
+              <Button variant="outline" onClick={() => void loadTelemetry(true, rangeKey)} disabled={loading || refreshing}>
                 <RefreshCw className={`mr-2 h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
                 Atualizar
+              </Button>
+
+              <Button
+                variant="outline"
+                onClick={() => void exportRelatorioPdf()}
+                disabled={loading || events.length === 0}
+                className="border-primary/40 bg-primary/5 text-primary hover:bg-primary/10 hover:text-primary"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                Baixar relatório PDF
               </Button>
             </div>
           </div>
@@ -959,7 +1144,7 @@ export default function TelemetriaPage() {
                   <SelectTrigger>
                     <SelectValue placeholder="Selecione um usuario" />
                   </SelectTrigger>
-                  <SelectContent>
+                  <SelectContent className="max-h-64 overflow-y-auto">
                     <SelectItem value="all">Todos os usuários</SelectItem>
                     {userOptions.map((option) => (
                       <SelectItem key={option.userId} value={option.userId}>
@@ -1140,7 +1325,7 @@ export default function TelemetriaPage() {
                 <PieIcon className="h-5 w-5" />
                 Origem dos eventos
               </CardTitle>
-              <CardDescription>Distribuição por Web / Tauri / Híbrido.</CardDescription>
+              <CardDescription>Distribuição por origem Web.</CardDescription>
             </CardHeader>
             <CardContent style={{ minHeight: 320 }}>
               {loading ? (
@@ -1306,7 +1491,7 @@ export default function TelemetriaPage() {
                 <Select
                   value={sessionsSourceFilter}
                   onValueChange={(value) =>
-                    setSessionsSourceFilter(value === "web" || value === "tauri" || value === "hybrid" ? value : "all")
+                    setSessionsSourceFilter(value === "web" ? value : "all")
                   }
                 >
                   <SelectTrigger>
@@ -1315,8 +1500,6 @@ export default function TelemetriaPage() {
                   <SelectContent>
                     <SelectItem value="all">Todas</SelectItem>
                     <SelectItem value="web">{SOURCE_LABELS.web}</SelectItem>
-                    <SelectItem value="tauri">{SOURCE_LABELS.tauri}</SelectItem>
-                    <SelectItem value="hybrid">{SOURCE_LABELS.hybrid}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1592,7 +1775,7 @@ export default function TelemetriaPage() {
                 <Select
                   value={eventSourceFilter}
                   onValueChange={(value) =>
-                    setEventSourceFilter(value === "web" || value === "tauri" || value === "hybrid" ? value : "all")
+                    setEventSourceFilter(value === "web" ? value : "all")
                   }
                 >
                   <SelectTrigger>
@@ -1601,8 +1784,6 @@ export default function TelemetriaPage() {
                   <SelectContent>
                     <SelectItem value="all">Todas as origens</SelectItem>
                     <SelectItem value="web">{SOURCE_LABELS.web}</SelectItem>
-                    <SelectItem value="tauri">{SOURCE_LABELS.tauri}</SelectItem>
-                    <SelectItem value="hybrid">{SOURCE_LABELS.hybrid}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

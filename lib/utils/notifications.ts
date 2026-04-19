@@ -26,7 +26,6 @@ const STATUS_LABELS: Record<string, string> = {
   entrada: "Entrada",
   triagem_interesse: "Triagem",
   analise_processual_inicial: "Análise Processual Inicial",
-  docs_credor: "Documentos do credor",
   pronto_calculo: "Pronto para calculo",
   calculo_andamento: "Calculo em andamento",
   juridico: "Juridico",
@@ -47,7 +46,6 @@ const STATUS_TONES: Record<string, string> = {
   entrada: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
   triagem_interesse: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   analise_processual_inicial: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
-  docs_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   pronto_calculo: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   calculo_andamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   juridico: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
@@ -73,7 +71,6 @@ const STATUS_TAB_MAP: Record<string, string> = {
   pronto_calculo: "calculo",
   certidoes: "certidoes",
   escrituras: "escrituras",
-  docs_credor: "documentos",
   analise_processual_inicial: "oficio",
 }
 
@@ -87,7 +84,6 @@ const STATUS_NOTIFICATION_TITLES: Record<string, (nome: string) => string> = {
   certidoes: (nome) => (nome ? `Certidoes em andamento - ${nome}` : "Certidoes em andamento"),
   escrituras: (nome) => (nome ? `Escrituras em andamento - ${nome}` : "Escrituras em andamento"),
   analise_processual_inicial: (nome) => (nome ? `Análise Processual Inicial - ${nome}` : "Análise Processual Inicial"),
-  docs_credor: (nome) => (nome ? `Documentos do credor - ${nome}` : "Documentos do credor"),
   fechado: (nome) => (nome ? `Precatorio fechado - ${nome}` : "Precatorio fechado"),
   pos_fechamento: (nome) => (nome ? `Pos-fechamento - ${nome}` : "Pos-fechamento"),
   sem_interesse: (nome) => (nome ? `Sem interesse - ${nome}` : "Sem interesse"),

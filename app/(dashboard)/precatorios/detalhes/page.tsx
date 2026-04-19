@@ -283,7 +283,7 @@ type Herdeiro = {
   percentual_participacao: number | null
 }
 
-type TriagemDestinoReprovacao = "none" | "reprovado" | "nao_elegivel" | "credito_vendido"
+type TriagemFluxoOption = "normal" | "pausado" | "encerrado" | "nao_elegivel" | "credito_vendido"
 
 type AdminAlertRecipientOption = {
   id: string
@@ -369,10 +369,11 @@ export default function PrecatorioDetailPage() {
   const [notFound, setNotFound] = useState(false)
   const [activeTab, setActiveTab] = useState("detalhes")
   const reduceMotion = useReducedMotion()
-  const [triagemStatusSelection, setTriagemStatusSelection] = useState<string>("")
-  const [triagemDestinoReprovacao, setTriagemDestinoReprovacao] = useState<TriagemDestinoReprovacao>("none")
+  const [triagemFluxoSelection, setTriagemFluxoSelection] = useState<TriagemFluxoOption>("normal")
   const [triagemSaving, setTriagemSaving] = useState(false)
   const [semInteresseModalOpen, setSemInteresseModalOpen] = useState(false)
+  const [semInteresseModalMode, setSemInteresseModalMode] = useState<"sem_interesse" | "pausa">("sem_interesse")
+  const [semInteresseDestinoStatus, setSemInteresseDestinoStatus] = useState("sem_interesse")
   const lastStatusRef = useRef<string | null>(null)
   const [fechamentoData, setFechamentoData] = useState({
     pendencias: "",
@@ -423,6 +424,7 @@ export default function PrecatorioDetailPage() {
     ].includes(role)
   )
   const canEditFechamento = roles.some((role) => ["juridico", "admin"].includes(role))
+  const isJuridicoOrAdmin = roles.some((role) => ["admin", "juridico"].includes(role))
   const hasFechamentoParecer =
     (!!precatorio?.pendencias_fechamento && String(precatorio.pendencias_fechamento).trim().length > 0) ||
     precatorio?.juridico_liberou_fechamento === true ||
@@ -467,7 +469,6 @@ export default function PrecatorioDetailPage() {
   const STATUS_TAB_MAP: Record<string, string> = {
     entrada: "detalhes",
     triagem_interesse: "detalhes",
-    docs_credor: "documentos",
     analise_processual_inicial: "documentos",
     pronto_calculo: "calculo",
     calculo_andamento: "calculo",
@@ -537,15 +538,12 @@ export default function PrecatorioDetailPage() {
       }
     )
   }
-  const TRIAGEM_STATUS_OPTIONS = Object.entries(TRIAGEM_STATUS_META).map(([value, meta]) => ({
-    value,
-    label: meta.label,
-  }))
-  const TRIAGEM_DESTINO_OPTIONS: Array<{ value: TriagemDestinoReprovacao; label: string }> = [
-    { value: "none", label: "Fluxo normal" },
-    { value: "reprovado", label: "Reprovado" },
+  const TRIAGEM_FLUXO_OPTIONS: Array<{ value: TriagemFluxoOption; label: string }> = [
+    { value: "normal", label: "Fluxo normal" },
+    { value: "pausado", label: "Pausado" },
+    { value: "encerrado", label: "Encerrado" },
     { value: "nao_elegivel", label: "Não elegível" },
-    { value: "credito_vendido", label: "Credor vendeu o crédito (Reprovado / não elegível)" },
+    { value: "credito_vendido", label: "Credor vendeu para outro" },
   ]
   const triagemStatusMeta = getTriagemStatusMeta(precatorio?.interesse_status)
   const interesseObservacao = precatorio?.interesse_observacao?.trim()
@@ -800,19 +798,30 @@ export default function PrecatorioDetailPage() {
   }
 
   useEffect(() => {
-    setTriagemStatusSelection(precatorio?.interesse_status || "SEM_CONTATO")
     const statusResolvido = resolveStatusColumnId(precatorio?.status_kanban || precatorio?.localizacao_kanban)
-    const resultadoFinal = precatorio?.juridico_resultado_final
-    const destinoAtual =
-      statusResolvido === "reprovado" && (resultadoFinal === "reprovado" || resultadoFinal === "nao_elegivel")
-        ? (resultadoFinal as TriagemDestinoReprovacao)
-        : "none"
-    setTriagemDestinoReprovacao(destinoAtual)
+    const observacaoAtual = String(precatorio?.interesse_observacao || "").toLowerCase()
+
+    if (statusResolvido === "reprovado") {
+      const isCreditoVendido = observacaoAtual.includes("vendeu o credito")
+      setTriagemFluxoSelection(isCreditoVendido ? "credito_vendido" : "nao_elegivel")
+      return
+    }
+
+    if (["pausado_credor", "pausado_documentos"].includes(String(statusResolvido))) {
+      setTriagemFluxoSelection("pausado")
+      return
+    }
+
+    if (["sem_interesse", "encerrados", "pos_fechamento"].includes(String(statusResolvido))) {
+      setTriagemFluxoSelection("encerrado")
+      return
+    }
+
+    setTriagemFluxoSelection("normal")
   }, [
-    precatorio?.interesse_status,
     precatorio?.status_kanban,
     precatorio?.localizacao_kanban,
-    precatorio?.juridico_resultado_final,
+    precatorio?.interesse_observacao,
   ])
 
   useEffect(() => {
@@ -966,17 +975,26 @@ export default function PrecatorioDetailPage() {
   async function handleConfirmSemInteresse(motivo: string, dataRecontato: Date | undefined) {
     if (!id) return
 
+    const isPausa = semInteresseModalMode === "pausa"
+    const destinoStatus = semInteresseDestinoStatus || (isPausa ? "pausado_credor" : "sem_interesse")
+
+    if (isPausa && !dataRecontato) {
+      throw new Error("A data de retorno é obrigatória para status pausado.")
+    }
+
     setTriagemSaving(true)
     try {
       const supabase = requireSupabase()
+      const dataRecontatoIso = dataRecontato ? dataRecontato.toISOString() : null
       const { error } = await supabase
         .from("precatorios")
         .update({
-          interesse_status: "SEM_INTERESSE",
-          status_kanban: "sem_interesse",
-          localizacao_kanban: "sem_interesse",
-          motivo_sem_interesse: motivo,
-          data_recontato: dataRecontato ? dataRecontato.toISOString() : null,
+          interesse_status: isPausa ? "PEDIR_RETORNO" : "SEM_INTERESSE",
+          status_kanban: destinoStatus,
+          localizacao_kanban: destinoStatus,
+          motivo_sem_interesse: isPausa ? precatorio?.motivo_sem_interesse || null : motivo,
+          interesse_observacao: isPausa ? motivo : precatorio?.interesse_observacao || null,
+          data_recontato: dataRecontatoIso,
           updated_at: new Date().toISOString(),
         })
         .eq("id", id)
@@ -994,8 +1012,8 @@ export default function PrecatorioDetailPage() {
           .from("notifications")
           .insert({
             user_id: profile.id,
-            title: `Recontato agendado - ${precatorioLabel}`,
-            body: `Recontato marcado para ${dateLabel}.`,
+            title: isPausa ? `Retorno de pausa - ${precatorioLabel}` : `Recontato agendado - ${precatorioLabel}`,
+            body: isPausa ? `Retomar contato com o credor em ${dateLabel}.` : `Recontato marcado para ${dateLabel}.`,
             kind: "warn",
             link_url: `/precatorios/detalhes?id=${id}&tab=detalhes`,
             entity_type: "precatorio",
@@ -1009,12 +1027,15 @@ export default function PrecatorioDetailPage() {
       }
 
       toast({
-        title: "Sem interesse registrado",
-        description: dataRecontato ? "Recontato agendado com sucesso." : "Registro atualizado.",
+        title: isPausa ? "Pausa registrada" : "Sem interesse registrado",
+        description: dataRecontato
+          ? "Data de retorno agendada com sucesso."
+          : "Registro atualizado.",
       })
 
-      setTriagemStatusSelection("SEM_INTERESSE")
-      setTriagemDestinoReprovacao("none")
+      setTriagemFluxoSelection(isPausa ? "pausado" : "encerrado")
+      setSemInteresseModalMode("sem_interesse")
+      setSemInteresseDestinoStatus("sem_interesse")
       await loadPrecatorio()
     } finally {
       setTriagemSaving(false)
@@ -1023,16 +1044,19 @@ export default function PrecatorioDetailPage() {
 
   async function handleSaveTriagemStatus() {
     if (!id) return
-    if (!triagemStatusSelection) return
-
-    const destinoReprovacaoSelecionado = triagemDestinoReprovacao !== "none"
-    const resultadoFinalTriagem =
-      triagemDestinoReprovacao === "credito_vendido"
-        ? "nao_elegivel"
-        : triagemDestinoReprovacao
+    const fluxoSelecionado = triagemFluxoSelection
     const observacaoCreditoVendido = "Credor informou que vendeu o credito para outra pessoa ou empresa."
 
-    if (triagemStatusSelection === "SEM_INTERESSE" && !destinoReprovacaoSelecionado) {
+    if (fluxoSelecionado === "pausado") {
+      setSemInteresseModalMode("pausa")
+      setSemInteresseDestinoStatus("pausado_credor")
+      setSemInteresseModalOpen(true)
+      return
+    }
+
+    if (fluxoSelecionado === "encerrado") {
+      setSemInteresseModalMode("sem_interesse")
+      setSemInteresseDestinoStatus("sem_interesse")
       setSemInteresseModalOpen(true)
       return
     }
@@ -1040,35 +1064,59 @@ export default function PrecatorioDetailPage() {
     setTriagemSaving(true)
     try {
       const supabase = requireSupabase()
-      const nextStatusKanban =
-        destinoReprovacaoSelecionado
-          ? "reprovado"
-          : triagemStatusSelection === "TEM_INTERESSE"
-            ? "docs_credor"
-            : triagemStatusSelection === "SEM_INTERESSE"
-              ? "sem_interesse"
-              : "triagem_interesse"
+      const destinoReprovacaoSelecionado = ["nao_elegivel", "credito_vendido"].includes(fluxoSelecionado)
+      const nextStatusKanban = fluxoSelecionado === "normal" ? "analise_processual_inicial" : "reprovado"
+
+      if (precatorio?.origem === "atendimento" && fluxoSelecionado === "normal") {
+        if (precatorio?.status_atendimento !== "interessado") {
+          throw new Error("O fluxo normal só pode ser liberado após triagem de interesse no Setor de Atendimento.")
+        }
+
+        const { data: tentativaInteressada, error: tentativaError } = await supabase
+          .from("atendimento_tentativas")
+          .select("id, contato_nome, contato_telefone, interesse_receber_proposta")
+          .eq("precatorio_id", id)
+          .eq("resultado", "interessado")
+          .order("criado_em", { ascending: false })
+          .limit(1)
+          .maybeSingle()
+
+        if (tentativaError) throw tentativaError
+        if (!tentativaInteressada) {
+          throw new Error("Registre o contato de interesse no Atendimento antes de enviar para o fluxo normal.")
+        }
+        if (!tentativaInteressada.contato_nome || !tentativaInteressada.contato_telefone || tentativaInteressada.interesse_receber_proposta === null) {
+          throw new Error("A triagem do Atendimento está incompleta. Informe nome, telefone e interesse em proposta.")
+        }
+        if (tentativaInteressada.interesse_receber_proposta !== true) {
+          throw new Error("No Atendimento, o credor não confirmou interesse em receber proposta. Ajuste a triagem antes de avançar.")
+        }
+      }
+
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
       const updatePayload: any = {
-        interesse_status: triagemStatusSelection,
+        interesse_status: fluxoSelecionado === "normal" ? "TEM_INTERESSE" : "SEM_INTERESSE",
         status_kanban: nextStatusKanban,
         localizacao_kanban: nextStatusKanban,
         updated_at: new Date().toISOString(),
       }
 
       if (destinoReprovacaoSelecionado) {
-        updatePayload.juridico_resultado_final = resultadoFinalTriagem
-        if (triagemDestinoReprovacao === "credito_vendido") {
+        updatePayload.juridico_resultado_final = "nao_elegivel"
+        if (fluxoSelecionado === "credito_vendido") {
           const observacaoAtual = String(precatorio?.interesse_observacao || "").trim()
           updatePayload.interesse_observacao = observacaoAtual
             ? `${observacaoAtual}\n${observacaoCreditoVendido}`
             : observacaoCreditoVendido
         }
+        updatePayload.motivo_sem_interesse = null
       } else {
         const statusResolvido = resolveStatusColumnId(precatorio?.status_kanban || precatorio?.localizacao_kanban)
         if (statusResolvido === "reprovado") {
           updatePayload.juridico_resultado_final = null
         }
+        updatePayload.interesse_observacao = null
+        updatePayload.motivo_sem_interesse = null
       }
 
       const { error } = await supabase
@@ -1080,9 +1128,10 @@ export default function PrecatorioDetailPage() {
 
       toast({
         title: "Triagem atualizada",
-        description: destinoReprovacaoSelecionado
-          ? "Registro salvo e crédito enviado para Reprovado / não elegível."
-          : "O interesse do credor foi registrado com sucesso.",
+        description:
+          fluxoSelecionado === "normal"
+            ? "Crédito enviado para o fluxo normal."
+            : "Registro salvo e crédito enviado para não elegível.",
       })
 
       await loadPrecatorio()
@@ -1361,8 +1410,36 @@ export default function PrecatorioDetailPage() {
   const nextColumnIndex = nextColumn ? KANBAN_COLUMNS.findIndex((col) => col.id === nextColumn.id) : -1
   const shouldSkipOptionalJuridico = !juridicoFoiAcionado && currentColumnId !== "juridico"
 
+  const STAGES_BLOQUEADOS_OPERADOR = new Set([
+    "analise_processual_inicial",
+    "aguardando_oficio",
+    "pronto_calculo",
+    "calculo_andamento",
+    "calculo_concluido",
+    "juridico",
+    "recalculo_pos_juridico",
+    "proposta_negociacao",
+    "proposta_aceita",
+    "certidoes",
+    "escrituras",
+    "fechado",
+    "pos_fechamento",
+    "pausado_credor",
+    "pausado_documentos",
+    "sem_interesse",
+    "reprovado",
+    "nao_elegivel",
+    "encerrados",
+  ])
+
+  const creditoBloqueadoParaOperador =
+    !isJuridicoOrAdmin && STAGES_BLOQUEADOS_OPERADOR.has(currentColumnId || "")
+
+  const canEditGestaoAnalise = isJuridicoOrAdmin
+
   const canAdvanceToNextColumn =
     canEdit &&
+    !creditoBloqueadoParaOperador &&
     !isEditing &&
     Boolean(nextColumn) &&
     currentColumnId !== "juridico" &&
@@ -1375,8 +1452,6 @@ export default function PrecatorioDetailPage() {
         return "shadow-[0_10px_24px_rgba(29,78,216,0.35)]"
       case "triagem_interesse":
         return "shadow-[0_10px_24px_rgba(67,56,202,0.35)]"
-      case "docs_credor":
-        return "shadow-[0_10px_24px_rgba(3,105,161,0.35)]"
       case "analise_processual_inicial":
         return "shadow-[0_10px_24px_rgba(14,116,144,0.35)]"
       case "juridico":
@@ -1406,8 +1481,6 @@ export default function PrecatorioDetailPage() {
         return "bg-blue-600 text-white"
       case "triagem_interesse":
         return "bg-indigo-600 text-white"
-      case "docs_credor":
-        return "bg-sky-600 text-white"
       case "analise_processual_inicial":
         return "bg-cyan-600 text-white"
       case "juridico":
@@ -1995,7 +2068,7 @@ export default function PrecatorioDetailPage() {
                   </ClayBtnAc>
                 </>
               ) : (
-                canEdit && (
+                canEdit && !creditoBloqueadoParaOperador && (
                   <ClayBtnGhost onClick={() => setIsEditing(true)}>
                     <Edit className="h-[14px] w-[14px]" />
                     Editar
@@ -2324,6 +2397,14 @@ export default function PrecatorioDetailPage() {
                             <ArrowRight className="h-[14px] w-[14px]" />
                             {advancingStage ? "Enviando..." : "Enviar para próxima fase"}
                           </ClayBtnAc>
+                        ) : creditoBloqueadoParaOperador && nextColumn ? (
+                          <div className="inline-flex items-center gap-2 rounded-[14px] border border-amber-200 bg-amber-50 px-4 py-2 text-[12.5px] font-semibold text-amber-700">
+                            <svg className="h-[14px] w-[14px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            Apenas Admin ou Jurídico pode avançar daqui
+                          </div>
                         ) : null}
                       </div>
                     </div>
@@ -2377,10 +2458,21 @@ export default function PrecatorioDetailPage() {
 
                 <ModalSemInteresse
                   open={semInteresseModalOpen}
-                  onOpenChange={setSemInteresseModalOpen}
+                  onOpenChange={(open) => {
+                    setSemInteresseModalOpen(open)
+                    if (!open) {
+                      setSemInteresseModalMode("sem_interesse")
+                      setSemInteresseDestinoStatus("sem_interesse")
+                    }
+                  }}
                   precatorioId={id}
+                  mode={semInteresseModalMode}
                   onConfirm={handleConfirmSemInteresse}
-                  initialMotivo={precatorio?.motivo_sem_interesse || ""}
+                  initialMotivo={
+                    semInteresseModalMode === "pausa"
+                      ? precatorio?.interesse_observacao || precatorio?.motivo_sem_interesse || ""
+                      : precatorio?.motivo_sem_interesse || ""
+                  }
                   initialDataRecontato={
                     precatorio?.data_recontato ? new Date(precatorio.data_recontato) : null
                   }
@@ -2467,7 +2559,16 @@ export default function PrecatorioDetailPage() {
                     <ClayCard className="order-3">
                       <ClayCardHeader icon={FileText} title="Gestão de Análise" />
                       <div className="p-5 lg:px-[22px] lg:py-5 space-y-4">
-                        {isEditing ? (
+                        {!canEditGestaoAnalise && (
+                          <div className="mb-2 flex items-center gap-2 rounded-[10px] border border-amber-200 bg-amber-50 px-3 py-2 text-[12px] font-medium text-amber-700">
+                            <svg className="h-[13px] w-[13px] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                              <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                              <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                            </svg>
+                            Somente Admin ou Jurídico pode editar esta seção.
+                          </div>
+                        )}
+                        {isEditing && canEditGestaoAnalise ? (
                           <div className="space-y-4">
                             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
@@ -3008,34 +3109,16 @@ export default function PrecatorioDetailPage() {
                         </div>
                         <div className="flex flex-wrap items-end gap-4">
                           <div className="flex flex-col gap-1 text-xs">
-                            <span className="font-semibold">Atualizar interesse</span>
+                            <span className="font-semibold">Fluxo da triagem</span>
                             <Select
-                              value={triagemStatusSelection || "SEM_CONTATO"}
-                              onValueChange={(value) => setTriagemStatusSelection(value)}
-                            >
-                              <SelectTrigger className="min-w-[200px]">
-                                <SelectValue placeholder="Escolha o status" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {TRIAGEM_STATUS_OPTIONS.map((option) => (
-                                  <SelectItem key={option.value} value={option.value}>
-                                    {option.label}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
-                          <div className="flex flex-col gap-1 text-xs">
-                            <span className="font-semibold">Encaminhar para</span>
-                            <Select
-                              value={triagemDestinoReprovacao}
-                              onValueChange={(value) => setTriagemDestinoReprovacao(value as TriagemDestinoReprovacao)}
+                              value={triagemFluxoSelection}
+                              onValueChange={(value) => setTriagemFluxoSelection(value as TriagemFluxoOption)}
                             >
                               <SelectTrigger className="min-w-[220px]">
-                                <SelectValue placeholder="Escolha o destino" />
+                                <SelectValue placeholder="Escolha o fluxo" />
                               </SelectTrigger>
                               <SelectContent>
-                                {TRIAGEM_DESTINO_OPTIONS.map((option) => (
+                                {TRIAGEM_FLUXO_OPTIONS.map((option) => (
                                   <SelectItem key={option.value} value={option.value}>
                                     {option.label}
                                   </SelectItem>
@@ -3046,7 +3129,7 @@ export default function PrecatorioDetailPage() {
                           <Button
                             size="sm"
                             onClick={handleSaveTriagemStatus}
-                            disabled={triagemSaving || !triagemStatusSelection}
+                            disabled={triagemSaving}
                           >
                             {triagemSaving ? "Salvando..." : "Salvar"}
                           </Button>
@@ -3513,7 +3596,7 @@ export default function PrecatorioDetailPage() {
                       <span>Atualizado em {new Date(precatorio.updated_at).toLocaleDateString("pt-BR")}</span>
                     )}
                   </div>
-                  {canEdit && !isEditing && (
+                  {canEdit && !creditoBloqueadoParaOperador && !isEditing && (
                     <div className="flex items-center gap-2">
                       <ClayBtnGhost onClick={() => setIsEditing(true)}>
                         <Edit className="h-[14px] w-[14px]" />

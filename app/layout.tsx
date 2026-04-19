@@ -8,7 +8,7 @@ import { AuthProvider } from "@/lib/auth/auth-context"
 import { ThemeProvider } from "@/components/theme-provider"
 import { ClientToaster } from "@/components/client-toaster"
 import { PDFViewerProvider } from "@/components/providers/pdf-viewer-provider"
-import { GlobalUpdateNotifier } from "@/components/settings/global-update-notifier"
+import { DesktopMigrationBlocker } from "@/components/tauri/desktop-migration-blocker"
 import { Providers } from "./providers"
 
 const manrope = Manrope({
@@ -78,8 +78,8 @@ export default function RootLayout({
           <AuthProvider>
             <PDFViewerProvider>
               <Providers>{children}</Providers>
+              <DesktopMigrationBlocker />
             </PDFViewerProvider>
-            <GlobalUpdateNotifier />
           </AuthProvider>
         </ThemeProvider>
         <ClientToaster />

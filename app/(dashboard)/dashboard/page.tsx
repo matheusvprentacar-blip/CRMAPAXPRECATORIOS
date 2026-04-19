@@ -1402,7 +1402,7 @@ export default function DashboardPage() {
                 </div>
                 <div className="p-5">
                   <div className="h-[180px] w-full" style={{ minWidth: 0 }}>
-                    <ResponsiveContainer width="100%" height="100%" minWidth={0}>
+                    <ResponsiveContainer width="100%" height="100%" minWidth={0} debounce={50}>
                       <BarChart
                         data={[
                           { name: "Principal", value: kpis.resumo.total_principal },
@@ -1526,7 +1526,7 @@ export default function DashboardPage() {
                     const colors = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     const dots   = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     return (
-                      <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-sm">
+                      <div key={`valor-${i}-${row.label}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_6rem] items-center gap-3 text-sm">
                         <div className="flex min-w-0 items-center gap-2">
                           <span className={["h-2.5 w-2.5 shrink-0 rounded-full", dots[i % dots.length]].join(" ")} />
                           <span className="truncate">{row.label}</span>
@@ -1672,7 +1672,7 @@ export default function DashboardPage() {
                     const colors = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     const dots   = ["bg-[#0e4d6a]", "bg-[#1a6080]", "bg-[#2578a0]", "bg-[#15803d]", "bg-[#1d4ed8]"]
                     return (
-                      <div key={row.label} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem] items-center gap-3 text-sm">
+                      <div key={`qtd-${i}-${row.label}`} className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)_4rem] items-center gap-3 text-sm">
                         <div className="flex min-w-0 items-center gap-2">
                           <span className={["h-2.5 w-2.5 shrink-0 rounded-full", dots[i % dots.length]].join(" ")} />
                           <span className="truncate">{row.label}</span>

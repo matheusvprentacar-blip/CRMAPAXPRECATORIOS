@@ -378,15 +378,23 @@ Deno.serve(async (req) => {
         // ACTION: updateUserRole
         // ----------------------------------------------------------------------
         if (action === 'updateUserRole') {
-            const { userId, newRole } = data
+            const { userId, newRole, operator_tag } = data
 
             if (!userId || !newRole) {
                 throw new Error('userId e newRole sao obrigatorios')
             }
 
+            const roleUpdatePayload: Record<string, unknown> = { role: newRole }
+            if (Object.prototype.hasOwnProperty.call(data, 'operator_tag')) {
+                roleUpdatePayload.operator_tag =
+                    typeof operator_tag === 'string' && operator_tag.trim()
+                        ? operator_tag.trim().toLowerCase()
+                        : null
+            }
+
             const { error: dbError } = await supabaseClient
                 .from('usuarios')
-                .update({ role: newRole })
+                .update(roleUpdatePayload)
                 .eq('id', userId)
 
             if (dbError) throw new Error(`Erro DB: ${dbError.message}`)
@@ -408,7 +416,7 @@ Deno.serve(async (req) => {
         // ACTION: createNewUser
         // ----------------------------------------------------------------------
         if (action === 'createNewUser') {
-            const { email, password, nome, role, autoConfirm } = data
+            const { email, password, nome, role, operator_tag, autoConfirm } = data
 
             if (!email || !password || !nome) {
                 throw new Error('Dados incompletos')
@@ -430,6 +438,9 @@ Deno.serve(async (req) => {
                 email,
                 nome,
                 role,
+                operator_tag: typeof operator_tag === 'string' && operator_tag.trim()
+                    ? operator_tag.trim().toLowerCase()
+                    : null,
                 created_at: new Date().toISOString(),
             })
 

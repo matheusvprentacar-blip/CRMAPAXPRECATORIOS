@@ -48,13 +48,17 @@ const ENCERRADOS_STATUS = [
   "pausado_credor",
   "pausado_documentos",
   "sem_interesse",
-]
+  "reprovado",
+  "nao_elegivel",
+] as const
 
 const ENCERRADOS_LABELS: Record<string, string> = {
   pos_fechamento: "Pós-fechamento",
   pausado_credor: "Pausado (credor)",
   pausado_documentos: "Pausado (documentos)",
   sem_interesse: "Sem interesse",
+  reprovado: "Reprovado",
+  nao_elegivel: "Não elegível",
 }
 
 const TRIAGEM_STATUS_OPTIONS = [
@@ -73,6 +77,8 @@ const TRIAGEM_DESTINO_OPTIONS: Array<{ value: TriagemDestinoReprovacao; label: s
   { value: "nao_elegivel", label: "Não elegível" },
   { value: "credito_vendido", label: "Credor vendeu o crédito (Reprovado / não elegível)" },
 ]
+
+const PAUSA_STATUS = ["pausado_credor", "pausado_documentos"] as const
 
 type SupabaseLikeError = {
   code?: string
@@ -418,9 +424,9 @@ const KanbanCardItem = memo(function KanbanCardItem({
     if (precatorio.interesse_status === "PEDIR_RETORNO" && precatorio.data_recontato)
       return `Recontato em ${new Date(precatorio.data_recontato).toLocaleDateString("pt-BR")}`
     if (precatorio.interesse_status === "SEM_CONTATO") return "Realizar primeiro contato com o credor"
-    if (colunaId === "docs_credor" && precatorio.resumo_itens && precatorio.resumo_itens.percentual_docs < 100)
-      return "Cobrar documentação pendente do credor"
-    if (colunaId === "juridico" && !precatorio.juridico_parecer_status) return "Aguardando parecer jurídico"
+    if ((colunaId === "juridico" || precatorio.status_kanban === "juridico") && !precatorio.juridico_parecer_status) {
+      return "Aguardando parecer jurídico"
+    }
     if (colunaId === "pronto_calculo") return "Abrir área de cálculo e iniciar atualização"
     return null
   })()
@@ -493,7 +499,11 @@ const KanbanCardItem = memo(function KanbanCardItem({
             )}
             {colunaId === "encerrados" && (
               <MiniPill
-                label={ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"}
+                label={
+                  precatorio.status_kanban === "reprovado"
+                    ? ENCERRADOS_LABELS[precatorio.juridico_resultado_final || "reprovado"] || ENCERRADOS_LABELS.reprovado
+                    : ENCERRADOS_LABELS[precatorio.status_kanban] || "Encerrado"
+                }
                 variant="gray"
               />
             )}
@@ -849,12 +859,7 @@ export default function KanbanPageNewGates() {
   )
 
   const isOperadorComercial = roles.includes("operador_comercial")
-  const colunasVisiveis = useMemo(() => {
-    if (isOperadorComercial) {
-      return COLUNAS_BASE
-    }
-    return COLUNAS_BASE.filter((c) => c.id !== "recebidos_admin")
-  }, [isOperadorComercial])
+  const colunasVisiveis = useMemo(() => COLUNAS_BASE, [])
 
   const [moveDialog, setMoveDialog] = useState<{
     open: boolean
@@ -887,9 +892,13 @@ export default function KanbanPageNewGates() {
   const [semInteresseDialog, setSemInteresseDialog] = useState<{
     open: boolean
     precatorioId: string | null
+    mode: "sem_interesse" | "pausa"
+    destinoStatus: string
   }>({
     open: false,
     precatorioId: null,
+    mode: "sem_interesse",
+    destinoStatus: "sem_interesse",
   })
 
   const [encerradosDialog, setEncerradosDialog] = useState<{
@@ -1328,7 +1337,7 @@ export default function KanbanPageNewGates() {
         precatorio.distribuido_por_admin &&
         isOperadorComercial
       ) {
-        statusToUse = "recebidos_admin"
+        statusToUse = "triagem_interesse"
       }
 
       const matchedColumns = statusToColumns.get(statusToUse)
@@ -1368,7 +1377,7 @@ export default function KanbanPageNewGates() {
     if (colunaDestino !== "pronto_calculo") return true
     const precatorioAtual = precatorios.find((p) => p.id === precatorioId)
     const colunaAtual = precatorioAtual?.status_kanban || precatorioAtual?.status
-    if (colunaAtual !== "analise_processual_inicial") return true
+    if (!["analise_processual_inicial", "juridico"].includes(String(colunaAtual))) return true
     return canEnviarCalculoRoles
   }
 
@@ -1425,7 +1434,12 @@ export default function KanbanPageNewGates() {
     }
 
     if (colunaDestino === "sem_interesse") {
-      setSemInteresseDialog({ open: true, precatorioId })
+      setSemInteresseDialog({
+        open: true,
+        precatorioId,
+        mode: "sem_interesse",
+        destinoStatus: "sem_interesse",
+      })
       return
     }
 
@@ -1532,9 +1546,17 @@ export default function KanbanPageNewGates() {
 
     const destino = encerradosDialog.colunaDestino || ENCERRADOS_STATUS[0]
 
-    if (destino === "sem_interesse") {
+    if (
+      destino === "sem_interesse" ||
+      PAUSA_STATUS.includes(destino as (typeof PAUSA_STATUS)[number])
+    ) {
       setEncerradosDialog((prev) => ({ ...prev, open: false }))
-      setSemInteresseDialog({ open: true, precatorioId: encerradosDialog.precatorioId })
+      setSemInteresseDialog({
+        open: true,
+        precatorioId: encerradosDialog.precatorioId,
+        mode: destino === "sem_interesse" ? "sem_interesse" : "pausa",
+        destinoStatus: destino,
+      })
       return
     }
 
@@ -1622,7 +1644,12 @@ export default function KanbanPageNewGates() {
         observacao: "",
         destinoReprovacao: "none",
       })
-      setSemInteresseDialog({ open: true, precatorioId: triagemModal.precatorioId })
+      setSemInteresseDialog({
+        open: true,
+        precatorioId: triagemModal.precatorioId,
+        mode: "sem_interesse",
+        destinoStatus: "sem_interesse",
+      })
       return
     }
 
@@ -1906,7 +1933,16 @@ export default function KanbanPageNewGates() {
 
   const kpiContagens = useMemo(() => {
     const ativos = filteredPrecatorios.filter(p =>
-      !["encerrados", "reprovado", "fechado"].includes(p.status_kanban)
+      ![
+        "encerrados",
+        "pos_fechamento",
+        "pausado_credor",
+        "pausado_documentos",
+        "sem_interesse",
+        "reprovado",
+        "nao_elegivel",
+        "fechado",
+      ].includes(p.status_kanban)
     ).length
     const semResponsavel = filteredPrecatorios.filter(p => !p.responsavel).length
     const comUrgencia = filteredPrecatorios.filter(p => p.urgente === true || (typeof p.prioridade === "number" && p.prioridade >= 3)).length
@@ -1933,10 +1969,14 @@ export default function KanbanPageNewGates() {
       p.sla_status === "atrasado"
     ).length
     const emTriagem = grupos.triagem_interesse?.length || 0
-    const emJuridico = grupos.juridico?.length || 0
+    const emJuridico = filteredPrecatorios.filter((p) => p.status_kanban === "juridico").length
     const juridFechamento = grupos.proposta_aceita?.length || 0
-    const pausados = grupos.encerrados?.length || 0
-    const reprovados = grupos.reprovado?.length || 0
+    const pausados = filteredPrecatorios.filter((p) =>
+      ["pos_fechamento", "pausado_credor", "pausado_documentos", "sem_interesse"].includes(p.status_kanban)
+    ).length
+    const reprovados = filteredPrecatorios.filter((p) =>
+      p.status_kanban === "reprovado" || p.status_kanban === "nao_elegivel"
+    ).length
     return [
       { label: "Travados por gate", value: String(travados).padStart(2, "0"), sub: "Docs, certidões ou parecer pendente" },
       { label: "Em triagem", value: String(emTriagem).padStart(2, "0"), sub: "Aguardando interesse do credor" },
@@ -2360,6 +2400,11 @@ export default function KanbanPageNewGates() {
                 Ao confirmar, você preencherá o motivo e o recontato no próximo modal.
               </p>
             )}
+            {PAUSA_STATUS.includes(encerradosDialog.colunaDestino as (typeof PAUSA_STATUS)[number]) && (
+              <p className="text-xs text-muted-foreground">
+                Ao confirmar, será obrigatório informar motivo da pausa e data de retorno.
+              </p>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setEncerradosDialog((prev) => ({ ...prev, open: false }))}>
@@ -2444,13 +2489,28 @@ export default function KanbanPageNewGates() {
 
       <ModalSemInteresse
         open={semInteresseDialog.open}
-        onOpenChange={(open) => setSemInteresseDialog((prev) => ({ ...prev, open }))}
+        onOpenChange={(open) =>
+          setSemInteresseDialog((prev) =>
+            open
+              ? { ...prev, open }
+              : {
+                  open: false,
+                  precatorioId: null,
+                  mode: "sem_interesse",
+                  destinoStatus: "sem_interesse",
+                }
+          )
+        }
         precatorioId={semInteresseDialog.precatorioId || ""}
+        mode={semInteresseDialog.mode}
         onConfirm={async (motivo, dataRecontato) => {
           const supabase = createBrowserClient()
           if (!supabase) return
 
           const precatorioId = semInteresseDialog.precatorioId
+          const mode = semInteresseDialog.mode
+          const destinoStatus = semInteresseDialog.destinoStatus || "sem_interesse"
+          const isPausa = mode === "pausa"
           const precatorioInfo = precatorios.find((p) => p.id === precatorioId)
           const precatorioLabel =
             precatorioInfo?.titulo ||
@@ -2458,16 +2518,30 @@ export default function KanbanPageNewGates() {
             precatorioInfo?.credor_nome ||
             "Precatório"
 
+          if (isPausa && !dataRecontato) {
+            throw new Error("A data de retorno é obrigatória para status pausado.")
+          }
+
+          const dataRecontatoIso = dataRecontato ? dataRecontato.toISOString() : null
+
+          const updateData: any = {
+            status_kanban: destinoStatus,
+            localizacao_kanban: destinoStatus,
+            data_recontato: dataRecontatoIso,
+            updated_at: new Date().toISOString(),
+          }
+
+          if (isPausa) {
+            updateData.interesse_status = "PEDIR_RETORNO"
+            updateData.interesse_observacao = motivo
+          } else {
+            updateData.interesse_status = "SEM_INTERESSE"
+            updateData.motivo_sem_interesse = motivo
+          }
+
           const { error } = await supabase
             .from("precatorios")
-            .update({
-              status_kanban: "sem_interesse",
-              localizacao_kanban: "sem_interesse",
-              interesse_status: "SEM_INTERESSE",
-              motivo_sem_interesse: motivo,
-              data_recontato: dataRecontato ? dataRecontato.toISOString() : null,
-              updated_at: new Date().toISOString(),
-            })
+            .update(updateData)
             .eq("id", semInteresseDialog.precatorioId)
 
           if (error) throw error
@@ -2478,8 +2552,10 @@ export default function KanbanPageNewGates() {
               .from("notifications")
               .insert({
                 user_id: profile.id,
-                title: `Recontado agendado - ${precatorioLabel}`,
-                body: `Recontato marcado para ${dateLabel}.`,
+                title: isPausa ? `Retorno de pausa - ${precatorioLabel}` : `Recontato agendado - ${precatorioLabel}`,
+                body: isPausa
+                  ? `Retomar contato com o credor em ${dateLabel}.`
+                  : `Recontato marcado para ${dateLabel}.`,
                 kind: "warn",
                 link_url: `/precatorios/detalhes?id=${precatorioId}&tab=detalhes`,
                 entity_type: "precatorio",
@@ -2495,18 +2571,31 @@ export default function KanbanPageNewGates() {
           setPrecatorios((prev) =>
             prev.map((p) =>
               p.id === semInteresseDialog.precatorioId
-                ? { ...p, status_kanban: "sem_interesse" }
+                ? {
+                    ...p,
+                    status_kanban: destinoStatus,
+                    interesse_status: isPausa ? "PEDIR_RETORNO" : "SEM_INTERESSE",
+                    interesse_observacao: isPausa ? motivo : p.interesse_observacao,
+                    motivo_sem_interesse: isPausa ? p.motivo_sem_interesse : motivo,
+                    data_recontato: dataRecontatoIso,
+                  }
                 : p
             )
           )
           toast({
             title: "Atualizado",
-            description: "Precatório movido para Sem Interesse.",
+            description: isPausa
+              ? "Precatório pausado com data de retorno agendada."
+              : "Precatório movido para Sem Interesse.",
           })
 
           await loadPrecatorios({ showLoading: false, preserveHorizontalScroll: true })
         }}
-        initialMotivo={semInteressePrecatorio?.motivo_sem_interesse ?? ""}
+        initialMotivo={
+          semInteresseDialog.mode === "pausa"
+            ? semInteressePrecatorio?.interesse_observacao ?? semInteressePrecatorio?.motivo_sem_interesse ?? ""
+            : semInteressePrecatorio?.motivo_sem_interesse ?? ""
+        }
         initialDataRecontato={
           semInteressePrecatorio?.data_recontato
             ? new Date(semInteressePrecatorio.data_recontato)

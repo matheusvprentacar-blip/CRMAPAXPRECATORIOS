@@ -5,7 +5,7 @@ import type React from "react"
 
 import { useState, useEffect, useRef } from "react"
 import Link from "next/link"
-import { usePathname } from "next/navigation"
+import { usePathname, useRouter } from "next/navigation"
 import { getSupabase } from "@/lib/supabase/client"
 import { AnimatePresence, motion } from "framer-motion"
 import {
@@ -55,13 +55,13 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { cn } from "@/lib/utils"
 import { useAuth } from "@/lib/auth/auth-context"
+import { isWithinAllowedHours } from "@/lib/auth/horarios"
 import { ProtectedRoute } from "@/lib/auth/protected-route"
 import Image from "next/image"
 import { NotificationsProvider } from "@/components/notifications/useNotifications"
 import { NotificationBell } from "@/components/notifications/NotificationBell"
 import { NotificationsModal } from "@/components/notifications/NotificationsModal"
 import { ComunicadosBroadcastModal } from "@/components/comunicados/comunicados-broadcast-modal"
-import { getVersion } from "@tauri-apps/api/app"
 import { TelemetryProvider } from "@/components/telemetry/telemetry-provider"
 import { AnimatedThemeToggler } from "@/components/ui/animated-theme-toggler"
 
@@ -197,7 +197,7 @@ const navigation = [
     name: "Atendimento",
     href: "/atendimento",
     icon: Phone,
-    roles: ["admin", "agente_atendimento"],
+    roles: ["admin", "agente_atendimento", "operador_comercial", "operador"],
   },
   { name: "Telemetria", href: "/admin/telemetria", icon: Activity, roles: ["admin"] },
   { name: "Admin Precatórios", href: "/admin/precatorios", icon: Scale, roles: ["admin"] },
@@ -417,6 +417,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const UI_ZOOM_MIGRATION_KEY = "ui_zoom_default_90_applied"
 
   const pathname = usePathname()
+  const router = useRouter()
   const [hideMenuForComunicado, setHideMenuForComunicado] = useState(false)
   const { profile, signOut } = useAuth()
   const [uiZoom, setUiZoom] = useState(DEFAULT_UI_ZOOM)
@@ -441,20 +442,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   })
   const isKanbanPage = pathname === "/kanban"
 
+  // Verificação de horário permitido — redireciona para tela de bloqueio se fora do período
+  useEffect(() => {
+    if (!profile) return
+    const check = () => {
+      if (!isWithinAllowedHours(profile.horarios_permitidos)) {
+        router.replace("/sessao-bloqueada")
+      }
+    }
+    check()
+    const interval = setInterval(check, 60_000)
+    return () => clearInterval(interval)
+  }, [profile, router])
+
   useEffect(() => {
     loadConfig()
-  }, [])
-
-  useEffect(() => {
-    const isTauriWindow =
-      typeof window !== "undefined" &&
-      ("__TAURI_INTERNALS__" in window || "__TAURI__" in window)
-
-    if (!isTauriWindow) return
-
-    getVersion().then(setAppVersion).catch(() => {
-      // Keep the build-time public version as fallback.
-    })
   }, [])
 
   useEffect(() => {
@@ -530,9 +532,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       if (error) throw error
 
       if (data) {
-        if (data.logo_url) setLogoUrl(data.logo_url)
-        if (data.nome_empresa) setNomeEmpresa(data.nome_empresa)
-        if (data.subtitulo_empresa) setSubtituloEmpresa(data.subtitulo_empresa)
+        const configuracoes = data as {
+          logo_url?: string | null
+          nome_empresa?: string | null
+          subtitulo_empresa?: string | null
+        }
+
+        if (configuracoes.logo_url) setLogoUrl(configuracoes.logo_url)
+        if (configuracoes.nome_empresa) setNomeEmpresa(configuracoes.nome_empresa)
+        if (configuracoes.subtitulo_empresa) setSubtituloEmpresa(configuracoes.subtitulo_empresa)
       }
     } catch (error) {
       console.error("Erro ao carregar configurações:", error)

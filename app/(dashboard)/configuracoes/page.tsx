@@ -746,9 +746,9 @@ export default function ConfiguracoesPage() {
 
         <Card className="md:max-w-md">
           <CardHeader>
-            <CardTitle>Atualizacao do Aplicativo</CardTitle>
+            <CardTitle>Versao do Sistema</CardTitle>
             <CardDescription>
-              Verifique, baixe e instale novas versoes sem reinstalacao manual.
+              Aplicacao web (Chrome): atualizacoes entram automaticamente após novo deploy.
             </CardDescription>
           </CardHeader>
           <CardContent>

@@ -3,20 +3,6 @@
 
 import { useCallback, useDeferredValue, useEffect, useMemo, useState } from "react"
 
-import { ModalCriarPrecatorio } from "@/components/admin/modal-criar-precatorio"
-import { ModalTemplatePrecatorio } from "@/components/admin/modal-template-precatorio"
-
-// Tipo de dados extraídos via OCR
-interface PrecatorioData {
-  credor_nome?: string
-  valor_principal?: number
-  numero_precatorio?: string
-  tribunal?: string
-  file_url?: string
-  raw_text?: string
-  // outros campos podem ser adicionados conforme necessidade
-}
-
 import { useRouter } from "next/navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -73,8 +59,6 @@ import {
 import { createBrowserClient } from "@/lib/supabase/client"
 import { RoleGuard } from "@/lib/auth/role-guard"
 import { toast } from "sonner"
-import { UploadOficiosModal } from "@/components/admin/upload-oficios-modal"
-import { ModalImportarPrecatorio } from "@/components/admin/modal-importar-precatorio"
 import { trackSupabaseError, trackError } from "@/lib/utils/error-tracker"
 import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { Checkbox } from "@/components/ui/checkbox"
@@ -199,6 +183,19 @@ const matchesPrecatorioSearch = (prec: PrecatorioAdmin, term: string) => {
   })
 }
 
+const getDistribuicaoErrorMessage = (error: unknown) => {
+  const code =
+    error && typeof error === "object" && "code" in error ? String((error as any).code || "") : ""
+  const message =
+    error && typeof error === "object" && "message" in error ? String((error as any).message || "") : ""
+
+  if (code === "23505" && /ja pertence a outro usuario/i.test(message)) {
+    return "Este crédito compartilha processo ou precatório com outros itens e a validação atual do banco bloqueou a redistribuição individual."
+  }
+
+  return message || "Erro ao distribuir"
+}
+
 const STATUS_EXPANSION_MAP: Record<string, string[]> = {
   encerrados: ["encerrados", "pos_fechamento", "pausado_credor", "pausado_documentos", "sem_interesse"],
   em_calculo: ["em_calculo", "calculo_andamento"],
@@ -209,8 +206,7 @@ const STATUS_EXPANSION_MAP: Record<string, string[]> = {
   entrada: ["entrada", "novo"],
   em_contato: ["em_contato", "triagem_interesse"],
   triagem_interesse: ["triagem_interesse", "em_contato"],
-  aguardando_documentos: ["aguardando_documentos", "docs_credor"],
-  docs_credor: ["docs_credor", "aguardando_documentos"],
+  aguardando_documentos: ["aguardando_documentos"],
   em_negociacao: ["em_negociacao", "proposta_negociacao"],
   proposta_negociacao: ["proposta_negociacao", "em_negociacao"],
   escrituras: ["escrituras"],
@@ -574,7 +570,6 @@ const matchesAdvancedFilters = (prec: PrecatorioAdmin, filtros: FiltrosPrecatori
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
   triagem_interesse: 15,
-  docs_credor: 25,
   analise_processual_inicial: 35,
   juridico: 45,
   pronto_calculo: 55,
@@ -596,7 +591,6 @@ const KANBAN_LABELS: Record<string, string> = {
   entrada: "Entrada",
   triagem_interesse: "Triagem",
   analise_processual_inicial: "Análise Processual Inicial",
-  docs_credor: "Documentos do credor",
   pronto_calculo: "Pronto para cálculo",
   calculo_andamento: "Cálculo em andamento",
   juridico: "Jurídico",
@@ -617,7 +611,6 @@ const STATUS_TONES: Record<string, string> = {
   entrada: "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted",
   triagem_interesse: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   analise_processual_inicial: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
-  docs_credor: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   pronto_calculo: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   calculo_andamento: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
   juridico: "border-primary/40 text-primary bg-primary/15 dark:border-primary/40 dark:text-primary dark:bg-primary/15",
@@ -741,21 +734,15 @@ export default function AdminPrecatoriosPage() {
     pendentes: 0,
   })
 
-  const [uploadOficiosOpen, setUploadOficiosOpen] = useState(false)
-  const [importModalOpen, setImportModalOpen] = useState(false)
   const [distributeDialogOpen, setDistributeDialogOpen] = useState(false)
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
   const [selectedPrecatorio, setSelectedPrecatorio] = useState<PrecatorioAdmin | null>(null)
-  const [ocrData, setOcrData] = useState<PrecatorioData | null>(null)
-  const [createModalOpen, setCreateModalOpen] = useState(false)
   const [saving, setSaving] = useState(false)
   const [notifyDialogOpen, setNotifyDialogOpen] = useState(false)
   const [notifyMessage, setNotifyMessage] = useState("")
   const [notifyRecipients, setNotifyRecipients] = useState<string[]>([])
   const [sendingNotice, setSendingNotice] = useState(false)
   const [sendingInterest, setSendingInterest] = useState<string | null>(null)
-  const [templateModalOpen, setTemplateModalOpen] = useState(false)
-
   // Bulk Deletion State
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [bulkDeleteDialogOpen, setBulkDeleteDialogOpen] = useState(false)
@@ -1121,12 +1108,36 @@ export default function AdminPrecatoriosPage() {
   async function handleDistribuir() {
     if (!selectedPrecatorio || !distribuicao.dono_usuario_id || !currentUser?.id) return
 
-
     setSaving(true)
     try {
       const supabase = createBrowserClient()
       if (!supabase) throw new Error("Supabase não disponível")
 
+      const jaTemResponsavel =
+        selectedPrecatorio.dono_usuario_id ||
+        selectedPrecatorio.responsavel ||
+        selectedPrecatorio.responsavel_calculo_id
+
+      // Passo 1: se já havia responsável atribuído, limpa primeiro para permitir redistribuição
+      if (jaTemResponsavel) {
+        const { error: clearError } = await supabase
+          .from("precatorios")
+          .update({
+            dono_usuario_id: null,
+            responsavel: null,
+            responsavel_calculo_id: null,
+          })
+          .eq("id", selectedPrecatorio.id)
+
+        if (clearError) {
+          trackSupabaseError('limpar responsavel antes de redistribuir', clearError, {
+            precatorioId: selectedPrecatorio.id,
+          })
+          throw clearError
+        }
+      }
+
+      // Passo 2: atribui os novos responsáveis
       const updates: any = {
         responsavel: distribuicao.dono_usuario_id,
         dono_usuario_id: distribuicao.dono_usuario_id,
@@ -1134,7 +1145,6 @@ export default function AdminPrecatoriosPage() {
         distribuido_por_admin: true,
         distribuido_por_admin_id: currentUser.id,
         distribuido_por_admin_em: new Date().toISOString(),
-        // status: "distribuido", // Removido pois viola check constraint constraint 'precatorios_status_check'
       }
 
       if (distribuicao.responsavel_calculo_id !== "none") {
@@ -1191,7 +1201,7 @@ export default function AdminPrecatoriosPage() {
       setSelectedPrecatorio(null)
       await loadData()
     } catch (error: any) {
-      toast.error(error.message || "Erro ao distribuir")
+      toast.error(getDistribuicaoErrorMessage(error))
     } finally {
       setSaving(false)
     }
@@ -1445,7 +1455,7 @@ export default function AdminPrecatoriosPage() {
       setSelectedIds(outliers.map((p) => p.id))
       await loadData()
     } catch (error: any) {
-      toast.error(error?.message || "Erro ao distribuir automaticamente")
+      toast.error(getDistribuicaoErrorMessage(error))
     } finally {
       setAutoDistribSaving(false)
     }
@@ -1489,29 +1499,15 @@ export default function AdminPrecatoriosPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div>
             <h1 className="text-2xl font-bold text-primary sm:text-3xl">Gestão de Precatórios</h1>
-            <p className="text-muted-foreground">Visão global dos precatórios do sistema para todos os admins</p>
+            <p className="text-muted-foreground">
+              Visão global dos precatórios do sistema. A inclusão de novos créditos agora acontece no Setor de Atendimento.
+            </p>
           </div>
           <div className="flex w-full gap-2 sm:w-auto">
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button className="w-full sm:w-auto">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Importação Admin
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-56">
-                <DropdownMenuLabel>Escolha o fluxo</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => setImportModalOpen(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Upload de Ofícios
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTemplateModalOpen(true)}>
-                  <FileText className="h-4 w-4 mr-2" />
-                  Template JSON
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+            <Button className="w-full sm:w-auto" onClick={() => router.push("/atendimento")}>
+              <Plus className="h-4 w-4 mr-2" />
+              Ir para Atendimento
+            </Button>
           </div>
         </div>
 
@@ -1742,7 +1738,14 @@ export default function AdminPrecatoriosPage() {
                           const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
                           const progress = KANBAN_PROGRESS[statusKey] || 0
                           const isSelected = selectedIds.includes(prec.id)
-                          const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
+                          const responsavelNome =
+                            prec.usuario_dono?.nome ||
+                            prec.responsavel ||
+                            prec.dono_usuario_id ||
+                            "Não distribuído"
+                          const jaDistribuido = Boolean(
+                            prec.dono_usuario_id || prec.responsavel || prec.responsavel_calculo_id
+                          )
                           const valorPrincipal = prec.valor_principal || 0
                           const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
                           const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
@@ -1842,11 +1845,11 @@ export default function AdminPrecatoriosPage() {
                                     size="sm"
                                     variant="outline"
                                     className="w-full sm:flex-1 sm:min-w-[140px]"
-                                    title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                    title={jaDistribuido ? "Redistribuir" : "Distribuir"}
                                     onClick={() => {
                                       setSelectedPrecatorio(prec)
                                       setDistribuicao({
-                                        dono_usuario_id: prec.dono_usuario_id || "",
+                                        dono_usuario_id: prec.dono_usuario_id || prec.responsavel || "",
                                         responsavel_calculo_id: prec.responsavel_calculo_id || "none",
                                         prioridade: (prec.prioridade as any) || "media",
                                       })
@@ -1854,7 +1857,7 @@ export default function AdminPrecatoriosPage() {
                                     }}
                                   >
                                     <Send className="h-3 w-3 mr-1" />
-                                    {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                    {jaDistribuido ? "Redistribuir" : "Distribuir"}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -1926,9 +1929,9 @@ export default function AdminPrecatoriosPage() {
                         : "Ainda não há precatórios cadastrados no sistema."}
                     </p>
                     {!hasServerSideFilters && filtroTab === "todos" && (
-                      <Button onClick={() => setImportModalOpen(true)}>
+                      <Button onClick={() => router.push("/atendimento")}>
                         <Plus className="h-4 w-4 mr-2" />
-                        Upload de Ofícios
+                        Cadastrar no Atendimento
                       </Button>
                     )}
                   </div>
@@ -1941,7 +1944,14 @@ export default function AdminPrecatoriosPage() {
                         const statusTone = STATUS_TONES[statusKey] || "border-border text-muted-foreground bg-muted dark:border-border dark:text-muted-foreground dark:bg-muted"
                         const progress = KANBAN_PROGRESS[statusKey] || 0
                         const isSelected = selectedIds.includes(prec.id)
-                        const responsavelNome = prec.usuario_dono?.nome || "Não distribuído"
+                        const responsavelNome =
+                          prec.usuario_dono?.nome ||
+                          prec.responsavel ||
+                          prec.dono_usuario_id ||
+                          "Não distribuído"
+                        const jaDistribuido = Boolean(
+                          prec.dono_usuario_id || prec.responsavel || prec.responsavel_calculo_id
+                        )
                         const valorPrincipal = prec.valor_principal || 0
                         const valorAtualizado = prec.valor_atualizado || prec.valor_principal || 0
                         const titulo = prec.titulo || prec.numero_precatorio || "Precatório sem título"
@@ -2041,11 +2051,11 @@ export default function AdminPrecatoriosPage() {
                                   size="sm"
                                   variant="outline"
                                   className="w-full sm:flex-1 sm:min-w-[140px]"
-                                  title={prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                  title={jaDistribuido ? "Redistribuir" : "Distribuir"}
                                   onClick={() => {
                                     setSelectedPrecatorio(prec)
                                     setDistribuicao({
-                                      dono_usuario_id: prec.dono_usuario_id || "",
+                                      dono_usuario_id: prec.dono_usuario_id || prec.responsavel || "",
                                       responsavel_calculo_id: prec.responsavel_calculo_id || "none",
                                       prioridade: (prec.prioridade as any) || "media",
                                     })
@@ -2053,7 +2063,7 @@ export default function AdminPrecatoriosPage() {
                                   }}
                                 >
                                   <Send className="h-3 w-3 mr-1" />
-                                  {prec.dono_usuario_id ? "Redistribuir" : "Distribuir"}
+                                  {jaDistribuido ? "Redistribuir" : "Distribuir"}
                                 </Button>
                                 <Button
                                   size="sm"
@@ -2344,16 +2354,34 @@ export default function AdminPrecatoriosPage() {
         <Dialog open={distributeDialogOpen} onOpenChange={setDistributeDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle className="text-primary">Distribuir Precatório</DialogTitle>
-              <DialogDescription>Atribua a um operador comercial</DialogDescription>
+              <DialogTitle className="text-primary">
+                {selectedPrecatorio?.dono_usuario_id || selectedPrecatorio?.responsavel || selectedPrecatorio?.responsavel_calculo_id
+                  ? "Redistribuir Precatório"
+                  : "Distribuir Precatório"}
+              </DialogTitle>
+              <DialogDescription>
+                {selectedPrecatorio?.dono_usuario_id || selectedPrecatorio?.responsavel || selectedPrecatorio?.responsavel_calculo_id
+                  ? "O responsável atual será removido e substituído pelo novo selecionado."
+                  : "Atribua a um operador comercial"}
+              </DialogDescription>
             </DialogHeader>
             {selectedPrecatorio && (
-              <div className="bg-muted p-4 rounded-lg mb-4">
+              <div className="bg-muted p-4 rounded-lg mb-4 space-y-1">
                 <p className="font-semibold">{selectedPrecatorio.titulo || selectedPrecatorio.numero_precatorio}</p>
                 <p className="text-sm text-muted-foreground">Credor: {selectedPrecatorio.credor_nome}</p>
                 <p className="text-sm text-muted-foreground">
                   Valor: {formatCurrency(selectedPrecatorio.valor_atualizado || selectedPrecatorio.valor_principal)}
                 </p>
+                {(selectedPrecatorio.dono_usuario_id || selectedPrecatorio.responsavel || selectedPrecatorio.responsavel_calculo_id) && (
+                  <p className="text-sm text-amber-600 font-medium mt-1">
+                    Responsável atual:{" "}
+                    {selectedPrecatorio.usuario_dono?.nome ??
+                      selectedPrecatorio.responsavel ??
+                      selectedPrecatorio.dono_usuario_id ??
+                      selectedPrecatorio.usuario_calculo?.nome ??
+                      selectedPrecatorio.responsavel_calculo_id}
+                  </p>
+                )}
               </div>
             )}
             <div className="grid gap-4">
@@ -2417,7 +2445,9 @@ export default function AdminPrecatoriosPage() {
               </Button>
               <Button onClick={handleDistribuir} disabled={saving || !distribuicao.dono_usuario_id}>
                 {saving ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
-                Distribuir
+                {selectedPrecatorio?.dono_usuario_id || selectedPrecatorio?.responsavel || selectedPrecatorio?.responsavel_calculo_id
+                  ? "Redistribuir"
+                  : "Distribuir"}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -2536,45 +2566,6 @@ export default function AdminPrecatoriosPage() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
-
-
-
-        <ModalImportarPrecatorio
-          open={importModalOpen}
-          onOpenChange={setImportModalOpen}
-          onExtracted={(data) => {
-            setOcrData(data)
-            setImportModalOpen(false)
-            // Delay opening the creation modal to allow the import modal to close/animate out completely
-            setTimeout(() => {
-              setCreateModalOpen(true)
-            }, 300)
-          }}
-        />
-
-        <ModalTemplatePrecatorio
-          open={templateModalOpen}
-          onOpenChange={setTemplateModalOpen}
-          createdById={currentUser?.id}
-          onSuccess={() => loadData()}
-        />
-
-        <ModalCriarPrecatorio
-          open={createModalOpen}
-          onOpenChange={setCreateModalOpen}
-          data={ocrData ?? undefined}
-          onSuccess={() => {
-            setCreateModalOpen(false)
-            setOcrData(null)
-            loadData()
-          }}
-        />
-
-        <UploadOficiosModal
-          open={uploadOficiosOpen}
-          onOpenChange={setUploadOficiosOpen}
-          onSuccess={() => loadData()}
-        />
       </div >
     </RoleGuard >
   )

@@ -12,6 +12,9 @@ interface Tentativa {
   tipo: "ligacao" | "whatsapp" | "email"
   resultado: "atendeu" | "nao_atendeu" | "interessado" | "sem_interesse"
   observacoes: string | null
+  contato_nome?: string | null
+  contato_telefone?: string | null
+  interesse_receber_proposta?: boolean | null
 }
 
 const TIPO_LABELS: Record<string, string> = {
@@ -52,7 +55,7 @@ export function HistoricoTentativas({ precatorioId, refreshKey }: HistoricoTenta
 
         const { data, error } = await supabase
           .from("atendimento_tentativas")
-          .select("id, agente_nome, criado_em, tipo, resultado, observacoes")
+          .select("id, agente_nome, criado_em, tipo, resultado, observacoes, contato_nome, contato_telefone, interesse_receber_proposta")
           .eq("precatorio_id", precatorioId)
           .order("criado_em", { ascending: false })
 
@@ -92,6 +95,15 @@ export function HistoricoTentativas({ precatorioId, refreshKey }: HistoricoTenta
             </span>
           </div>
           <p className="mt-0.5 text-xs text-muted-foreground">por {t.agente_nome}</p>
+          {t.resultado === "interessado" && (
+            <div className="mt-1 space-y-0.5 text-xs text-muted-foreground">
+              {t.contato_nome && <p>{`Contato: ${t.contato_nome}`}</p>}
+              {t.contato_telefone && <p>{`Telefone: ${t.contato_telefone}`}</p>}
+              {typeof t.interesse_receber_proposta === "boolean" && (
+                <p>{`Aceita proposta: ${t.interesse_receber_proposta ? "Sim" : "Não"}`}</p>
+              )}
+            </div>
+          )}
           {t.observacoes && (
             <p className="mt-1 text-xs text-foreground/80">{t.observacoes}</p>
           )}

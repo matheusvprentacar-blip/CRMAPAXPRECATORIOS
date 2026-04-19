@@ -21,7 +21,7 @@ type TelemetryEventType =
   | "reauth_failed"
   | "session_ended"
 
-type TelemetrySource = "web" | "tauri" | "hybrid"
+type TelemetrySource = "web"
 type LockReason = "idle_timeout" | null
 type TelemetryEventContext = {
   userId?: string | null
@@ -43,21 +43,6 @@ const LOCK_AFTER_IDLE_MS = 20 * 60 * 1000 // 20 min
 const ACTIVITY_PING_INTERVAL_MS = 15_000 // 15s for more frequent pings during testing
 const CHECK_INTERVAL_MS = 5_000
 const MOUSEMOVE_SAMPLE_MS = 5_000
-const TAURI_MINIMIZE_CHECK_MS = 3_000
-
-function _readEnvMs(key: string, fallback: number, minValue: number) {
-  const value = process.env[key]
-  const parsed = Number(value)
-  if (!value || Number.isNaN(parsed) || !Number.isFinite(parsed) || parsed < minValue) {
-    return fallback
-  }
-  return parsed
-}
-
-function isTauriRuntime() {
-  if (typeof window === "undefined") return false
-  return "__TAURI_INTERNALS__" in window || "__TAURI__" in window
-}
 
 function generateSessionId() {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") {
@@ -85,7 +70,6 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   const lastPingAtRef = useRef<number>(0)
   const idleRef = useRef(false)
   const lockedRef = useRef(false)
-  const minimizedRef = useRef(false)
   const visibleRef = useRef(true)
   const lastMouseMoveAtRef = useRef(0)
   const telemetryWriteEnabledRef = useRef(true)
@@ -96,7 +80,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     async (
       eventType: TelemetryEventType,
       eventData: Record<string, unknown> = {},
-      source: TelemetrySource = isTauriRuntime() ? "hybrid" : "web",
+      source: TelemetrySource = "web",
       context: TelemetryEventContext = {}
     ) => {
       const userId = context.userId ?? user?.id
@@ -197,7 +181,6 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
         lockedRef.current = false
         idleRef.current = false
-        minimizedRef.current = false
         setLocked(false)
         setLockReason(null)
 
@@ -241,7 +224,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
           reason,
           path: typeof window !== "undefined" ? window.location.pathname : "unknown",
         },
-        isTauriRuntime() ? "hybrid" : "web",
+        "web",
         { userId: currentUserId, sessionId: currentSessionId }
       )
     },
@@ -258,7 +241,6 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       endedSessionIdsRef.current.clear()
       lockedRef.current = false
       idleRef.current = false
-      minimizedRef.current = false
       visibleRef.current = true
       setLocked(false)
       setLockReason(null)
@@ -273,7 +255,6 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
     lastPingAtRef.current = 0
     idleRef.current = false
     lockedRef.current = false
-    minimizedRef.current = false
     visibleRef.current = typeof document !== "undefined" ? document.visibilityState !== "hidden" : true
     setLocked(false)
     setLockReason(null)
@@ -284,7 +265,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       {
         path: typeof window !== "undefined" ? window.location.pathname : "unknown",
       },
-      isTauriRuntime() ? "hybrid" : "web",
+      "web",
       { userId: user.id, sessionId: newSessionId }
     )
 
@@ -349,12 +330,10 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!user?.id) return
 
-    const isTauri = isTauriRuntime()
-
     const emitWindowVisibility = (
       visible: boolean,
       origin: string,
-      source: TelemetrySource = isTauri ? "tauri" : "web"
+      source: TelemetrySource = "web"
     ) => {
       if (visibleRef.current === visible) return
       visibleRef.current = visible
@@ -380,7 +359,7 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
 
     const onVisibilityChange = () => {
       const visible = document.visibilityState !== "hidden"
-      emitWindowVisibility(visible, "visibilitychange", isTauri ? "tauri" : "web")
+      emitWindowVisibility(visible, "visibilitychange")
     }
 
     const activityEvents: Array<keyof WindowEventMap> = [
@@ -406,110 +385,17 @@ export function TelemetryProvider({ children }: { children: ReactNode }) {
       markActivity("window_focus", true)
     }
 
-    if (!isTauri) {
-      window.addEventListener("blur", onWindowBlur)
-      window.addEventListener("focus", onWindowFocus)
-    }
-
-    let disposed = false
-    let tauriWindowStatePoll: number | null = null
-    const tauriUnlisteners: Array<() => void> = []
-
-    if (isTauri) {
-      ; (async () => {
-        try {
-          const { getCurrentWindow } = await import("@tauri-apps/api/window")
-          if (disposed) return
-
-          const appWindow = getCurrentWindow()
-
-          const syncVisibilityState = async (origin: string) => {
-            const visible = await appWindow.isVisible()
-            emitWindowVisibility(visible, origin, "tauri")
-          }
-
-          const syncMinimizedState = async (origin: string) => {
-            const minimized = await appWindow.isMinimized()
-            if (minimized === minimizedRef.current) return
-
-            minimizedRef.current = minimized
-            if (minimized) {
-              void recordEvent("window_minimized", { origin }, "tauri")
-              emitWindowVisibility(false, `${origin}_minimized`, "tauri")
-              return
-            }
-
-            void recordEvent("window_restored", { origin }, "tauri")
-            emitWindowVisibility(true, `${origin}_restored`, "tauri")
-            markActivity("window_restored", true)
-          }
-
-          const unlistenFocusChanged = await appWindow.onFocusChanged(({ payload: focused }) => {
-            if (focused) {
-              void recordEvent("window_focused", { origin: "tauri_focus" }, "tauri")
-              emitWindowVisibility(true, "tauri_focus", "tauri")
-              markActivity("tauri_focus", true)
-              return
-            }
-
-            void recordEvent("window_blurred", { origin: "tauri_blur" }, "tauri")
-            void syncMinimizedState("focus_changed")
-            void syncVisibilityState("focus_changed")
-          })
-
-          if (disposed) {
-            unlistenFocusChanged()
-            return
-          }
-
-          tauriUnlisteners.push(unlistenFocusChanged)
-
-          const unlistenResized = await appWindow.onResized(() => {
-            void syncMinimizedState("resize")
-            void syncVisibilityState("resize")
-          })
-
-          if (disposed) {
-            unlistenResized()
-            return
-          }
-
-          tauriUnlisteners.push(unlistenResized)
-
-          await syncMinimizedState("init")
-          await syncVisibilityState("init")
-
-          tauriWindowStatePoll = window.setInterval(() => {
-            void syncMinimizedState("poll")
-            void syncVisibilityState("poll")
-          }, TAURI_MINIMIZE_CHECK_MS)
-        } catch (error) {
-          console.warn("[telemetria] Integracao Tauri indisponivel.", error)
-        }
-      })()
-    }
+    window.addEventListener("blur", onWindowBlur)
+    window.addEventListener("focus", onWindowFocus)
 
     return () => {
-      disposed = true
-
       for (const eventName of activityEvents) {
         window.removeEventListener(eventName, onActivity)
       }
 
       document.removeEventListener("visibilitychange", onVisibilityChange)
-
-      if (!isTauri) {
-        window.removeEventListener("blur", onWindowBlur)
-        window.removeEventListener("focus", onWindowFocus)
-      }
-
-      if (tauriWindowStatePoll !== null) {
-        window.clearInterval(tauriWindowStatePoll)
-      }
-
-      for (const unlisten of tauriUnlisteners) {
-        unlisten()
-      }
+      window.removeEventListener("blur", onWindowBlur)
+      window.removeEventListener("focus", onWindowFocus)
     }
   }, [markActivity, recordEvent, user?.id])
 

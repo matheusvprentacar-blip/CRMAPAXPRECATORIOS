@@ -47,7 +47,7 @@ graph TD
 ## 🛠 Principais Dependências
 - **Frontend:** HeroUI, Framer Motion, Recharts, Lucide React.
 - **Backend:** Supabase SSR, Gemini AI SDK.
-- **Desktop:** Tauri Rust ecosystem.
+- **Acesso:** Web (Google Chrome).
 
 ## 📖 Exemplos de Uso
 O sistema permite realizar o upload de um ofício precatório, onde a IA extrai automaticamente os dados, gerando um Kanban jurídico e permitindo a simulação imediata de valores de compra com base nos juros calculados.

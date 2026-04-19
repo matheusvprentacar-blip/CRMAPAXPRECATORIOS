@@ -10,6 +10,7 @@ import { ProfileTab } from "@/components/hr/profile-tab"
 import { DocumentsTab } from "@/components/hr/documents-tab"
 import { FinancialTab } from "@/components/hr/financial-tab"
 import { LeavesTab } from "@/components/hr/leaves-tab"
+import { OPERATOR_TAG_LABELS, normalizeOperatorTag } from "@/lib/users/operator-tag"
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -202,6 +203,11 @@ function UserDetailsContent() {
                   {ROLE_LABELS[r] ?? r.replace(/_/g, " ")}
                 </span>
               ))}
+              {normalizeOperatorTag(user.operator_tag) && (
+                <span className="inline-flex items-center rounded-full border border-sky-500/25 bg-sky-500/10 px-2.5 py-0.5 text-[11px] font-semibold text-sky-700 dark:text-sky-300">
+                  {OPERATOR_TAG_LABELS[normalizeOperatorTag(user.operator_tag)!]}
+                </span>
+              )}
             </div>
           )}
         </div>

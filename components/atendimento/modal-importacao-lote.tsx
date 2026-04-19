@@ -1,7 +1,7 @@
 "use client"
 /* eslint-disable */
 
-import { useCallback, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -29,6 +29,9 @@ import { createBrowserClient } from "@/lib/supabase/client"
 import { ModalDuplicata, type DuplicataInfo } from "./modal-duplicata"
 import { toast } from "sonner"
 import type { RegistroExtraido } from "@/lib/server/nova-pipeline-ocr"
+import { useUsuariosCache } from "@/hooks/use-usuarios-cache"
+import { buildDistribuicaoCreditosPreview } from "@/lib/atendimento/distribuicao-creditos"
+import { OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole, normalizeOperatorTag, type OperatorTag } from "@/lib/users/operator-tag"
 
 type Etapa = "upload" | "processando" | "revisao"
 type Modo = "pdf" | "excel"
@@ -107,9 +110,40 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
   const [paginaAtual, setPaginaAtual] = useState(1)
   const [selecionados, setSelecionados] = useState<Set<number>>(new Set())
   const [salvando, setSalvando] = useState(false)
+  const [operatorTagFilter, setOperatorTagFilter] = useState<OperatorTag | "todos">("todos")
+  const [selectedOperatorIds, setSelectedOperatorIds] = useState<string[]>([])
   const [modalDuplicata, setModalDuplicata] = useState<{ aberto: boolean; registro: RegistroRevisao | null }>({ aberto: false, registro: null })
   const inputRef = useRef<HTMLInputElement>(null)
   const idCounter = useRef(0)
+  const { usuarios, loading: loadingUsuarios } = useUsuariosCache()
+
+  const operadoresElegiveis = useMemo(
+    () =>
+      usuarios.filter((usuario) => {
+        if (!isAtendimentoOperatorRole(usuario.role)) return false
+        if (operatorTagFilter === "todos") return true
+        return normalizeOperatorTag(usuario.operator_tag) === operatorTagFilter
+      }),
+    [operatorTagFilter, usuarios]
+  )
+
+  const registrosSelecionados = useMemo(
+    () => registros.filter((registro) => selecionados.has(registro._id) && registro._status !== "pulado"),
+    [registros, selecionados]
+  )
+
+  const distribuicaoPreview = useMemo(
+    () =>
+      buildDistribuicaoCreditosPreview(
+        registrosSelecionados.map((registro) => ({
+          id: String(registro._id),
+          valor_principal: registro.valor_principal ?? 0,
+          valor_atualizado: null,
+        })),
+        selectedOperatorIds
+      ),
+    [registrosSelecionados, selectedOperatorIds]
+  )
 
   const reset = () => {
     setEtapa("upload")
@@ -125,7 +159,21 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     setPaginaAtual(1)
     setSelecionados(new Set())
     setSalvando(false)
+    setOperatorTagFilter("todos")
+    setSelectedOperatorIds([])
     idCounter.current = 0
+  }
+
+  useEffect(() => {
+    setSelectedOperatorIds((prev) =>
+      prev.filter((operatorId) => operadoresElegiveis.some((operador) => operador.id === operatorId))
+    )
+  }, [operadoresElegiveis])
+
+  const toggleOperatorSelection = (operatorId: string) => {
+    setSelectedOperatorIds((prev) =>
+      prev.includes(operatorId) ? prev.filter((id) => id !== operatorId) : [...prev, operatorId]
+    )
   }
 
   const handleClose = () => {
@@ -219,20 +267,21 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
 
       if (!dup) return reg
 
-      return {
+      const registroDuplicado: RegistroRevisao = {
         ...reg,
         _status: "duplicata" as const,
         _duplicataInfo: {
           id: dup.id,
           numero_precatorio: dup.numero_precatorio,
           numero_processo: dup.numero_processo,
-          credor_nome: dup.credor_nome,
+          credor_nome: dup.credor_nome ?? reg.credor_nome ?? "Credor não identificado",
           status_kanban: dup.status_kanban,
           dono_usuario_id: dup.dono_usuario_id,
           responsavel_nome: dup.usuarios?.nome ?? null,
           updated_at: dup.updated_at,
         },
       }
+      return registroDuplicado
     })
   }
 
@@ -414,38 +463,65 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
       toast.error("Selecione pelo menos um registro para importar.")
       return
     }
+    if (selectedOperatorIds.length === 0 || !distribuicaoPreview) {
+      toast.error("Selecione ao menos um operador para distribuir os créditos deste lote.")
+      return
+    }
     setSalvando(true)
     try {
       const supabase = createBrowserClient()
       if (!supabase) throw new Error("Supabase não inicializado")
       const { data: { user } } = await supabase.auth.getUser()
       if (!user) throw new Error("Usuário não autenticado")
+      const distribuicaoMap = new Map<string, string>()
+      Object.entries(distribuicaoPreview.assignments).forEach(([operatorId, registroIds]) => {
+        registroIds.forEach((registroId) => distribuicaoMap.set(registroId, operatorId))
+      })
 
-      const payloads = paraImportar.map((r) => ({
-        criado_por: user.id,
-        credor_nome: r.credor_nome ?? "Credor não identificado",
-        credor_cpf_cnpj: r.credor_cpf_cnpj ?? null,
-        numero_precatorio: r.numero_precatorio ?? null,
-        numero_processo: r.numero_processo ?? null,
-        numero_oficio: r.numero_oficio ?? null,
-        tribunal: r.tribunal ?? null,
-        devedor: r.devedor ?? null,
-        advogado_nome: r.advogado_nome ?? null,
-        valor_principal: r.valor_principal ?? 0,
-        natureza: r.natureza ?? null,
-        data_expedicao: r.data_expedicao ?? null,
-        status: "novo",
-        titulo: r.numero_precatorio
-          ? `Precatório ${r.numero_precatorio} - ${r.credor_nome ?? "Credor"}`
-          : `Lead - ${r.credor_nome ?? "Credor"}`,
-        origem: "atendimento",
-        status_atendimento: "na_fila",
-      }))
+      const registrosSemOperador = paraImportar.filter((registro) => !distribuicaoMap.has(String(registro._id)))
+      if (registrosSemOperador.length > 0) {
+        throw new Error("Todos os registros selecionados precisam estar distribuídos antes da importação.")
+      }
+
+      const nowIso = new Date().toISOString()
+
+      const payloads = paraImportar.map((r) => {
+        const responsavelId = distribuicaoMap.get(String(r._id))
+        if (!responsavelId) {
+          throw new Error(`Não foi possível definir o operador do registro ${r.credor_nome ?? r._id}.`)
+        }
+
+        return {
+          criado_por: user.id,
+          credor_nome: r.credor_nome ?? "Credor não identificado",
+          credor_cpf_cnpj: r.credor_cpf_cnpj ?? null,
+          numero_precatorio: r.numero_precatorio ?? null,
+          numero_processo: r.numero_processo ?? null,
+          numero_oficio: r.numero_oficio ?? null,
+          tribunal: r.tribunal ?? null,
+          devedor: r.devedor ?? null,
+          advogado_nome: r.advogado_nome ?? null,
+          valor_principal: r.valor_principal ?? 0,
+          natureza: r.natureza ?? null,
+          data_expedicao: r.data_expedicao ?? null,
+          status: "novo",
+          titulo: r.numero_precatorio
+            ? `Precatório ${r.numero_precatorio} - ${r.credor_nome ?? "Credor"}`
+            : `Lead - ${r.credor_nome ?? "Credor"}`,
+          origem: "atendimento",
+          status_atendimento: "na_fila",
+          responsavel: responsavelId,
+          dono_usuario_id: responsavelId,
+          distribuido_por_admin: true,
+          distribuido_por_admin_id: user.id,
+          distribuido_por_admin_em: nowIso,
+        }
+      })
 
       // Inserir em lotes de 50
       for (let i = 0; i < payloads.length; i += 50) {
         const lote = payloads.slice(i, i + 50)
-        const { error } = await supabase.from("precatorios").insert(lote)
+        const { error } = await supabase.from("precatorios").insert(lote as never)
         if (error) throw new Error(`Erro no lote ${i / 50 + 1}: ${error.message}`)
       }
 
@@ -617,6 +693,127 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
                   <span className="text-muted-foreground ml-auto">{selecionados.size} selecionados</span>
                 </div>
 
+                <div className="rounded-lg border bg-muted/20 p-4 space-y-4">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div>
+                      <p className="text-sm font-semibold">Distribuição automática do lote</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Escolha a tag e os operadores que receberão os créditos ainda durante a importação.
+                      </p>
+                    </div>
+                    <Badge variant="secondary">
+                      {registrosSelecionados.length} registro(s) na rodada
+                    </Badge>
+                  </div>
+
+                  <div className="grid gap-4 lg:grid-cols-[220px_1fr]">
+                    <div className="space-y-3">
+                      <div className="space-y-1">
+                        <Label>Tag Operacional</Label>
+                        <select
+                          value={operatorTagFilter}
+                          onChange={(e) => {
+                            setOperatorTagFilter(e.target.value as OperatorTag | "todos")
+                            setSelectedOperatorIds([])
+                          }}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                        >
+                          <option value="todos">Todos os operadores</option>
+                          {OPERATOR_TAG_OPTIONS.map((option) => (
+                            <option key={option.value} value={option.value}>
+                              {option.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          onClick={() => setSelectedOperatorIds(operadoresElegiveis.map((operador) => operador.id))}
+                          disabled={operadoresElegiveis.length === 0}
+                        >
+                          Selecionar visíveis
+                        </Button>
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedOperatorIds([])}
+                          disabled={selectedOperatorIds.length === 0}
+                        >
+                          Limpar
+                        </Button>
+                      </div>
+
+                      <div className="max-h-60 space-y-2 overflow-y-auto rounded-lg border bg-background p-3">
+                        {loadingUsuarios ? (
+                          <div className="flex items-center justify-center py-6">
+                            <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : operadoresElegiveis.length === 0 ? (
+                          <p className="py-4 text-center text-xs text-muted-foreground">
+                            Nenhum operador comercial encontrado para essa tag.
+                          </p>
+                        ) : (
+                          operadoresElegiveis.map((operador) => (
+                            <label key={operador.id} className="flex items-center gap-2 text-sm">
+                              <input
+                                type="checkbox"
+                                checked={selectedOperatorIds.includes(operador.id)}
+                                onChange={() => toggleOperatorSelection(operador.id)}
+                                className="cursor-pointer"
+                              />
+                              <span className="flex-1 truncate">{operador.nome}</span>
+                            </label>
+                          ))
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="space-y-3">
+                      <div className="grid gap-3 sm:grid-cols-2">
+                        {selectedOperatorIds.length === 0 ? (
+                          <div className="rounded-lg border border-dashed px-4 py-8 text-center text-sm text-muted-foreground sm:col-span-2">
+                            Selecione pelo menos um operador para montar a distribuição.
+                          </div>
+                        ) : (
+                          selectedOperatorIds.map((operatorId) => {
+                            const operador = operadoresElegiveis.find((item) => item.id === operatorId) ?? usuarios.find((item) => item.id === operatorId)
+                            const count = distribuicaoPreview?.counts[operatorId] ?? 0
+                            const sum = distribuicaoPreview?.sums[operatorId] ?? 0
+
+                            return (
+                              <div key={operatorId} className="rounded-lg border bg-background px-4 py-3">
+                                <p className="text-sm font-semibold">{operador?.nome || "Operador"}</p>
+                                <div className="mt-2 flex items-center justify-between text-xs text-muted-foreground">
+                                  <span>{count} crédito(s)</span>
+                                  <span>R$ {sum.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
+                                </div>
+                              </div>
+                            )
+                          })
+                        )}
+                      </div>
+
+                      <div className="rounded-lg border bg-background px-4 py-3 text-xs text-muted-foreground">
+                        {distribuicaoPreview ? (
+                          <span>
+                            Total desta rodada: R$ {distribuicaoPreview.total.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}.
+                            A distribuição é balanceada automaticamente pelo valor principal informado em cada registro.
+                          </span>
+                        ) : (
+                          <span>
+                            O lote só poderá ser importado depois que pelo menos um operador estiver selecionado.
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
                 {errosProcessamento.length > 0 && (
                   <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 space-y-1">
                     {errosProcessamento.map((e, i) => (
@@ -682,7 +879,9 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
                             )}
                             {reg._status === "pulado" && <span className="text-muted-foreground">—</span>}
                             {reg._qualidade === "pobre" && (
-                              <AlertTriangle className="inline h-3 w-3 text-amber-500 ml-1" title="Qualidade de extração baixa" />
+                              <span title="Qualidade de extração baixa">
+                                <AlertTriangle className="ml-1 inline h-3 w-3 text-amber-500" />
+                              </span>
                             )}
                           </td>
                           <td className="p-2">
@@ -794,7 +993,10 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
                   >
                     Selecionar Válidos
                   </Button>
-                  <Button onClick={salvarImportacao} disabled={salvando || selecionados.size === 0}>
+                  <Button
+                    onClick={salvarImportacao}
+                    disabled={salvando || selecionados.size === 0 || selectedOperatorIds.length === 0}
+                  >
                     {salvando && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Importar {selecionados.size > 0 ? `(${selecionados.size})` : ""}
                   </Button>

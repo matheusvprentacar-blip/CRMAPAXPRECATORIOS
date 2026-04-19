@@ -17,6 +17,7 @@ interface ModalSemInteresseProps {
     open: boolean
     onOpenChange: (open: boolean) => void
     precatorioId: string
+    mode?: "sem_interesse" | "pausa"
     onConfirm: (motivo: string, dataRecontato: Date | undefined) => void
     initialMotivo?: string | null
     initialDataRecontato?: Date | null
@@ -26,12 +27,14 @@ export function ModalSemInteresse({
     open,
     onOpenChange,
     precatorioId,
+    mode = "sem_interesse",
     onConfirm,
     initialMotivo,
     initialDataRecontato,
 }: ModalSemInteresseProps) {
+    const isPausaMode = mode === "pausa"
     const [motivo, setMotivo] = useState(initialMotivo?.trim() ?? "")
-    const [agendarRecontato, setAgendarRecontato] = useState(!!initialDataRecontato)
+    const [agendarRecontato, setAgendarRecontato] = useState(isPausaMode || !!initialDataRecontato)
     const [dataRecontato, setDataRecontato] = useState<Date | undefined>(
         initialDataRecontato ?? undefined
     )
@@ -43,11 +46,14 @@ export function ModalSemInteresse({
         if (initialDataRecontato) {
             setAgendarRecontato(true)
             setDataRecontato(initialDataRecontato)
+        } else if (isPausaMode) {
+            setAgendarRecontato(true)
+            setDataRecontato(addDays(new Date(), 7))
         } else {
             setAgendarRecontato(false)
             setDataRecontato(undefined)
         }
-    }, [open, initialMotivo, initialDataRecontato, precatorioId])
+    }, [open, initialMotivo, initialDataRecontato, isPausaMode, precatorioId])
 
     const handleSave = async () => {
         if (!motivo.trim()) {
@@ -55,17 +61,17 @@ export function ModalSemInteresse({
             return
         }
 
-        if (agendarRecontato && !dataRecontato) {
-            toast.error("Por favor, selecione uma data para recontato.")
+        if ((isPausaMode || agendarRecontato) && !dataRecontato) {
+            toast.error(isPausaMode ? "A data de retorno é obrigatória para status pausado." : "Por favor, selecione uma data para recontato.")
             return
         }
 
         setSaving(true)
         try {
-            await onConfirm(motivo, agendarRecontato ? dataRecontato : undefined)
+            await onConfirm(motivo, isPausaMode ? dataRecontato : agendarRecontato ? dataRecontato : undefined)
             onOpenChange(false)
             setMotivo("")
-            setAgendarRecontato(false)
+            setAgendarRecontato(isPausaMode)
             setDataRecontato(undefined)
         } catch (error) {
             console.error(error)
@@ -79,42 +85,50 @@ export function ModalSemInteresse({
         <Dialog open={open} onOpenChange={onOpenChange}>
             <DialogContent className="sm:max-w-[425px]">
                 <DialogHeader>
-                    <DialogTitle>Mover para Sem Interesse</DialogTitle>
+                    <DialogTitle>{isPausaMode ? "Registrar pausa no contato" : "Mover para Sem Interesse"}</DialogTitle>
                     <DialogDescription>
-                        Informe o motivo e, se desejar, agende um retorno futuro.
+                        {isPausaMode
+                            ? "Informe o motivo da pausa e defina a data obrigatória para retorno ao contato."
+                            : "Informe o motivo e, se desejar, agende um retorno futuro."}
                     </DialogDescription>
                 </DialogHeader>
 
                 <div className="grid gap-4 py-4">
                     <div className="flex flex-col gap-2">
-                        <Label htmlFor="motivo">Motivo (Obrigatório)</Label>
+                        <Label htmlFor="motivo">{isPausaMode ? "Motivo da pausa (Obrigatório)" : "Motivo (Obrigatório)"}</Label>
                         <Textarea
                             id="motivo"
                             value={motivo}
                             onChange={(e) => setMotivo(e.target.value)}
-                            placeholder="Ex: Valor muito baixo, cliente não aceitou proposta..."
+                            placeholder={
+                                isPausaMode
+                                    ? "Ex: Credor pediu retorno após decisão familiar..."
+                                    : "Ex: Valor muito baixo, cliente não aceitou proposta..."
+                            }
                             className="h-24 resize-none"
                         />
                     </div>
 
-                    <div className="flex items-center space-x-2">
-                    <Checkbox
-                            id="recontato"
-                            checked={agendarRecontato}
-                            onCheckedChange={(checked) => {
-                                const enabled = !!checked
-                                setAgendarRecontato(enabled)
-                                if (enabled && !dataRecontato) {
-                                    setDataRecontato(addDays(new Date(), 7))
-                                }
-                            }}
-                        />
-                        <Label htmlFor="recontato">Agendar Recontato?</Label>
-                    </div>
+                    {!isPausaMode && (
+                        <div className="flex items-center space-x-2">
+                            <Checkbox
+                                id="recontato"
+                                checked={agendarRecontato}
+                                onCheckedChange={(checked) => {
+                                    const enabled = !!checked
+                                    setAgendarRecontato(enabled)
+                                    if (enabled && !dataRecontato) {
+                                        setDataRecontato(addDays(new Date(), 7))
+                                    }
+                                }}
+                            />
+                            <Label htmlFor="recontato">Agendar Recontato?</Label>
+                        </div>
+                    )}
 
-                    {agendarRecontato && (
+                    {(isPausaMode || agendarRecontato) && (
                         <div className="flex flex-col gap-2 animate-in fade-in slide-in-from-top-2">
-                            <Label>Data de Retorno</Label>
+                            <Label>{isPausaMode ? "Data de retorno (Obrigatória)" : "Data de Retorno"}</Label>
                             <Popover>
                                 <PopoverTrigger asChild>
                                     <Button
@@ -146,7 +160,7 @@ export function ModalSemInteresse({
                     <Button variant="outline" onClick={() => onOpenChange(false)}>Cancelar</Button>
                     <Button onClick={handleSave} disabled={saving} className="bg-slate-600 hover:bg-slate-700">
                         {saving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                        Confirmar
+                        {isPausaMode ? "Salvar pausa" : "Confirmar"}
                     </Button>
                 </DialogFooter>
             </DialogContent>

@@ -16,6 +16,7 @@ import type { Precatorio } from "@/lib/types/database"
 import { PdfUploadButton } from "./pdf-upload-button"
 import { getPdfViewerUrl } from "@/lib/utils/pdf-upload"
 import { DocumentosViewer } from "@/components/precatorios/documentos-viewer"
+import { GuiaCalculoViewer } from "@/components/calculo/guia-calculo-viewer"
 import {
   AlertDialog,
   AlertDialogAction,
@@ -145,7 +146,7 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
   const [loading, setLoading]                 = useState(false)
   const [saving, setSaving]                   = useState(false)
   const [showResetDialog, setShowResetDialog] = useState(false)
-  const [showPdfDrawer, setShowPdfDrawer]     = useState(false)
+  const [rightPanel, setRightPanel]           = useState<"docs" | "guide" | null>(null)
   const [mobileSidebar, setMobileSidebar]     = useState(false)
 
   const fallbackDocs = useMemo(() => {
@@ -153,7 +154,11 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
     return [{ id: "pdf-precatorio", titulo: "Ofício Requisitório", tipo: "oficio_requisitorio", viewUrl: pdfUrl, urlType: "legacy" }]
   }, [pdfUrl])
 
-  useEffect(() => { if (pdfUrl) setShowPdfDrawer(true) }, [pdfUrl])
+  useEffect(() => {
+    if (pdfUrl) {
+      setRightPanel((current) => current ?? "docs")
+    }
+  }, [pdfUrl])
   useEffect(() => {
     if (precatorioId) loadPrecatorio(precatorioId)
     else loadLocalStorage()
@@ -427,12 +432,23 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
 
             {precatorioId && (
               <>
-                <button type="button" onClick={()=>setShowPdfDrawer(!showPdfDrawer)}
+                <button type="button" onClick={()=>setRightPanel((current)=>current==="guide" ? null : "guide")}
                   className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[11.5px] font-semibold transition-all"
                   style={{
-                    background: showPdfDrawer ? T.accentDim : "rgba(255,255,255,0.05)",
-                    color: showPdfDrawer ? T.accent : T.textMid,
-                    border: `1px solid ${showPdfDrawer ? T.accentMid : T.border}`,
+                    background: rightPanel === "guide" ? T.accentDim : "rgba(255,255,255,0.05)",
+                    color: rightPanel === "guide" ? T.accent : T.textMid,
+                    border: `1px solid ${rightPanel === "guide" ? T.accentMid : T.border}`,
+                  }}>
+                  {IC.calc}
+                  <span className="hidden md:inline">Guia</span>
+                </button>
+
+                <button type="button" onClick={()=>setRightPanel((current)=>current==="docs" ? null : "docs")}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[11.5px] font-semibold transition-all"
+                  style={{
+                    background: rightPanel === "docs" ? T.accentDim : "rgba(255,255,255,0.05)",
+                    color: rightPanel === "docs" ? T.accent : T.textMid,
+                    border: `1px solid ${rightPanel === "docs" ? T.accentMid : T.border}`,
                   }}>
                   {IC.doc}
                   <span className="hidden md:inline">Documentos</span>
@@ -496,25 +512,29 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
 
           {/* PDF Drawer — slides in as right column */}
           <AnimatePresence>
-            {showPdfDrawer && (
+            {rightPanel && (
               <motion.div
                 className="shrink-0 flex flex-col overflow-hidden"
                 style={{
-                  width: "min(420px, 42vw)",
+                  width: rightPanel === "guide" ? "min(500px, 46vw)" : "min(420px, 42vw)",
                   borderLeft: `1px solid ${T.border}`,
                   background: "#ffffff",
                 }}
                 initial={reduceMotion?{opacity:1}:{width:0,opacity:0}}
-                animate={reduceMotion?{opacity:1}:{width:"min(420px, 42vw)",opacity:1}}
+                animate={reduceMotion?{opacity:1}:{width: rightPanel === "guide" ? "min(500px, 46vw)" : "min(420px, 42vw)",opacity:1}}
                 exit={reduceMotion?{opacity:0}:{width:0,opacity:0}}
                 transition={{ duration: 0.28, ease: [0.32,0.72,0,1] }}
               >
-                <DocumentosViewer
-                  precatorioId={precatorioId}
-                  onClose={()=>setShowPdfDrawer(false)}
-                  fallbackDocs={fallbackDocs}
-                  className="h-full"
-                />
+                {rightPanel === "docs" ? (
+                  <DocumentosViewer
+                    precatorioId={precatorioId}
+                    onClose={()=>setRightPanel(null)}
+                    fallbackDocs={fallbackDocs}
+                    className="h-full"
+                  />
+                ) : (
+                  <GuiaCalculoViewer onClose={() => setRightPanel(null)} />
+                )}
               </motion.div>
             )}
           </AnimatePresence>

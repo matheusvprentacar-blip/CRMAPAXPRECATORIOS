@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -15,6 +15,8 @@ import { Loader2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
 import { toast } from "sonner"
+import { useUsuariosCache } from "@/hooks/use-usuarios-cache"
+import { OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole, normalizeOperatorTag, type OperatorTag } from "@/lib/users/operator-tag"
 
 interface ModalNovoCreditoAtendimentoProps {
   open: boolean
@@ -39,7 +41,20 @@ export function ModalNovoCreditoAtendimento({
   const [natureza, setNatureza] = useState("")
   const [dataExpedicao, setDataExpedicao] = useState("")
   const [valorPrincipal, setValorPrincipal] = useState("")
+  const [operatorTagFilter, setOperatorTagFilter] = useState<OperatorTag | "todos">("todos")
+  const [responsavelId, setResponsavelId] = useState("")
   const [saving, setSaving] = useState(false)
+  const { usuarios, loading: loadingUsuarios } = useUsuariosCache()
+
+  const operadores = useMemo(
+    () =>
+      usuarios.filter((usuario) => {
+        if (!isAtendimentoOperatorRole(usuario.role)) return false
+        if (operatorTagFilter === "todos") return true
+        return normalizeOperatorTag(usuario.operator_tag) === operatorTagFilter
+      }),
+    [operatorTagFilter, usuarios]
+  )
 
   const reset = () => {
     setCredor("")
@@ -54,11 +69,17 @@ export function ModalNovoCreditoAtendimento({
     setNatureza("")
     setDataExpedicao("")
     setValorPrincipal("")
+    setOperatorTagFilter("todos")
+    setResponsavelId("")
   }
 
   const handleSave = async () => {
     if (!credor.trim()) {
       toast.error("Nome do credor é obrigatório.")
+      return
+    }
+    if (!responsavelId) {
+      toast.error("Selecione o operador que receberá este crédito.")
       return
     }
     setSaving(true)
@@ -89,9 +110,14 @@ export function ModalNovoCreditoAtendimento({
           : `Lead - ${credor.trim()}`,
         origem: "atendimento",
         status_atendimento: "na_fila",
+        responsavel: responsavelId,
+        dono_usuario_id: responsavelId,
+        distribuido_por_admin: true,
+        distribuido_por_admin_id: user.id,
+        distribuido_por_admin_em: new Date().toISOString(),
       }
 
-      const { error } = await supabase.from("precatorios").insert([payload])
+      const { error } = await supabase.from("precatorios").insert([payload] as never)
       if (error) {
         if (error.code === "23505") throw new Error("Número de precatório já cadastrado.")
         throw new Error(error.message)
@@ -223,6 +249,47 @@ export function ModalNovoCreditoAtendimento({
               value={valorPrincipal}
               onChange={(e) => setValorPrincipal(e.target.value)}
             />
+          </div>
+
+          <div className="space-y-1">
+            <Label>Tag Operacional</Label>
+            <select
+              value={operatorTagFilter}
+              onChange={(e) => {
+                setOperatorTagFilter(e.target.value as OperatorTag | "todos")
+                setResponsavelId("")
+              }}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+            >
+              <option value="todos">Todos os operadores</option>
+              {OPERATOR_TAG_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div className="space-y-1">
+            <Label>Distribuir para Operador <span className="text-destructive">*</span></Label>
+            <select
+              value={responsavelId}
+              onChange={(e) => setResponsavelId(e.target.value)}
+              className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+              disabled={loadingUsuarios}
+            >
+              <option value="">
+                {loadingUsuarios ? "Carregando operadores..." : "Selecione um operador"}
+              </option>
+              {operadores.map((operador) => (
+                <option key={operador.id} value={operador.id}>
+                  {operador.nome}
+                </option>
+              ))}
+            </select>
+            <p className="text-xs text-muted-foreground">
+              O crédito já entra no atendimento com responsável definido, sem sair desta área.
+            </p>
           </div>
         </div>
 

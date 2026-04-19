@@ -64,7 +64,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
 
   const channelRef = useRef<SupabaseChannel | null>(null)
   const userRef = useRef<string | null>(null)
-  const pendingDesktopRef = useRef<{ notification: NotificationRow; ts: number } | null>(null)
 
   const unreadCount = useMemo(
     () => notifications.filter((notification) => !notification.read_at).length,
@@ -206,35 +205,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
     async (notification: NotificationRow) => {
       if (typeof window === "undefined") return
 
-      const isTauri = "__TAURI_INTERNALS__" in window || "__TAURI__" in window
-      if (isTauri) {
-        pendingDesktopRef.current = { notification, ts: Date.now() }
-      }
-
-      if (isTauri) {
-        try {
-          const { isPermissionGranted, requestPermission, sendNotification } = await import(
-            "@tauri-apps/plugin-notification"
-          )
-
-          let granted = await isPermissionGranted()
-          if (!granted) {
-            const permission = await requestPermission()
-            granted = permission === "granted"
-          }
-
-          if (granted) {
-            sendNotification({
-              title: notification.title,
-              body: notification.body,
-            })
-            return
-          }
-        } catch (error) {
-          console.warn("Tauri notification failed:", error)
-        }
-      }
-
       if ("Notification" in window) {
         try {
           if (Notification.permission === "granted") {
@@ -328,32 +298,6 @@ export function NotificationsProvider({ children }: { children: React.ReactNode 
       }
     }
   }, [supabase, user?.id, loadInitial, sendDesktopNotification, upsertNotification])
-
-  useEffect(() => {
-    if (typeof window === "undefined") return
-
-    const handleFocus = () => {
-      const pending = pendingDesktopRef.current
-      if (!pending) return
-
-      if (Date.now() - pending.ts > 60000) {
-        pendingDesktopRef.current = null
-        return
-      }
-
-      if (pending.notification.link_url) {
-        router.push(pending.notification.link_url)
-        void markAsRead(pending.notification.id)
-      } else {
-        setModalOpen(true)
-      }
-
-      pendingDesktopRef.current = null
-    }
-
-    window.addEventListener("focus", handleFocus)
-    return () => window.removeEventListener("focus", handleFocus)
-  }, [markAsRead, router])
 
   const value = useMemo(
     () => ({

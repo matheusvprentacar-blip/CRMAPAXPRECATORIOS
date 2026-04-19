@@ -27,9 +27,17 @@ import {
   createNewUser, deleteUser, getUserCreditAssignments, setUserActiveStatus,
   type CreditRedistributionAssignment,
 } from "./actions"
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useCallback } from "react"
 import { Usuario } from "@/lib/types/database"
 import { useRouter } from "next/navigation"
+import { OPERATOR_TAG_LABELS, OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole, normalizeOperatorTag } from "@/lib/users/operator-tag"
+import { Switch } from "@/components/ui/switch"
+import { Clock } from "@/components/icons"
+import {
+  type HorariosPermitidos,
+  type HorarioJanela,
+  DIAS_LABEL,
+} from "@/lib/auth/horarios"
 
 // ─── constants ────────────────────────────────────────────────────────────────
 
@@ -206,8 +214,64 @@ export default function UsuariosPage() {
   const [newUserData, setNewUserData] = useState({
     email: "", password: "", nome: "",
     role: ["operador_comercial"],
+    operator_tag: "operador",
     autoConfirm: true,
   })
+
+  // ── Horários permitidos ──────────────────────────────────────────────────────
+  const [horariosUser, setHorariosUser]         = useState<Usuario | null>(null)
+  const [horariosDialogOpen, setHorariosDialogOpen] = useState(false)
+  const [horariosSaving, setHorariosSaving]     = useState(false)
+  const [horariosAtivo, setHorariosAtivo]       = useState(false)
+  const [horariosDias, setHorariosDias]         = useState<HorariosPermitidos["dias"]>({})
+
+  function openHorariosDialog(u: Usuario) {
+    setHorariosUser(u)
+    const h = u.horarios_permitidos
+    setHorariosAtivo(h?.ativo ?? false)
+    setHorariosDias(h?.dias ?? {})
+    setHorariosDialogOpen(true)
+  }
+
+  function toggleDia(key: string, enabled: boolean) {
+    setHorariosDias((prev) => {
+      const copy = { ...prev } as Record<string, HorarioJanela | null>
+      copy[key] = enabled ? { inicio: "08:00", fim: "18:00" } : null
+      return copy
+    })
+  }
+
+  function updateJanela(key: string, field: "inicio" | "fim", value: string) {
+    setHorariosDias((prev) => {
+      const janela = (prev as Record<string, HorarioJanela | null>)[key]
+      if (!janela) return prev
+      return { ...prev, [key]: { ...janela, [field]: value } }
+    })
+  }
+
+  const saveHorarios = useCallback(async () => {
+    if (!horariosUser) return
+    setHorariosSaving(true)
+    const supabase = createBrowserClient()
+    const payload: HorariosPermitidos | null = horariosAtivo
+      ? { ativo: true, dias: horariosDias }
+      : null
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const { error } = await (supabase as any)
+      .from("usuarios")
+      .update({ horarios_permitidos: payload })
+      .eq("id", horariosUser.id)
+    setHorariosSaving(false)
+    if (error) {
+      toast({ title: "Erro ao salvar horários", description: error.message, variant: "destructive" })
+    } else {
+      setUsuarios((prev) =>
+        prev.map((u) => (u.id === horariosUser.id ? { ...u, horarios_permitidos: payload } : u)),
+      )
+      toast({ title: "Horários salvos", description: `Restrições de ${horariosUser.nome} atualizadas.` })
+      setHorariosDialogOpen(false)
+    }
+  }, [horariosUser, horariosAtivo, horariosDias, toast])
 
   const redistributionPreview = useMemo(
     () => buildValueDistribution(creditsToRedistribute, selectedRecipientIds, outlierMultiplier),
@@ -394,12 +458,22 @@ export default function UsuariosPage() {
       if (newUserData.password.length < 6) throw new Error("A senha deve ter no mínimo 6 caracteres")
       const result = await createNewUser({
         email: newUserData.email, password: newUserData.password,
-        nome: newUserData.nome, role: newUserData.role, autoConfirm: newUserData.autoConfirm,
+        nome: newUserData.nome,
+        role: newUserData.role,
+        operator_tag: isAtendimentoOperatorRole(newUserData.role) ? newUserData.operator_tag : null,
+        autoConfirm: newUserData.autoConfirm,
       })
       if (!result.success) throw new Error(result.error)
       toast({ title: "Colaborador adicionado!", description: result.message })
       await loadUsuarios()
-      setNewUserData({ email: "", password: "", nome: "", role: ["operador_comercial"], autoConfirm: true })
+      setNewUserData({
+        email: "",
+        password: "",
+        nome: "",
+        role: ["operador_comercial"],
+        operator_tag: "operador",
+        autoConfirm: true,
+      })
       setCreateUserOpen(false)
     } catch (err: any) {
       toast({ title: "Falha ao criar usuário", description: err.message || "Erro desconhecido", variant: "destructive" })
@@ -559,6 +633,11 @@ export default function UsuariosPage() {
                           {ROLE_LABELS[r] ?? r.replace(/_/g, " ")}
                         </span>
                       ))}
+                      {normalizeOperatorTag(usuario.operator_tag) && (
+                        <span className="inline-flex items-center rounded-full border border-sky-500/25 bg-sky-500/10 px-2 py-0 text-[10px] font-semibold text-sky-700 dark:text-sky-300">
+                          {OPERATOR_TAG_LABELS[normalizeOperatorTag(usuario.operator_tag)!]}
+                        </span>
+                      )}
                       {usuario.role.length > 3 && (
                         <span className="inline-flex items-center rounded-full border border-border/40 bg-foreground/8 px-2 py-0 text-[10px] font-semibold text-foreground/50">
                           +{usuario.role.length - 3}
@@ -593,6 +672,10 @@ export default function UsuariosPage() {
                         <DropdownMenuContent align="end" className="w-48">
                           <DropdownMenuItem onClick={() => router.push(`/admin/usuarios/detalhes?id=${usuario.id}`)}>
                             Gerenciar usuário
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openHorariosDialog(usuario)}>
+                            <Clock className="h-4 w-4" />
+                            Horários permitidos
                           </DropdownMenuItem>
                           <DropdownMenuSeparator />
                           <DropdownMenuItem
@@ -637,6 +720,104 @@ export default function UsuariosPage() {
             </div>
           )}
         </div>
+
+        {/* ── MODAL: HORÁRIOS PERMITIDOS ───────────────────────────────────── */}
+        <Dialog open={horariosDialogOpen} onOpenChange={setHorariosDialogOpen}>
+          <DialogContent className="max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Clock className="h-4 w-4 text-primary" />
+                Horários permitidos — {horariosUser?.nome}
+              </DialogTitle>
+              <DialogDescription>
+                Defina os dias e horários em que este usuário pode acessar o sistema.
+                Fora da janela, ele será bloqueado com um contador de retorno.
+              </DialogDescription>
+            </DialogHeader>
+
+            <div className="space-y-5 py-2">
+              {/* Toggle restrição ativa */}
+              <div className="flex items-center justify-between rounded-xl border border-border/60 bg-muted/30 px-4 py-3">
+                <div>
+                  <p className="text-sm font-medium">Restrição de horário ativa</p>
+                  <p className="text-xs text-muted-foreground">
+                    Quando desativada, o usuário acessa sem restrições
+                  </p>
+                </div>
+                <Switch checked={horariosAtivo} onCheckedChange={setHorariosAtivo} />
+              </div>
+
+              {/* Grade de dias */}
+              {horariosAtivo && (
+                <div className="space-y-2">
+                  {(["1","2","3","4","5","6","0"] as const).map((dayKey) => {
+                    const janela = (horariosDias as Record<string, HorarioJanela | null>)[dayKey]
+                    const enabled = !!janela
+                    return (
+                      <div
+                        key={dayKey}
+                        className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition-colors ${
+                          enabled
+                            ? "border-primary/30 bg-primary/5"
+                            : "border-border/50 bg-muted/20 opacity-60"
+                        }`}
+                      >
+                        <Switch
+                          checked={enabled}
+                          onCheckedChange={(v) => toggleDia(dayKey, v)}
+                          className="shrink-0"
+                        />
+                        <span className="w-16 text-sm font-medium">{DIAS_LABEL[dayKey]}</span>
+                        {enabled && (
+                          <div className="flex items-center gap-2 ml-auto">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground">De</span>
+                              <input
+                                type="time"
+                                value={janela?.inicio ?? "08:00"}
+                                onChange={(e) => updateJanela(dayKey, "inicio", e.target.value)}
+                                className="h-8 rounded-md border border-border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-xs text-muted-foreground">às</span>
+                              <input
+                                type="time"
+                                value={janela?.fim ?? "18:00"}
+                                onChange={(e) => updateJanela(dayKey, "fim", e.target.value)}
+                                className="h-8 rounded-md border border-border bg-background px-2 text-sm tabular-nums focus:outline-none focus:ring-1 focus:ring-primary"
+                              />
+                            </div>
+                          </div>
+                        )}
+                        {!enabled && (
+                          <span className="ml-auto text-xs text-muted-foreground">Bloqueado</span>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <button
+                onClick={() => setHorariosDialogOpen(false)}
+                className="rounded-lg border border-border/60 bg-muted/30 px-4 py-2 text-sm text-muted-foreground hover:bg-muted/60 transition-colors"
+              >
+                Cancelar
+              </button>
+              <button
+                onClick={() => void saveHorarios()}
+                disabled={horariosSaving}
+                className="flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground hover:bg-primary/90 disabled:opacity-50 transition-colors"
+              >
+                {horariosSaving && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                Salvar horários
+              </button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* ── MODAL: CRIAR USUÁRIO ───────────────────────────────────────────── */}
         <Dialog open={createUserOpen} onOpenChange={setCreateUserOpen}>
@@ -716,6 +897,26 @@ export default function UsuariosPage() {
                   })}
                 </div>
               </div>
+
+              {isAtendimentoOperatorRole(newUserData.role) && (
+                <div className="space-y-2">
+                  <Label className="text-[11px] font-bold uppercase tracking-wide text-foreground/45">
+                    Tag Operacional
+                  </Label>
+                  <select
+                    value={newUserData.operator_tag}
+                    onChange={(e) => setNewUserData((prev) => ({ ...prev, operator_tag: e.target.value }))}
+                    disabled={creatingUser}
+                    className="h-10 w-full rounded-xl border border-border/70 bg-background px-3 text-sm"
+                  >
+                    {OPERATOR_TAG_OPTIONS.map((option) => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
               {/* Auto-confirm toggle */}
               <div className="flex items-center gap-3">

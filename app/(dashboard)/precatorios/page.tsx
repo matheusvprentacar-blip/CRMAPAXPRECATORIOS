@@ -545,30 +545,29 @@ function PrecatorioVisualCard({
           )}
 
           <div className="flex-1 space-y-4">
-            <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
-              <div className="min-w-0 flex-1 basis-[220px]">
-                <div className="flex items-start gap-3">
-                  <div className={cx("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold", tone.avatar)}>
-                    {initials}
-                  </div>
-                  <div className="min-w-0">
+            <div className="flex items-start gap-3">
+              <div className={cx("inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-[10px] text-[13px] font-bold", tone.avatar)}>
+                {initials}
+              </div>
+              <div className="min-w-0 flex-1 overflow-hidden">
+                <div className="grid items-start gap-3 overflow-hidden" style={{ gridTemplateColumns: "minmax(0,1fr) auto" }}>
+                  <div className="overflow-hidden">
                     <h3 className="truncate text-[15px] font-bold text-foreground">{headline}</h3>
-                    <div className="mt-1 text-[11.5px] font-medium text-muted-foreground">
+                    <div className="mt-0.5 truncate text-[11.5px] font-medium text-muted-foreground">
                       {precatorio.numero_processo ? maskProcesso(precatorio.numero_processo) : precatorio.numero_precatorio || "Sem número"}
                     </div>
-                    <div className="mt-1 text-[11.5px] text-muted-foreground/70">
+                    <div className="mt-0.5 truncate text-[11.5px] text-muted-foreground/70">
                       Devedor: {precatorio.devedor || "Não informado"}
                     </div>
                   </div>
-                </div>
-              </div>
-
-              <div className="ml-auto min-w-0 max-w-full text-right sm:max-w-[48%]">
-                <div className={cx("break-all text-[clamp(1rem,1.9vw,1.125rem)] font-extrabold leading-tight tracking-[-0.02em]", valor.valueClass)}>
-                  {valor.formatted}
-                </div>
-                <div className="mt-1 text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/60">
-                  {valor.label}
+                  <div className="overflow-hidden text-right">
+                    <div className={cx("whitespace-nowrap text-[15px] font-extrabold leading-tight tracking-[-0.02em]", valor.valueClass)}>
+                      {valor.formatted}
+                    </div>
+                    <div className="mt-0.5 whitespace-nowrap text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground/60">
+                      {valor.label}
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -1150,7 +1149,7 @@ export default function PrecatoriosPage() {
             <HeroDropdown>
               <HeroDropdownTrigger>
                 <div
-                  className="inline-flex h-11 w-[190px] cursor-pointer items-center justify-between rounded-xl border border-slate-900/10 bg-[#f4f5f8] px-3 text-sm font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300"
+                  className="inline-flex h-11 w-full min-w-[160px] max-w-[190px] cursor-pointer items-center justify-between rounded-xl border border-slate-900/10 bg-[#f4f5f8] px-3 text-sm font-medium text-slate-500 shadow-sm dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300 sm:w-[190px]"
                 >
                   {statusSelectValue === "todos"
                     ? "Todos os status"
@@ -1180,7 +1179,7 @@ export default function PrecatoriosPage() {
               showDistribuicaoFilter={true}
             />
           </div>
-          <div className="flex flex-wrap items-center gap-3 xl:ml-auto xl:justify-end">
+          <div className="flex items-center justify-between gap-3 xl:ml-auto">
             <div className="inline-flex items-center gap-2 rounded-full border border-slate-900/10 bg-[#f4f5f8] px-3 py-1.5 text-[12.5px] font-medium text-slate-500 dark:border-white/10 dark:bg-[#09090b] dark:text-slate-300">
               <span>{effectiveTotalPrecatorios} registros</span>
               {loading && initialized ? (

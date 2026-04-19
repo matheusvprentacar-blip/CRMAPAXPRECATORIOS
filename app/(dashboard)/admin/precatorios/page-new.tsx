@@ -74,7 +74,6 @@ interface PrecatorioAdmin {
 const KANBAN_PROGRESS: Record<string, number> = {
   entrada: 5,
   triagem_interesse: 15,
-  docs_credor: 25,
   analise_processual_inicial: 35,
   juridico: 45,
   pronto_calculo: 55,
@@ -95,7 +94,6 @@ const KANBAN_LABELS: Record<string, string> = {
   entrada: "Entrada",
   triagem_interesse: "Triagem",
   analise_processual_inicial: "Análise Processual Inicial",
-  docs_credor: "Documentos do credor",
   pronto_calculo: "Pronto para cálculo",
   calculo_andamento: "Cálculo em andamento",
   juridico: "Jurídico",

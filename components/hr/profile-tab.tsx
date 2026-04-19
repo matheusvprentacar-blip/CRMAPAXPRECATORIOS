@@ -10,6 +10,7 @@ import { useState } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { Loader2, Save } from "@/components/icons"
+import { OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole } from "@/lib/users/operator-tag"
 
 const AVAILABLE_ROLES = [
     { value: "admin", label: "Administrador" },
@@ -38,6 +39,7 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
         email: user.email,
         telefone: user.telefone || "",
         role: user.role || [],
+        operator_tag: user.operator_tag || "operador",
         position: user.position || "",
         admission_date: user.admission_date || "",
         // Bank info and address could be added here as JSON, keeping simple for now
@@ -68,6 +70,7 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
                 nome: formData.nome,
                 telefone: formData.telefone,
                 role: formData.role, // Assuming DB handles text[] updates
+                operator_tag: isAtendimentoOperatorRole(formData.role) ? formData.operator_tag : null,
                 position: formData.position,
                 admission_date: formData.admission_date || null,
                 updated_at: new Date().toISOString(),
@@ -93,7 +96,12 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
             if (JSON.stringify(user.role.sort()) !== JSON.stringify(formData.role.sort())) {
                 // Sync roles via edge function if they changed
                 const { error: roleError } = await supabase.functions.invoke('admin-actions', {
-                    body: { action: 'updateUserRole', userId: user.id, newRole: formData.role }
+                    body: {
+                        action: 'updateUserRole',
+                        userId: user.id,
+                        newRole: formData.role,
+                        operator_tag: isAtendimentoOperatorRole(formData.role) ? formData.operator_tag : null,
+                    }
                 })
                 if (roleError) console.error("Failed to sync auth roles", roleError)
             }
@@ -181,6 +189,26 @@ export function ProfileTab({ user, onUpdate }: ProfileTabProps) {
                             </div>
                         ))}
                     </div>
+
+                    {isAtendimentoOperatorRole(formData.role) && (
+                        <div className="mt-4 space-y-2">
+                            <Label>Tag Operacional</Label>
+                            <select
+                                value={formData.operator_tag}
+                                onChange={e => setFormData({ ...formData, operator_tag: e.target.value })}
+                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                            >
+                                {OPERATOR_TAG_OPTIONS.map((option) => (
+                                    <option key={option.value} value={option.value}>
+                                        {option.label}
+                                    </option>
+                                ))}
+                            </select>
+                            <p className="text-xs text-muted-foreground">
+                                Essa tag alimenta a distribuicao rapida de creditos no Setor de Atendimento.
+                            </p>
+                        </div>
+                    )}
                 </CardContent>
             </Card>
 

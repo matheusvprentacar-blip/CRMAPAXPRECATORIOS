@@ -31,6 +31,7 @@ export async function createNewUser(userData: {
   password: string
   nome: string
   role: string[]
+  operator_tag?: string | null
   autoConfirm: boolean
 }) {
   return invokeAdminAction({ action: "createNewUser", ...userData })

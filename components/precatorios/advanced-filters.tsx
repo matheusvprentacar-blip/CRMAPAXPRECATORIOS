@@ -45,9 +45,7 @@ const STATUS_GROUPS = [
     dot: "#3b82f6",
     items: [
       { value: "entrada",           label: "Entrada / Pré-cadastro",  active: "bg-blue-50   border-blue-400   text-blue-800   dark:bg-blue-950/60  dark:border-blue-500  dark:text-blue-200",  inactive: "border-blue-200/60   text-blue-600/70   dark:border-blue-800/50  dark:text-blue-400/60"  },
-      { value: "recebidos_admin",   label: "Recebidos do Admin",      active: "bg-teal-50   border-teal-400   text-teal-800   dark:bg-teal-950/60  dark:border-teal-500  dark:text-teal-200",  inactive: "border-teal-200/60   text-teal-600/70   dark:border-teal-800/50  dark:text-teal-400/60"  },
       { value: "triagem_interesse", label: "Triagem (interesse)",     active: "bg-indigo-50 border-indigo-400 text-indigo-800 dark:bg-indigo-950/60 dark:border-indigo-500 dark:text-indigo-200", inactive: "border-indigo-200/60 text-indigo-600/70 dark:border-indigo-800/50 dark:text-indigo-400/60" },
-      { value: "docs_credor",       label: "Docs do credor",          active: "bg-sky-50    border-sky-400    text-sky-800    dark:bg-sky-950/60   dark:border-sky-500   dark:text-sky-200",   inactive: "border-sky-200/60    text-sky-600/70    dark:border-sky-800/50   dark:text-sky-400/60"   },
     ],
   },
   {
