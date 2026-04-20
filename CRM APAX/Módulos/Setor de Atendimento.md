@@ -38,6 +38,8 @@ O setor de atendimento passou a ser a porta de entrada dos créditos que ainda e
   - não vê valores
 - `operador_comercial` e `operador`
   - veem apenas créditos distribuídos para si
+  - esse filtro vale para todas as abas da tela (`Fila Ativa` e `Arquivados`)
+  - quando houver combinação de roles com `agente_atendimento`, o escopo operacional prevalece (continua vendo apenas os créditos distribuídos para si)
   - não veem valores
 
 ## Distribuição em Massa

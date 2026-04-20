@@ -332,9 +332,10 @@ export default function AtendimentoPage() {
   const { profile } = useAuth()
   const roles = profile?.role ?? []
   const isAdmin = roles.includes("admin")
-  const isAgenteAtendimento = roles.includes("agente_atendimento")
-  const isOperadorAtendimento =
-    (roles.includes("operador_comercial") || roles.includes("operador")) && !isAdmin && !isAgenteAtendimento
+  const hasOperadorRole = roles.includes("operador_comercial") || roles.includes("operador")
+  // Quando houver combinação de roles (ex.: agente_atendimento + operador),
+  // o escopo operacional deve prevalecer: ver somente créditos distribuídos para si.
+  const isOperadorAtendimento = hasOperadorRole && !isAdmin
 
   const [creditos, setCreditos] = useState<CreditoAtendimento[]>([])
   const [loading, setLoading] = useState(true)
