@@ -24,6 +24,7 @@ import { useToast } from "@/hooks/use-toast"
 import { ImportJsonModal } from "@/components/import/import-json-modal"
 import { SearchBar } from "@/components/precatorios/search-bar"
 import { AdvancedFilters } from "@/components/precatorios/advanced-filters"
+import { ModalPreenchimentoRapido } from "@/components/precatorios/modal-preenchimento-rapido"
 import { usePrecatoriosSearch } from "@/hooks/use-precatorios-search"
 import { STATUS_LABELS, STATUS_OPTIONS } from "@/lib/types/filtros"
 
@@ -612,7 +613,7 @@ function PrecatorioVisualCard({
               <div className="flex items-center gap-2" onClick={(event) => event.stopPropagation()}>
                 {selectable ? <PrecatorioDeleteMenu onDelete={onDelete} /> : null}
                 <span className="text-[12px] font-bold text-[#0e4d6a] transition-opacity duration-200 group-hover:opacity-100 md:opacity-0">
-                  Ver detalhes →
+                  Abrir →
                 </span>
               </div>
             </div>
@@ -807,6 +808,14 @@ export default function PrecatoriosPage() {
   const [precatorioToDelete, setPrecatorioToDelete] = useState<Precatorio | null>(null)
   const [deleting, setDeleting] = useState(false)
   const [importJsonOpen, setImportJsonOpen] = useState(false)
+
+  // Modal de preenchimento rapido (1 clique no card)
+  const [quickFillOpen, setQuickFillOpen] = useState(false)
+  const [quickFillPrecatorio, setQuickFillPrecatorio] = useState<Precatorio | null>(null)
+  const openQuickFill = (precatorio: Precatorio) => {
+    setQuickFillPrecatorio(precatorio)
+    setQuickFillOpen(true)
+  }
 
   useEffect(() => {
     loadUserInfo()
@@ -1312,7 +1321,10 @@ export default function PrecatoriosPage() {
                     setPrecatorioToDelete(precatorio)
                     setDeleteDialogOpen(true)
                   }}
-                  openDetails={(id) => router.push(`/precatorios/detalhes?id=${id}`)}
+                  openDetails={(id) => {
+                    const alvo = precatoriosList.find((p) => p.id === id)
+                    if (alvo) openQuickFill(alvo)
+                  }}
                 />
               ) : (
                 <div className="grid gap-4" style={{ gridTemplateColumns: "repeat(auto-fill, minmax(min(100%, 340px), 1fr))" }}>
@@ -1327,7 +1339,7 @@ export default function PrecatoriosPage() {
                           setPrecatorioToDelete(precatorio)
                           setDeleteDialogOpen(true)
                         }}
-                        onOpen={() => router.push(`/precatorios/detalhes?id=${precatorio.id}`)}
+                        onOpen={() => openQuickFill(precatorio)}
                       />
                     </AnimatedListItem>
                   ))}
@@ -1505,6 +1517,13 @@ export default function PrecatoriosPage() {
           refetch()
           setImportJsonOpen(false)
         }}
+      />
+
+      <ModalPreenchimentoRapido
+        open={quickFillOpen}
+        onOpenChange={setQuickFillOpen}
+        precatorio={quickFillPrecatorio}
+        onSuccess={() => refetch()}
       />
     </div >
   )

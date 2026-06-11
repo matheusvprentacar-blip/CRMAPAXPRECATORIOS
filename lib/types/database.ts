@@ -65,6 +65,37 @@ export interface HRLeave {
   updated_at: string
 }
 
+// Resultado das certidoes no modal de preenchimento rapido.
+export type CertidaoStatus =
+  | "negativa"
+  | "positiva"
+  | "nao_concluido"
+  | "nao_solicitado"
+  | "na"
+
+// Tipos de certidao do modal de preenchimento rapido (tabela precatorio_certidoes).
+export type CertidaoTipo =
+  | "central"
+  | "estadual"
+  | "municipal"
+  | "federal"
+  | "distribuidor"
+  | "debitos_trabalhistas"
+  | "acoes_trabalhistas"
+
+// Uma certidao do resumo rapido (1 linha por precatorio + tipo).
+// O anexo do documento continua no checklist (precatorio_itens / tipo_grupo = 'CERTIDAO').
+export interface PrecatorioCertidao {
+  id: string
+  precatorio_id: string
+  tipo: CertidaoTipo
+  resultado?: CertidaoStatus | null
+  solicitada_em?: string | null
+  validade?: string | null
+  created_at?: string
+  updated_at?: string
+}
+
 export interface Precatorio {
   id: string
 
@@ -219,6 +250,12 @@ export interface Precatorio {
   raw_text?: string | null
   pontos_importantes?: string[] | null
   detalhes?: Record<string, unknown> | null
+
+  // Preenchimento rapido (modal da pagina de precatorios)
+  numero_processo_originario?: string | null
+  possui_oficio_requisitorio?: boolean | null
+  possui_preferencial?: boolean | null
+  possui_adiantamento?: boolean | null
 
   // Timestamps
   created_at: string

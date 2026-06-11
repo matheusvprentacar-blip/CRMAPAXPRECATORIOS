@@ -65,6 +65,10 @@ aliases:
 | `proposta_maior_percentual` | numeric | % proposta maior |
 | `proposta_maior_valor` | numeric | Valor proposta maior |
 
+> [!note] Persistência canônica da calculadora
+> O fechamento do cálculo grava tributos e propostas nas colunas `irpf_valor`, `pss_valor`, `proposta_menor_valor`, `proposta_maior_valor` e seus percentuais correspondentes.
+> Campos auxiliares de memória, como `taxa_juros_moratorios` e `qtd_salarios_minimos`, permanecem dentro de `dados_calculo`.
+
 ### Status e Workflow
 | Campo | Tipo | Valores possíveis |
 |-------|------|------------------|
@@ -75,6 +79,14 @@ aliases:
 | `origem` | text | Ex.: `atendimento`, `kanban`, `manual` |
 | `status_atendimento` | text | `na_fila`, `em_contato`, `interessado`, `sem_interesse` |
 | `urgente` | boolean | Flag de urgência |
+
+### RLS — Operador de Cálculo
+
+Migration relacionada: `supabase/migrations/20260506110000_248_operador_calculo_fila_global_triagem.sql`.
+
+- `operador_calculo` pode visualizar créditos no escopo de cálculo: `fila_calculo`, `pronto_calculo`, `calculo_andamento`, `em_calculo`, `calculo_concluido` e `calculado`.
+- O mesmo perfil pode atualizar créditos desse escopo para andamento, conclusão ou retorno a `triagem_interesse`.
+- Essa liberação existe para permitir fila global de cálculo e detalhes do crédito sem transformar o perfil em acesso administrativo.
 
 ### Responsáveis
 | Campo | Tipo | Descrição |
@@ -100,6 +112,41 @@ aliases:
 | `tipo_atraso` | text | Causa do atraso |
 | `impacto_atraso` | text | `baixo`, `medio`, `alto` |
 | `motivo_atraso_calculo` | text | Descrição do motivo |
+
+### Preenchimento rápido (modal)
+
+> [!info] Campos do modal de preenchimento rápido
+> Editados pelo modal aberto com **1 clique** no card da página `/precatorios`. Componente: `components/precatorios/modal-preenchimento-rapido.tsx`. Migration: `supabase/migrations/20260611120000_250_precatorio_campos_modal_rapido.sql`.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `numero_processo_originario` | text | Nº do processo originário (1ª instância) |
+| `possui_oficio_requisitorio` | boolean | Resumo rápido: possui ofício requisitório |
+| `possui_preferencial` | boolean | Resumo rápido: possui preferencial |
+| `possui_adiantamento` | boolean | Resumo rápido: possui adiantamentos |
+
+As 7 certidões do modal ficam na tabela dedicada **`precatorio_certidoes`** (abaixo), não em colunas da tabela `precatorios`.
+
+#### Tabela: `precatorio_certidoes`
+
+1 linha por `(precatorio_id, tipo)`. Guarda só o **resumo** (resultado + datas). O **anexo/upload** continua em `precatorio_itens`.
+
+| Campo | Tipo | Descrição |
+|-------|------|-----------|
+| `id` | uuid | PK |
+| `precatorio_id` | uuid | FK → `precatorios` (ON DELETE CASCADE) |
+| `tipo` | text | `central`, `estadual`, `municipal`, `federal`, `distribuidor`, `debitos_trabalhistas`, `acoes_trabalhistas` |
+| `resultado` | text | `negativa` \| `positiva` \| `nao_concluido` \| `nao_solicitado` \| `na` |
+| `solicitada_em` | date | Data em que a certidão foi solicitada |
+| `validade` | date | Validade do documento |
+
+> [!info] RLS
+> A policy delega ao acesso de `precatorios` via `EXISTS` — o usuário só vê/edita certidões de precatórios que já pode ver.
+
+> [!warning] Resumo ≠ checklist documental
+> `precatorio_certidoes` guarda só status + datas. O **upload/anexo** e o status documental (`PENDENTE`/`RECEBIDO`/…) seguem em `precatorio_itens` (`tipo_grupo = 'CERTIDAO'`), usado no [[Kanban]] e na página de detalhes.
+>
+> O campo "Operador" do modal grava em `dono_usuario_id` **e** `responsavel` (mantidos em sincronia), não em texto livre.
 
 ---
 
