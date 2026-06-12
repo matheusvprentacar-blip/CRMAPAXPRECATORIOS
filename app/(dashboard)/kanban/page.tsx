@@ -1467,8 +1467,8 @@ export default function KanbanPageNewGates() {
 
       const statusMapping: Record<string, string> = {
         pronto_calculo: "pronto_calculo",
-        calculo_andamento: "em_calculo",
-        calculo_concluido: "calculado",
+        calculo_andamento: "calculo_andamento",
+        calculo_concluido: "calculo_concluido",
       }
 
       const updateData: any = {
@@ -1523,6 +1523,8 @@ export default function KanbanPageNewGates() {
     if (destination.droppableId === source.droppableId) return
 
     const colunaDestino = destination.droppableId
+    const precatorioAtual = precatorios.find((p) => p.id === draggableId)
+    const statusOrigem = String(precatorioAtual?.status_kanban || "")
 
     if (colunaDestino === "encerrados") {
       setEncerradosDialog({
@@ -1534,6 +1536,15 @@ export default function KanbanPageNewGates() {
     }
 
     if (colunaDestino === "triagem_interesse") {
+      const retornoAnaliseParaTriagem =
+        source.droppableId === "analise_processual_inicial" ||
+        ["analise_processual_inicial", "juridico", "analise_juridica"].includes(statusOrigem)
+
+      if (retornoAnaliseParaTriagem) {
+        await moverPrecatorio(draggableId, colunaDestino)
+        return
+      }
+
       abrirTriagemModal(draggableId)
       return
     }
@@ -1588,8 +1599,8 @@ export default function KanbanPageNewGates() {
 
       const statusMapping: Record<string, string> = {
         pronto_calculo: "pronto_calculo",
-        calculo_andamento: "em_calculo",
-        calculo_concluido: "calculado",
+        calculo_andamento: "calculo_andamento",
+        calculo_concluido: "calculo_concluido",
       }
 
       if (statusMapping[moveDialog.colunaDestino]) {
@@ -1753,29 +1764,6 @@ export default function KanbanPageNewGates() {
   }, [markPrecatorioUpdateSeen, profile?.role, router])
 
   const abrirAreaCalculos = useCallback(async (precatorioId: string) => {
-    const supabase = createBrowserClient()
-    if (supabase) {
-      const { error } = await supabase
-        .from("precatorios")
-        .update({
-          status: "calculo_andamento",
-          status_kanban: "calculo_andamento",
-          localizacao_kanban: "calculo_andamento",
-          updated_at: new Date().toISOString()
-        })
-        .eq("id", precatorioId)
-
-      if (error) {
-        console.error("Erro ao atualizar status:", error)
-        toast({
-          title: "Erro ao atualizar status",
-          description: error.message,
-          variant: "destructive"
-        })
-        return
-      }
-    }
-
     router.push(`/calcular?id=${precatorioId}`)
   }, [router])
 

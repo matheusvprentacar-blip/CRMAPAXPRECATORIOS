@@ -13,6 +13,12 @@ import { Badge } from "@/components/ui/badge"
 import { Loader2, FileText, Scale, Calculator, History, ScrollText } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
+import {
+  deveDistribuirIgualAutomaticamente,
+  distribuirPercentuaisHerdeiros,
+  formatPercentualHerdeiro,
+  normalizarPercentuaisHerdeiros,
+} from "@/lib/herdeiros/percentuais"
 // FormInteresse removed - unused
 
 import { ChecklistDocumentos } from "./checklist-documentos"
@@ -183,7 +189,12 @@ export function ModalDetalhesKanban({
         console.error("[Modal Detalhes] Erro ao carregar herdeiros:", herdeirosError)
         setHerdeiros([])
       } else {
-        setHerdeiros(herdeirosData || [])
+        const herdeirosCarregados = (herdeirosData || []) as Herdeiro[]
+        setHerdeiros(
+          deveDistribuirIgualAutomaticamente(herdeirosCarregados)
+            ? distribuirPercentuaisHerdeiros(herdeirosCarregados)
+            : normalizarPercentuaisHerdeiros(herdeirosCarregados)
+        )
       }
       setHerdeirosLoading(false)
     } catch (error) {
@@ -379,7 +390,7 @@ export function ModalDetalhesKanban({
                         </div>
                         {herdeiro.percentual_participacao !== null && herdeiro.percentual_participacao !== undefined && (
                           <Badge variant="outline" className="text-xs">
-                            {Number(herdeiro.percentual_participacao).toLocaleString("pt-BR", { maximumFractionDigits: 2 })}%
+                            {formatPercentualHerdeiro(herdeiro.percentual_participacao)}
                           </Badge>
                         )}
                       </div>
@@ -603,8 +614,6 @@ function AuditoriaTimeline({ precatorioId }: { precatorioId: string }) {
     </div>
   )
 }
-
-
 
 
 

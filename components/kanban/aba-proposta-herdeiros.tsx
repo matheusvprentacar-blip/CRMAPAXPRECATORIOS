@@ -5,6 +5,14 @@ import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { toast } from "@/components/ui/use-toast"
+import {
+  deveDistribuirIgualAutomaticamente,
+  distribuirPercentuaisHerdeiros,
+  formatPercentualHerdeiro,
+  normalizarPercentuaisHerdeiros,
+  percentuaisHerdeirosSomamCem,
+  somaPercentuaisHerdeiros,
+} from "@/lib/herdeiros/percentuais"
 
 type Herdeiro = {
   id: string
@@ -43,7 +51,12 @@ export function AbaPropostaHerdeiros({
           .order("created_at", { ascending: true })
 
         if (error) throw error
-        setHerdeiros(data || [])
+        const herdeirosCarregados = (data || []) as Herdeiro[]
+        setHerdeiros(
+          deveDistribuirIgualAutomaticamente(herdeirosCarregados)
+            ? distribuirPercentuaisHerdeiros(herdeirosCarregados)
+            : normalizarPercentuaisHerdeiros(herdeirosCarregados)
+        )
       } catch (error: any) {
         console.error("[AbaPropostaHerdeiros] Erro:", error)
         toast({
@@ -60,11 +73,11 @@ export function AbaPropostaHerdeiros({
   }, [precatorioId])
 
   const totalPercentual = useMemo(
-    () => herdeiros.reduce((sum, h) => sum + Number(h.percentual_participacao || 0), 0),
+    () => somaPercentuaisHerdeiros(herdeiros),
     [herdeiros],
   )
 
-  const totalOk = Math.abs(totalPercentual - 100) <= 0.01
+  const totalOk = percentuaisHerdeirosSomamCem(herdeiros)
 
   if (loading && herdeiros.length === 0) return null
   if (!herdeiros.length) return null
@@ -79,7 +92,7 @@ export function AbaPropostaHerdeiros({
           <div>
             <p className="text-xs text-muted-foreground">Percentual aplicado</p>
             <p className="text-lg font-semibold">
-              {Number(percentualProposta || 0).toFixed(2)}%
+              {formatPercentualHerdeiro(percentualProposta) || "0%"}
             </p>
           </div>
           <div className="text-right">
@@ -103,7 +116,7 @@ export function AbaPropostaHerdeiros({
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="text-xs text-muted-foreground">{pct.toFixed(2)}%</p>
+                  <p className="text-xs text-muted-foreground">{formatPercentualHerdeiro(pct) || "0%"}</p>
                   <p className="text-sm font-semibold">{formatCurrency(valor)}</p>
                 </div>
               </div>
@@ -113,7 +126,7 @@ export function AbaPropostaHerdeiros({
 
         <div className="flex items-center justify-between text-xs">
           <span className="text-muted-foreground">
-            Total de cotas: {totalPercentual.toFixed(2)}%
+            Total de cotas: {formatPercentualHerdeiro(totalPercentual) || "0%"}
           </span>
           {totalOk ? (
             <span className="text-emerald-600">Cotas OK</span>

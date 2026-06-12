@@ -151,7 +151,7 @@ const navigation = [
     name: "Análise Processual",
     href: "/analise-processual",
     icon: FileSearch,
-    roles: ["admin", "operador_calculo", "gestor"],
+    roles: ["admin", "operador_calculo", "gestor", "analista"],
   },
   {
     name: "Gestão de Certidões",

@@ -20,6 +20,7 @@ cssclasses:
 ### 🏛 Sistema
 - [[Visão Geral]] — Stack, módulos e arquitetura de alto nível
 - [[Arquitetura Técnica]] — Next.js, Supabase, componentes e providers
+- [[Componentes UI]] — Wrappers compartilhados e regras de comportamento de overlays e selects
 - [[Papéis e Permissões]] — 13 roles e suas capacidades
 - [[Memória Operacional do Codex]] — Regra de consulta e atualização do vault pelo agente
 
@@ -39,6 +40,7 @@ cssclasses:
 ### 🔄 Processos
 - [[Ciclo de Vida do Precatório]] — Do cadastro ao fechamento
 - [[Fluxo de Cálculo]] — Pipeline completo de cálculo
+- [[Persistência do Cálculo]] — Regras de salvamento, versionamento e status canônico do cálculo
 - [[Mapa Visual do Cálculo.canvas|Mapa Visual do Cálculo]] — Nó mestre destacado e etapas explicadas visualmente
 
 ---

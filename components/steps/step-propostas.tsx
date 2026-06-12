@@ -8,6 +8,16 @@ import { StepFooter } from "@/components/ui/calc/StepFooter"
 import { getSupabase } from "@/lib/supabase/client"
 import { toast } from "sonner"
 import { calcularSalariosMinimosJuros } from "@/lib/calculos/indices"
+import {
+  deveDistribuirIgualAutomaticamente,
+  distribuirPercentuaisHerdeiros,
+  formatPercentualInput,
+  inferHerdeirosComCotaManual,
+  normalizePercentualParticipacao,
+  normalizarPercentuaisHerdeiros,
+  percentuaisHerdeirosSomamCem,
+  somaPercentuaisHerdeiros,
+} from "@/lib/herdeiros/percentuais"
 
 // ─── clay helpers ─────────────────────────────────────────────────────────────
 const inputStyle: CSSProperties = {
@@ -108,8 +118,12 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
   const [herdeiros, setHerdeiros] = useState<Herdeiro[]>([])
   const [loadingHerdeiros, setLoadingHerdeiros] = useState(false)
   const [savingHerdeiros, setSavingHerdeiros] = useState(false)
+  const [cotasManuaisIds, setCotasManuaisIds] = useState<string[]>([])
+  const [percentualInputs, setPercentualInputs] = useState<Record<string, string>>({})
 
   const clamp = (v: number) => Math.min(100, Math.max(0, v))
+  const buildPercentualInputs = (items: Herdeiro[]) =>
+    Object.fromEntries(items.map((item) => [item.id, formatPercentualInput(item.percentual_participacao)]))
 
   useEffect(() => {
     if (!precatorioId) return
@@ -119,7 +133,13 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
         const supabase = getSupabase(); if (!supabase) return
         const { data, error } = await supabase.from("precatorio_herdeiros").select("id, nome_completo, cpf, percentual_participacao").eq("precatorio_id", precatorioId).order("created_at", { ascending: true })
         if (error) throw error
-        setHerdeiros(data || [])
+        const herdeirosCarregados = (data || []) as Herdeiro[]
+        const herdeirosNormalizados = deveDistribuirIgualAutomaticamente(herdeirosCarregados)
+          ? distribuirPercentuaisHerdeiros(herdeirosCarregados)
+          : normalizarPercentuaisHerdeiros(herdeirosCarregados)
+        setHerdeiros(herdeirosNormalizados)
+        setPercentualInputs(buildPercentualInputs(herdeirosNormalizados))
+        setCotasManuaisIds(inferHerdeirosComCotaManual(herdeirosNormalizados))
       } catch (error: any) { toast.error(error.message || "Erro ao carregar herdeiros.") }
       finally { setLoadingHerdeiros(false) }
     }
@@ -159,9 +179,54 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
     setCalculoFinal({ breakdown, valor_atualizado: totalBruto, pss_valor: pssValor, irpf_valor: irpfValor, base_liquida_pre_descontos: basePreDescontos, honorarios_valor: honorariosValor, honorarios_percentual: honorariosPercentual, adiantamento_valor: adiantamentoValor, adiantamento_percentual: adiantamentoPercentual, base_liquida_final: baseLiquidaFinal, base_calculo_liquida: baseLiquidaFinal, valor_liquido_credor: baseLiquidaFinal, percentual_menor: percentualMenorProposta, percentual_maior: percentualMaiorProposta, menor_proposta: menorProposta, maior_proposta: maiorProposta, qtdSalariosMinimos, menorProposta, maiorProposta })
   }, [percentualMenorProposta, percentualMaiorProposta, resultadosEtapas, isManual, manualMenor, manualMaior])
 
-  const totalCotas = herdeiros.reduce((s, h) => s + Number(h.percentual_participacao || 0), 0)
+  const totalCotas = somaPercentuaisHerdeiros(herdeiros)
   const hasHerdeiros = herdeiros.length > 0
-  const cotasOk = Math.abs(totalCotas - 100) <= 0.01
+  const cotasOk = percentuaisHerdeirosSomamCem(herdeiros)
+
+  const aplicarHerdeirosComInputs = (items: Herdeiro[]) => {
+    setHerdeiros(items)
+    setPercentualInputs(buildPercentualInputs(items))
+  }
+
+  const distribuirCotasIgualmente = () => {
+    const herdeirosDistribuidos = distribuirPercentuaisHerdeiros(herdeiros)
+    setCotasManuaisIds([])
+    aplicarHerdeirosComInputs(herdeirosDistribuidos)
+  }
+
+  const handlePercentualHerdeiroChange = (id: string, value: string) => {
+    const percentual = normalizePercentualParticipacao(value)
+
+    if (percentual === null) {
+      setPercentualInputs((prev) => ({ ...prev, [id]: value }))
+      setHerdeiros((prev) =>
+        prev.map((herdeiro) =>
+          herdeiro.id === id ? { ...herdeiro, percentual_participacao: null } : herdeiro
+        )
+      )
+      return
+    }
+
+    const nextManualIds = Array.from(new Set([...cotasManuaisIds, id]))
+    const herdeirosAtualizados = herdeiros.map((herdeiro) =>
+      herdeiro.id === id ? { ...herdeiro, percentual_participacao: percentual } : herdeiro
+    )
+    const herdeirosDistribuidos = distribuirPercentuaisHerdeiros(herdeirosAtualizados, nextManualIds)
+    const nextInputs = buildPercentualInputs(herdeirosDistribuidos)
+
+    nextInputs[id] = value
+    setCotasManuaisIds(nextManualIds)
+    setHerdeiros(herdeirosDistribuidos)
+    setPercentualInputs(nextInputs)
+  }
+
+  const handlePercentualHerdeiroBlur = (id: string) => {
+    const herdeiro = herdeiros.find((item) => item.id === id)
+    setPercentualInputs((prev) => ({
+      ...prev,
+      [id]: formatPercentualInput(herdeiro?.percentual_participacao),
+    }))
+  }
 
   const salvarCotas = async () => {
     if (!precatorioId || !hasHerdeiros) return
@@ -169,9 +234,11 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
     setSavingHerdeiros(true)
     try {
       const supabase = getSupabase(); if (!supabase) return
-      const updates = await Promise.all(herdeiros.map((h) => supabase.from("precatorio_herdeiros").update({ percentual_participacao: Number(h.percentual_participacao || 0) }).eq("id", h.id)))
+      const cotasParaSalvar = normalizarPercentuaisHerdeiros(herdeiros)
+      const updates = await Promise.all(cotasParaSalvar.map((h) => supabase.from("precatorio_herdeiros").update({ percentual_participacao: h.percentual_participacao }).eq("id", h.id)))
       const firstError = updates.find((r) => r.error)?.error
       if (firstError) throw firstError
+      aplicarHerdeirosComInputs(cotasParaSalvar)
       toast.success("Cotas salvas com sucesso.")
     } catch (error: any) { toast.error(error.message || "Erro ao salvar cotas.") }
     finally { setSavingHerdeiros(false) }
@@ -271,11 +338,20 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
                 <ICUsers />
                 <p className="text-[13px] font-bold" style={{ color: "#0b0c10" }}>Distribuição de cotas</p>
               </div>
-              <button type="button" onClick={salvarCotas} disabled={savingHerdeiros || !cotasOk}
-                className="rounded-[10px] px-3 py-1.5 text-[12px] font-bold transition-all disabled:opacity-50"
-                style={{ background: "#0e4d6a", color: "#fff", border: "none", boxShadow: "4px 4px 10px rgba(14,77,106,0.3)" }}>
-                {savingHerdeiros ? "Salvando..." : "Salvar cotas"}
-              </button>
+              <div className="flex items-center gap-2">
+                {herdeiros.length > 1 && (
+                  <button type="button" onClick={distribuirCotasIgualmente} disabled={savingHerdeiros}
+                    className="rounded-[10px] px-3 py-1.5 text-[12px] font-bold transition-all disabled:opacity-50"
+                    style={{ background: "#f0f1f5", color: "#0b0c10", border: "1px solid rgba(0,0,0,0.07)" }}>
+                    Ratear igual
+                  </button>
+                )}
+                <button type="button" onClick={salvarCotas} disabled={savingHerdeiros || !cotasOk}
+                  className="rounded-[10px] px-3 py-1.5 text-[12px] font-bold transition-all disabled:opacity-50"
+                  style={{ background: "#0e4d6a", color: "#fff", border: "none", boxShadow: "4px 4px 10px rgba(14,77,106,0.3)" }}>
+                  {savingHerdeiros ? "Salvando..." : "Salvar cotas"}
+                </button>
+              </div>
             </div>
             <div className="space-y-2">
               {herdeiros.map((h) => (
@@ -285,9 +361,15 @@ export function StepPropostas({ dados, setDados, resultadosEtapas, onCompletar, 
                     <p className="text-[11px] truncate" style={{ color: "#9ca3af" }}>{h.cpf || "CPF N/I"}</p>
                   </div>
                   <div style={{ width: 128 }}>
-                    <input type="number" step="0.01" min="0" max="100" style={inputStyle}
-                      value={Number(h.percentual_participacao || 0)}
-                      onChange={(e) => setHerdeiros((prev) => prev.map((x) => x.id === h.id ? { ...x, percentual_participacao: isNaN(Number(e.target.value)) ? 0 : Number(e.target.value) } : x))} />
+                    <input
+                      type="text"
+                      inputMode="decimal"
+                      style={inputStyle}
+                      placeholder="0,00"
+                      value={percentualInputs[h.id] ?? formatPercentualInput(h.percentual_participacao)}
+                      onChange={(e) => handlePercentualHerdeiroChange(h.id, e.target.value)}
+                      onBlur={() => handlePercentualHerdeiroBlur(h.id)}
+                    />
                   </div>
                 </div>
               ))}

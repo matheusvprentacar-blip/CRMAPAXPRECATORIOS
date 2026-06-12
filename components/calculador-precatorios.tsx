@@ -2,6 +2,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useMemo } from "react"
+import { useRouter } from "next/navigation"
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import { StepDadosBasicos } from "./steps/step-dados-basicos"
 import { StepIndices } from "./steps/step-indices"
@@ -94,6 +95,16 @@ const STEPS = [
   { label: "Resumo",                short: "Resumo",      component: StepResumo },
 ]
 
+const CALCULO_STATUS_ATIVO = new Set(["calculo_andamento", "em_calculo", "calculo_concluido", "calculado"])
+
+const TRIAGEM_RETURN_SUGGESTIONS = [
+  "Falta de documentos essenciais para validar o crédito.",
+  "Falta de identificação ou documentação de herdeiro.",
+  "Dados financeiros do ofício incompletos ou inconsistentes.",
+  "Divergência entre credor, CPF/CNPJ ou número do processo.",
+  "Necessário confirmar penhora, cessão ou adiantamento antes do cálculo.",
+]
+
 // ─── Sidebar step item ────────────────────────────────────────────────────────
 function SideStep({ index, label, isActive, isDone, onClick, isLast }: {
   index: number; label: string; isActive: boolean; isDone: boolean; onClick: () => void; isLast: boolean
@@ -137,6 +148,7 @@ function SideStep({ index, label, isActive, isDone, onClick, isLast }: {
 // ─── Main ─────────────────────────────────────────────────────────────────────
 const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatoriosProps) => {
   const reduceMotion = useReducedMotion()
+  const router = useRouter()
   const [etapaAtual, setEtapaAtual]           = useState(0)
   const [dados, setDados]                     = useState<any>({})
   const [etapasCompletadas, setEtapasCompletadas] = useState<number[]>([])
@@ -148,6 +160,9 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
   const [showResetDialog, setShowResetDialog] = useState(false)
   const [rightPanel, setRightPanel]           = useState<"docs" | "guide" | null>(null)
   const [mobileSidebar, setMobileSidebar]     = useState(false)
+  const [showTriagemDialog, setShowTriagemDialog] = useState(false)
+  const [triagemMotivo, setTriagemMotivo] = useState("")
+  const [triagemSaving, setTriagemSaving] = useState(false)
 
   const fallbackDocs = useMemo(() => {
     if (!pdfUrl) return []
@@ -228,11 +243,80 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
   }, [resultadosEtapas])
 
   // ── handlers ─────────────────────────────────────────────────────────────
-  const handleCompletarEtapa = useCallback((etapa: number, resultado?: any) => {
+  const marcarCalculoEmAndamento = useCallback(async () => {
+    if (!precatorioId) return true
+
+    const statusAtual = String(
+      precatorioData?.status_kanban ||
+      precatorioData?.localizacao_kanban ||
+      precatorioData?.status ||
+      ""
+    )
+
+    if (CALCULO_STATUS_ATIVO.has(statusAtual)) return true
+
+    const supabase = getSupabase()
+    if (!supabase) return false
+
+    const now = new Date().toISOString()
+    const { data: { user } } = await supabase.auth.getUser()
+    const { error } = await supabase
+      .from("precatorios")
+      .update({
+        status: "calculo_andamento",
+        status_kanban: "calculo_andamento",
+        localizacao_kanban: "calculo_andamento",
+        updated_at: now,
+      })
+      .eq("id", precatorioId)
+
+    if (error) {
+      toast.error(error.message || "Não foi possível iniciar o cálculo.")
+      return false
+    }
+
+    setPrecatorioData((current) =>
+      current
+        ? {
+            ...current,
+            status: "calculo_andamento" as any,
+            status_kanban: "calculo_andamento",
+            localizacao_kanban: "calculo_andamento",
+            updated_at: now,
+          }
+        : current
+    )
+
+    if (user) {
+      const { error: atividadeError } = await supabase.from("atividades").insert({
+        precatorio_id: precatorioId,
+        usuario_id: user.id,
+        tipo: "mudanca_status",
+        descricao: "Cálculo iniciado após conclusão da etapa Dados básicos",
+      })
+      if (atividadeError) {
+        console.error("[calculador-precatorios] Falha ao registrar início do cálculo:", atividadeError)
+      }
+    }
+
+    return true
+  }, [
+    precatorioData?.localizacao_kanban,
+    precatorioData?.status,
+    precatorioData?.status_kanban,
+    precatorioId,
+  ])
+
+  const handleCompletarEtapa = useCallback(async (etapa: number, resultado?: any) => {
+    if (etapa === 0 && !etapasCompletadas.includes(0)) {
+      const iniciou = await marcarCalculoEmAndamento()
+      if (!iniciou) return
+    }
+
     if (!etapasCompletadas.includes(etapa)) setEtapasCompletadas(p=>[...p,etapa])
     if (resultado) setResultadosEtapas(p=>{ const n=[...p]; n[etapa]=resultado; return n })
     if (etapa < STEPS.length-1) setEtapaAtual(etapa+1)
-  }, [etapasCompletadas])
+  }, [etapasCompletadas, marcarCalculoEmAndamento])
 
   const voltar = () => { if (etapaAtual>0) setEtapaAtual(etapaAtual-1) }
   const irParaEtapa = (i: number) => { setEtapaAtual(i); setMobileSidebar(false) }
@@ -252,26 +336,63 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       const { data:{user} } = await supabase.auth.getUser()
       const vaF = safeNumber(pr?.valor_atualizado||at?.valorAtualizado||at?.valor_atualizado||rs?.valor_atualizado)
       const slF = safeNumber(pr?.base_liquida_final||rs?.base_liquida_final)
+      const principalBase = safeNumber(db?.valor_principal_original ?? dados.valor_principal_original ?? dados.valorPrincipal)
+      const pssValor = safeNumber(pss?.pss_valor ?? pss?.pssTotal ?? pss?.pss_atualizado ?? 0)
+      const irpfValor = safeNumber(irpf?.irpf_valor ?? irpf?.valor_irpf ?? irpf?.irTotal ?? 0)
+      const honorariosValor = safeNumber(pr?.honorarios_valor ?? hon?.honorarios?.honorarios_valor ?? 0)
+      const honorariosPercentual = safeNumber(pr?.honorarios_percentual ?? hon?.honorarios?.honorarios_percentual ?? dados.honorarios_percentual ?? 0)
+      const adiantamentoValor = safeNumber(pr?.adiantamento_valor ?? hon?.honorarios?.adiantamento_valor ?? 0)
+      const adiantamentoPercentual = safeNumber(pr?.adiantamento_percentual ?? hon?.honorarios?.adiantamento_percentual ?? dados.adiantamento_percentual ?? 0)
+      const propostaMenorValor = safeNumber(pr?.menor_proposta ?? pr?.menorProposta ?? 0)
+      const propostaMenorPercentual = safeNumber(pr?.percentual_menor ?? dados.percentual_menor_proposta ?? 0)
+      const propostaMaiorValor = safeNumber(pr?.maior_proposta ?? pr?.maiorProposta ?? 0)
+      const propostaMaiorPercentual = safeNumber(pr?.percentual_maior ?? dados.percentual_maior_proposta ?? 0)
+      const taxaJurosMoratorios = safeNumber(at?.taxaJuros ?? at?.taxa_juros_moratorios ?? dados.taxa_juros_moratorios ?? 0)
+      const qtdSalariosMinimos = safeNumber(rs?.qtdSalariosMinimos ?? pr?.qtdSalariosMinimos ?? 0)
+      const dataBaseCalculo = toDate(db?.data_base||dados.dataBase)
+      const dataExpedicao = toDate(db?.data_expedicao||dados.dataExpedicao)
+      const dataCalculo = toDate(db?.data_calculo||dados.dataCalculo)
+      const calculoTimestamp = new Date().toISOString()
+      const dadosCalculo = {
+        dados,
+        resultadosEtapas,
+        etapasCompletadas,
+        dataCalculo: calculoTimestamp,
+        juros_mora_percentual: pss?.juros_mora_percentual || 0,
+        valor_atualizado: vaF,
+        base_liquida_final: slF,
+        pss_valor: pssValor,
+        irpf_valor: irpfValor,
+        honorarios_valor: honorariosValor,
+        honorarios_percentual: honorariosPercentual,
+        adiantamento_valor: adiantamentoValor,
+        adiantamento_percentual: adiantamentoPercentual,
+        proposta_menor_valor: propostaMenorValor,
+        proposta_menor_percentual: propostaMenorPercentual,
+        proposta_maior_valor: propostaMaiorValor,
+        proposta_maior_percentual: propostaMaiorPercentual,
+        taxa_juros_moratorios: taxaJurosMoratorios,
+        qtd_salarios_minimos: qtdSalariosMinimos,
+      }
       const payload:any = {
-        valor_principal: safeNumber(vaF>0?vaF:(db?.valor_principal_original||dados.valorPrincipal)),
+        valor_principal: principalBase,
         valor_juros: safeNumber(at?.valorJuros||at?.juros_mora), valor_selic: safeNumber(at?.valorSelic||at?.multa),
         valor_atualizado: vaF, saldo_liquido: slF,
-        data_base: toDate(db?.data_base||dados.dataBase), data_expedicao: toDate(db?.data_expedicao||dados.dataExpedicao),
-        data_calculo: toDate(db?.data_calculo||dados.dataCalculo),
-        irpf_total: safeNumber(irpf?.irpf_valor??irpf?.irTotal??0), pss_total: safeNumber(pss?.pss_valor??pss?.pssTotal??0),
-        pss_oficio_valor: pss?.pss_oficio_valor||0,
-        honorarios_valor: safeNumber(pr?.honorarios_valor??hon?.honorarios?.honorarios_valor??0),
-        adiantamento_valor: safeNumber(pr?.adiantamento_valor??hon?.honorarios?.adiantamento_valor??0),
-        menor_proposta: safeNumber(pr?.menor_proposta??pr?.menorProposta??0),
-        maior_proposta: safeNumber(pr?.maior_proposta??pr?.maiorProposta??0),
-        taxa_juros_moratorios: safeNumber(at?.taxaJuros??at?.taxa_juros_moratorios??0),
-        qtd_salarios_minimos: safeNumber(rs?.qtdSalariosMinimos??0),
+        data_base: dataBaseCalculo, data_base_calculo: dataBaseCalculo, data_expedicao: dataExpedicao,
+        data_calculo: dataCalculo,
+        irpf_valor: irpfValor, irpf_isento: irpf?.irpf_isento === true,
+        pss_valor: pssValor, pss_oficio_valor: safeNumber(pss?.pss_oficio_valor||0),
+        honorarios_valor: honorariosValor, honorarios_percentual: honorariosPercentual,
+        adiantamento_valor: adiantamentoValor, adiantamento_percentual: adiantamentoPercentual,
+        proposta_menor_valor: propostaMenorValor, proposta_menor_percentual: propostaMenorPercentual,
+        proposta_maior_valor: propostaMaiorValor, proposta_maior_percentual: propostaMaiorPercentual,
         loa: String((db?.loa??dados.loa??"")).trim()||null,
         ano_orcamentario: toY(db?.ano_orcamentario??dados.ano_orcamentario),
         previsao_pagamento: toYD(db?.previsao_pagamento??dados.previsao_pagamento),
-        status:"calculado", status_kanban:"calculo_concluido", localizacao_kanban:"calculo_concluido",
-        dados_calculo:{ dados,resultadosEtapas,etapasCompletadas,dataCalculo:new Date().toISOString(),juros_mora_percentual:pss?.juros_mora_percentual||0 },
-        updated_at: new Date().toISOString(),
+        status:"calculo_concluido", status_kanban:"calculo_concluido", localizacao_kanban:"calculo_concluido",
+        calculo_desatualizado: false, calculo_externo: false,
+        dados_calculo: dadosCalculo,
+        updated_at: calculoTimestamp,
       }
       const {error} = await supabase.from("precatorios").update(payload).eq("id",precatorioId)
       if (error) {
@@ -279,16 +400,60 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
         toast.error(`Erro: ${error.message}`); return
       }
       clearPendingUpdate()
-      const {count} = await supabase.from("precatorio_calculos").select("*",{count:"exact",head:true}).eq("precatorio_id",precatorioId)
-      const v=(count||0)+1
-      await supabase.from("precatorio_calculos").insert({precatorio_id:precatorioId,versao:v,data_base:db?.data_base,valor_atualizado:vaF,saldo_liquido:slF,premissas_json:payload.dados_calculo,premissas_resumo:`Cálculo finalizado v${v}`,created_by:user?.id,arquivo_pdf_url:null})
-      await supabase.from("precatorios").update({calculo_ultima_versao:v}).eq("id",precatorioId)
-      if(user) await supabase.from("atividades").insert({precatorio_id:precatorioId,usuario_id:user.id,tipo:"calculo",descricao:`Cálculo finalizado (v${v})`,dados_novos:{valor_principal:db?.valor_principal_original||0,maior_proposta:pr?.maior_proposta||0,valor_atualizado:vaF,calculo_ultima_versao:v}})
+      const { count, error: countError } = await supabase
+        .from("precatorio_calculos")
+        .select("*", { count: "exact", head: true })
+        .eq("precatorio_id", precatorioId)
+      if (countError) {
+        throw new Error(`Cálculo salvo, mas não foi possível preparar o histórico da versão: ${countError.message}`)
+      }
+
+      const v = (count || 0) + 1
+      const { error: historicoError } = await supabase.from("precatorio_calculos").insert({
+        precatorio_id: precatorioId,
+        versao: v,
+        data_base: db?.data_base,
+        valor_atualizado: vaF,
+        saldo_liquido: slF,
+        premissas_json: payload.dados_calculo,
+        premissas_resumo: `Cálculo finalizado v${v}`,
+        created_by: user?.id,
+        arquivo_pdf_url: null,
+      })
+      if (historicoError) {
+        throw new Error(`Cálculo salvo, mas não foi possível gravar o histórico da versão: ${historicoError.message}`)
+      }
+
+      const { error: versaoError } = await supabase
+        .from("precatorios")
+        .update({ calculo_ultima_versao: v })
+        .eq("id", precatorioId)
+      if (versaoError) {
+        throw new Error(`Cálculo salvo, mas não foi possível atualizar a versão atual: ${versaoError.message}`)
+      }
+
+      if (user) {
+        const { error: atividadeError } = await supabase.from("atividades").insert({
+          precatorio_id: precatorioId,
+          usuario_id: user.id,
+          tipo: "calculo",
+          descricao: `Cálculo finalizado (v${v})`,
+          dados_novos: {
+            valor_principal: db?.valor_principal_original || 0,
+            maior_proposta: pr?.maior_proposta || 0,
+            valor_atualizado: vaF,
+            calculo_ultima_versao: v,
+          },
+        })
+        if (atividadeError) {
+          console.error("[calculador-precatorios] Falha ao registrar atividade do cálculo:", atividadeError)
+        }
+      }
       toast.success("Cálculo finalizado com sucesso!")
       if(onUpdate) onUpdate()
     } catch(e) {
       if(isFetchFailure(e)){savePendingUpdate({precatorioId});toast.error("Falha de conexão.");return}
-      toast.error("Erro ao finalizar cálculo")
+      toast.error(e instanceof Error ? e.message : "Erro ao finalizar cálculo")
     } finally { setSaving(false) }
   }
 
@@ -305,6 +470,74 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
       toast.success("Cálculo resetado com sucesso!")
       setShowResetDialog(false)
     } catch { toast.error("Erro ao resetar") } finally { setSaving(false) }
+  }
+
+  const retornarParaTriagem = async () => {
+    if (!precatorioId) return
+
+    const motivo = triagemMotivo.trim()
+    if (!motivo) {
+      toast.error("Informe o motivo do retorno para triagem.")
+      return
+    }
+
+    setTriagemSaving(true)
+    try {
+      const supabase = getSupabase(); if (!supabase) return
+      const { data: { user } } = await supabase.auth.getUser()
+      const now = new Date().toISOString()
+      const previousObs = String((precatorioData as any)?.interesse_observacao || "").trim()
+      const registro = `[Retorno do cálculo] ${new Date().toLocaleString("pt-BR")} - ${motivo}`
+      const interesseObservacao = previousObs ? `${previousObs}\n\n${registro}` : registro
+      const statusAnterior =
+        precatorioData?.status_kanban ||
+        precatorioData?.localizacao_kanban ||
+        precatorioData?.status ||
+        null
+
+      const { error } = await supabase
+        .from("precatorios")
+        .update({
+          status: "triagem_interesse",
+          status_kanban: "triagem_interesse",
+          localizacao_kanban: "triagem_interesse",
+          interesse_observacao: interesseObservacao,
+          updated_at: now,
+        })
+        .eq("id", precatorioId)
+
+      if (error) {
+        toast.error(error.message || "Não foi possível retornar para triagem.")
+        return
+      }
+
+      if (user) {
+        const { error: atividadeError } = await supabase.from("atividades").insert({
+          precatorio_id: precatorioId,
+          usuario_id: user.id,
+          tipo: "mudanca_status",
+          descricao: `Retorno para triagem solicitado pelo cálculo: ${motivo}`,
+          dados_novos: {
+            de: statusAnterior,
+            para: "triagem_interesse",
+            motivo_retorno_triagem: motivo,
+          },
+        })
+        if (atividadeError) {
+          console.error("[calculador-precatorios] Falha ao registrar retorno para triagem:", atividadeError)
+        }
+      }
+
+      toast.success("Crédito retornado para triagem.")
+      setShowTriagemDialog(false)
+      setTriagemMotivo("")
+      if (onUpdate) onUpdate()
+      router.push("/calculo")
+    } catch (error: any) {
+      toast.error(error?.message || "Erro ao retornar para triagem.")
+    } finally {
+      setTriagemSaving(false)
+    }
   }
 
   // ── derived ───────────────────────────────────────────────────────────────
@@ -454,6 +687,13 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
                   <span className="hidden md:inline">Documentos</span>
                 </button>
 
+                <button type="button" onClick={()=>setShowTriagemDialog(true)} disabled={saving || triagemSaving}
+                  className="inline-flex items-center gap-1.5 h-8 px-2.5 rounded-[9px] text-[11.5px] font-semibold transition-all disabled:opacity-40"
+                  style={{ background: "#fff7ed", color: "#c2410c", border: "1px solid rgba(194,65,12,0.24)" }}>
+                  {IC.flag}
+                  <span className="hidden md:inline">Triagem</span>
+                </button>
+
                 <div className="flex items-center">
                   <PdfUploadButton precatorioId={precatorioId} currentPdfUrl={pdfUrl}
                     onUploadSuccess={async()=>loadPrecatorio(precatorioId)} />
@@ -556,6 +796,61 @@ const CalculadoraPrecatorios = ({ precatorioId, onUpdate }: CalculadoraPrecatori
             </AlertDialogCancel>
             <AlertDialogAction onClick={resetarCalculo} style={{ background:"rgba(220,38,38,0.8)", color:"white" }}>
               Confirmar Reset
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={showTriagemDialog} onOpenChange={(open)=>{ if(!triagemSaving) setShowTriagemDialog(open) }}>
+        <AlertDialogContent style={{ background:"#ffffff", border:`1px solid ${T.border}`, color: T.textHi }}>
+          <AlertDialogHeader>
+            <AlertDialogTitle style={{ color: T.textHi }}>Enviar para triagem</AlertDialogTitle>
+            <AlertDialogDescription style={{ color: T.textMid }}>
+              Informe por que o crédito precisa voltar para triagem antes de continuar o cálculo.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <div className="space-y-3">
+            <div className="flex flex-wrap gap-2">
+              {TRIAGEM_RETURN_SUGGESTIONS.map((suggestion) => (
+                <button
+                  key={suggestion}
+                  type="button"
+                  onClick={()=>setTriagemMotivo(suggestion)}
+                  className="rounded-[10px] px-2.5 py-1.5 text-[11px] font-semibold transition-colors"
+                  style={{ background: "#f0f1f5", color: T.textMid, border: `1px solid ${T.border}` }}
+                >
+                  {suggestion}
+                </button>
+              ))}
+            </div>
+
+            <textarea
+              value={triagemMotivo}
+              onChange={(event)=>setTriagemMotivo(event.target.value)}
+              placeholder="Descreva o motivo do retorno para triagem..."
+              rows={5}
+              className="w-full resize-none rounded-[12px] text-[13px] outline-none"
+              style={{
+                border: `1px solid ${T.border}`,
+                color: T.textHi,
+                background: "#ffffff",
+                padding: "10px 12px",
+                boxShadow: "inset 2px 2px 5px rgba(0,0,0,0.04),inset -2px -2px 4px rgba(255,255,255,0.8)",
+              }}
+            />
+          </div>
+
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={triagemSaving} style={{ background:"rgba(0,0,0,0.04)", border:`1px solid ${T.border}`, color:T.textMid }}>
+              Cancelar
+            </AlertDialogCancel>
+            <AlertDialogAction
+              disabled={triagemSaving}
+              onClick={(event)=>{ event.preventDefault(); void retornarParaTriagem() }}
+              style={{ background:"#c2410c", color:"white" }}
+            >
+              {triagemSaving ? "Enviando..." : "Enviar para triagem"}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

@@ -297,6 +297,43 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     return isNaN(num) ? null : num
   }
 
+  // Converte valores de data vindos da planilha para ISO (YYYY-MM-DD).
+  // Qualquer valor que não seja uma data reconhecível vira null, evitando que
+  // texto livre (ex.: "Apresentação") quebre o insert na coluna DATE do banco.
+  function parseDataParaISO(valor: string | null | undefined): string | null {
+    if (valor == null) return null
+    const txt = String(valor).trim()
+    if (!txt) return null
+
+    // Já em ISO: YYYY-MM-DD (com hora opcional)
+    const iso = txt.match(/^(\d{4})-(\d{2})-(\d{2})/)
+    if (iso) {
+      const ano = Number(iso[1]); const mes = Number(iso[2]); const dia = Number(iso[3])
+      if (mes >= 1 && mes <= 12 && dia >= 1 && dia <= 31) return `${iso[1]}-${iso[2]}-${iso[3]}`
+      return null
+    }
+
+    // Formato BR: DD/MM/AAAA, DD-MM-AAAA, DD.MM.AAAA (ano com 2 ou 4 dígitos)
+    const br = txt.match(/^(\d{1,2})[/.\-](\d{1,2})[/.\-](\d{2,4})$/)
+    if (br) {
+      const dia = Number(br[1]); const mes = Number(br[2])
+      let ano = br[3]
+      if (ano.length === 2) ano = `20${ano}`
+      if (dia < 1 || dia > 31 || mes < 1 || mes > 12) return null
+      return `${ano}-${String(mes).padStart(2, "0")}-${String(dia).padStart(2, "0")}`
+    }
+
+    // Serial de data do Excel (dias desde 1899-12-30)
+    if (/^\d{4,5}$/.test(txt)) {
+      const serial = Number(txt)
+      const ms = Date.UTC(1899, 11, 30) + serial * 86400000
+      const dt = new Date(ms)
+      if (!Number.isNaN(dt.getTime())) return dt.toISOString().slice(0, 10)
+    }
+
+    return null
+  }
+
   function aplicarMapeamentoClientSide(
     linhas: Record<string, string>[],
     map: MapeamentoExcel,
@@ -503,8 +540,10 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
           advogado_nome: r.advogado_nome ?? null,
           valor_principal: r.valor_principal ?? 0,
           natureza: r.natureza ?? null,
-          data_expedicao: r.data_expedicao ?? null,
+          data_expedicao: parseDataParaISO(r.data_expedicao),
           status: "novo",
+          status_kanban: "triagem_interesse",
+          localizacao_kanban: "triagem_interesse",
           titulo: r.numero_precatorio
             ? `Precatório ${r.numero_precatorio} - ${r.credor_nome ?? "Credor"}`
             : `Lead - ${r.credor_nome ?? "Credor"}`,

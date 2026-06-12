@@ -33,6 +33,14 @@ import { Textarea } from "@/components/ui/textarea"
 import { ProposalConfigModal } from "./proposal-config-modal"
 import { Settings } from "@/components/icons"
 import { useAuth } from "@/lib/auth/auth-context"
+import {
+    deveDistribuirIgualAutomaticamente,
+    distribuirPercentuaisHerdeiros,
+    formatPercentualHerdeiro,
+    normalizarPercentuaisHerdeiros,
+    percentuaisHerdeirosSomamCem,
+    somaPercentuaisHerdeiros,
+} from "@/lib/herdeiros/percentuais"
 import { ensureOpenLegalOpinionForPrecatorio } from "@/features/legal-opinion/request-from-precatorio"
 
 interface AbaPropostaProps {
@@ -116,7 +124,12 @@ export function AbaProposta({
                     .order("created_at", { ascending: true })
 
                 if (error) throw error
-                setHerdeiros(data || [])
+                const herdeirosCarregados = (data || []) as Herdeiro[]
+                setHerdeiros(
+                    deveDistribuirIgualAutomaticamente(herdeirosCarregados)
+                        ? distribuirPercentuaisHerdeiros(herdeirosCarregados)
+                        : normalizarPercentuaisHerdeiros(herdeirosCarregados)
+                )
             } catch (error: any) {
                 console.error("[AbaProposta] Erro ao carregar herdeiros:", error)
                 toast({
@@ -136,8 +149,8 @@ export function AbaProposta({
     const saldoLiquidoCredor = precatorio.saldo_liquido || 0
     const honorariosValor = precatorio.honorarios_valor || 0
     const hasHerdeiros = herdeiros.length > 0
-    const totalCotas = herdeiros.reduce((sum, h) => sum + Number(h.percentual_participacao || 0), 0)
-    const cotasOk = Math.abs(totalCotas - 100) <= 0.01
+    const totalCotas = somaPercentuaisHerdeiros(herdeiros)
+    const cotasOk = percentuaisHerdeirosSomamCem(herdeiros)
 
     const tetoPercentual = adjustPercent(precatorio.proposta_maior_percentual || 0)
     const tetoMaximoCredor = tetoPercentual > 0 ? tetoPercentual : 100
@@ -845,7 +858,7 @@ export function AbaProposta({
                             precatorio_id: precatorioId,
                             usuario_id: user.id,
                             tipo: "proposta" as any,
-                            descricao: `Proposta (herdeiro: ${herdeiro.nome_completo}) baixada/enviada: ${pct.toFixed(2)}% (Valor: ${valorFmt})`,
+                            descricao: `Proposta (herdeiro: ${herdeiro.nome_completo}) baixada/enviada: ${formatPercentualHerdeiro(pct) || "0%"} (Valor: ${valorFmt})`,
                             dados_novos: {
                                 percentual: pct,
                                 valor: valorHerdeiro,
@@ -1081,7 +1094,7 @@ export function AbaProposta({
                                                             <p className="text-xs text-muted-foreground truncate">{h.cpf || "CPF N/I"}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-xs text-muted-foreground">{pct.toFixed(2)}%</p>
+                                                            <p className="text-xs text-muted-foreground">{formatPercentualHerdeiro(pct) || "0%"}</p>
                                                             <p className="text-sm font-semibold">{formatCurrency(valor)}</p>
                                                         </div>
                                                     </div>
@@ -1090,7 +1103,7 @@ export function AbaProposta({
                                         </div>
                                     )}
                                     <div className="flex items-center justify-between text-xs">
-                                        <span className="text-muted-foreground">Total de cotas: {totalCotas.toFixed(2)}%</span>
+                                        <span className="text-muted-foreground">Total de cotas: {formatPercentualHerdeiro(totalCotas) || "0%"}</span>
                                         {cotasOk ? (
                                             <span className="text-emerald-600">Cotas OK</span>
                                         ) : (
@@ -1286,7 +1299,7 @@ export function AbaProposta({
                                                             <p className="text-xs text-muted-foreground truncate">{h.cpf || "CPF N/I"}</p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-xs text-muted-foreground">{pct.toFixed(2)}%</p>
+                                                            <p className="text-xs text-muted-foreground">{formatPercentualHerdeiro(pct) || "0%"}</p>
                                                             <p className="text-sm font-semibold">{formatCurrency(valor)}</p>
                                                         </div>
                                                     </div>
@@ -1295,7 +1308,7 @@ export function AbaProposta({
                                         </div>
                                     )}
                                     <div className="flex items-center justify-between text-xs">
-                                        <span className="text-muted-foreground">Total de cotas: {totalCotas.toFixed(2)}%</span>
+                                        <span className="text-muted-foreground">Total de cotas: {formatPercentualHerdeiro(totalCotas) || "0%"}</span>
                                         {cotasOk ? (
                                             <span className="text-emerald-600">Cotas OK</span>
                                         ) : (

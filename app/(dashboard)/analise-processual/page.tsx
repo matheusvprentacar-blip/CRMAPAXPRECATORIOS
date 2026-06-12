@@ -178,12 +178,16 @@ export default function AnaliseProcessualPage() {
           analise_itcmd_percentual
         `
 
+        // Espelha a coluna "Pré-análise jurídica" do kanban (columns.ts),
+        // que agrupa os status analise_processual_inicial, juridico e analise_juridica.
+        const filaStatuses = "(analise_processual_inicial,juridico,analise_juridica)"
+
         const buildQuery = (selectClause: string) =>
           supabase
             .from("precatorios")
             .select(selectClause)
             .or(
-              "status_kanban.eq.analise_processual_inicial,localizacao_kanban.eq.analise_processual_inicial,status.eq.analise_processual_inicial",
+              `status_kanban.in.${filaStatuses},localizacao_kanban.in.${filaStatuses},status.in.${filaStatuses}`,
             )
             .order("created_at", { ascending: true })
 

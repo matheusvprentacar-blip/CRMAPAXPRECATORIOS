@@ -74,6 +74,7 @@ components/steps/
 - `SegmentedToggle` para menor/maior proposta
 - Componente `ProposalKpi` com 4 métricas
 - Preview completo do breakdown: bruto → deduções → líquido → proposta
+- Rateio de herdeiros com percentuais em duas casas, distribuição exata em `100,00%` e rebalanceamento automático do saldo quando uma cota manual é editada
 
 ### Passo 8 — Resumo (`StepResumo`)
 - `SummaryKpi` em 4 tons: primary, danger, success, neutral
@@ -93,6 +94,16 @@ components/steps/
 - Conteúdo lido da nota [[Fluxo de Cálculo]] por `/api/knowledge/calculo-flow`
 - O vault também expõe [[Mapa Visual do Cálculo.canvas|Mapa Visual do Cálculo]], que usa a mesma nota como fonte para a visão em nós
 - Alterações no Obsidian atualizam o guia informativo exibido na calculadora
+
+### Retorno para triagem
+- Botão `Triagem` disponível na barra superior da calculadora.
+- Exige motivo obrigatório antes de mover o crédito para `triagem_interesse`.
+- Oferece sugestões rápidas como falta de documentos, falta de identificação de herdeiro e dados financeiros incompletos.
+- O motivo é salvo em `interesse_observacao` e registrado em `atividades` quando possível.
+
+### Início do cálculo
+- A abertura da tela `/calcular` não altera o workflow.
+- O status `calculo_andamento` é aplicado somente quando a Etapa 1 (`Dados básicos`) é concluída.
 
 ## Componentes UI Compartilhados
 

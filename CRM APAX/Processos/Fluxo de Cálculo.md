@@ -346,7 +346,10 @@ Gerar menor e maior proposta com base na base líquida final e suportar override
 - Montar `base_liquida_final = totalBruto - PSS - IRPF - honorários - adiantamento`.
 - Calcular menor e maior proposta por percentual quando o modo automático estiver ativo.
 - Permitir valores manuais de proposta quando o modo manual estiver ativo.
-- Validar que a soma das cotas de herdeiros feche em 100%.
+- Validar que a soma das cotas de herdeiros feche em 100,00%.
+- Distribuir cotas de herdeiros em centésimos de percentual para suportar valores quebrados, como `14,28%`.
+- Ao editar a cota de um herdeiro, manter essa cota e redistribuir automaticamente o restante entre os demais. Ex.: meeiro com `50%` em quatro herdeiros deixa o saldo em `16,67%`, `16,67%` e `16,66%`.
+- Preservar cotas manuais já existentes quando uma nova edição, inclusão ou exclusão disparar redistribuição.
 
 ### Saídas
 
@@ -358,12 +361,16 @@ Gerar menor e maior proposta com base na base líquida final e suportar override
 ### Explicações separadas
 
 - As propostas não usam mais o bruto; elas usam a base líquida final.
+- No preview interno da etapa, a calculadora trabalha com `menor_proposta` e `maior_proposta`.
+- Na persistência do banco, esses valores são gravados nas colunas `precatorios.proposta_menor_valor` e `precatorios.proposta_maior_valor`, junto com `proposta_menor_percentual` e `proposta_maior_percentual`.
 - O rateio entre herdeiros é controlado nesta etapa, mas salvo em tabela própria.
+- Cadastros antigos com cotas iguais arredondadas, como `14%` para sete herdeiros, são normalizados em memória para fechar `100,00%` antes de exibir propostas.
 - Esta etapa já deixa pronto o preview completo do breakdown usado no resumo.
 
 ### Código relacionado
 
 - `components/steps/step-propostas.tsx`
+- `lib/herdeiros/percentuais.ts`
 - `components/kanban/proposal-config-modal.tsx`
 
 ## Etapa 8 — Resumo e Persistência
@@ -392,14 +399,19 @@ Consolidar bruto, descontos, propostas e persistir a versão final do cálculo n
 
 - `precatorios.valor_atualizado`
 - `precatorios.saldo_liquido`
-- `precatorios.menor_proposta`
-- `precatorios.maior_proposta`
+- `precatorios.irpf_valor`
+- `precatorios.pss_valor`
+- `precatorios.proposta_menor_valor`
+- `precatorios.proposta_maior_valor`
+- `precatorios.proposta_menor_percentual`
+- `precatorios.proposta_maior_percentual`
 - `precatorios.dados_calculo`
 - `precatorio_calculos.versao`
 
 ### Explicações separadas
 
 - Esta é a única etapa que fecha o fluxo e materializa o resultado no banco.
+- Métricas auxiliares como `taxa_juros_moratorios` e `qtd_salarios_minimos` ficam no snapshot `dados_calculo`, não em colunas dedicadas de `precatorios`.
 - O JSON exportado é um snapshot do cálculo, útil para auditoria e conferência.
 - O histórico de versões é o que permite recalcular e rastrear mudanças depois.
 
@@ -414,6 +426,13 @@ Consolidar bruto, descontos, propostas e persistir a versão final do cálculo n
 - Upload de PDF e visualização de documentos no drawer lateral.
 - Painel `Guia do cálculo`, que lê esta nota em tempo real.
 - Reset completo do cálculo com limpeza de `dados_calculo` e `pdf_url`.
+- Retorno para `triagem_interesse` quando o operador identificar falta de dados ou documentos antes de prosseguir.
+
+## Regra operacional de andamento
+
+- Abrir a tela `/calcular` não coloca o crédito em `calculo_andamento`.
+- O status `calculo_andamento` só é aplicado quando a Etapa 1 (`Dados básicos`) é concluída com sucesso.
+- Se os dados mínimos estiverem ausentes, o operador pode devolver o crédito para triagem com motivo obrigatório em texto livre.
 
 ## Regras da Engine
 

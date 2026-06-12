@@ -532,7 +532,7 @@ export default function FilaCalculoPage() {
 
       const roles = (Array.isArray(profile?.role) ? profile?.role : [profile?.role].filter(Boolean)) as any[]
       const isAdmin = roles.includes("admin") || roles.includes("gestor")
-      if (roles.includes("operador_calculo") && !isAdmin) {
+      if (!roles.includes("operador_calculo") && !isAdmin) {
         query = query.or(`responsavel_calculo_id.eq.${user.id},responsavel_calculo_id.is.null`)
       }
 
@@ -555,20 +555,6 @@ export default function FilaCalculoPage() {
 
   async function handleCalcular(precatorioId: string) {
     setCalculando(precatorioId)
-    try {
-      const supabase = getSupabase()
-      if (supabase) {
-        const { error } = await supabase.from("precatorios").update({
-          status: "calculo_andamento",
-          status_kanban: "calculo_andamento",
-          localizacao_kanban: "calculo_andamento",
-          updated_at: new Date().toISOString(),
-        }).eq("id", precatorioId)
-        if (!error) {
-          await supabase.from("atividades").insert({ precatorio_id: precatorioId, tipo: "mudanca_status", descricao: "Cálculo iniciado na fila de cálculo" })
-        }
-      }
-    } catch (e) { console.error(e) }
     router.push(`/calcular?id=${precatorioId}`)
   }
 
@@ -577,7 +563,7 @@ export default function FilaCalculoPage() {
       const supabase = getSupabase()
       if (!supabase) return
       const { error } = await supabase.from("precatorios").update({
-        status: "calculado", status_kanban: "calculo_concluido", localizacao_kanban: "calculo_concluido", updated_at: new Date().toISOString(),
+        status: "calculo_concluido", status_kanban: "calculo_concluido", localizacao_kanban: "calculo_concluido", updated_at: new Date().toISOString(),
       }).eq("id", precatorioId)
       if (error) throw error
       await supabase.from("atividades").insert({ precatorio_id: precatorioId, tipo: "mudanca_status", descricao: "Cálculo finalizado na fila de cálculo" })

@@ -45,6 +45,26 @@ crmapaxprecatorios/
 > [!info] Execução
 > A aplicação opera em modo **web-only** via Google Chrome. O runtime principal é Next.js no navegador.
 
+## Deploy Web (Vercel)
+
+- **Plataforma**: Vercel
+- **Projeto**: `crmapaxprecatorios`
+- **Domínio de produção**: `https://precatorios.grupoapax.com`
+- **Fluxo operacional atual**: deploy direto da workspace com `vercel deploy --prod --yes`
+- **Última validação operacional**: deploy de produção concluído em `2026-06-02` com alias ativo em `https://precatorios.grupoapax.com`
+
+> [!note] Publicação
+> O deploy de produção usa o estado atual da pasta local no momento da execução, então mudanças locais ainda não commitadas entram na publicação se estiverem presentes no workspace.
+
+> [!warning] Build atual
+> O pipeline de produção está publicando com warning não bloqueante em `lib/server/nova-pipeline-ocr.ts`: o pacote `pdf-parse` não expõe default export no formato importado hoje. O deploy segue funcional, mas o fluxo `app/api/atendimento/ocr-lote/route.ts` merece correção preventiva.
+
+### Scripts de diagnóstico
+
+- O React Grab é ferramenta de diagnóstico local e não deve ser carregado no deploy público.
+- A injeção em `app/layout.tsx` fica restrita a `NODE_ENV === "development"` com `NEXT_PUBLIC_ENABLE_REACT_GRAB=true`.
+- Builds da Vercel não devem expor `react-grab` ou `@react-grab/codex` para usuários finais.
+
 ## Encerramento Desktop (Tauri)
 
 - A release final do desktop exibe um bloqueio de migração para web em `https://precatorios.grupoapax.com`.

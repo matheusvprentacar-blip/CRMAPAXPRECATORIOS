@@ -75,6 +75,15 @@ import { sendAdminNotification } from "@/lib/utils/admin-notifications"
 import { KANBAN_COLUMNS } from "../../kanban/columns"
 import { MOTION } from "@/lib/motion"
 import { DetailSection } from "@/components/motion/DetailSection"
+import {
+  deveDistribuirIgualAutomaticamente,
+  distribuirPercentuaisHerdeiros,
+  formatPercentualHerdeiro,
+  formatPercentualInput,
+  inferHerdeirosComCotaManual,
+  normalizePercentualParticipacao,
+  normalizarPercentuaisHerdeiros,
+} from "@/lib/herdeiros/percentuais"
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const hasValue = (v: any): boolean => v !== null && v !== undefined
@@ -323,6 +332,7 @@ export default function PrecatorioDetailPage() {
   const [selectedHerdeiro, setSelectedHerdeiro] = useState<Herdeiro | null>(null)
   const [herdeiroModalOpen, setHerdeiroModalOpen] = useState(false)
   const [herdeiroEdit, setHerdeiroEdit] = useState<Herdeiro | null>(null)
+  const [herdeiroPercentualInput, setHerdeiroPercentualInput] = useState("")
   const [herdeiroEditMode, setHerdeiroEditMode] = useState(false)
   const [herdeiroSaving, setHerdeiroSaving] = useState(false)
   const [loading, setLoading] = useState(true)
@@ -388,6 +398,7 @@ export default function PrecatorioDetailPage() {
   const [adminInterestSending, setAdminInterestSending] = useState(false)
   const [adminInterestModalOpen, setAdminInterestModalOpen] = useState(false)
   const [advancingStage, setAdvancingStage] = useState(false)
+  const [returningToTriagem, setReturningToTriagem] = useState(false)
 
 
 
@@ -764,7 +775,11 @@ export default function PrecatorioDetailPage() {
         console.error("[v0] Erro ao carregar herdeiros:", herdeirosError)
         setHerdeiros([])
       } else {
-        setHerdeiros(herdeirosData || [])
+        const herdeirosCarregados = (herdeirosData || []) as Herdeiro[]
+        const herdeirosNormalizados = deveDistribuirIgualAutomaticamente(herdeirosCarregados)
+          ? distribuirPercentuaisHerdeiros(herdeirosCarregados)
+          : normalizarPercentuaisHerdeiros(herdeirosCarregados)
+        setHerdeiros(herdeirosNormalizados)
       }
       setHerdeirosLoading(false)
       // define userRole a partir do profile (evita ficar null)
@@ -1446,6 +1461,12 @@ export default function PrecatorioDetailPage() {
     currentColumnId !== "proposta_aceita" &&
     nextColumn?.id !== "reprovado"
 
+  const canReturnToTriagem =
+    canEdit &&
+    roles.some((role) => ["admin", "juridico", "operador", "operador_comercial"].includes(role)) &&
+    !isEditing &&
+    (currentColumnId === "analise_processual_inicial" || currentStatusKanban === "analise_juridica")
+
   const getKanbanGlowClass = (column: (typeof KANBAN_COLUMNS)[number] | null | undefined) => {
     switch (column?.id) {
       case "entrada":
@@ -1587,6 +1608,38 @@ export default function PrecatorioDetailPage() {
     }
   }
 
+  async function handleReturnToTriagem() {
+    if (!id || !canReturnToTriagem) return
+
+    setReturningToTriagem(true)
+    try {
+      const supabase = requireSupabase()
+      const updatePayload = {
+        status_kanban: "triagem_interesse",
+        localizacao_kanban: "triagem_interesse",
+        updated_at: new Date().toISOString(),
+      }
+
+      const { error } = await supabase.from("precatorios").update(updatePayload).eq("id", id)
+      if (error) throw error
+
+      setActiveTab("detalhes")
+      toast({
+        title: "Etapa atualizada",
+        description: "Crédito retornado para Triagem.",
+      })
+      await loadPrecatorio()
+    } catch (err: any) {
+      toast({
+        title: "Erro ao voltar para triagem",
+        description: err?.message || "Não foi possível retornar o crédito para Triagem.",
+        variant: "destructive",
+      })
+    } finally {
+      setReturningToTriagem(false)
+    }
+  }
+
   // Prevent auto-advancing to "Reprovado" or "Encerrados" unless explicit? 
   // User said "sempre que a etapa for concluida". 
   // Let's assume linear flow is safe, but maybe skip 'reprovado' if it's next in array (it's last, so it might be safe if the flow leads there, but typically one doesn't "advance" to rejected without a decision).
@@ -1722,6 +1775,7 @@ export default function PrecatorioDetailPage() {
   const handleOpenHerdeiro = (herdeiro: Herdeiro) => {
     setSelectedHerdeiro(herdeiro)
     setHerdeiroEdit({ ...herdeiro })
+    setHerdeiroPercentualInput(formatPercentualInput(herdeiro.percentual_participacao))
     setHerdeiroEditMode(false)
     setHerdeiroModalOpen(true)
   }
@@ -1730,38 +1784,132 @@ export default function PrecatorioDetailPage() {
     setHerdeiroEdit((prev) => (prev ? { ...prev, [field]: value } : prev))
   }
 
+  const persistHerdeiroPercentuais = async (items: Herdeiro[]) => {
+    const supabase = requireSupabase()
+    const updates = await Promise.all(
+      items.map((herdeiro) =>
+        supabase
+          .from("precatorio_herdeiros")
+          .update({
+            percentual_participacao: herdeiro.percentual_participacao,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", herdeiro.id)
+      )
+    )
+
+    const firstError = updates.find((result) => result.error)?.error
+    if (firstError) throw firstError
+  }
+
+  const syncHerdeiroSelection = (items: Herdeiro[], selectedId?: string | null) => {
+    if (!selectedId) return
+
+    const nextSelected = items.find((item) => item.id === selectedId)
+    if (!nextSelected) return
+
+    setSelectedHerdeiro(nextSelected)
+    setHerdeiroEdit((prev) => (prev?.id === selectedId ? { ...nextSelected } : prev))
+    setHerdeiroPercentualInput(formatPercentualInput(nextSelected.percentual_participacao))
+  }
+
+  const handleDistribuirHerdeirosIgual = async () => {
+    if (herdeiros.length === 0) return
+
+    setHerdeiroSaving(true)
+    try {
+      const herdeirosDistribuidos = distribuirPercentuaisHerdeiros(herdeiros)
+      await persistHerdeiroPercentuais(herdeirosDistribuidos)
+      setHerdeiros(herdeirosDistribuidos)
+      syncHerdeiroSelection(herdeirosDistribuidos, selectedHerdeiro?.id)
+
+      toast({
+        title: "Cotas redistribuídas",
+        description: "As participações dos herdeiros foram rateadas igualmente.",
+      })
+    } catch (err: any) {
+      toast({
+        title: "Erro ao distribuir cotas",
+        description: err?.message || "Não foi possível distribuir as cotas.",
+        variant: "destructive",
+      })
+    } finally {
+      setHerdeiroSaving(false)
+    }
+  }
+
   const handleSaveHerdeiro = async () => {
     if (!herdeiroEdit) return
     setHerdeiroSaving(true)
     try {
       const supabase = requireSupabase()
+      const percentualEditado = normalizePercentualParticipacao(herdeiroEdit.percentual_participacao) ?? 0
+      const herdeiroNormalizado: Herdeiro = {
+        ...herdeiroEdit,
+        percentual_participacao: percentualEditado,
+      }
+      const herdeiroAnterior = herdeiros.find((item) => item.id === herdeiroEdit.id)
+      const percentualAnterior = normalizePercentualParticipacao(herdeiroAnterior?.percentual_participacao) ?? 0
+      const percentualFoiAlterado = percentualAnterior !== percentualEditado
+      const herdeirosAtualizados = herdeiros.some((item) => item.id === herdeiroEdit.id)
+        ? herdeiros.map((item) => (item.id === herdeiroEdit.id ? herdeiroNormalizado : item))
+        : [herdeiroNormalizado, ...herdeiros]
+      const cotasManuaisIds = inferHerdeirosComCotaManual(herdeiros, herdeiroEdit.id)
+      const herdeirosDistribuidos = percentualFoiAlterado
+        ? distribuirPercentuaisHerdeiros(herdeirosAtualizados, cotasManuaisIds)
+        : normalizarPercentuaisHerdeiros(herdeirosAtualizados)
+      const herdeiroParaSalvar =
+        herdeirosDistribuidos.find((item) => item.id === herdeiroEdit.id) || herdeiroNormalizado
+      const updatedAt = new Date().toISOString()
+
       const { error } = await supabase
         .from("precatorio_herdeiros")
         .update({
-          nome_completo: herdeiroEdit.nome_completo,
-          cpf: herdeiroEdit.cpf,
-          telefone: herdeiroEdit.telefone,
-          email: herdeiroEdit.email,
-          endereco: herdeiroEdit.endereco,
-          banco: herdeiroEdit.banco,
-          agencia: herdeiroEdit.agencia,
-          conta: herdeiroEdit.conta,
-          tipo_conta: herdeiroEdit.tipo_conta,
-          chave_pix: herdeiroEdit.chave_pix,
-          percentual_participacao: herdeiroEdit.percentual_participacao,
-          updated_at: new Date().toISOString(),
+          nome_completo: herdeiroParaSalvar.nome_completo,
+          cpf: herdeiroParaSalvar.cpf,
+          telefone: herdeiroParaSalvar.telefone,
+          email: herdeiroParaSalvar.email,
+          endereco: herdeiroParaSalvar.endereco,
+          banco: herdeiroParaSalvar.banco,
+          agencia: herdeiroParaSalvar.agencia,
+          conta: herdeiroParaSalvar.conta,
+          tipo_conta: herdeiroParaSalvar.tipo_conta,
+          chave_pix: herdeiroParaSalvar.chave_pix,
+          percentual_participacao: herdeiroParaSalvar.percentual_participacao,
+          updated_at: updatedAt,
         })
         .eq("id", herdeiroEdit.id)
 
       if (error) throw error
 
-      setHerdeiros((prev) => prev.map((h) => (h.id === herdeiroEdit.id ? { ...h, ...herdeiroEdit } : h)))
-      setSelectedHerdeiro(herdeiroEdit)
-      setHerdeiroEdit(herdeiroEdit)
+      if (percentualFoiAlterado) {
+        const updates = await Promise.all(
+          herdeirosDistribuidos
+            .filter((item) => item.id !== herdeiroEdit.id)
+            .map((herdeiro) =>
+              supabase
+                .from("precatorio_herdeiros")
+                .update({
+                  percentual_participacao: herdeiro.percentual_participacao,
+                  updated_at: updatedAt,
+                })
+                .eq("id", herdeiro.id)
+            )
+        )
+        const firstError = updates.find((result) => result.error)?.error
+        if (firstError) throw firstError
+      }
+
+      setHerdeiros(herdeirosDistribuidos)
+      setSelectedHerdeiro(herdeiroParaSalvar)
+      setHerdeiroEdit(herdeiroParaSalvar)
+      setHerdeiroPercentualInput(formatPercentualInput(herdeiroParaSalvar.percentual_participacao))
       setHerdeiroEditMode(false)
       toast({
         title: "Herdeiro atualizado",
-        description: "Dados do herdeiro salvos com sucesso.",
+        description: percentualFoiAlterado
+          ? "Dados salvos e cotas restantes redistribuídas."
+          : "Dados do herdeiro salvos com sucesso.",
       })
     } catch (err: any) {
       toast({
@@ -1803,9 +1951,18 @@ export default function PrecatorioDetailPage() {
       if (error) throw error
 
       if (data) {
-        setHerdeiros((prev) => [data as Herdeiro, ...prev])
-        setSelectedHerdeiro(data as Herdeiro)
-        setHerdeiroEdit({ ...(data as Herdeiro) })
+        const herdeiroCriado = data as Herdeiro
+        const herdeirosComNovo = [herdeiroCriado, ...herdeiros]
+        const cotasManuaisIds = inferHerdeirosComCotaManual(herdeiros)
+        const herdeirosDistribuidos = distribuirPercentuaisHerdeiros(herdeirosComNovo, cotasManuaisIds)
+        await persistHerdeiroPercentuais(herdeirosDistribuidos)
+        const herdeiroSelecionado =
+          herdeirosDistribuidos.find((item) => item.id === herdeiroCriado.id) || herdeiroCriado
+
+        setHerdeiros(herdeirosDistribuidos)
+        setSelectedHerdeiro(herdeiroSelecionado)
+        setHerdeiroEdit({ ...herdeiroSelecionado })
+        setHerdeiroPercentualInput(formatPercentualInput(herdeiroSelecionado.percentual_participacao))
         setHerdeiroEditMode(true)
         setHerdeiroModalOpen(true)
       }
@@ -1880,9 +2037,17 @@ export default function PrecatorioDetailPage() {
 
       if (error) throw error
 
-      setHerdeiros((prev) => prev.filter((h) => h.id !== herdeiroId))
+      const herdeirosRestantesBase = herdeiros.filter((h) => h.id !== herdeiroId)
+      const cotasManuaisIds = inferHerdeirosComCotaManual(herdeirosRestantesBase)
+      const herdeirosRestantes = distribuirPercentuaisHerdeiros(herdeirosRestantesBase, cotasManuaisIds)
+      if (herdeirosRestantes.length > 0) {
+        await persistHerdeiroPercentuais(herdeirosRestantes)
+      }
+
+      setHerdeiros(herdeirosRestantes)
       setSelectedHerdeiro((prev) => (prev?.id === herdeiroId ? null : prev))
       setHerdeiroEdit((prev) => (prev?.id === herdeiroId ? null : prev))
+      setHerdeiroPercentualInput("")
       setHerdeiroEditMode(false)
       setHerdeiroModalOpen(false)
 
@@ -2392,6 +2557,12 @@ export default function PrecatorioDetailPage() {
                       </div>
 
                       <div className="flex flex-wrap items-center gap-2">
+                        {canReturnToTriagem && (
+                          <ClayBtnGhost onClick={handleReturnToTriagem} disabled={returningToTriagem || advancingStage}>
+                            <RotateCcw className="h-[14px] w-[14px]" />
+                            {returningToTriagem ? "Voltando..." : "Voltar para triagem"}
+                          </ClayBtnGhost>
+                        )}
                         {canAdvanceToNextColumn ? (
                           <ClayBtnAc onClick={handleAdvanceToNextStage} disabled={advancingStage}>
                             <ArrowRight className="h-[14px] w-[14px]" />
@@ -3322,9 +3493,20 @@ export default function PrecatorioDetailPage() {
                           )}
                         </div>
                         {canEdit && (
-                          <ClayBtnGhost onClick={handleAddHerdeiro} disabled={herdeiroSaving} className="h-[32px] text-[11.5px]">
-                            Adicionar herdeiro
-                          </ClayBtnGhost>
+                          <div className="flex items-center gap-2">
+                            {herdeiros.length > 1 && (
+                              <ClayBtnGhost
+                                onClick={handleDistribuirHerdeirosIgual}
+                                disabled={herdeiroSaving}
+                                className="h-[32px] text-[11.5px]"
+                              >
+                                Ratear igual
+                              </ClayBtnGhost>
+                            )}
+                            <ClayBtnGhost onClick={handleAddHerdeiro} disabled={herdeiroSaving} className="h-[32px] text-[11.5px]">
+                              Adicionar herdeiro
+                            </ClayBtnGhost>
+                          </div>
                         )}
                       </div>
                       <div className="p-5 lg:px-[22px] lg:py-5">
@@ -3355,9 +3537,9 @@ export default function PrecatorioDetailPage() {
                                       <p className="text-[11px] text-[#6b7280]">Email: {herdeiro.email}</p>
                                     )}
                                   </div>
-                                  {formatPercent(herdeiro.percentual_participacao) && (
+                                  {formatPercentualHerdeiro(herdeiro.percentual_participacao) && (
                                     <span className="inline-flex h-6 items-center rounded-full border border-[#bfdbfe] bg-[#eff6ff] px-2 text-[10.5px] font-bold text-[#1d4ed8]">
-                                      {formatPercent(herdeiro.percentual_participacao)}
+                                      {formatPercentualHerdeiro(herdeiro.percentual_participacao)}
                                     </span>
                                   )}
                                 </div>
@@ -3375,6 +3557,7 @@ export default function PrecatorioDetailPage() {
                         if (!open) {
                           setSelectedHerdeiro(null)
                           setHerdeiroEdit(null)
+                          setHerdeiroPercentualInput("")
                           setHerdeiroEditMode(false)
                         }
                       }}
@@ -3436,15 +3619,22 @@ export default function PrecatorioDetailPage() {
                                 <label className="text-xs font-medium text-muted-foreground uppercase">Participação</label>
                                 {herdeiroEditMode ? (
                                   <Input
-                                    value={herdeiroEdit?.percentual_participacao?.toString() || ""}
+                                    inputMode="decimal"
+                                    placeholder="0,00"
+                                    value={herdeiroPercentualInput}
                                     onChange={(e) => {
-                                      const value = e.target.value.replace(",", ".")
-                                      const parsed = value === "" ? null : Number(value)
-                                      updateHerdeiroEdit("percentual_participacao", Number.isNaN(parsed) ? null : parsed)
+                                      const value = e.target.value
+                                      setHerdeiroPercentualInput(value)
+                                      updateHerdeiroEdit("percentual_participacao", normalizePercentualParticipacao(value))
+                                    }}
+                                    onBlur={() => {
+                                      setHerdeiroPercentualInput(
+                                        formatPercentualInput(herdeiroEdit?.percentual_participacao)
+                                      )
                                     }}
                                   />
                                 ) : (
-                                  <p className="text-base">{formatPercent(selectedHerdeiro.percentual_participacao) || "-"}</p>
+                                  <p className="text-base">{formatPercentualHerdeiro(selectedHerdeiro.percentual_participacao) || "-"}</p>
                                 )}
                               </div>
                               <div className="space-y-1 sm:col-span-2">
@@ -3542,6 +3732,7 @@ export default function PrecatorioDetailPage() {
                                     variant="outline"
                                     onClick={() => {
                                       setHerdeiroEdit(selectedHerdeiro)
+                                      setHerdeiroPercentualInput(formatPercentualInput(selectedHerdeiro.percentual_participacao))
                                       setHerdeiroEditMode(false)
                                     }}
                                     disabled={herdeiroSaving}
@@ -3553,7 +3744,14 @@ export default function PrecatorioDetailPage() {
                                   </Button>
                                 </>
                               ) : (
-                                <Button onClick={() => setHerdeiroEditMode(true)}>Editar</Button>
+                                <Button
+                                  onClick={() => {
+                                    setHerdeiroPercentualInput(formatPercentualInput(selectedHerdeiro.percentual_participacao))
+                                    setHerdeiroEditMode(true)
+                                  }}
+                                >
+                                  Editar
+                                </Button>
                               )}
                             </div>
                           </div>

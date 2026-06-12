@@ -32,6 +32,10 @@ const robotoMono = Roboto_Mono({
   weight: ["400", "500", "600", "700"],
 })
 
+const shouldLoadReactGrab =
+  process.env.NODE_ENV === "development" &&
+  process.env.NEXT_PUBLIC_ENABLE_REACT_GRAB === "true"
+
 export const metadata: Metadata = {
   title: "CRM APAX Precat\u00f3rios | Sistema de Gest\u00e3o",
   description: "Sistema completo de gest\u00e3o de precat\u00f3rios com c\u00e1lculos, workflows e relat\u00f3rios",
@@ -63,15 +67,19 @@ export default function RootLayout({
   return (
     <html lang="pt-BR" className={`${manrope.variable} ${montserrat.variable} ${robotoMono.variable}`} suppressHydrationWarning>
       <head>
-        <Script
-          src="//unpkg.com/react-grab/dist/index.global.js"
-          crossOrigin="anonymous"
-          strategy="beforeInteractive"
-        />
-        <Script
-          src="//unpkg.com/@react-grab/codex/dist/client.global.js"
-          strategy="lazyOnload"
-        />
+        {shouldLoadReactGrab ? (
+          <>
+            <Script
+              src="//unpkg.com/react-grab/dist/index.global.js"
+              crossOrigin="anonymous"
+              strategy="beforeInteractive"
+            />
+            <Script
+              src="//unpkg.com/@react-grab/codex/dist/client.global.js"
+              strategy="lazyOnload"
+            />
+          </>
+        ) : null}
       </head>
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" forcedTheme="light" disableTransitionOnChange>

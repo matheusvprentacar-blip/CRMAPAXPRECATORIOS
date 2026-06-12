@@ -41,6 +41,8 @@ Cada coluna tem:
 - O status `sem_interesse` continua com tratamento separado: motivo obrigatório e recontato opcional.
 - Na triagem de interesse da tela de detalhes do precatório, o encaminhamento foi simplificado para 5 fluxos: `normal`, `pausado`, `encerrado`, `não elegível` e `credor vendeu para outro`.
 - Para créditos com `origem = atendimento`, o fluxo `normal` exige validação prévia de contato registrado no Atendimento como `interessado`.
+- Retorno específico liberado no drag-and-drop: quando o cartão sai da coluna `analise_processual_inicial` (inclui cards com status `juridico`) e volta para `triagem_interesse`, a movimentação é direta, sem abrir modal de triagem. Os demais envios para triagem continuam exigindo o modal.
+- Na tela de detalhes do precatório (`/precatorios/detalhes`), foi adicionado o botão `Voltar para triagem` na barra de status para o mesmo cenário específico (`analise_processual_inicial`/`juridico`/`analise_juridica` → `triagem_interesse`), sem abrir modal. Esse botão fica disponível para `admin`, `juridico`, `operador` e `operador_comercial`.
 
 ## Gate de Permissão por Fase
 

@@ -18,6 +18,7 @@ import { toast } from "sonner"
 import { maskCNPJ, maskCPF, maskProcesso } from "@/lib/masks"
 import { cn } from "@/lib/utils"
 import { PDFViewer } from "@/components/pdf-viewer"
+import { distribuirPercentuaisHerdeiros } from "@/lib/herdeiros/percentuais"
 
 const STEPS = [
   { id: 1, title: "Dados Básicos", icon: FileText, description: "Informações do processo" },
@@ -173,13 +174,19 @@ export default function NovoPrecatorioPage() {
 
         const precatorioId = inserted?.[0]?.id
         if (precatorioId && herdeirosComDados.length > 0) {
-          const herdeirosPayload = herdeirosComDados.map((h) => ({
+          const herdeirosComRateio = distribuirPercentuaisHerdeiros(
+            herdeirosComDados.map((h, index) => ({
+              id: String(index),
+              ...h,
+            }))
+          )
+          const herdeirosPayload = herdeirosComRateio.map((h) => ({
             precatorio_id: precatorioId,
             nome_completo: h.nome_completo.trim().toUpperCase(),
             cpf: h.cpf?.trim() || null,
             telefone: h.telefone?.trim() || null,
             endereco: h.endereco?.trim() || null,
-            percentual_participacao: 0,
+            percentual_participacao: h.percentual_participacao,
           }))
 
           const { error: herdeirosError } = await supabase

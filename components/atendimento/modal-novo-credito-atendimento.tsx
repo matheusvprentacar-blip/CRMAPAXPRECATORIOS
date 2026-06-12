@@ -105,6 +105,8 @@ export function ModalNovoCreditoAtendimento({
         data_expedicao: dataExpedicao || null,
         valor_principal: valorPrincipal ? Number(valorPrincipal) : 0,
         status: "novo",
+        status_kanban: "triagem_interesse",
+        localizacao_kanban: "triagem_interesse",
         titulo: numero.trim()
           ? `Precatório ${numero.trim()} - ${credor.trim()}`
           : `Lead - ${credor.trim()}`,

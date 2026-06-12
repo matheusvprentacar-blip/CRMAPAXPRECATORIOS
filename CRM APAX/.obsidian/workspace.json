@@ -74,7 +74,7 @@
       }
     ],
     "direction": "horizontal",
-    "width": 300
+    "width": 200
   },
   "right": {
     "id": "07adc8983bc2ba5e",
@@ -179,6 +179,13 @@
   },
   "active": "6c295342c4c34da9",
   "lastOpenFiles": [
+    "Processos/Fluxo de Cálculo.md",
+    "2026-04-20.md",
+    "2026-04-19.md",
+    "Sem título.md",
+    "Módulos/Dashboard.md",
+    "Agentes/Templates/TEMPLATE - Tarefa Compartilhada.md",
+    "2026-04-18.md",
     "Sistema/Visão Geral.md",
     "Sistema/Arquitetura Técnica.md",
     "🏠 Índice.md",
@@ -187,15 +194,10 @@
     "Sistema/Memória Operacional do Codex.md",
     "Agentes/Painel Claude Codex.md",
     "Módulos/Setor de Atendimento.md",
-    "2026-04-18.md",
     "Processos/Mapa Visual do Cálculo.canvas",
-    "Agentes/Templates/TEMPLATE - Tarefa Compartilhada.md",
-    "Processos/Fluxo de Cálculo.md",
     "Processos/Ciclo de Vida do Precatório.md",
-    "2026-04-19.md",
     "Módulos/Calculadora de Precatórios.md",
     "Módulos/Kanban.md",
-    "Módulos/Dashboard.md",
     "Agentes/Templates",
     "Agentes",
     "Sem título.base",

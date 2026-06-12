@@ -125,7 +125,9 @@ export function ModalCalculoManual({ open, onOpenChange, precatorio, onSuccess }
                     proposta_menor_percentual: parseFloat(menorPropostaPerc),
                     proposta_maior_percentual: parseFloat(maiorPropostaPerc),
 
-                    status: "calculado",
+                    status: "calculo_concluido",
+                    status_kanban: "calculo_concluido",
+                    localizacao_kanban: "calculo_concluido",
                     calculo_externo: true,
                     data_calculo: new Date().toISOString(),
                     dados_calculo: {

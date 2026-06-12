@@ -60,6 +60,36 @@ Os demais veem apenas os precatórios onde aparecem como:
 - `responsavel_juridico_id`
 - `responsavel_calculo_id`
 
+## Escopo da Fila de Cálculo
+
+O perfil `operador_calculo` possui escopo ampliado dentro do módulo de cálculo:
+
+- vê todos os créditos em `fila_calculo`, `pronto_calculo`, `calculo_andamento` e `calculo_concluido`;
+- pode abrir os detalhes desses créditos enquanto estiverem no escopo de cálculo;
+- pode iniciar o andamento somente ao concluir a Etapa 1 da calculadora;
+- pode retornar o crédito para `triagem_interesse` com motivo obrigatório quando faltarem dados ou documentos.
+
+Esse escopo não torna o operador de cálculo um perfil global do CRM; ele fica restrito às filas e ações necessárias ao cálculo.
+
+## Escopo da Análise Processual
+
+A tela `/analise-processual` (menu **Análise Processual**) é liberada para `admin`, `gestor`, `operador_calculo` e `analista`.
+
+O perfil `analista` possui escopo dedicado para fazer a triagem jurídica **sem ser admin**:
+
+- vê e edita os créditos parados na coluna **Pré-análise jurídica** do kanban, ou seja, com `status_kanban` / `localizacao_kanban` / `status` igual a `analise_processual_inicial`, `juridico` ou `analise_juridica` (os três `statusIds` que a coluna agrupa em `kanban/columns.ts`);
+- registra o parecer preenchendo os campos `analise_*` (penhora, cessão, herdeiros, viabilidade, ITCMD, valores/percentuais e observações);
+- **não** altera o status do crédito por essa tela — a movimentação para o cálculo continua sendo feita pelo Kanban.
+
+> [!info] Por que precisa de duas camadas
+> O menu (`app/(dashboard)/layout.tsx`) apenas mostra/esconde o link; quem realmente autoriza ler e salvar é a **RLS**. As policies `precatorios_analista_scope_select` e `precatorios_analista_scope_update` (migration `251`, espelhando a `248` do `operador_calculo`) é que dão o escopo ao `analista`. Sem a policy, a tela abriria mas o "Salvar resultado" falharia.
+
+> [!warning] Escopo restrito
+> Fora dos status da coluna Pré-análise jurídica (`analise_processual_inicial`, `juridico`, `analise_juridica`), o `analista` continua sem acesso de edição global — ele só enxerga créditos onde também seja dono (`dono_usuario_id`, `criado_por`, `responsavel`, etc.).
+
+> [!danger] A policy precisa estar aplicada no banco
+> A tela usa o client autenticado (RLS ligada). Se a migration `251` **não tiver sido aplicada** no Supabase, a query não retorna erro — ela simplesmente devolve **lista vazia**, porque a RLS filtra todos os créditos onde o analista não é dono. Sintoma idêntico a "não vê nada". Após criar/alterar a `251`, rode `supabase db push` (ou cole o SQL no SQL Editor). A migration é idempotente (`CREATE OR REPLACE` + `DROP POLICY IF EXISTS`), então pode ser reaplicada sem risco.
+
 ## Setor de Atendimento
 
 ### Quem acessa
