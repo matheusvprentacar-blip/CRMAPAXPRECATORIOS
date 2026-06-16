@@ -14,6 +14,7 @@ import { Label } from "@/components/ui/label"
 import { Loader2 } from "@/components/icons"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
+import { normalizarNatureza } from "@/lib/precatorios/natureza"
 import { toast } from "sonner"
 import { useUsuariosCache } from "@/hooks/use-usuarios-cache"
 import { OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole, normalizeOperatorTag, type OperatorTag } from "@/lib/users/operator-tag"
@@ -101,7 +102,7 @@ export function ModalNovoCreditoAtendimento({
         tribunal: tribunal.trim() || null,
         devedor: devedor.trim() || null,
         advogado_nome: advogado.trim() || null,
-        natureza: natureza.trim() || null,
+        natureza: normalizarNatureza(natureza),
         data_expedicao: dataExpedicao || null,
         valor_principal: valorPrincipal ? Number(valorPrincipal) : 0,
         status: "novo",

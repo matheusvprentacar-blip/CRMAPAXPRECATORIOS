@@ -90,6 +90,15 @@ As tags operacionais disponíveis são:
 > [!tip] Como auditar gap de schema sem acesso ao Postgres
 > Com a `SUPABASE_SERVICE_ROLE_KEY` dá para checar se uma coluna existe no remoto via `GET /rest/v1/<tabela>?select=<coluna>&limit=1`. Retorno com `"code":"42703"` = coluna ausente; retorno com dados/`[]` = coluna existe.
 
+> [!warning] Importação em lote: `violates check constraint "precatorios_natureza_check"`
+> A coluna `natureza` tem `CHECK (natureza IN ('Alimentar','Comum'))`. O OCR/Excel devolve a natureza como **texto livre** (`"ALIMENTAR"`, `"alimentício"`, `"Não Alimentar"`, ou até cabeçalhos repetidos como `"PRECATÓRIOS MUNICIPIO"`) e o código só aplicava `.trim()` — qualquer valor fora dos dois aceitos derrubava o lote inteiro.
+> **Correção:** helper compartilhado `normalizarNatureza()` em `lib/precatorios/natureza.ts` (NFD + lowercase): `aliment*` → `Alimentar`, `nao aliment*`/`comum` → `Comum`, qualquer outro valor → `null`. Aplicado tanto na importação em lote (`ModalImportacaoLote`) quanto no cadastro manual de atendimento (`ModalNovoCreditoAtendimento`) e no `modal-criar-precatorio` do admin — todos tinham o mesmo campo de natureza como texto livre. Nunca mais quebra o insert por natureza.
+
+> [!danger] Importação em lote: `numero_processo ... ja pertence a outro usuario` derrubava o lote inteiro
+> O trigger `validar_dono_numero_precatorio_processo` ([[Módulo Admin]]) lança `unique_violation` quando um `numero_processo`/`numero_precatorio` já pertence a **outro dono**. Como o insert era feito em blocos atômicos de 50 (`insert(lote)`), um único conflito abortava os 50 — inclusive os créditos válidos.
+> **Causa típica:** duplicata **intra-lote** (mesmo número repetido na planilha, distribuído a operadores diferentes pelo balanceamento) ou registro pré-existente de outro operador.
+> **Correção (client-side, sem RPC):** o modal só é aberto por `admin` (visibilidade global), então a importação ficou **resiliente**: tenta o bloco inteiro (caminho rápido) e, ao falhar, reinsere **registro a registro** para que os válidos entrem e os conflitantes sejam isolados. Os recusados são reportados num painel "não importados" com **o nome do operador a quem o crédito pertence** (`montarDuplicataInfo()` reusa o `SELECT` que traz `usuarios.nome` via FK `precatorios_dono_usuario_id_fkey`), reaproveitando o `ModalDuplicata` para ver detalhes / redistribuir.
+
 ## Arquivos Principais
 
 - `app/(dashboard)/atendimento/page.tsx`
@@ -98,6 +107,7 @@ As tags operacionais disponíveis são:
 - `components/atendimento/modal-nova-tentativa.tsx`
 - `lib/atendimento/distribuicao-creditos.ts`
 - `lib/users/operator-tag.ts`
+- `lib/precatorios/natureza.ts` (normalização de natureza compartilhada)
 
 ## Veja também
 

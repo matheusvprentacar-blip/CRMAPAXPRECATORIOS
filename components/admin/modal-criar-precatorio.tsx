@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { toast } from "sonner"
 import { createBrowserClient } from "@/lib/supabase/client"
 import { maskProcesso } from "@/lib/masks"
+import { normalizarNatureza } from "@/lib/precatorios/natureza"
 
 interface PrecatorioData {
   credor_nome?: string
@@ -122,14 +123,14 @@ export function ModalCriarPrecatorio({
         credor_telefone: telefone || null,
         numero_processo: processo || null,
         data_expedicao: dataExpedicao || null,
-        natureza: natureza || null,
+        natureza: normalizarNatureza(natureza),
         status: "novo",
         titulo: `Precatorio ${numero} - ${credor}`,
         raw_text: safeData.raw_text || null,
         file_url: safeData.file_url || null,
       }
 
-      const { error } = await supabase.from("precatorios").insert([payload])
+      const { error } = await supabase.from("precatorios").insert([payload] as never)
       if (error) {
         if (error.code === "23505") {
           throw new Error("Numero de precatorio ja cadastrado")

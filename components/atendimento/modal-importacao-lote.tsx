@@ -31,6 +31,7 @@ import { toast } from "sonner"
 import type { RegistroExtraido } from "@/lib/server/nova-pipeline-ocr"
 import { useUsuariosCache } from "@/hooks/use-usuarios-cache"
 import { buildDistribuicaoCreditosPreview } from "@/lib/atendimento/distribuicao-creditos"
+import { normalizarNatureza } from "@/lib/precatorios/natureza"
 import { OPERATOR_TAG_OPTIONS, isAtendimentoOperatorRole, normalizeOperatorTag, type OperatorTag } from "@/lib/users/operator-tag"
 
 type Etapa = "upload" | "processando" | "revisao"
@@ -90,6 +91,19 @@ function normalizarNumeroDocumento(valor: string | null | undefined): string | n
   return limpo || null
 }
 
+// Erro do trigger validar_dono_numero_precatorio_processo (numero ja pertence a outro dono).
+function isConflitoDeDono(err: { code?: string | null; message?: string | null } | null): boolean {
+  if (!err) return false
+  return err.code === "23505" || /pertence a outro/i.test(err.message ?? "")
+}
+
+interface ResumoNaoImportado {
+  registroId: number
+  credor: string
+  numero: string
+  donoNome: string
+}
+
 interface ModalImportacaoLoteProps {
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -113,6 +127,7 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
   const [operatorTagFilter, setOperatorTagFilter] = useState<OperatorTag | "todos">("todos")
   const [selectedOperatorIds, setSelectedOperatorIds] = useState<string[]>([])
   const [modalDuplicata, setModalDuplicata] = useState<{ aberto: boolean; registro: RegistroRevisao | null }>({ aberto: false, registro: null })
+  const [naoImportados, setNaoImportados] = useState<ResumoNaoImportado[]>([])
   const inputRef = useRef<HTMLInputElement>(null)
   const idCounter = useRef(0)
   const { usuarios, loading: loadingUsuarios } = useUsuariosCache()
@@ -161,6 +176,7 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     setSalvando(false)
     setOperatorTagFilter("todos")
     setSelectedOperatorIds([])
+    setNaoImportados([])
     idCounter.current = 0
   }
 
@@ -283,6 +299,58 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
       }
       return registroDuplicado
     })
+  }
+
+  // Após a importação, busca no banco o dono atual dos registros que o trigger recusou
+  // por já pertencerem a outro usuário. Como o modal só é aberto por admin (visibilidade
+  // global), o SELECT enxerga registros de outros donos e traz o nome do responsável.
+  async function montarDuplicataInfo(
+    supabase: NonNullable<ReturnType<typeof createBrowserClient>>,
+    regs: RegistroRevisao[]
+  ): Promise<Map<number, DuplicataInfo>> {
+    const resultado = new Map<number, DuplicataInfo>()
+    if (regs.length === 0) return resultado
+
+    const numerosPrecatorio = Array.from(
+      new Set(regs.map((r) => normalizarNumeroDocumento(r.numero_precatorio)).filter((v): v is string => Boolean(v)))
+    )
+    const numerosProcesso = Array.from(
+      new Set(regs.map((r) => normalizarNumeroDocumento(r.numero_processo)).filter((v): v is string => Boolean(v)))
+    )
+
+    const [porPrecatorio, porProcesso] = await Promise.all([
+      numerosPrecatorio.length ? buscarDuplicatasPorColuna(supabase, "numero_precatorio", numerosPrecatorio) : Promise.resolve([]),
+      numerosProcesso.length ? buscarDuplicatasPorColuna(supabase, "numero_processo", numerosProcesso) : Promise.resolve([]),
+    ])
+
+    const mapaPrec = new Map<string, DuplicataBancoRow>()
+    const mapaProc = new Map<string, DuplicataBancoRow>()
+    for (const row of porPrecatorio) {
+      const n = normalizarNumeroDocumento(row.numero_precatorio)
+      if (n) mapaPrec.set(n, row)
+    }
+    for (const row of porProcesso) {
+      const n = normalizarNumeroDocumento(row.numero_processo)
+      if (n) mapaProc.set(n, row)
+    }
+
+    for (const reg of regs) {
+      const nPrec = normalizarNumeroDocumento(reg.numero_precatorio)
+      const nProc = normalizarNumeroDocumento(reg.numero_processo)
+      const row = (nPrec && mapaPrec.get(nPrec)) || (nProc && mapaProc.get(nProc))
+      if (!row) continue
+      resultado.set(reg._id, {
+        id: row.id,
+        numero_precatorio: row.numero_precatorio,
+        numero_processo: row.numero_processo,
+        credor_nome: row.credor_nome ?? reg.credor_nome ?? "Credor não identificado",
+        status_kanban: row.status_kanban,
+        dono_usuario_id: row.dono_usuario_id,
+        responsavel_nome: row.usuarios?.nome ?? null,
+        updated_at: row.updated_at,
+      })
+    }
+    return resultado
   }
 
   function parseBRL(valor: string): number | null {
@@ -539,7 +607,7 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
           devedor: r.devedor ?? null,
           advogado_nome: r.advogado_nome ?? null,
           valor_principal: r.valor_principal ?? 0,
-          natureza: r.natureza ?? null,
+          natureza: normalizarNatureza(r.natureza),
           data_expedicao: parseDataParaISO(r.data_expedicao),
           status: "novo",
           status_kanban: "triagem_interesse",
@@ -557,16 +625,89 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
         }
       })
 
-      // Inserir em lotes de 50
-      for (let i = 0; i < payloads.length; i += 50) {
-        const lote = payloads.slice(i, i + 50)
-        const { error } = await supabase.from("precatorios").insert(lote as never)
-        if (error) throw new Error(`Erro no lote ${i / 50 + 1}: ${error.message}`)
+      setNaoImportados([])
+
+      // Importação resiliente: o insert em lote é atômico, então um único registro
+      // recusado pelo trigger de duplicidade derrubaria os 50. Tentamos o bloco inteiro
+      // (caminho rápido) e, ao falhar, reinserimos registro a registro para que os
+      // válidos entrem e os conflitantes sejam isolados e reportados.
+      const CHUNK = 50
+      const inseridosIds = new Set<number>()
+      const conflitos: { reg: RegistroRevisao; message: string }[] = []
+      const errosOutros: string[] = []
+
+      for (let i = 0; i < payloads.length; i += CHUNK) {
+        const regsChunk = paraImportar.slice(i, i + CHUNK)
+        const payloadChunk = payloads.slice(i, i + CHUNK)
+
+        const { error } = await supabase.from("precatorios").insert(payloadChunk as never)
+        if (!error) {
+          regsChunk.forEach((r) => inseridosIds.add(r._id))
+          continue
+        }
+
+        for (let j = 0; j < regsChunk.length; j++) {
+          const reg = regsChunk[j]
+          const { error: errIndiv } = await supabase.from("precatorios").insert([payloadChunk[j]] as never)
+          if (!errIndiv) {
+            inseridosIds.add(reg._id)
+          } else if (isConflitoDeDono(errIndiv)) {
+            conflitos.push({ reg, message: errIndiv.message ?? "" })
+          } else {
+            errosOutros.push(`${reg.credor_nome ?? `Registro ${reg._id}`}: ${errIndiv.message}`)
+          }
+        }
       }
 
-      toast.success(`${paraImportar.length} créditos importados para a fila de atendimento.`)
-      onSuccess()
-      handleClose()
+      const totalInseridos = inseridosIds.size
+      if (totalInseridos > 0) onSuccess()
+
+      // Caminho feliz: todos os registros entraram.
+      if (conflitos.length === 0 && errosOutros.length === 0) {
+        toast.success(`${totalInseridos} créditos importados para a fila de atendimento.`)
+        handleClose()
+        return
+      }
+
+      // Identifica o dono atual de cada crédito recusado por duplicidade.
+      const infoPorId = await montarDuplicataInfo(supabase, conflitos.map((c) => c.reg))
+      const semInfo = conflitos.filter((c) => !infoPorId.has(c.reg._id))
+      semInfo.forEach((c) =>
+        errosOutros.push(`${c.reg.credor_nome ?? `Registro ${c.reg._id}`}: ${c.message || "conflito de duplicidade"}`)
+      )
+
+      const resumo: ResumoNaoImportado[] = conflitos
+        .filter((c) => infoPorId.has(c.reg._id))
+        .map((c) => {
+          const info = infoPorId.get(c.reg._id)!
+          return {
+            registroId: c.reg._id,
+            credor: c.reg.credor_nome ?? "Credor não identificado",
+            numero: c.reg.numero_processo ?? c.reg.numero_precatorio ?? "—",
+            donoNome: info.responsavel_nome ?? "Outro operador",
+          }
+        })
+      setNaoImportados(resumo)
+
+      // Atualiza a tabela: remove os que entraram e marca os conflitantes como duplicata
+      // (com o dono real) para reaproveitar o fluxo de detalhes/redistribuição.
+      setRegistros((prev) =>
+        prev
+          .filter((r) => !inseridosIds.has(r._id))
+          .map((r) => {
+            const info = infoPorId.get(r._id)
+            return info ? { ...r, _status: "duplicata" as const, _duplicataInfo: info } : r
+          })
+      )
+      setSelecionados(new Set())
+      setPaginaAtual(1)
+      setErrosProcessamento(errosOutros)
+
+      const partes: string[] = []
+      if (totalInseridos > 0) partes.push(`${totalInseridos} importado(s)`)
+      if (resumo.length > 0) partes.push(`${resumo.length} já pertencem a outro operador`)
+      if (errosOutros.length > 0) partes.push(`${errosOutros.length} com erro`)
+      toast.warning(`${partes.join(" · ")}. Veja os destaques abaixo.`)
     } catch (err) {
       toast.error(err instanceof Error ? err.message : "Erro ao salvar")
     } finally {
@@ -861,6 +1002,50 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
                   </div>
                 )}
 
+                {/* Créditos recusados por já pertencerem a outro operador */}
+                {naoImportados.length > 0 && (
+                  <div className="rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-900/10 p-4 space-y-3">
+                    <div className="flex items-center gap-2">
+                      <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
+                      <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+                        {naoImportados.length} crédito(s) não importado(s) — já pertencem a outro operador
+                      </p>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Os demais foram importados normalmente. Os créditos abaixo já estão cadastrados para outro
+                      responsável e por isso não foram incluídos.
+                    </p>
+                    <div className="divide-y divide-amber-200/60 rounded-md border border-amber-200/60 bg-background">
+                      {naoImportados.map((item) => (
+                        <div key={item.registroId} className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-xs">
+                          <div className="min-w-0">
+                            <p className="font-medium truncate">{item.credor}</p>
+                            <p className="text-muted-foreground font-mono">{item.numero}</p>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <div className="text-right">
+                              <span className="text-[10px] uppercase tracking-wide text-muted-foreground">Pertence a</span>
+                              <p className="font-semibold">{item.donoNome}</p>
+                            </div>
+                            <Button
+                              type="button"
+                              size="sm"
+                              variant="outline"
+                              className="h-7 text-xs"
+                              onClick={() => {
+                                const reg = registros.find((r) => r._id === item.registroId)
+                                if (reg?._duplicataInfo) setModalDuplicata({ aberto: true, registro: reg })
+                              }}
+                            >
+                              Detalhes
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* Tabela */}
                 <div className="overflow-x-auto rounded-lg border">
                   <table className="w-full text-xs">
@@ -1052,7 +1237,9 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
           onOpenChange={(v) => setModalDuplicata((prev) => ({ ...prev, aberto: v }))}
           duplicata={modalDuplicata.registro._duplicataInfo!}
           onPular={() => {
-            pularRegistro(modalDuplicata.registro!._id)
+            const id = modalDuplicata.registro!._id
+            pularRegistro(id)
+            setNaoImportados((prev) => prev.filter((item) => item.registroId !== id))
             setModalDuplicata({ aberto: false, registro: null })
           }}
           onImportarMesmo={() => {
