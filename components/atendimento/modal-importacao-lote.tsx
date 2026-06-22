@@ -353,14 +353,29 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     return resultado
   }
 
-  function parseBRL(valor: string): number | null {
-    if (!valor) return null
-    let limpo = valor.replace(/R\$\s*/i, "").trim()
+  function parseBRL(valor: string | number | null | undefined): number | null {
+    if (valor == null) return null
+    // Excel com raw:false pode entregar número puro em alguns formatos de célula.
+    if (typeof valor === "number") return Number.isFinite(valor) ? valor : null
+    let limpo = valor.replace(/R\$\s*/i, "").trim().replace(/\s/g, "")
     if (!limpo) return null
-    // BRL format: "55.130.133,34" → dots are thousand separators, comma is decimal
+
     if (limpo.includes(",")) {
+      // Decimal brasileiro: vírgula é o decimal, pontos são separadores de milhar.
+      // "55.130.133,34" → "55130133.34"
       limpo = limpo.replace(/\./g, "").replace(",", ".")
+    } else if (limpo.includes(".")) {
+      // Sem vírgula, mas com ponto(s). O Excel (raw:false) formata milhares com
+      // ponto e SEM casas decimais, então "366.910" significa 366910 — não 366,91.
+      // Só tratamos o ponto como decimal quando o formato NÃO é de milhar BR.
+      // Milhar bem-formado: 1º grupo com 1-3 dígitos e os demais com exatamente 3.
+      const partes = limpo.split(".")
+      const primeira = partes[0]
+      const demais = partes.slice(1)
+      const ehMilhar = /^\d{1,3}$/.test(primeira) && demais.every((g) => /^\d{3}$/.test(g))
+      if (ehMilhar) limpo = partes.join("")
     }
+
     const num = parseFloat(limpo)
     return isNaN(num) ? null : num
   }
