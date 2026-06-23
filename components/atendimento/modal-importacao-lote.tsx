@@ -97,6 +97,94 @@ function isConflitoDeDono(err: { code?: string | null; message?: string | null }
   return err.code === "23505" || /pertence a outro/i.test(err.message ?? "")
 }
 
+// Converte texto/numero de valor para number, tolerando formato BR ("1.234,56"),
+// US ("1,234.56"), milhar BR sem decimais ("366.910") e numero puro do Excel.
+function parseBRL(valor: string | number | null | undefined): number | null {
+  if (valor == null) return null
+  if (typeof valor === "number") return Number.isFinite(valor) ? valor : null
+  let limpo = valor.replace(/R\$\s*/i, "").trim().replace(/\s/g, "")
+  if (!limpo) return null
+
+  const temVirgula = limpo.includes(",")
+  const temPonto = limpo.includes(".")
+
+  if (temVirgula && temPonto) {
+    // Formato ambíguo entre BR ("1.234,56") e US ("1,234.56"). O separador
+    // DECIMAL é sempre o que aparece por último; o outro é separador de milhar.
+    // Planilhas exportadas em locale en-US chegam como "R$ 391,876.29".
+    if (limpo.lastIndexOf(",") > limpo.lastIndexOf(".")) {
+      limpo = limpo.replace(/\./g, "").replace(",", ".") // BR
+    } else {
+      limpo = limpo.replace(/,/g, "") // US
+    }
+  } else if (temVirgula) {
+    limpo = limpo.replace(",", ".") // decimal BR: "391,87"
+  } else if (temPonto) {
+    // Só ponto(s): milhar BR bem-formado ("366.910" = 366910) vira inteiro;
+    // caso contrário o ponto é decimal ("391.87").
+    const partes = limpo.split(".")
+    const ehMilhar =
+      partes.length > 1 &&
+      /^\d{1,3}$/.test(partes[0]) &&
+      partes.slice(1).every((g) => /^\d{3}$/.test(g))
+    if (ehMilhar) limpo = partes.join("")
+  }
+
+  const num = parseFloat(limpo)
+  return isNaN(num) ? null : num
+}
+
+// Formata um number como moeda brasileira: 391876.29 → "R$ 391.876,29".
+function formatBRL(valor: number | null | undefined): string {
+  if (valor == null || !Number.isFinite(valor)) return ""
+  return valor.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+}
+
+// Input de moeda BRL: sem foco mostra "R$ 391.876,29"; ao focar vira um rascunho
+// editável (decimal com vírgula) e, ao sair, reparseia com parseBRL. Mantém a
+// coluna de valor sempre exibindo moeda do Brasil sem atrapalhar a edição.
+function CurrencyInput({
+  value,
+  onChange,
+  disabled,
+  className,
+}: {
+  value: number | null
+  onChange: (valor: number | null) => void
+  disabled?: boolean
+  className?: string
+}) {
+  const [editando, setEditando] = useState(false)
+  const [rascunho, setRascunho] = useState("")
+
+  return (
+    <Input
+      type="text"
+      inputMode="decimal"
+      className={className}
+      disabled={disabled}
+      value={editando ? rascunho : formatBRL(value)}
+      onFocus={() => {
+        setRascunho(
+          value == null
+            ? ""
+            : value.toLocaleString("pt-BR", {
+                useGrouping: false,
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2,
+              })
+        )
+        setEditando(true)
+      }}
+      onChange={(e) => setRascunho(e.target.value)}
+      onBlur={() => {
+        setEditando(false)
+        onChange(parseBRL(rascunho))
+      }}
+    />
+  )
+}
+
 interface ResumoNaoImportado {
   registroId: number
   credor: string
@@ -353,46 +441,8 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     return resultado
   }
 
-  function parseBRL(valor: string | number | null | undefined): number | null {
-    if (valor == null) return null
-    // Excel com raw:false pode entregar número puro em alguns formatos de célula.
-    if (typeof valor === "number") return Number.isFinite(valor) ? valor : null
-    let limpo = valor.replace(/R\$\s*/i, "").trim().replace(/\s/g, "")
-    if (!limpo) return null
-
-    const temVirgula = limpo.includes(",")
-    const temPonto = limpo.includes(".")
-
-    if (temVirgula && temPonto) {
-      // Formato ambíguo entre BR ("1.234,56") e US ("1,234.56"). O separador
-      // DECIMAL é sempre o que aparece por último; o outro é separador de milhar.
-      // Planilhas exportadas em locale en-US chegam como "R$ 391,876.29".
-      if (limpo.lastIndexOf(",") > limpo.lastIndexOf(".")) {
-        // BR: ponto = milhar, vírgula = decimal → "55.130.133,34" → "55130133.34"
-        limpo = limpo.replace(/\./g, "").replace(",", ".")
-      } else {
-        // US: vírgula = milhar, ponto = decimal → "391,876.29" → "391876.29"
-        limpo = limpo.replace(/,/g, "")
-      }
-    } else if (temVirgula) {
-      // Só vírgula: decimal brasileiro → "391,87" → "391.87"
-      limpo = limpo.replace(",", ".")
-    } else if (temPonto) {
-      // Só ponto(s). O Excel (raw:false) formata milhares com ponto e SEM casas
-      // decimais, então "366.910" significa 366910 — não 366,91. Só tratamos o
-      // ponto como milhar quando o formato é bem-formado: 1º grupo com 1-3 dígitos
-      // e os demais com exatamente 3. Caso contrário o ponto é decimal ("391.87").
-      const partes = limpo.split(".")
-      const ehMilhar =
-        partes.length > 1 &&
-        /^\d{1,3}$/.test(partes[0]) &&
-        partes.slice(1).every((g) => /^\d{3}$/.test(g))
-      if (ehMilhar) limpo = partes.join("")
-    }
-
-    const num = parseFloat(limpo)
-    return isNaN(num) ? null : num
-  }
+  // parseBRL / formatBRL / CurrencyInput agora vivem no escopo do módulo (acima),
+  // para serem reaproveitados pelo input de moeda da tabela.
 
   // Converte valores de data vindos da planilha para ISO (YYYY-MM-DD).
   // Qualquer valor que não seja uma data reconhecível vira null, evitando que
@@ -578,6 +628,17 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
       prev.map((r) => {
         if (r._id !== id) return r
         const atualizado = { ...r, [campo]: campo === "valor_principal" ? parseFloat(valor) || null : valor || null }
+        return { ...atualizado, _status: calcularStatus(atualizado) }
+      })
+    )
+  }
+
+  // Atualiza o valor principal já como number (vem do CurrencyInput parseado).
+  const atualizarValor = (id: number, valor: number | null) => {
+    setRegistros((prev) =>
+      prev.map((r) => {
+        if (r._id !== id) return r
+        const atualizado = { ...r, valor_principal: valor }
         return { ...atualizado, _status: calcularStatus(atualizado) }
       })
     )
@@ -1178,11 +1239,10 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
                             />
                           </td>
                           <td className="p-2">
-                            <Input
+                            <CurrencyInput
                               className="h-6 text-xs px-1"
-                              type="number"
-                              value={reg.valor_principal ?? ""}
-                              onChange={(e) => atualizarCampo(reg._id, "valor_principal", e.target.value)}
+                              value={reg.valor_principal ?? null}
+                              onChange={(n) => atualizarValor(reg._id, n)}
                               disabled={reg._status === "pulado"}
                             />
                           </td>
