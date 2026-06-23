@@ -360,19 +360,33 @@ export function ModalImportacaoLote({ open, onOpenChange, onSuccess }: ModalImpo
     let limpo = valor.replace(/R\$\s*/i, "").trim().replace(/\s/g, "")
     if (!limpo) return null
 
-    if (limpo.includes(",")) {
-      // Decimal brasileiro: vírgula é o decimal, pontos são separadores de milhar.
-      // "55.130.133,34" → "55130133.34"
-      limpo = limpo.replace(/\./g, "").replace(",", ".")
-    } else if (limpo.includes(".")) {
-      // Sem vírgula, mas com ponto(s). O Excel (raw:false) formata milhares com
-      // ponto e SEM casas decimais, então "366.910" significa 366910 — não 366,91.
-      // Só tratamos o ponto como decimal quando o formato NÃO é de milhar BR.
-      // Milhar bem-formado: 1º grupo com 1-3 dígitos e os demais com exatamente 3.
+    const temVirgula = limpo.includes(",")
+    const temPonto = limpo.includes(".")
+
+    if (temVirgula && temPonto) {
+      // Formato ambíguo entre BR ("1.234,56") e US ("1,234.56"). O separador
+      // DECIMAL é sempre o que aparece por último; o outro é separador de milhar.
+      // Planilhas exportadas em locale en-US chegam como "R$ 391,876.29".
+      if (limpo.lastIndexOf(",") > limpo.lastIndexOf(".")) {
+        // BR: ponto = milhar, vírgula = decimal → "55.130.133,34" → "55130133.34"
+        limpo = limpo.replace(/\./g, "").replace(",", ".")
+      } else {
+        // US: vírgula = milhar, ponto = decimal → "391,876.29" → "391876.29"
+        limpo = limpo.replace(/,/g, "")
+      }
+    } else if (temVirgula) {
+      // Só vírgula: decimal brasileiro → "391,87" → "391.87"
+      limpo = limpo.replace(",", ".")
+    } else if (temPonto) {
+      // Só ponto(s). O Excel (raw:false) formata milhares com ponto e SEM casas
+      // decimais, então "366.910" significa 366910 — não 366,91. Só tratamos o
+      // ponto como milhar quando o formato é bem-formado: 1º grupo com 1-3 dígitos
+      // e os demais com exatamente 3. Caso contrário o ponto é decimal ("391.87").
       const partes = limpo.split(".")
-      const primeira = partes[0]
-      const demais = partes.slice(1)
-      const ehMilhar = /^\d{1,3}$/.test(primeira) && demais.every((g) => /^\d{3}$/.test(g))
+      const ehMilhar =
+        partes.length > 1 &&
+        /^\d{1,3}$/.test(partes[0]) &&
+        partes.slice(1).every((g) => /^\d{3}$/.test(g))
       if (ehMilhar) limpo = partes.join("")
     }
 
