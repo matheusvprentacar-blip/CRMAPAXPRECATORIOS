@@ -109,6 +109,10 @@ As tags operacionais disponíveis são:
 > **Causa típica:** duplicata **intra-lote** (mesmo número repetido na planilha, distribuído a operadores diferentes pelo balanceamento) ou registro pré-existente de outro operador.
 > **Correção (client-side, sem RPC):** o modal só é aberto por `admin` (visibilidade global), então a importação ficou **resiliente**: tenta o bloco inteiro (caminho rápido) e, ao falhar, reinsere **registro a registro** para que os válidos entrem e os conflitantes sejam isolados. Os recusados são reportados num painel "não importados" com **o nome do operador a quem o crédito pertence** (`montarDuplicataInfo()` reusa o `SELECT` que traz `usuarios.nome` via FK `precatorios_dono_usuario_id_fkey`), reaproveitando o `ModalDuplicata` para ver detalhes / redistribuir.
 
+> [!danger] Card do Kanban não refletia o "primeiro contato" após registro de tentativa
+> O card do Kanban lê **apenas `interesse_status`** (chip de interesse e a linha "Realizar primeiro contato com o credor" em `app/(dashboard)/kanban/page.tsx`). O registro de contato (`ModalNovaTentativa`) só atualizava **`status_atendimento`** (`em_contato`/`interessado`/`sem_interesse`) — são **dois campos distintos** e não existe trigger/RPC sincronizando os dois. Resultado: mesmo após registrar contato, o card continuava em `SEM_CONTATO` ("Sem contato" / "Realizar primeiro contato com o credor"). O valor `CONTATO_EM_ANDAMENTO` já existia no enum/chip, mas **nada no código o escrevia**.
+> **Correção:** `ModalNovaTentativa` agora, além de gravar `status_atendimento`, promove `interesse_status` de `SEM_CONTATO`/nulo → `CONTATO_EM_ANDAMENTO` (update filtrado por `.or("interesse_status.eq.SEM_CONTATO,interesse_status.is.null")`). Nunca rebaixa status já definido pela triagem (`TEM_INTERESSE`/`SEM_INTERESSE`) e **não** passa o gate jurídico (que só libera em `TEM_INTERESSE`). A decisão formal de interesse continua a cargo da triagem (Kanban/detalhes).
+
 ## Arquivos Principais
 
 - `app/(dashboard)/atendimento/page.tsx`

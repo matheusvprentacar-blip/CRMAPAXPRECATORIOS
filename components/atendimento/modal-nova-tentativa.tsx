@@ -129,6 +129,20 @@ export function ModalNovaTentativa({
 
       if (updateError) throw new Error(updateError.message)
 
+      // Sincroniza o indicador de contato do Kanban.
+      // O card do Kanban lê `interesse_status`, não `status_atendimento`. Ao registrar
+      // uma tentativa, tiramos o crédito de "Sem contato" para "Contato em andamento",
+      // removendo o aviso "Realizar primeiro contato com o credor". A decisão formal de
+      // TEM_INTERESSE/SEM_INTERESSE continua a cargo da triagem (Kanban/detalhes): por isso
+      // só promovemos quando ainda está em SEM_CONTATO (ou nulo) e nunca rebaixamos.
+      const { error: interesseError } = await supabase
+        .from("precatorios")
+        .update({ interesse_status: "CONTATO_EM_ANDAMENTO" } as never)
+        .eq("id", precatorioId)
+        .or("interesse_status.eq.SEM_CONTATO,interesse_status.is.null")
+
+      if (interesseError) throw new Error(interesseError.message)
+
       toast.success("Tentativa registrada com sucesso.")
       setTipo("")
       setResultado("")

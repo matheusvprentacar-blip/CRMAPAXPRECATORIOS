@@ -88,6 +88,10 @@ Responsável: `gestor_escrituras` (`responsavel_escrituras_id`)
 | `status_kanban` | Status atual no kanban |
 | `localizacao_kanban` | Coluna atual |
 | `status_escrituras` | Status do fluxo de escrituras |
+| `interesse_status` | Interesse/contato do credor exibido no card (chip + linha "Realizar primeiro contato"). **Não confundir com `status_atendimento`** — ver [[Setor de Atendimento]] |
+
+> [!warning] O card usa `interesse_status`, não `status_atendimento`
+> O chip de interesse e a linha "Realizar primeiro contato com o credor" derivam **só de `interesse_status`**. O registro de contato do Atendimento atualiza `status_atendimento`; a sincronização `SEM_CONTATO → CONTATO_EM_ANDAMENTO` é feita em `ModalNovaTentativa`. Detalhes em [[Setor de Atendimento]].
 
 ## Veja também
 - [[Ciclo de Vida do Precatório]]
